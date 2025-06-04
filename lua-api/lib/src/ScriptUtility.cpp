@@ -129,6 +129,15 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
     }
     case L"NameProperty"_fnv:
         return sol::make_object(s, *(uevr::API::FName*)((uintptr_t)self + offset));
+    case L"StrProperty"_fnv:
+    {
+        using FString = uevr::API::TArray<wchar_t>;
+        const auto& str = *(FString*)((uintptr_t)self + offset);
+        if (str.data == nullptr || str.count == 0) {
+            return sol::make_object(s, "");
+        }
+        return sol::make_object(s, std::wstring(str.data, str.count));
+    }
     case L"InterfaceProperty"_fnv:
     case L"ObjectProperty"_fnv:
         if (*(uevr::API::UObject**)((uintptr_t)self + offset) == nullptr) {
@@ -265,17 +274,17 @@ sol::object prop_to_object(sol::this_state s, uevr::API::UObject* self, const st
     return prop_to_object(s, self, c, name);
 }
 
-void set_property(sol::this_state s, void* self, uevr::API::UStruct* c, const std::wstring& name, sol::object value) {
+void set_property(sol::this_state s, void* self, uevr::API::UStruct* c, const std::wstring& name, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto desc = c->find_property(name.c_str());
 
     if (desc == nullptr) {
         throw sol::error(std::format("[set_property] Property '{}' not found", ::utility::narrow(name)));
     }
 
-    set_property(s, self, c, desc, value);
+    set_property(s, self, c, desc, value, dynamic_strings);
 }
 
-void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, uevr::API::FProperty* desc, sol::object value) {
+void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, uevr::API::FProperty* desc, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto propc = desc->get_class();
 
     if (propc == nullptr) {
@@ -400,6 +409,70 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
         return;
     case L"ArrayProperty"_fnv:
         throw sol::error("Setting array properties is not supported (yet)");
+    case L"StrProperty"_fnv:
+    {
+        const auto arg_obj = value;
+        using FString = uevr::API::TArray<wchar_t>;
+
+        auto& fstr = *(FString*)&*(uevr::API::TArray<wchar_t>*)((uintptr_t)self + offset);
+
+        if (arg_obj.is<std::wstring>()) {
+            const auto src = arg_obj.as<std::wstring>();
+
+            // Dynamic strings is used for temporary stuff like function calls
+            // when we set a property it can exist permanently
+            if (dynamic_strings != nullptr) {
+                auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
+                std::copy(src.begin(), src.end(), buffer.get());
+                buffer[src.size()] = L'\0';
+    
+                fstr.count = src.size() + 1;
+                fstr.capacity = fstr.count;
+                fstr.data = buffer.get();
+
+                dynamic_strings->push_back(std::move(buffer));
+            } else {
+                // Use FMalloc (TODO)
+
+            }
+        } else if (arg_obj.is<std::string>()) {
+            const auto src = ::utility::widen(arg_obj.as<std::string>());
+
+            if (dynamic_strings != nullptr) {
+                auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
+                std::copy(src.begin(), src.end(), buffer.get());
+                buffer[src.size()] = L'\0';
+
+                fstr.count = src.size() + 1;
+                fstr.capacity = fstr.count;
+                fstr.data = buffer.get();
+
+                dynamic_strings->push_back(std::move(buffer));
+            } else {
+                // Use FMalloc (TODO)
+            }
+        } else if (arg_obj.is<wchar_t*>()) {
+            const auto src = std::wstring_view{arg_obj.as<wchar_t*>()};
+
+            if (dynamic_strings != nullptr) {
+                auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
+                std::copy(src.begin(), src.end(), buffer.get());
+                buffer[src.size()] = L'\0';
+
+                fstr.count = src.size() + 1;
+                fstr.capacity = fstr.count;
+                fstr.data = buffer.get();
+
+                dynamic_strings->push_back(std::move(buffer));
+            } else {
+                // Use FMalloc (TODO)
+            }
+        } else {
+            throw sol::error("Invalid argument type for FString");
+        }
+
+        return;
+    }
     case L"StructProperty"_fnv:
     {
         const auto struct_desc = ((uevr::API::FStructProperty*)desc)->get_struct();
@@ -408,7 +481,22 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
             throw sol::error("Struct property has no struct");
         }
 
-        if (value.is<lua::datatypes::StructObject>()) {
+        if (value.is<sol::lua_table>()) {
+            // Go through each key in the table and set each property in the struct to the value (if it exists)
+            for (const auto& [key, val] : value.as<sol::table>()) {
+                if (!key.is<std::wstring>()) {
+                    throw sol::error("Invalid key type for struct property (expected string)");
+                }
+                
+                const auto prop = struct_desc->find_property(key.as<std::wstring>().c_str());
+
+                if (prop == nullptr) {
+                    throw sol::error(std::format("Struct property '{}' not found in {}", ::utility::narrow(key.as<std::wstring>()), ::utility::narrow(struct_desc->get_fname()->to_string())));
+                }
+
+                set_property(s, (void*)((uintptr_t)self + offset), struct_desc, prop, val, dynamic_strings);
+            }
+        } else if (value.is<lua::datatypes::StructObject>()) {
             const auto arg = value.as<lua::datatypes::StructObject>();
 
             if (arg.desc != struct_desc) {
@@ -451,14 +539,14 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     // NONE
 }
 
-void set_property(sol::this_state s, uevr::API::UObject* self, const std::wstring& name, sol::object value) {
+void set_property(sol::this_state s, uevr::API::UObject* self, const std::wstring& name, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto c = self->get_class();
 
     if (c == nullptr) {
         throw sol::error("[set_property] Object has no class");
     }
 
-    set_property(s, self, c, name, value);
+    set_property(s, self, c, name, value, dynamic_strings);
 }
 
 sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API::UFunction* fn, sol::variadic_args args) {
@@ -624,7 +712,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
                 continue; // This means the caller wants to actually use this as an out parameter and not set it
             }
 
-            set_property(s, params.data(), fn, prop_desc, args[args_index++]);
+            set_property(s, params.data(), fn, prop_desc, args[args_index++], &dynamic_strings);
         }
     }
 

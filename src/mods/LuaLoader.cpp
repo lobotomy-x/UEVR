@@ -221,6 +221,35 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
 
         ImGui::TreePop();
     }
+
+    {
+        std::scoped_lock __{ m_access_mutex };
+
+        for (auto& entry : m_script_panels) {
+            if (in_entry != entry.name) {
+                continue;
+            }
+
+            if (entry.state.expired()) {
+                continue;
+            }
+    
+            auto state = entry.state.lock();
+            if (state == nullptr) {
+                continue;
+            }
+    
+            std::scoped_lock _{state->context()->get_mutex()};
+    
+            try {
+                state->context()->handle_protected_result(entry.fn());
+            } catch (const std::exception& e) {
+                state->context()->log_error(std::format("[LuaLoader] Exception in script panel {}: {}", entry.name, e.what()));
+            } catch (...) {
+                state->context()->log_error(std::format("[LuaLoader] Unknown exception in script panel {}", entry.name));
+            }
+        }
+    }
 }
 
 void LuaLoader::reset_scripts() {
@@ -240,6 +269,7 @@ void LuaLoader::reset_scripts() {
 
     m_main_state.reset();
     m_states.clear();
+    m_script_panels.clear();
 
     spdlog::info("[LuaLoader] Destroyed all Lua states.");
 
@@ -260,28 +290,38 @@ void LuaLoader::reset_scripts() {
     m_known_scripts.clear();
 
     const auto autorun_path = Framework::get_persistent_dir() / "scripts";
+    const auto global_autorun_path = Framework::get_persistent_dir()  / ".." / "UEVR" / "scripts";
 
     spdlog::info("[LuaLoader] Creating directories {}", autorun_path.string());
     std::filesystem::create_directories(autorun_path);
     spdlog::info("[LuaLoader] Loading scripts...");
+    namespace fs = std::filesystem;
 
-    for (auto&& entry : std::filesystem::directory_iterator{autorun_path}) {
-        auto&& path = entry.path();
-
-        if (path.has_extension() && path.extension() == ".lua") {
-            if (!m_loaded_scripts_map.contains(path.filename().string())) {
-                m_loaded_scripts_map.emplace(path.filename().string(), true);
-            }
-
-            if (m_loaded_scripts_map[path.filename().string()] == true) {
-                m_main_state->run_script(path.string());
-                m_loaded_scripts.emplace_back(path.filename().string());
-            }
-
-            m_known_scripts.emplace_back(path.filename().string());
+	auto load_scripts_from_dir = [this](std::filesystem::path path) {
+        if (!fs::exists(path) || !fs::is_directory(path)) {
+            return;
         }
-    }
 
+		for (auto&& entry : std::filesystem::directory_iterator{path}) {
+			auto&& path = entry.path();
+
+			if (path.has_extension() && path.extension() == ".lua") {
+				if (!m_loaded_scripts_map.contains(path.filename().string())) {
+					m_loaded_scripts_map.emplace(path.filename().string(), true);
+				}
+
+				if (m_loaded_scripts_map[path.filename().string()] == true) {
+					m_main_state->run_script(path.string());
+					m_loaded_scripts.emplace_back(path.filename().string());
+				}
+
+				m_known_scripts.emplace_back(path.filename().string());
+			}
+		}
+	};
+
+    load_scripts_from_dir(global_autorun_path);
+    load_scripts_from_dir(autorun_path);
     std::sort(m_known_scripts.begin(), m_known_scripts.end());
     std::sort(m_loaded_scripts.begin(), m_loaded_scripts.end());
 }
@@ -289,13 +329,24 @@ void LuaLoader::reset_scripts() {
 void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     std::scoped_lock _{state->context()->get_mutex()};
     auto& lua = state->lua();
+    auto lua_table = lua.create_table();
 
-    //auto debug = lua["debug"];
-    //debug["getregistry"] = sol::nil;
+    // TODO: Rework this to be within add_additional_bindings somehow without a weak_ptr
+    lua_table["add_script_panel"] = [this, &state](sol::this_state s, std::string name, sol::function fn) {
+        m_script_panels.emplace_back(PanelEntry{
+            .state = std::weak_ptr<ScriptState>{state},
+            .name = name,
+            .fn = fn
+        });
+    };
 
-    bindings::open_imgui(state.get());
-    bindings::open_json(state.get());
-    bindings::open_fs(state.get());
+    lua["uevr"]["lua"] = lua_table;
+}
+
+void LuaLoader::add_additional_bindings(sol::state_view& lua) {
+    bindings::open_imgui(lua);
+    bindings::open_json(lua);
+    bindings::open_fs(lua);
 }
 
 void LuaLoader::dispatch_event(std::string_view event_name, std::string_view event_data) {

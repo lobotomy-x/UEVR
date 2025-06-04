@@ -499,7 +499,7 @@ void FFakeStereoRenderingHook::attempt_hook_slate_thread(uintptr_t return_addres
         }
     }
 
-    if (m_hooked_slate_thread) {
+    if (m_hooked_slate_thread && !alternate) {
         return;
     }
 
@@ -530,6 +530,27 @@ void FFakeStereoRenderingHook::attempt_hook_slate_thread(uintptr_t return_addres
 
         if (!func) {
             SPDLOG_ERROR("Cannot hook FSlateRHIRenderer::DrawWindow_RenderThread with alternative return address method");
+            m_hooked_slate_thread = true; // not actually true but just to stop spamming the scans
+            return;
+        }
+
+        SPDLOG_INFO("Checking if the assembly listing for {:X} is really small", *func);
+
+        // Check if the assembly listing for this function is really small. It shouldn't be really small.
+        // This will happen on UE 5.5+ where RenderTexture_RenderThread is enqueued inside of a lambda.
+        size_t distance_to_ret = 0;
+        utility::exhaustive_decode((uint8_t*)*func, 1000, [&](utility::ExhaustionContext& ctx2) -> utility::ExhaustionResult {
+            ++distance_to_ret;
+
+            if (ctx2.instrux.BranchInfo.IsBranch && std::string_view{ctx2.instrux.Mnemonic}.starts_with("CALL")) {
+                return utility::ExhaustionResult::STEP_OVER;
+            }
+
+            return utility::ExhaustionResult::CONTINUE;
+        });
+
+        if (distance_to_ret < 50) {
+            SPDLOG_ERROR("FSlateRHIRenderer::DrawWindow_RenderThread function is too small! Distance to RET: {}", distance_to_ret);
             m_hooked_slate_thread = true; // not actually true but just to stop spamming the scans
             return;
         }
@@ -837,6 +858,20 @@ bool FFakeStereoRenderingHook::standard_fake_stereo_hook(uintptr_t vtable) {
                 }
 
                 break;
+            } else {
+                try {
+                    using GetRenderTargetManagerFn = IStereoRenderTargetManager* (*)(void*, void*, void*, void*);
+                    const auto func = (GetRenderTargetManagerFn)(*get_render_target_manager_func_ptr);
+    
+                    // On UE5.5+ FFakeStereoRendering has a valid GetRenderTargetManager that doesn't return null.
+                    if (!is_4_18_or_lower && func(og_vtable.data(), nullptr, nullptr, nullptr) == (IStereoRenderTargetManager*)&og_vtable[sizeof(void*)]) {
+                        SPDLOG_INFO("Found UE5.5+ variant of GetRenderTargetManager function at index {}", render_target_manager_vtable_index);
+                        SPDLOG_INFO("GetRenderTargetManager function at index {} appears to be valid.", render_target_manager_vtable_index);
+                        break;
+                    }
+                } catch(...) {
+                    SPDLOG_WARN("Unknown exception while checking GetRenderTargetManager function at index {}", render_target_manager_vtable_index);
+                }
             }
         }
     //} else {
@@ -1189,7 +1224,7 @@ bool FFakeStereoRenderingHook::standard_fake_stereo_hook(uintptr_t vtable) {
         // pretty consistent patterns
         if (sdk::is_vfunc_pattern(*func_ptr, "0F B6 C2 FF C0 C3") ||
             sdk::is_vfunc_pattern(*func_ptr, "33 C0 84 D2 0F 95 C0 FF C0 C3") || 
-            sdk::is_vfunc_pattern(*func_ptr, "84 D2 74 04 8B 41 14 C3 B8 01")) 
+            sdk::is_vfunc_pattern(*func_ptr, "84 D2 74 04 8B 41 ? C3 B8 01"))
         {
             SPDLOG_INFO("Found GetDesiredNumberOfViews function at index: {}", i);
             get_desired_number_of_views_index = i;
@@ -3463,13 +3498,40 @@ void FFakeStereoRenderingHook::pre_render_viewfamily_renderthread(ISceneViewExte
                 once_slate = false;
             }
 
-            auto l = (sdk::FRHICommandListBase*)command_list;
+            static size_t actual_offset = 0;
+            auto l = (sdk::FRHICommandListBase*)((uintptr_t)command_list + actual_offset);
+            const auto is_ue5 = g_hook->has_double_precision();
 
             if (l != nullptr && l->root != nullptr && ((uintptr_t)l->root & (sizeof(void*) - 1)) == 0) {
+                auto new_root = (sdk::FRHICommandBase_New*)l->root;
                 if (!analyzed_root_already) try {
-                    if (utility::get_module_within(*(void**)l->root).value_or(nullptr) == nullptr) {
-                        SPDLOG_INFO("Old FRHICommandBase detected");
-                        is_old_command_base = true;
+                    // so all of this might seem really overkill but
+                    // it's a good way to detect whether we have an FMemStack at the top of the command list
+                    // which we need to skip on UE5.5+
+                    if (utility::get_module_within(*(void**)l->root).value_or(nullptr) == nullptr || 
+                        IsBadReadPtr(*(void**)l->root, sizeof(void*)) || 
+                        utility::get_module_within(**(void***)l->root).value_or(nullptr) == nullptr ||
+                        (!IsBadReadPtr(new_root->next, sizeof(void*)) && (utility::get_module_within(*(void**)new_root->next).value_or(nullptr) == nullptr || utility::get_module_within(**(void***)new_root->next).value_or(nullptr) == nullptr))
+                    )
+                {
+                        if (is_ue5) {
+                            // UE5 is NOT an old command list, we need to bruteforce the offset
+                            // Start at 0x10 because that's usually where the pointers in FMemStack end.
+                            for (size_t i = 0x10; i < 0x50; i += sizeof(void*)) try {
+                                const auto cur_l = (sdk::FRHICommandListBase*)((uintptr_t)command_list + i);
+                                if (utility::get_module_within(*(void**)cur_l->root).value_or(nullptr) != nullptr) {
+                                    actual_offset = i;
+                                    l = cur_l;
+                                    SPDLOG_INFO("Found UE5.5+ command list at offset 0x{:x}", i);
+                                    break;
+                                }
+                            } catch(...) {
+
+                            }
+                        } else {
+                            SPDLOG_INFO("Old FRHICommandBase detected");
+                            is_old_command_base = true;
+                        }
                     } else {
                         SPDLOG_INFO("New FRHICommandBase detected");
                     }
@@ -4940,6 +5002,8 @@ __forceinline void FFakeStereoRenderingHook::render_texture_render_thread(FFakeS
         g_hook->attempt_hook_slate_thread(return_address);
     }
 
+    g_hook->get_slate_thread_worker()->execute(rhi_command_list);
+
     /*const auto return_address = (uintptr_t)_ReturnAddress();
     const auto slate_cvar_usage_location = sdk::vr::get_slate_draw_to_vr_render_target_usage_location();
 
@@ -5528,8 +5592,8 @@ void FFakeStereoRenderingHook::post_init_properties(uintptr_t localplayer) {
     g_hook->m_fixed_localplayer_view_count = true;
 }
 
-void* FFakeStereoRenderingHook::slate_draw_window_render_thread(void* renderer, void* command_list, sdk::FViewportInfo* viewport_info, 
-                                                                void* elements, void* params, void* unk1, void* unk2) 
+void* FFakeStereoRenderingHook::slate_draw_window_render_thread(void* renderer, void* a2, void* a3, 
+                                                                void* a4, void* params, void* unk1, void* unk2) 
 {
 #ifdef FFAKE_STEREO_RENDERING_LOG_ALL_CALLS
     SPDLOG_INFO("SlateRHIRenderer::DrawWindow_RenderThread called!");
@@ -5537,26 +5601,195 @@ void* FFakeStereoRenderingHook::slate_draw_window_render_thread(void* renderer, 
     SPDLOG_INFO_ONCE("SlateRHIRenderer::DrawWindow_RenderThread called!");
 #endif
 
-    if (!g_framework->is_game_data_intialized()) {
-        return g_hook->m_slate_thread_hook.call<void*>(renderer, command_list, viewport_info, elements, params, unk1, unk2);
+    if (!g_framework->is_game_data_intialized() || a2 == nullptr) {
+        return g_hook->m_slate_thread_hook.call<void*>(renderer, a2, a3, a4, params, unk1, unk2);
     }
 
-    g_hook->get_slate_thread_worker()->execute((FRHICommandListImmediate*)command_list);
+    auto viewport_info = (sdk::FViewportInfo*)a3;
+    sdk::ISlateViewport* slate_viewport = nullptr; // UE5.5+
+    void** a4_ptr = (void**)a4;
+
+    static bool a4_is_ue_5_5_variant = [&]() -> bool {
+        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Checking if a4 is UE 5.5 variant...");
+
+        __try {
+            if (a4_ptr[0] == renderer) {
+                SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] a4 is UE 5.5 variant!");
+                return true;
+            }
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            SPDLOG_WARN("Exception occurred while checking if a4 is UE 5.5 variant!");
+        }
+
+        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] a4 is not UE 5.5 variant!");
+
+        return false;
+    }();
+
+    if (!a4_is_ue_5_5_variant) {
+        // How are we going to fix this on UE5.5?
+        g_hook->get_slate_thread_worker()->execute((FRHICommandListImmediate*)a2);
+    } else {
+        const auto window = (uintptr_t)a4_ptr[2];
+
+        static std::optional<size_t> viewport_offset = [&]() -> std::optional<size_t> {
+            std::optional<size_t> result{};
+            const auto module_within = utility::get_module_within(g_hook->m_slate_thread_hook.target_address());
+
+            // Temporarily unhook the DrawWindow_RenderThread hook because we need to emulate the function
+            // We could use the trampoline but bdshemu is picky about whether RIP is
+            // within the "shellcode" or not (e.g. within the module bounds)
+            // and so, the hook must be temporarily unhooked
+            if (!module_within) {
+                SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Failed to get module within for target address!");
+                return result;
+            }
+
+            SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Module within: {:x}", (uintptr_t)*module_within);
+
+            if (!g_hook->m_slate_thread_hook.disable().has_value()) {
+                SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Failed to disable slate thread hook!");
+                return result;
+            }
+
+            utility::ScopeGuard guard{[&]() {
+                SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Re-enabling slate thread hook!");
+                if (!g_hook->m_slate_thread_hook.enable().has_value()) {
+                    SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Failed to re-enable slate thread hook!");
+                }
+            }};
+
+            utility::ShemuContext ctx{*module_within};
+            ctx.ctx->Registers.RegRip = (ND_UINT64)g_hook->m_slate_thread_hook.target_address();
+            ctx.ctx->Registers.RegRcx = (ND_UINT64)renderer;
+            ctx.ctx->Registers.RegRdx = (ND_UINT64)a2;
+            ctx.ctx->Registers.RegR8 = (ND_UINT64)a3;
+            ctx.ctx->Registers.RegR9 = (ND_UINT64)a4;
+            ctx.ctx->MemThreshold = 1000;
+
+            uint32_t window_getter_callstack_level = 0;
+            std::span<uint8_t> window_bounds{(uint8_t*)window, (uint8_t*)window + 0x1000};
+
+            utility::emulate(*module_within, ctx.ctx->Registers.RegRip, 1000, ctx, [&](const utility::ShemuContextExtended& ctx) -> utility::ExhaustionResult {
+                SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Emulating instruction: {:x} ({:X})", ctx.ctx->ctx->Registers.RegRip, ctx.ctx->ctx->Registers.RegRip - (uintptr_t)*module_within);
+
+                // Allow writes to go through if we are inside the window getter.
+                // The downside is this might unintentionally increase the reference count of the window
+                // but it's necessary for the window getter to not give us a nullptr.
+                if (ctx.next.writes_to_memory && window_getter_callstack_level == 0) {
+                    return utility::ExhaustionResult::STEP_OVER;
+                }
+
+                if (std::string_view{ctx.next.ix.Mnemonic}.starts_with("CALL")) {
+                    if (window_getter_callstack_level > 0) {
+                        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Allowing call inside window getter function, continuing!");
+                        ++window_getter_callstack_level;
+                        return utility::ExhaustionResult::CONTINUE;
+                    }
+
+                    // Check if RCX != window first. We don't want to skip over the call if it is set to it.
+                    // There are inlined and non-inlined versions of this function which is why we need to check this.
+                    if ((uint8_t*)ctx.ctx->ctx->Registers.RegRcx < window_bounds.data() || (uint8_t*)ctx.ctx->ctx->Registers.RegRcx > window_bounds.data() + window_bounds.size()) {
+                        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Skipping call!");
+                        return utility::ExhaustionResult::STEP_OVER;
+                    }
+
+                    SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Allowing call, RCX matches window {:x}!", ctx.next.ix.Operands[0].Info.Register.Reg, window);
+                    SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] RCX: {:x}, RDX: {:x}", ctx.ctx->ctx->Registers.RegRcx, ctx.ctx->ctx->Registers.RegRdx);
+                    ++window_getter_callstack_level;
+                    return utility::ExhaustionResult::CONTINUE;
+                }
+
+                // Check if we hit a ret and are inside the window getter function.
+                if (ctx.next.ix.Instruction == ND_INS_RETN) {
+                    if (window_getter_callstack_level > 0) { 
+                        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Hit ret inside window getter function, continuing!");
+                        --window_getter_callstack_level;
+                        return utility::ExhaustionResult::CONTINUE;
+                    }
+                }
+
+                // We're looking for a mov reg, [reg+offset] instruction
+                // where reg contains the pointer to the window
+                // and offset is the offset to the viewport.
+                const auto& cctx = ctx.ctx->ctx;
+                const auto& ix = cctx->Instruction;
+
+                if (ix.Instruction == ND_INS_MOV && ix.Operands[0].Type == ND_OP_REG && ix.Operands[1].Type == ND_OP_MEM &&
+                    ix.Operands[1].Info.Memory.HasBase && ix.Operands[1].Info.Memory.HasDisp)
+                {
+                    uintptr_t* reg = (uintptr_t*)&((uint64_t*)&cctx->Registers.RegRax)[ix.Operands[1].Info.Memory.Base];
+
+                    // Instead of checking the window, we check if the register is within the bounds of the window's memory.
+                    // This should allow us to catch all sorts of compiler optimizations.
+                    if ((uint8_t*)*reg >= window_bounds.data() && (uint8_t*)*reg < window_bounds.data() + window_bounds.size()) try {
+                        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Found window pointer at {:x}!", (uintptr_t)reg);
+                        auto offset = ix.Operands[1].Info.Memory.Disp;
+                        const auto value = *(uintptr_t***)((uintptr_t)*reg + offset);
+
+                        if (value == nullptr || IsBadReadPtr((void*)value, sizeof(void*))) {
+                            SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Skipping invalid offset at {:x}!", (uintptr_t)value);
+                            return utility::ExhaustionResult::CONTINUE;
+                        }
+
+                        if (*value == nullptr || IsBadReadPtr((void*)*value, sizeof(void*))) {
+                            SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Skipping invalid vtable at {:x}!", (uintptr_t)*value);
+                            return utility::ExhaustionResult::CONTINUE;
+                        }
+
+                        if (!utility::get_module_within(*value).has_value() || !utility::get_module_within((*value)[0]).has_value()) {
+                            SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Skipping invalid module at {:x}!", (uintptr_t)*value);
+                            return utility::ExhaustionResult::CONTINUE;
+                        }
+
+                        const auto behind_value = *(uintptr_t***)((uintptr_t)*reg + offset - sizeof(void*));
+
+                        if (behind_value != nullptr && !IsBadReadPtr((void*)behind_value, sizeof(void*)) &&
+                            *behind_value != nullptr && !IsBadReadPtr((void*)*behind_value, sizeof(void*)) &&
+                            utility::get_module_within(*behind_value).has_value() && utility::get_module_within((*behind_value)[0]).has_value())
+                        {
+                            SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Adjusting offset by sizeof(void*)!");
+                            offset -= sizeof(void*);
+                        }
+
+                        result = (*reg + offset) - (uintptr_t)window;
+
+                        SPDLOG_INFO("[SlateRHIRenderer::DrawWindow_RenderThread] Found viewport offset at {:x}!", *result);
+                        return utility::ExhaustionResult::BREAK;
+                    } catch (...) {
+                        SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Exception while checking offset!");
+                    }
+                }
+
+                return utility::ExhaustionResult::CONTINUE;
+            });
+
+            if (!result) {
+                SPDLOG_ERROR("[SlateRHIRenderer::DrawWindow_RenderThread] Failed to find viewport offset!");
+            }
+
+            return result;
+        }();
+
+        if (viewport_offset) {
+            slate_viewport = *(sdk::ISlateViewport**)((uintptr_t)window + *viewport_offset);
+        }
+    }
 
     const auto& mods = g_framework->get_mods()->get_mods();
 
     for (auto& mod : mods) {
-        mod->on_pre_slate_draw_window(renderer, command_list, viewport_info);
+        mod->on_pre_slate_draw_window(renderer, a2, viewport_info);
     }
 
     g_hook->m_inside_slate_draw_window = true;
     g_hook->m_slate_draw_window_thread_id = GetCurrentThreadId();
 
     auto call_orig = [&]() {
-        auto ret = g_hook->m_slate_thread_hook.call<void*>(renderer, command_list, viewport_info, elements, params, unk1, unk2);
+        auto ret = g_hook->m_slate_thread_hook.call<void*>(renderer, a2, a3, a4, params, unk1, unk2);
 
         for (auto& mod : mods) {
-            mod->on_post_slate_draw_window(renderer, command_list, viewport_info);
+            mod->on_post_slate_draw_window(renderer, a2, viewport_info);
         }
 
         g_hook->m_inside_slate_draw_window = false;
@@ -5578,14 +5811,20 @@ void* FFakeStereoRenderingHook::slate_draw_window_render_thread(void* renderer, 
         return call_orig();
     }
 
-    const auto viewport_rt_provider = viewport_info->get_rt_provider(g_hook->get_render_target_manager()->get_render_target());
+    sdk::FSlateResource* slate_resource = nullptr;
 
-    if (viewport_rt_provider == nullptr) {
-        SPDLOG_INFO_EVERY_N_SEC(1, "No viewport RT provider, skipping!");
-        return call_orig();
+    if (slate_viewport != nullptr) {
+        slate_resource = slate_viewport->GetViewportRenderTargetTexture();
+    } else {
+        const auto viewport_rt_provider = viewport_info->get_rt_provider(g_hook->get_render_target_manager()->get_render_target());
+
+        if (viewport_rt_provider == nullptr) {
+            SPDLOG_INFO_EVERY_N_SEC(1, "No viewport RT provider, skipping!");
+            return call_orig();
+        }
+    
+        slate_resource = viewport_rt_provider->get_viewport_render_target_texture();
     }
-
-    const auto slate_resource = viewport_rt_provider->get_viewport_render_target_texture();
 
     if (slate_resource == nullptr) {
         SPDLOG_INFO_EVERY_N_SEC(1, "No slate resource, skipping!");
@@ -5599,13 +5838,13 @@ void* FFakeStereoRenderingHook::slate_draw_window_render_thread(void* renderer, 
 
     // To be seen if we need to resort to a MidHook on this function if the parameters
     // are wildly different between UE versions.
-    const auto ret = g_hook->m_slate_thread_hook.call<void*>(renderer, command_list, viewport_info, elements, params, unk1, unk2);
+    const auto ret = g_hook->m_slate_thread_hook.call<void*>(renderer, a2, a3, a4, params, unk1, unk2);
 
     // Restore the old texture.
     slate_resource->get_mutable_resource() = old_texture;
 
     for (auto& mod : mods) {
-        mod->on_post_slate_draw_window(renderer, command_list, viewport_info);
+        mod->on_post_slate_draw_window(renderer, a2, viewport_info);
     }
     
     // After this we copy over the texture and clear it in the present hook. doing it here just seems to crash sometimes.
