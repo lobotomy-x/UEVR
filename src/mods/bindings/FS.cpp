@@ -39,7 +39,42 @@ std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::stri
 
 namespace api::fs {
 namespace detail {
-::fs::path get_datadir(std::string wanted_subdir = "") {
+::fs::path get_datadir(std::string wanted_subdir = "") {  
+
+/* 
+local user_dir
+local uevr_dir
+local data_dir
+local game_name
+local input = ""
+local kismet
+uevr.lua.add_script_panel("Loopholes", function()
+        -- get a full path to any files on the system, e.g. to pass to 3rd party lua dll
+        kismet = uevr.api : find_uobject("Class /Script/Engine.KismetSystemLibrary"): get_class_default_object() 
+        if kismet then user_dir = user_dir or kismet:GetPlatformUserName() 
+            if user_dir then uevr_dir = uevr_dir or
+                 ("C:/users/"..user_dir.."/AppData/Roaming/UnrealVRMod") 
+                if uevr_dir then game_name = game_name or 
+                    kismet:GetGameName() 
+                    if game_name then 
+                        data_dir = data_dir or (uevr_dir.."/"..game_name.."-Win64-Shipping/".."data")
+                     end 
+                 end 
+            end 
+        local c, nt, s1, s2 = imgui.input_text("URL", input) if c then input = nt end 
+        if imgui.button("Launch") then 
+            -- can be used to open files and probably some other tricks
+            kismet:LaunchURL(input) 
+        end 
+        imgui.text(data_dir or "") 
+        imgui.text(user_dir or "") 
+        imgui.text(uevr_dir or "")
+        imgui.text(data_dir or "") 
+        imgui.text(game_name or "")
+end)
+*/
+
+
     static const std::string modpath = []() {
         std::string result{};
         result.resize(1024, 0);

@@ -1648,6 +1648,42 @@ UEVR_OpenXRData g_openxr_data {
     uevr::openxr::get_view_space
 };
 
+namespace uevr {
+namespace api {
+                   /// <summary>
+/// Request the creation of a separate script state from the main script state
+/// </summary>
+/// <returns>the lua state of the new script state</returns>
+lua_State* create_script_state() {
+    return LuaLoader::get()->create_state();
+}
+/// <summary>
+/// Request the destruction of the script_state belonging to the lua state in question
+/// </summary>
+void destroy_script_state(lua_State* lua_state) {
+    LuaLoader::get()->delete_state(lua_state);
+}
+
+bool on_lua_state_created(LuaStateCreatedCb cb) {
+    if (cb == nullptr) {
+        return false;
+    }
+
+    return LuaLoader::get()->add_on_lua_state_created(cb);
+}
+
+bool on_lua_state_destroyed(LuaStateDestroyedCb cb) {
+    if (cb == nullptr) {
+        return false;
+    }
+
+
+    return LuaLoader::get()->add_on_lua_state_destroyed(cb);
+}
+
+}
+}
+
 UEVR_LuaData g_lua_data {
     .get_lua_state = []() -> lua_State* {
         auto& ll = LuaLoader::get();

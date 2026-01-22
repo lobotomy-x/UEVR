@@ -3949,6 +3949,17 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
     const auto inner_c_type = utility::narrow(inner_c->get_name().to_string());
 
     switch (utility::hash(inner_c_type)) {
+    case L"NameProperty"_fnv: {  
+        const auto& array_obj = *(sdk::TArray<sdk::FName*>*)((uintptr_t)addr + prop->get_offset());
+
+        for (auto obj : array_obj) {
+        const auto wstr = obj.to_string();
+        const auto str = utility::narrow(wstr);
+
+        ImGui::Text("%s: ", str.data());
+    }
+     break;
+    }
     case "InterfaceProperty"_fnv:
     case "ObjectProperty"_fnv:
     {

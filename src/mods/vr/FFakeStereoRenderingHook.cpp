@@ -128,7 +128,7 @@ void FFakeStereoRenderingHook::on_draw_ui() {
             m_tracking_system_hook->on_draw_ui();
         }
 
-#if 0
+//#if 0
         if (ImGui::Button("Spawn scene capture")) {
             get_render_target_manager()->create_scene_capture();
         }
@@ -156,7 +156,7 @@ void FFakeStereoRenderingHook::on_draw_ui() {
             }
         }
         ImGui::Text("Scene Capture Texture: %s", status ? "Exists" : "Does not exist");
-#endif
+//#endif
 
         auto& data = m_viewport_rt_hook_data;
         std::scoped_lock _{data.retaddr_mutex};

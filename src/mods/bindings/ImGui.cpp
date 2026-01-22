@@ -24,14 +24,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
 #include "../LuaLoader.hpp"
 #include "Framework.hpp"
 #include "utility/ImGui.hpp"
-
+#include <sdk/UTexture.hpp>
+#include <sdk/FRenderResource.hpp>
+#include <sdk/FTexture.hpp>
+#include <sdk/FTextureRenderTargetResource.hpp>
+ #include <sdk/FTextureResource.hpp>
 #include "ImGui.hpp"
+// set the imgui texture pointer to our own data format
+// borrowed this trick from otis_inf's reshade shadertoggler
+#define ImTextureID UEVR_FRHITexture2DHandle
 
 namespace api::imgui {
 int32_t g_disabled_counts{0};
@@ -45,7 +53,7 @@ void cleanup() {
 }
 
 ImVec2 create_imvec2(sol::object obj) {
-    ImVec2 out{ 0.0f, 0.0f };
+    ImVec2 out{0.0f, 0.0f};
 
     if (obj.is<Vector2f>()) {
         auto vec = obj.as<Vector2f>();
@@ -58,7 +66,7 @@ ImVec2 create_imvec2(sol::object obj) {
             out.x = table.get<float>(1);
             out.y = table.get<float>(2);
         } else {
-            throw sol::error{ "Invalid table passed. Table size must be 2." };
+            throw sol::error{"Invalid table passed. Table size must be 2."};
         }
     } else if (obj.is<Vector3f>()) {
         auto vec = obj.as<Vector3f>();
@@ -68,13 +76,13 @@ ImVec2 create_imvec2(sol::object obj) {
         auto vec = obj.as<Vector4f>();
         out.x = vec.x;
         out.y = vec.y;
-    }
+    } 
 
     return out;
 };
 
 ImVec4 create_imvec4(sol::object obj) {
-    ImVec4 out{ 0.0f, 0.0f, 0.0f, 0.0f };
+    ImVec4 out{0.0f, 0.0f, 0.0f, 0.0f};
 
     if (obj.is<Vector4f>()) {
         auto vec = obj.as<Vector4f>();
@@ -91,21 +99,88 @@ ImVec4 create_imvec4(sol::object obj) {
             out.z = table.get<float>(3);
             out.w = table.get<float>(4);
         } else {
-            throw sol::error{ "Invalid table passed. Table size must be 4." };
+            throw sol::error{"Invalid table passed. Table size must be 4."};
         }
     }
 
     return out;
 };
 
-bool button(const char* label, sol::object size_object) {
+// unify all color accepting functions (previously couldn't take tables directly and choice of vector or hex color was somewhat arbitrary)
+ImVec4 create_imvec4_color(sol::object obj) {
+    ImVec4 out{1.0f, 1.0f, 1.0f, 1.0f};
+
+    if (obj.is<unsigned int>()) {
+        auto _uint = obj.as<unsigned int>();
+        auto r = _uint & 0xFF;
+        auto g = (_uint >> 8) & 0xFF;
+        auto b = (_uint >> 16) & 0xFF;
+        auto a = (_uint >> 24) & 0xFF;
+        out.x = (float)r / 255.0f;
+        out.y = (float)g / 255.0f;
+        out.z = (float)b / 255.0f;
+        out.w = (float)a / 255.0f;
+    } else if (obj.is<Vector4f>()) {
+        auto vec = obj.as<Vector4f>();
+        out.x = vec.x;
+        out.y = vec.y;
+        out.z = vec.z;
+        out.w = vec.w;
+    } else if (obj.is<sol::table>()) {
+        auto table = obj.as<sol::table>();
+        if (table.size() == 4) {
+            out.x = table.get<float>(1);
+            out.y = table.get<float>(2);
+            out.z = table.get<float>(3);
+            out.w = table.get<float>(4);
+        } else {
+            throw sol::error{"Invalid table passed. Table size must be 4."};
+        }
+    }
+    return out;
+};
+
+
+
+// unify all color accepting functions (previously couldn't take tables directly and choice of vector or hex color was somewhat arbitrary)
+ImU32 create_imu32_color(sol::object obj) {
+    ImVec4 out{1.0f, 1.0f, 1.0f, 1.0f};
+
+    if (obj.is<unsigned int>()) {
+        return obj.as<ImU32>();
+    } 
+    else if (obj.is<Vector4f>()) {
+      auto r = math.floor(math.max(0, math.min(255, vec.x * 255 + 0.5)))
+      auto g = math.floor(math.max(0, math.min(255, vec.y * 255 + 0.5)))
+      auto b = math.floor(math.max(0, math.min(255, vec.z * 255 + 0.5)))
+      auto a = math.floor(math.max(0, math.min(255, vec.w * 255 + 0.5)))
+return (a << 24) | (b << 16) | (g << 8) | r
+    } else if (obj.is<sol::table>()) {
+        auto table = obj.as<sol::table>();
+        if (table.size() == 4) {
+            out.x = table.get<float>(1);
+            out.y = table.get<float>(2);
+            out.z = table.get<float>(3);
+            out.w = table.get<float>(4);
+        } else {
+            throw sol::error{"Invalid table passed. Table size must be 4."};
+        }
+    }
+    return out;
+};
+// Use buttonex to allow passing flags, e.g. hold to repeat
+bool button(const char* label, sol::object size_object, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
 
     const auto size = create_imvec2(size_object);
+    ImGuiButtonFlags flags = 0;
 
-    return ImGui::Button(label, size);
+    if (flags_object.is<int>()) {
+        flags = (ImGuiButtonFlags)(flags_object.as<int>());
+    }
+    return ImGui::ButtonEx(label, size, flags);
 }
 
 bool small_button(const char* label) {
@@ -140,26 +215,143 @@ bool arrow_button(const char* str_id, int dir) {
     return ImGui::ArrowButton(str_id, (ImGuiDir)dir);
 }
 
-void text(const char* text) {
+
+#if LUA_DEBUG
+void show_metrics_window(bool enabled){
+    ImGui::ShowMetricsWindow(enabled);
+}
+void show_font_atlas(){
+    ImGui::ShowFontAtlas() {}
+}
+
+
+void show_debug_log_window(bool enabled){
+    ImGui::ShowDebugLogWindow(enabled);
+}
+void show_stack_tool_window(bool enabled){
+    ImGui::ShowStackToolWindow(enabled);
+
+}
+
+
+void show_font_selector(const char* label){
+    ImGui::ShowFontSelector(label);
+}
+
+void show_demo_window(bool enabled) {
+    ImGui::ShowDemoWindow(enabled);
+}
+
+
+#endif 
+bool begin_drag_drop_source(sol::object flags_object) {
+    
+    ImGuiDragDropFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiDragDropFlags)(flags_object.as<int>());
+    }
+   return ImGui::BeginDragDropSource(flags);
+}
+ 
+void end_drag_drop_source() {
+    ImGui::EndDragDropSource();
+}
+                       
+bool set_drag_drop_payload(const char* type, sol::object data) {
+    return ImGui::SetDragDropPayload(type, data, sizeof(data),  ImGuiCond_Always );
+}
+
+bool is_payload_accepted(){
+    return ImGui::IsDragDropPayloadBeingAccepted();
+}
+
+sol::object accept_payload(const char* type, sol::object flags_object) {
+  ImGuiDragDropFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiDragDropFlags)(flags_object.as<int>());
+    }
+    ImGuiPayload* payload = ImGui::AcceptDragDropPayload(type, flags);
+    return payload->Data;                                                                                                                    
+}
+
+
+ bool begin_drag_drop_target() {
+
+   return ImGui::BeginDragDropTarget();
+}
+
+void end_drag_drop_target() {
+    ImGui::EndDragDropTarget();
+}
+
+void render_drag_drop(sol::object rect_start, sol::object rect_end) {
+   const auto rectstart = create_imvec2(rect_start);
+   const auto rectend = create_imvec2(rect_end);
+    ImRect bb (rectstart, rectend);
+    ImGui::RenderDragDropTargetRect(bb);
+ 
+}
+                                                         
+void accept_drag_drop() {
+    ImGui::AcceptDragDropPayload();
+}
+
+void text(const char* text, sol::object flags_object) {
+    if (text == nullptr) {
+        text = "";
+    }
+    ImGuiTextFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiTextFlags)(flags_object.as<int>());
+    }
+    if (flags == 0)
+        flags = ImGuiTextFlags_NoWidthForLargeClippedText;
+    ImGui::TextEx(text, NULL, flags);
+}
+
+void text_colored(const char* text, sol::object color) {
     if (text == nullptr) {
         text = "";
     }
 
-    ImGui::TextUnformatted(text);
+    const auto out_color = create_imvec4_color(color);
+
+    ImGui::TextColored(out_color, text);
 }
 
-void text_colored(const char* text, unsigned int color) {
+
+void bullet() {
+    ImGui::Bullet();
+}
+
+void bullet_text(const char* text) {
     if (text == nullptr) {
         text = "";
     }
-
-    auto r = color & 0xFF;
-    auto g = (color >> 8) & 0xFF;
-    auto b = (color >> 16) & 0xFF;
-    auto a = (color >> 24) & 0xFF;
-
-    ImGui::TextColored(ImVec4{ (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f }, text);
+    ImGui::BulletText(text);
 }
+
+void label_text(const char* label, const char* fmt) {
+    ImGui::LabelText(label, fmt);
+}
+
+// you can also set flags individually to get repeat now
+void push_button_repeat(bool v) {
+    ImGui::PushButtonRepeat(v);
+
+}
+
+void pop_button_repeat() {
+    ImGui::PopButtonRepeat();
+}
+
+void separator_text(const char* text) {
+    ImGui::SeparatorText(text);
+}
+
 
 sol::variadic_results checkbox(sol::this_state s, const char* label, bool v) {
     if (label == nullptr) {
@@ -176,12 +368,19 @@ sol::variadic_results checkbox(sol::this_state s, const char* label, bool v) {
     return results;
 }
 
-sol::variadic_results drag_float(sol::this_state s, const char* label, float v, float v_speed, float v_min, float v_max, const char* display_format = "%.3f") {
+sol::variadic_results drag_float(sol::this_state s, const char* label, float v, float v_speed, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::DragFloat(label, &v, v_speed, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::DragFloat(label, &v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -191,12 +390,19 @@ sol::variadic_results drag_float(sol::this_state s, const char* label, float v, 
     return results;
 }
 
-sol::variadic_results drag_float2(sol::this_state s, const char* label, Vector2f v, float v_speed, float v_min, float v_max, const char* display_format = "%.3f") {
+sol::variadic_results drag_float2(sol::this_state s, const char* label, Vector2f v, float v_speed, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::DragFloat2(label, (float*)&v, v_speed, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::DragFloat2(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -206,12 +412,19 @@ sol::variadic_results drag_float2(sol::this_state s, const char* label, Vector2f
     return results;
 }
 
-sol::variadic_results drag_float3(sol::this_state s, const char* label, Vector3f v, float v_speed, float v_min, float v_max, const char* display_format = "%.3f") {
+sol::variadic_results drag_float3(sol::this_state s, const char* label, Vector3f v, float v_speed, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::DragFloat3(label, (float*)&v, v_speed, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::DragFloat3(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -221,13 +434,19 @@ sol::variadic_results drag_float3(sol::this_state s, const char* label, Vector3f
     return results;
 }
 
-
-sol::variadic_results drag_float4(sol::this_state s, const char* label, Vector4f v, float v_speed, float v_min, float v_max, const char* display_format = "%.3f") {
+sol::variadic_results drag_float4(sol::this_state s, const char* label, Vector4f v, float v_speed, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::DragFloat4(label, (float*)&v, v_speed, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::DragFloat4(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -237,12 +456,19 @@ sol::variadic_results drag_float4(sol::this_state s, const char* label, Vector4f
     return results;
 }
 
-sol::variadic_results drag_int(sol::this_state s, const char* label, int v, float v_speed, int v_min, int v_max, const char* display_format = "%d") {
+sol::variadic_results drag_int(sol::this_state s, const char* label, int v, float v_speed, int v_min, int v_max,
+    const char* display_format = "%d", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::DragInt(label, &v, v_speed, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::DragInt(label, &v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -252,12 +478,19 @@ sol::variadic_results drag_int(sol::this_state s, const char* label, int v, floa
     return results;
 }
 
-sol::variadic_results slider_float(sol::this_state s, const char* label, float v, float v_min, float v_max, const char* display_format = "%.3f") {
+sol::variadic_results slider_float(sol::this_state s, const char* label, float v, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::SliderFloat(label, &v, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::SliderFloat(label, &v, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -267,13 +500,19 @@ sol::variadic_results slider_float(sol::this_state s, const char* label, float v
     return results;
 }
 
-
-sol::variadic_results slider_int(sol::this_state s, const char* label, int v, int v_min, int v_max, const char* display_format = "%d") {
+sol::variadic_results slider_int(
+    sol::this_state s, const char* label, int v, int v_min, int v_max, const char* display_format = "%d", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
-    auto changed = ImGui::SliderInt(label, &v, v_min, v_max, display_format);
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::SliderInt(label, &v, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -282,13 +521,35 @@ sol::variadic_results slider_int(sol::this_state s, const char* label, int v, in
 
     return results;
 }
+//
+// InputFloat(
+// InputFloat2
+// InputFloat3
+// InputFloat4
 
-sol::variadic_results input_text(sol::this_state s, const char* label, const std::string& v, ImGuiInputTextFlags flags) {
+// InputInt
+
+// sol::variadic_results input_scalar(sol::this_state s, const char* label, ImGuiDataType data_type, void* p_data, const void* p_step =
+// NULL,
+//     const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0);)
+
+//   IMGUI_API bool Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0,
+// const ImVec2& size = ImVec2(0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so
+//                                    // you can modify your selection state. size.x==0.0: use remaining width, size.x>0.0: specify width.
+//                                    // size.y==0.0: use label height, size.y>0.0: specify height
+
+sol::variadic_results input_text(
+    sol::this_state s, const char* label, const std::string& v, ImGuiInputTextFlags flags /*, sol::object callback_object*/) {
     flags |= ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_CallbackAlways;
 
     if (label == nullptr) {
         label = "";
     }
+    // ImGuiInputTextCallback callback {};
+
+    // if (callback_object) {
+    //     flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    // }
 
     static std::string buffer{""};
     buffer = v;
@@ -319,7 +580,8 @@ sol::variadic_results input_text(sol::this_state s, const char* label, const std
     return results;
 }
 
-sol::variadic_results input_text_multiline(sol::this_state s, const char* label, const std::string& v, sol::object size_obj, ImGuiInputTextFlags flags) {
+sol::variadic_results input_text_multiline(
+    sol::this_state s, const char* label, const std::string& v, sol::object size_obj, ImGuiInputTextFlags flags) {
     flags |= ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_CallbackAlways;
 
     if (label == nullptr) {
@@ -357,7 +619,6 @@ sol::variadic_results input_text_multiline(sol::this_state s, const char* label,
     return results;
 }
 
-
 sol::variadic_results combo(sol::this_state s, const char* label, sol::object selection, sol::table values) {
     if (label == nullptr) {
         label = "";
@@ -380,7 +641,7 @@ sol::variadic_results combo(sol::this_state s, const char* label, sol::object se
     auto selection_changed = false;
 
     if (ImGui::BeginCombo(label, preview_value)) {
-        //for (auto i = 1u; i <= values.size(); ++i) {
+        // for (auto i = 1u; i <= values.size(); ++i) {
         for (auto& [key, val] : values) {
             auto val_at_k = values[key].get<sol::object>();
 
@@ -405,31 +666,54 @@ sol::variadic_results combo(sol::this_state s, const char* label, sol::object se
     return results;
 }
 
-bool tree_node(const char* label) {
+bool tree_node(const char* label, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
+    ImGuiTreeNodeFlags flags = 0;
 
-    return ImGui::TreeNode(label);
+    if (flags_object.is<int>()) {
+        flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
+    }
+
+     ImGui::PushID(label);
+    return ImGui::TreeNodeEx(label, flags);
 }
 
-bool tree_node_ptr_id(const void* id, const char* label) {
+bool tree_node_ptr_id(const void* id, const char* label, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
+    // Previously if you call ptr/str id version you would think that does enough
+    // to distinguish items when iterating a table 
+    // it does for the nodes but anything inside the nodes doesn't seem to be covered
+    // and therefore even when using ptr_id the expansion state can be screwed up
+    ImGuiTreeNodeFlags flags = 0;
 
-    return ImGui::TreeNode(id, label);
+    if (flags_object.is<int>()) {
+        flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
+    }
+
+    ImGui::PushID(label);
+    return ImGui::TreeNodeEx(id,flags, label);
 }
 
-bool tree_node_str_id(const char* id, const char* label) {
+bool tree_node_str_id(const char* id, const char* label, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
+    ImGuiTreeNodeFlags flags = 0;
 
-    return ImGui::TreeNode(id, label);
+    if (flags_object.is<int>()) {
+        flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
+    }
+
+    ImGui::PushID(label);
+    return ImGui::TreeNodeEx(id,flags, label);
 }
 
 void tree_pop() {
+    ImGui::PopID();
     ImGui::TreePop();
 }
 
@@ -447,6 +731,104 @@ bool is_item_hovered(sol::object flags_obj) {
     return ImGui::IsItemHovered(flags);
 }
 
+ImGuiID get_active_id() {
+    return ImGui::GetActiveID();
+}
+
+  ImGuiID get_focus_id() {
+    return ImGui::GetFocusID;
+}
+
+
+
+  ImGuiID get_hovered_id() {
+    return ImGui::GetHoveredID;
+}
+
+  ImGuiID get_item_id() {
+    return ImGui::GetItemID();
+}
+
+ void active_item_by_id(sol::object id) {
+       auto ID = imgui::get_id(id);
+        ImGui::ActivateItemByID(id);
+
+ }
+
+  void clear_active_id() {
+     ImGui::ClearActiveID();
+
+
+ }
+
+   void focus_item() {
+     ImGui::FocusItem();
+ }
+
+
+void focus_window() {
+     ImGui::FocusWindow();    
+  
+ }
+
+void text_wrapped(const char* text) {
+     ImGui::TextWrapped(text);
+ }
+
+
+
+
+     //
+//  // This is more or less equivalent to:
+////   if (IsItemHovered() || IsItemActive())
+////       SetKeyOwner(key, GetItemID());
+//// Extensive uses of that (e.g. many calls for a single item) may want to manually perform the tests once and then call SetKeyOwner() multiple times.
+//// More advanced usage scenarios may want to call SetKeyOwner() manually based on different condition.
+//// Worth noting is that only one item can be hovered and only one item can be active, therefore this usage pattern doesn't need to bother with routing and priority.
+//void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
+//{
+//    ImGuiContext& g = *GImGui;
+//    ImGuiID id = g.LastItemData.ID;
+//    if (id == 0 || (g.HoveredId != id && g.ActiveId != id))
+//        return;
+//    if ((flags & ImGuiInputFlags_CondMask_) == 0)
+//        flags |= ImGuiInputFlags_CondDefault_;
+//    if ((g.HoveredId == id && (flags & ImGuiInputFlags_CondHovered)) || (g.ActiveId == id && (flags & ImGuiInputFlags_CondActive)))
+//    {
+//        IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetItemKeyOwner) == 0); // Passing flags not supported by this function!
+//        SetKeyOwner(key, id, flags & ~ImGuiInputFlags_CondMask_);
+//    }
+//}
+//
+//bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
+//{
+//    ImGuiContext& g = *GImGui;
+//
+//    // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
+//    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+//        flags |= ImGuiInputFlags_RouteFocused;
+//    if (!SetShortcutRouting(key_chord, owner_id, flags))
+//        return false;
+//
+//    if (key_chord & ImGuiMod_Shortcut)
+//        key_chord = ConvertShortcutMod(key_chord);
+//    ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
+//    if (g.IO.KeyMods != mods)
+//        return false;
+//
+//    // Special storage location for mods
+//    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+//    if (key == ImGuiKey_None)
+//        key = ConvertSingleModFlagToKey(&g, mods);
+//
+//    if (!IsKeyPressed(key, owner_id, (flags & (ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateMask_))))
+//        return false;
+//    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByShortcut) == 0); // Passing flags not supported by this function!
+//
+//    return true;
+//}
+
+
 bool is_item_active() {
     return ImGui::IsItemActive();
 }
@@ -455,6 +837,37 @@ bool is_item_focused() {
     return ImGui::IsItemFocused();
 }
 
+/*// dock in main panel
+void set_next_window_docked(sol::object condition_obj) {
+    ImGuiCond condition{};
+
+    if (condition_obj.is<int>()) {
+        condition = (ImGuiCond)condition_obj.as<int>();
+    }
+
+    ImGuiID dockID = ImGui::GetID("UEVR_Dockspace");
+    ImGui::SetNextWindowDockID(dockID, condition);
+}*/
+
+/*// I'm not sure how far we'll go with this but I'll at least expose basic dockspace creation to lua
+void set_next_window_dock_id(sol::object dockid, sol::object condition_obj) {
+    ImGuiCond condition{};
+
+    if (condition_obj.is<int>()) {
+        condition = (ImGuiCond)condition_obj.as<int>();
+
+        ImGuiID dockID{};
+        if (dockid.is<int>()) {
+            dockID = ImGui::GetID(dockid.as<int>());
+        } else if (dockid.is<const char*>()) {
+            dockID = ImGui::GetID(dockid.as<const char*>());
+        } else if (dockid.is<void*>()) {
+            dockID = ImGui::GetID(dockid.as<void*>());
+
+            ImGui::SetNextWindowDockID(dockID, condition);
+        }
+    }
+}*/
 bool begin_window(const char* name, sol::object open_obj, ImGuiWindowFlags flags = 0) {
     if (name == nullptr) {
         name = "";
@@ -526,7 +939,8 @@ void end_rect(sol::object additional_size_obj, sol::object rounding_obj) {
     maxs.x += additional_size;
     maxs.y += additional_size;
 
-    ImGui::GetWindowDrawList()->AddRect(mins, maxs, ImGui::GetColorU32(ImGuiCol_Border), ImGui::GetStyle().FrameRounding, ImDrawFlags_RoundCornersAll, 1.0f);
+    ImGui::GetWindowDrawList()->AddRect(
+        mins, maxs, ImGui::GetColorU32(ImGuiCol_Border), ImGui::GetStyle().FrameRounding, ImDrawFlags_RoundCornersAll, 1.0f);
 }
 
 void begin_disabled(sol::object disabled_obj) {
@@ -579,8 +993,13 @@ int load_font(sol::object filepath_obj, int size, sol::object ranges) {
         throw std::runtime_error("Font filepath cannot access parent directories.");
     }
 
+    const auto global_fonts_path = Framework::get_persistent_dir().parent_path() / "UEVR" / "fonts";
+    const auto windows_fonts_path = std::filesystem::path("C :\\WINDOWS\\Fonts");
     const auto fonts_path = Framework::get_persistent_dir() / "fonts";
-    const auto font_path = fonts_path / filepath;
+
+    const auto font_path = std::filesystem::exists(fonts_path / filepath)          ? fonts_path / filepath
+                           : std::filesystem::exists(global_fonts_path / filepath) ? (global_fonts_path / filepath)
+                                                                                   : windows_fonts_path / filepath;
 
     fs::create_directories(fonts_path);
     std::vector<ImWchar> ranges_vec{};
@@ -739,7 +1158,6 @@ sol::variadic_results color_edit(sol::this_state s, const char* label, unsigned 
         flags = (ImGuiColorEditFlags)flags_obj.as<int>();
     }
 
-   
     auto r = color & 0xFF;
     auto g = (color >> 8) & 0xFF;
     auto b = (color >> 16) & 0xFF;
@@ -937,6 +1355,17 @@ bool is_key_released(int key) {
     return ImGui::IsKeyReleased((ImGuiKey)key);
 }
 
+//// okay this isn't imgui obviously but it feels sensible to put in the imgui table for consistency
+// actually on second thought we can just set the UE mouse position
+// but lets add a way to remove the cursor patch to the api in general
+// void set_mouse_pos(int x, int y) {
+//   bool has_cursor_pos_patch = g_framework->has_set_cursor_pos_patch();
+//    if (has_cursor_pos_patch) g_framework->remove_set_cursor_pos_patch( );
+//
+//    SetCursorPos(x, y);
+//  if (has_cursor_pos_patch) g_framework->set_cursor_pos_patch( );
+//}
+
 bool is_mouse_down(int button) {
     return ImGui::IsMouseDown(button);
 }
@@ -952,6 +1381,36 @@ bool is_mouse_released(int button) {
 bool is_mouse_double_clicked(int button) {
     return ImGui::IsMouseDoubleClicked(button);
 }
+
+
+
+//    IMGUI_API bool IsMouseReleasedWithDelay(ImGuiMouseButton button,
+//    float delay); // delayed mouse release (use very sparingly!). Generally used with 'delay >= io.MouseDoubleClickTime' + combined with a
+//                  // 'io.MouseClickedLastCount==1' test. This is a very rarely used UI idiom, but some apps use this: e.g. MS Explorer
+//                  // single click on an icon to rename.
+// IMGUI_API int GetMouseClickedCount(
+//    ImGuiMouseButton button); // return the number of successive mouse-clicks at the time where a click happen (otherwise 0).
+// IMGUI_API bool IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max,
+//    bool clip = true); // is mouse hovering given bounding rect (in screen space). clipped by current clipping settings, but disregarding
+//    of
+//                       // other consideration of focus/window ordering/popup-block.
+// IMGUI_API bool IsMousePosValid(
+//    const ImVec2* mouse_pos = NULL); // by convention we use (-FLT_MAX,-FLT_MAX) to denote that there is no mouse available
+// IMGUI_API bool IsAnyMouseDown();     // [WILL OBSOLETE] is any mouse button held? This was designed for backends, but prefer having
+// backend
+//                                     // maintain a mask of held mouse buttons, because upcoming input queue system will make this invalid.
+// IMGUI_API ImVec2 GetMousePos();      // shortcut to ImGui::GetIO().MousePos provided by user, to be consistent with other calls
+// IMGUI_API ImVec2 GetMousePosOnOpeningCurrentPopup(); // retrieve mouse position at the time of opening popup we have BeginPopup() into
+//                                                     // (helper to avoid user backing that value themselves)
+// IMGUI_API bool IsMouseDragging(
+//    ImGuiMouseButton button, float lock_threshold = -1.0f); // is mouse dragging? (uses io.MouseDraggingThreshold if lock_threshold <
+//    0.0f)
+// IMGUI_API ImVec2 GetMouseDragDelta(ImGuiMouseButton button = 0,
+//    float lock_threshold = -1.0f); // return the delta from the initial clicking position while the mouse button is pressed or was just
+//                                   // released. This is locked and return 0.0f until the mouse moves past a distance threshold at least
+//                                   once
+//                                   // (uses io.MouseDraggingThreshold if lock_threshold < 0.0f)
+// IMGUI_API void ResetMouseDragDelta(ImGuiMouseButton button = 0);
 
 void indent(int indent_width) {
     ImGui::Indent(indent_width);
@@ -1001,6 +1460,30 @@ bool begin_popup(const char* str_id, sol::object flags_obj) {
     return ImGui::BeginPopup(str_id, flags);
 }
 
+// technically was possible to get the input blocking features using the modal flag on normal windows but let's make this available formally
+bool begin_popup_modal(const char* str_id, sol::object open_obj, sol::object flags_obj) {
+
+    bool open = true;
+    bool* open_p = nullptr;
+
+    if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+        open = open_obj.as<bool>();
+        open_p = &open;
+    }
+
+    if (!open) {
+        return false;
+    }
+
+    int flags{0};
+
+    if (flags_obj.is<int>()) {
+        flags = flags_obj.as<int>();
+    }
+
+    return ImGui::BeginPopupModal(str_id, open_p, flags);
+}
+
 bool begin_popup_context_item(const char* str_id, sol::object flags_obj) {
     int flags{1};
 
@@ -1019,18 +1502,33 @@ void close_current_popup() {
     ImGui::CloseCurrentPopup();
 }
 
+void close_non_modal_popups() {
+    ImGui::ClosePopupsExceptModals();
+}
+
 bool is_popup_open(const char* str_id) {
     return ImGui::IsPopupOpen(str_id);
 }
 
-Vector2f calc_text_size(const char* text) {
-    const auto result = ImGui::CalcTextSize(text);
-
+Vector2f calc_text_size(const char* text, sol::object text_end, sol::object double_hash_hides_text, sol::object wrap_width) {
+   
+    auto _text_end = text_end.is<const char*>() ? text_end.as<const char*>() : 0;
+    bool hide_text_after_double_hash = double_hash_hides_text.is<bool>() ? double_hash_hides_text.as<bool>() : false;
+    float text_wrap_width = wrap_width.is<float>() ? wrap_width.as<float>() : -1.0f;
+    const auto result = ImGui::CalcTextSize(text, _text_end, hide_text_after_double_hash, text_wrap_width);
     return Vector2f{
         result.x,
         result.y,
     };
 }
+
+Vector2f get_content_region_available() {
+    const auto result = ImGui::GetContentRegionAvail();
+    return Vector2f {
+            result.x,
+            result.y
+        };
+    }
 
 Vector2f get_window_size() {
     const auto result = ImGui::GetWindowSize();
@@ -1069,6 +1567,38 @@ bool begin_list_box(const char* label, sol::object size_obj) {
 
     return ImGui::BeginListBox(label, size);
 }
+
+//
+//sol::variadic_results list_box(sol::this_state s, const char* label, sol::table items, sol::object selection, sol::object size_obj) {
+//    if (label == nullptr) {
+//        label = "";
+//    }
+//    auto count = items.size();        
+// 
+//    auto space = ImGui::GetContentRegionAvail();
+//    auto size = create_imvec2(size_obj);
+//    
+//    ImGui::PushID(label);
+//    if (ImGui::BeginListBox(label, size)) 
+//    {
+//        auto it = 0;
+//        for (auto& [key, val] : items)
+//        {
+//            try {
+//                    auto id = imgui::get_id(key);
+//                    ImGui::PushID(id);
+//            } 
+//            catch (...) {
+//                        ImGui::PushID(it);
+//            }
+//            
+//            const bool is_selected = (key == selection);
+//            if (ImGui::Selectable(val.as<const char*>, is_selected, ImGuiSelectableFlags_AllowDoubleClick))
+//                if (is_selected)
+//                    ImGui::SetItemDefaultFocus();
+//        ImGui::EndListBox();
+//    }
+//}
 
 void end_list_box() {
     ImGui::EndListBox();
@@ -1134,6 +1664,11 @@ bool menu_item(const char* label, sol::object shortcut_obj, sol::object selected
     return ImGui::MenuItem(label, shortcut, selected, enabled);
 }
 
+// I'll add tab bar stuff if I decide I want it or someone specifically requests it but I think its pointless with docking...
+// tabitem
+// tabbar
+// endtabbar
+
 Vector2f get_display_size() {
     const auto& result = ImGui::GetIO().DisplaySize;
 
@@ -1158,7 +1693,9 @@ void set_next_item_width(float item_width) {
 float calc_item_width() {
     return ImGui::CalcItemWidth();
 }
-
+float calc_item_size() {
+    return ImGui::CalcItemSize();
+}
 void item_size(sol::object pos, sol::object size, sol::object text_baseline_y) {
     if (text_baseline_y.is<float>()) {
         ImGui::ItemSize(ImRect{create_imvec2(pos), create_imvec2(size)}, text_baseline_y.as<float>());
@@ -1181,6 +1718,84 @@ bool item_add(const char* label, sol::object pos, sol::object size) {
     return ImGui::ItemAdd(ImRect{create_imvec2(pos), create_imvec2(size)}, window->GetID(label));
 }
 
+// for tree nodes
+bool is_item_clicked() {
+    return   ImGui::IsItemClicked();
+}      
+
+bool is_item_edited() {
+    return ImGui::IsItemEdited();
+
+}
+                    
+bool is_item_visible()
+{
+    return ImGui::IsItemVisible()
+}
+
+bool is_any_item_hovered()
+{
+    return ImGui::IsAnyItemHovered()
+}
+
+bool is_item_toggled_selection()
+{
+    return ImGui::IsItemToggledSelection()
+}
+
+bool is_any_item_active()
+{
+    return ImGui::IsAnyItemActive()
+}
+
+bool is_any_item_focused()
+{
+    return ImGui::IsAnyItemFocused()
+}
+                
+bool is_item_toggled_open() {
+    return ImGui::IsItemToggledOpen();
+}
+  
+
+void set_next_item_allow_overlap(){
+        ImGui::SetNextItemAllowOverlap();
+}
+
+void push_clip_rect(sol::object min, sol::object max, bool intersect) {
+    ImGui::PushClipRect(create_imvec2(min), create_imvec2(max), intersect);
+}
+
+void pop_clip_rect() {
+    ImGui::PopClipRect();
+}
+
+void push_item_flag(sol::object flags_object, sol::object enabled_obj) {
+    auto flags = 0;
+    if (flags_object.is<int>()) {
+        flags = flags_object.as<int>();
+    }
+    auto enabled = true;
+    if (enabled_obj.is<bool>()) {
+        enabled = enabled_obj.as<bool>();
+    }
+    ImGui::PushItemFlag(flags, enabled);
+}
+
+void pop_item_flag() {
+    ImGui::PopItemFlag();
+}
+
+bool selectable(const char* label, bool selected, sol::object flags_obj) {
+    if (flags_obj.is<int>()) {
+        flags = (ImGuiSelectableFlags)flags_obj.as<int>();
+    }
+    return ImGui::Selectable()
+}
+
+// as the kind of psychopath who actually intentionally used the potential memory leak here to style the GUI, we should not allow that
+// I won't get to it just yet but I'm thinking of taking a pretty heavy handed approach to managing imgui errors
+// since the consequence is almost always program crash
 void push_style_color(int style_color, sol::object color_obj) {
     if (color_obj.is<int>()) {
         ImGui::PushStyleColor((ImGuiCol)style_color, (ImU32)color_obj.as<int>());
@@ -1264,7 +1879,7 @@ const char* get_clipboard() {
     return ImGui::GetClipboardText();
 }
 
-void progress_bar(float progress, sol::object size, const char* overlay ){
+void progress_bar(float progress, sol::object size, const char* overlay) {
     if (overlay == nullptr) {
         overlay = "";
     }
@@ -1369,6 +1984,27 @@ ImGuiTableSortSpecs* table_get_sort_specs() {
 }
 
 // Window Drawlist
+
+ImDrawList* get_window_draw_list() {
+    return ImGui::GetWindowDrawList();
+}
+
+ImDrawList* get_background_draw_list() {
+    return ImGui::GetBackgroundDrawList();
+}
+
+ImDrawList* get_foreground_draw_list() {
+    return ImGui::GetForegroundDrawList();
+}
+
+void draw_image(sol::object image, sol::object min, sol::object max, sol::object uvmin, sol::object uvmax, sol::object color) {
+       if (auto dl = ImGui::GetWindowDrawList(); dl != nullptr) {
+        auto texture = image.as<UEVR_FRHITexture2DHandle>();
+        dl->AddImage(texture, create_imvec2 (min), create_imvec2(max), create_imvec2(uvmin), create_imvec2(uvmax), create_u32_color(color));
+        }
+
+}
+
 void draw_list_path_clear() {
     if (auto dl = ImGui::GetWindowDrawList(); dl != nullptr) {
         dl->PathClear();
@@ -1434,41 +2070,135 @@ void set_scroll_from_pos_y(float local_y, float center_y_ratio = 0.5f) {
 
 namespace api::draw {
 void text(const char* text, float x, float y, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddText(ImVec2{x, y}, color, text);
+    ImGui::GetWindowDrawList()->AddText(ImVec2{x, y}, color, text);
 }
 
 void filled_rect(float x, float y, float w, float h, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{x, y}, ImVec2{x + w, y + h}, color);
+    ImGui::GetWindowDrawList()->AddRectFilled(ImVec2{x, y}, ImVec2{x + w, y + h}, color);
 }
 
 void outline_rect(float x, float y, float w, float h, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddRect(ImVec2{x, y}, ImVec2{x + w, y + h}, color);
+    ImGui::GetWindowDrawList()->AddRect(ImVec2{x, y}, ImVec2{x + w, y + h}, color);
 }
 
 void line(float x1, float y1, float x2, float y2, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddLine(ImVec2{x1, y1}, ImVec2{x2, y2}, color);
+    ImGui::GetWindowDrawList()->AddLine(ImVec2{x1, y1}, ImVec2{x2, y2}, color);
 }
 
 void outline_circle(float x, float y, float radius, ImU32 color, sol::object num_segments) {
     auto segments = num_segments.is<sol::nil_t>() ? 32 : num_segments.as<int>();
 
-    ImGui::GetBackgroundDrawList()->AddCircle(ImVec2{x, y}, radius, color, segments);
+    ImGui::GetWindowDrawList()->AddCircle(ImVec2{x, y}, radius, color, segments);
 }
 
 void filled_circle(float x, float y, float radius, ImU32 color, sol::object num_segments) {
     auto segments = num_segments.is<sol::nil_t>() ? 32 : num_segments.as<int>();
 
-    ImGui::GetBackgroundDrawList()->AddCircleFilled(ImVec2{x, y}, radius, color, segments);
+    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2{x, y}, radius, color, segments);
 }
 
 void outline_quad(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddQuad(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, ImVec2{x4, y4}, color);
+    ImGui::GetWindowDrawList()->AddQuad(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, ImVec2{x4, y4}, color);
 }
 
 void filled_quad(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, ImU32 color) {
-    ImGui::GetBackgroundDrawList()->AddQuadFilled(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, ImVec2{x4, y4}, color);
+    ImGui::GetWindowDrawList()->AddQuadFilled(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, ImVec2{x4, y4}, color);
 }
-} // namespace api::draw
+}
+//
+//ImVec2 world_to_screen(sol::object world_pos_object) {
+//    static auto engine = sdk::UEngine::get();
+//    static auto world = engine->get_world();
+//    static auto player_controller = sdk::UGameplayStatics::get_player_controller(world, 0);
+//    if (world_pos_object.is<Vector3f>()) {
+//        auto& v3f = world_pos_object.as<Vector3f&>();
+//    } else {
+//        return std::nullopt;
+//    }
+//    Vector2f pos = sdk::UGameplayStatics::world_to_screen(player_controller, v3f);
+// 
+//
+//    return imgui::create_imvec2(pos);
+//}
+//
+//void world_text(const char* text, sol::object world_pos_object, ImU32 color = 0xFFFFFFFF) {
+//    auto screen_pos = world_to_screen(world_pos_object);
+//
+//    if (!screen_pos) {
+//        return;
+//    }
+//
+//    auto draw_list = ImGui::GetBackgroundDrawList();
+//    draw_list->AddText(ImVec2{screen_pos->x, screen_pos->y}, color, text);
+//}
+//
+//
+//void sphere(sol::object camera_up, sol::object screen_pos_center, sol::object world_pos_object, float radius, ImU32 color, bool outline) {
+//    Vector3f world_pos{};
+//
+//    if (world_pos_object.is<Vector2f>()) {
+//        auto& v2f = world_pos_object.as<Vector2f&>();
+//        world_pos = Vector3f{v2f.x, v2f.y, 0.0f};
+//    } else if (world_pos_object.is<Vector3f>()) {
+//        auto& v3f = world_pos_object.as<Vector3f&>();
+//        world_pos = Vector3f{v3f.x, v3f.y, v3f.z};
+//    } else if (world_pos_object.is<Vector4f>()) {
+//        auto& v4f = world_pos_object.as<Vector4f&>();
+//        world_pos = Vector3f{v4f.x, v4f.y, v4f.z};
+//    } else {
+//        return;
+//    }
+//
+//    ::imgui::draw_sphere(world_pos, radius, color, outline);
+//}
+//
+//void capsule(sol::object camera_up, sol::object screen_pos_center, sol::object start_pos_object, sol::object end_pos_object, float radius,
+//    ImU32 color, bool outline) {
+//    Vector3f start_pos{};
+//
+//    if (start_pos_object.is<Vector2f>()) {
+//        auto& v2f = start_pos_object.as<Vector2f&>();
+//        start_pos = Vector3f{v2f.x, v2f.y, 0.0f};
+//    } else if (start_pos_object.is<Vector3f>()) {
+//        auto& v3f = start_pos_object.as<Vector3f&>();
+//        start_pos = Vector3f{v3f.x, v3f.y, v3f.z};
+//    } else if (start_pos_object.is<Vector4f>()) {
+//        auto& v4f = start_pos_object.as<Vector4f&>();
+//        start_pos = Vector3f{v4f.x, v4f.y, v4f.z};
+//    } else {
+//        return;
+//    }
+//
+//    Vector3f end_pos{};
+//
+//    if (end_pos_object.is<Vector2f>()) {
+//        auto& v2f = end_pos_object.as<Vector2f&>();
+//        end_pos = Vector3f{v2f.x, v2f.y, 0.0f};
+//    } else if (end_pos_object.is<Vector3f>()) {
+//        auto& v3f = end_pos_object.as<Vector3f&>();
+//        end_pos = Vector3f{v3f.x, v3f.y, v3f.z};
+//    } else if (end_pos_object.is<Vector4f>()) {
+//        auto& v4f = end_pos_object.as<Vector4f&>();
+//        end_pos = Vector3f{v4f.x, v4f.y, v4f.z};
+//    } else {
+//        return;
+//    }
+//
+//    ::imgui::draw_capsule(start_pos, end_pos, radius, color, outline);
+//}
+
+//
+// triangle
+// ellipse
+// ngon
+// bezier
+// image // read from utextures >:)
+// #include "..\pluginloader\FRHITexture2DFunctions.hpp"
+//
+// void texture_image(sol::object utexture) {
+//    const auto native_texture = utexture.is<>() ? flags_obj.as<int>() : 0;
+//}
+//} // namespace api::draw
 
 void bindings::open_imgui(sol::state_view& lua) {
     auto imgui = lua.create_table();
@@ -1563,6 +2293,9 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["end_menu"] = api::imgui::end_menu;
     imgui["menu_item"] = api::imgui::menu_item;
     imgui["get_display_size"] = api::imgui::get_display_size;
+    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
+    imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
+    imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
 
     // Item
     imgui["push_item_width"] = api::imgui::push_item_width;
@@ -1571,6 +2304,8 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["calc_item_width"] = api::imgui::calc_item_width;
     imgui["item_add"] = api::imgui::item_add;
     imgui["item_size"] = api::imgui::item_size;
+    imgui["push_item_flag"] = api::imgui::push_item_flag;
+    imgui["pop_item_flag"] = api::imgui::pop_item_flag;
 
     imgui["push_style_color"] = api::imgui::push_style_color;
     imgui["pop_style_color"] = api::imgui::pop_style_color;
@@ -1590,7 +2325,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
     imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
     imgui["draw_list_path_stroke"] = api::imgui::draw_list_path_stroke;
-    
+
     // SCROLL APIs
     imgui["get_scroll_x"] = api::imgui::get_scroll_x;
     imgui["get_scroll_y"] = api::imgui::get_scroll_y;
@@ -1602,7 +2337,6 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_scroll_here_y"] = api::imgui::set_scroll_here_y;
     imgui["set_scroll_from_pos_x"] = api::imgui::set_scroll_from_pos_x;
     imgui["set_scroll_from_pos_y"] = api::imgui::set_scroll_from_pos_y;
-
 
     // TABLE APIS
     imgui["begin_table"] = api::imgui::begin_table;
@@ -1622,268 +2356,218 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["table_get_column_flags"] = api::imgui::table_get_column_flags;
     imgui["table_set_bg_color"] = api::imgui::table_set_bg_color;
 
-    imgui.new_usertype<ImGuiTableSortSpecs>("TableSortSpecs",
-        "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty,
-        "get_specs", [](ImGuiTableSortSpecs* specs) {
-            std::vector<ImGuiTableColumnSortSpecs*> out {};
+    imgui.new_usertype<ImGuiTableSortSpecs>(
+        "TableSortSpecs", "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty, "get_specs", [](ImGuiTableSortSpecs* specs) {
+            std::vector<ImGuiTableColumnSortSpecs*> out{};
 
             for (int i = 0; i < specs->SpecsCount; ++i) {
                 out.push_back(const_cast<ImGuiTableColumnSortSpecs*>(specs->Specs + i));
             }
 
             return out;
-        }
-    );
-    imgui.new_usertype<ImGuiTableColumnSortSpecs>("TableColumnSortSpecs", 
-        "user_id", &ImGuiTableColumnSortSpecs::ColumnUserID,
-        "column_index", &ImGuiTableColumnSortSpecs::ColumnIndex,
-        "sort_order", &ImGuiTableColumnSortSpecs::SortOrder,
-        "sort_direction", sol::readonly_property([](ImGuiTableColumnSortSpecs* specs){
-            return specs->SortDirection;
-        })
-    );
-    imgui.new_enum("TableFlags",
-        "None", ImGuiTableFlags_None,
-        "Resizable", ImGuiTableFlags_Resizable,
-        "Reorderable", ImGuiTableFlags_Reorderable,
-        "Hideable", ImGuiTableFlags_Hideable,
-        "Sortable", ImGuiTableFlags_Sortable,
-        "NoSavedSettings", ImGuiTableFlags_NoSavedSettings,
-        "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody,
-        "RowBg", ImGuiTableFlags_RowBg,
-        "BordersInnerH", ImGuiTableFlags_BordersInnerH,
-        "BordersOuterH", ImGuiTableFlags_BordersOuterH,
-        "BordersInnerV", ImGuiTableFlags_BordersInnerV,
-        "BordersOuterV", ImGuiTableFlags_BordersOuterV,
-        "BordersH", ImGuiTableFlags_BordersH,
-        "BordersV", ImGuiTableFlags_BordersV,
-        "BordersInner", ImGuiTableFlags_BordersInner,
-        "BordersOuter", ImGuiTableFlags_BordersOuter,
-        "Borders", ImGuiTableFlags_Borders,
-        "NoBordersInBody", ImGuiTableFlags_NoBordersInBody,
-        "NoBordersInBodyUntilResize", ImGuiTableFlags_NoBordersInBodyUntilResize,
-        "SizingFixedFit", ImGuiTableFlags_SizingFixedFit,
-        "SizingFixedSame", ImGuiTableFlags_SizingFixedSame,
-        "SizingStretchProp", ImGuiTableFlags_SizingStretchProp,
-        "SizingStretchSame", ImGuiTableFlags_SizingStretchSame,
-        "NoHostExtendX", ImGuiTableFlags_NoHostExtendX,
-        "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
-        "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible,
-        "PreciseWidths", ImGuiTableFlags_PreciseWidths,
-        "NoClip", ImGuiTableFlags_NoClip,
-        "PadOuterX", ImGuiTableFlags_PadOuterX,
-        "NoPadOuterX", ImGuiTableFlags_NoPadOuterX,
-        "NoPadInnerX", ImGuiTableFlags_NoPadInnerX,
-        "ScrollX", ImGuiTableFlags_ScrollX,
-        "ScrollY", ImGuiTableFlags_ScrollY,
-        "SortMulti", ImGuiTableFlags_SortMulti,
-        "SortTristate", ImGuiTableFlags_SortTristate
-    );
-    imgui.new_enum("ColumnFlags",
-        "None", ImGuiTableColumnFlags_None,                
-        "DefaultHide", ImGuiTableColumnFlags_DefaultHide,         
-        "DefaultSort", ImGuiTableColumnFlags_DefaultSort,         
-        "WidthStretch", ImGuiTableColumnFlags_WidthStretch,        
-        "WidthFixed", ImGuiTableColumnFlags_WidthFixed,          
-        "NoResize", ImGuiTableColumnFlags_NoResize,            
-        "NoReorder", ImGuiTableColumnFlags_NoReorder,           
-        "NoHide", ImGuiTableColumnFlags_NoHide,              
-        "NoClip", ImGuiTableColumnFlags_NoClip,              
-        "NoSort", ImGuiTableColumnFlags_NoSort,              
-        "NoSortAscending", ImGuiTableColumnFlags_NoSortAscending,     
-        "NoSortDescending", ImGuiTableColumnFlags_NoSortDescending,    
-        "NoHeaderWidth", ImGuiTableColumnFlags_NoHeaderWidth,       
-        "PreferSortAscending", ImGuiTableColumnFlags_PreferSortAscending, 
-        "PreferSortDescending", ImGuiTableColumnFlags_PreferSortDescending,
-        "IndentEnable", ImGuiTableColumnFlags_IndentEnable,        
-        "IndentDisable", ImGuiTableColumnFlags_IndentDisable,       
-        "IsEnabled", ImGuiTableColumnFlags_IsEnabled,           
-        "IsVisible", ImGuiTableColumnFlags_IsVisible,           
-        "IsSorted", ImGuiTableColumnFlags_IsSorted,            
-        "IsHovered", ImGuiTableColumnFlags_IsHovered           
-    );
+        });
+    imgui.new_usertype<ImGuiTableColumnSortSpecs>("TableColumnSortSpecs", "user_id", &ImGuiTableColumnSortSpecs::ColumnUserID,
+        "column_index", &ImGuiTableColumnSortSpecs::ColumnIndex, "sort_order", &ImGuiTableColumnSortSpecs::SortOrder, "sort_direction",
+        sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; }));
+    imgui.new_enum("TableFlags", "None", ImGuiTableFlags_None, "Resizable", ImGuiTableFlags_Resizable, "Reorderable",
+        ImGuiTableFlags_Reorderable, "Hideable", ImGuiTableFlags_Hideable, "Sortable", ImGuiTableFlags_Sortable, "NoSavedSettings",
+        ImGuiTableFlags_NoSavedSettings, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody, "RowBg", ImGuiTableFlags_RowBg,
+        "BordersInnerH", ImGuiTableFlags_BordersInnerH, "BordersOuterH", ImGuiTableFlags_BordersOuterH, "BordersInnerV",
+        ImGuiTableFlags_BordersInnerV, "BordersOuterV", ImGuiTableFlags_BordersOuterV, "BordersH", ImGuiTableFlags_BordersH, "BordersV",
+        ImGuiTableFlags_BordersV, "BordersInner", ImGuiTableFlags_BordersInner, "BordersOuter", ImGuiTableFlags_BordersOuter, "Borders",
+        ImGuiTableFlags_Borders, "NoBordersInBody", ImGuiTableFlags_NoBordersInBody, "NoBordersInBodyUntilResize",
+        ImGuiTableFlags_NoBordersInBodyUntilResize, "SizingFixedFit", ImGuiTableFlags_SizingFixedFit, "SizingFixedSame",
+        ImGuiTableFlags_SizingFixedSame, "SizingStretchProp", ImGuiTableFlags_SizingStretchProp, "SizingStretchSame",
+        ImGuiTableFlags_SizingStretchSame, "NoHostExtendX", ImGuiTableFlags_NoHostExtendX, "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
+        "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible, "PreciseWidths", ImGuiTableFlags_PreciseWidths, "NoClip",
+        ImGuiTableFlags_NoClip, "PadOuterX", ImGuiTableFlags_PadOuterX, "NoPadOuterX", ImGuiTableFlags_NoPadOuterX, "NoPadInnerX",
+        ImGuiTableFlags_NoPadInnerX, "ScrollX", ImGuiTableFlags_ScrollX, "ScrollY", ImGuiTableFlags_ScrollY, "SortMulti",
+        ImGuiTableFlags_SortMulti, "SortTristate", ImGuiTableFlags_SortTristate);
+    imgui.new_enum("ColumnFlags", "None", ImGuiTableColumnFlags_None, "DefaultHide", ImGuiTableColumnFlags_DefaultHide, "DefaultSort",
+        ImGuiTableColumnFlags_DefaultSort, "WidthStretch", ImGuiTableColumnFlags_WidthStretch, "WidthFixed",
+        ImGuiTableColumnFlags_WidthFixed, "NoResize", ImGuiTableColumnFlags_NoResize, "NoReorder", ImGuiTableColumnFlags_NoReorder,
+        "NoHide", ImGuiTableColumnFlags_NoHide, "NoClip", ImGuiTableColumnFlags_NoClip, "NoSort", ImGuiTableColumnFlags_NoSort,
+        "NoSortAscending", ImGuiTableColumnFlags_NoSortAscending, "NoSortDescending", ImGuiTableColumnFlags_NoSortDescending,
+        "NoHeaderWidth", ImGuiTableColumnFlags_NoHeaderWidth, "PreferSortAscending", ImGuiTableColumnFlags_PreferSortAscending,
+        "PreferSortDescending", ImGuiTableColumnFlags_PreferSortDescending, "IndentEnable", ImGuiTableColumnFlags_IndentEnable,
+        "IndentDisable", ImGuiTableColumnFlags_IndentDisable, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsVisible",
+        ImGuiTableColumnFlags_IsVisible, "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsHovered", ImGuiTableColumnFlags_IsHovered);
 
     imgui.new_enum("ImGuiKey",
-        
+
         // Keys
-        "Key_None", ImGuiKey_None,
-        "Key_Tab", ImGuiKey_Tab,
-        "Key_LeftArrow", ImGuiKey_LeftArrow,
-        "Key_RightArrow", ImGuiKey_RightArrow,
-        "Key_UpArrow", ImGuiKey_UpArrow,
-        "Key_DownArrow", ImGuiKey_DownArrow,
-        "Key_PageUp", ImGuiKey_PageUp,
-        "Key_PageDown", ImGuiKey_PageDown,
-        "Key_Home", ImGuiKey_Home,
-        "Key_End", ImGuiKey_End,
-        "Key_Insert", ImGuiKey_Insert,
-        "Key_Delete", ImGuiKey_Delete,
-        "Key_Backspace", ImGuiKey_Backspace,
-        "Key_Space", ImGuiKey_Space,
-        "Key_Enter", ImGuiKey_Enter,
-        "Key_Escape", ImGuiKey_Escape,
-        "Key_LeftCtrl", ImGuiKey_LeftCtrl,
-        "Key_LeftShift", ImGuiKey_LeftShift,
-        "Key_LeftAlt", ImGuiKey_LeftAlt,
-        "Key_LeftSuper", ImGuiKey_LeftSuper,
-        "Key_RightCtrl", ImGuiKey_RightCtrl,
-        "Key_RightShift", ImGuiKey_RightShift,
-        "Key_RightAlt", ImGuiKey_RightAlt,
-        "Key_RightSuper", ImGuiKey_RightSuper,
-        "Key_Menu", ImGuiKey_Menu,
-        "Key_0", ImGuiKey_0,
-        "Key_1", ImGuiKey_1,
-        "Key_2", ImGuiKey_2,
-        "Key_3", ImGuiKey_3,
-        "Key_4", ImGuiKey_4,
-        "Key_5", ImGuiKey_5,
-        "Key_6", ImGuiKey_6,
-        "Key_7", ImGuiKey_7,
-        "Key_8", ImGuiKey_8,
-        "Key_9", ImGuiKey_9,
-        "Key_A", ImGuiKey_A,
-        "Key_B", ImGuiKey_B,
-        "Key_C", ImGuiKey_C,
-        "Key_D", ImGuiKey_D,
-        "Key_E", ImGuiKey_E,
-        "Key_F", ImGuiKey_F,
-        "Key_G", ImGuiKey_G,
-        "Key_H", ImGuiKey_H,
-        "Key_I", ImGuiKey_I,
-        "Key_J", ImGuiKey_J,
-        "Key_K", ImGuiKey_K,
-        "Key_L", ImGuiKey_L,
-        "Key_M", ImGuiKey_M,
-        "Key_N", ImGuiKey_N,
-        "Key_O", ImGuiKey_O,
-        "Key_P", ImGuiKey_P,
-        "Key_Q", ImGuiKey_Q,
-        "Key_R", ImGuiKey_R,
-        "Key_S", ImGuiKey_S,
-        "Key_T", ImGuiKey_T,
-        "Key_U", ImGuiKey_U,
-        "Key_V", ImGuiKey_V,
-        "Key_W", ImGuiKey_W,
-        "Key_X", ImGuiKey_X,
-        "Key_Y", ImGuiKey_Y,
-        "Key_Z", ImGuiKey_Z,
-        "Key_F1", ImGuiKey_F1,
-        "Key_F2", ImGuiKey_F2,
-        "Key_F3", ImGuiKey_F3,
-        "Key_F4", ImGuiKey_F4,
-        "Key_F5", ImGuiKey_F5,
-        "Key_F6", ImGuiKey_F6,
-        "Key_F7", ImGuiKey_F7,
-        "Key_F8", ImGuiKey_F8,
-        "Key_F9", ImGuiKey_F9,
-        "Key_F10", ImGuiKey_F10,
-        "Key_F11", ImGuiKey_F11,
-        "Key_F12", ImGuiKey_F12,
-        "Key_Apostrophe", ImGuiKey_Apostrophe,
-        "Key_Comma", ImGuiKey_Comma,
-        "Key_Minus", ImGuiKey_Minus,
-        "Key_Period", ImGuiKey_Period,
-        "Key_Slash", ImGuiKey_Slash,
-        "Key_Semicolon", ImGuiKey_Semicolon,
-        "Key_Equal", ImGuiKey_Equal,
-        "Key_LeftBracket", ImGuiKey_LeftBracket,
-        "Key_Backslash", ImGuiKey_Backslash,
-        "Key_RightBracket", ImGuiKey_RightBracket,
-        "Key_GraveAccent", ImGuiKey_GraveAccent,
-        "Key_CapsLock", ImGuiKey_CapsLock,
-        "Key_ScrollLock", ImGuiKey_ScrollLock,
-        "Key_NumLock", ImGuiKey_NumLock,
-        "Key_PrintScreen", ImGuiKey_PrintScreen,
-        "Key_Pause", ImGuiKey_Pause,
-        "Key_Keypad0", ImGuiKey_Keypad0,
-        "Key_Keypad1", ImGuiKey_Keypad1,
-        "Key_Keypad2", ImGuiKey_Keypad2,
-        "Key_Keypad3", ImGuiKey_Keypad3,
-        "Key_Keypad4", ImGuiKey_Keypad4,
-        "Key_Keypad5", ImGuiKey_Keypad5,
-        "Key_Keypad6", ImGuiKey_Keypad6,
-        "Key_Keypad7", ImGuiKey_Keypad7,
-        "Key_Keypad8", ImGuiKey_Keypad8,
-        "Key_Keypad9", ImGuiKey_Keypad9,
-        "Key_KeypadDecimal", ImGuiKey_KeypadDecimal,
-        "Key_KeypadDivide", ImGuiKey_KeypadDivide,
-        "Key_KeypadMultiply", ImGuiKey_KeypadMultiply,
-        "Key_KeypadSubtract", ImGuiKey_KeypadSubtract,
-        "Key_KeypadAdd", ImGuiKey_KeypadAdd,
-        "Key_KeypadEnter", ImGuiKey_KeypadEnter,
-        "Key_KeypadEqual", ImGuiKey_KeypadEqual,
-        "Key_GamepadStart", ImGuiKey_GamepadStart,
-        "Key_GamepadBack", ImGuiKey_GamepadBack,
-        "Key_GamepadFaceLeft", ImGuiKey_GamepadFaceLeft,
-        "Key_GamepadFaceRight", ImGuiKey_GamepadFaceRight,
-        "Key_GamepadFaceUp", ImGuiKey_GamepadFaceUp,
-        "Key_GamepadFaceDown", ImGuiKey_GamepadFaceDown,
-        "Key_GamepadDpadLeft", ImGuiKey_GamepadDpadLeft,
-        "Key_GamepadDpadRight", ImGuiKey_GamepadDpadRight,
-        "Key_GamepadDpadUp", ImGuiKey_GamepadDpadUp,
-        "Key_GamepadDpadDown", ImGuiKey_GamepadDpadDown,
-        "Key_GamepadL1", ImGuiKey_GamepadL1,
-        "Key_GamepadR1", ImGuiKey_GamepadR1,
-        "Key_GamepadL2", ImGuiKey_GamepadL2,
-        "Key_GamepadR2", ImGuiKey_GamepadR2,
-        "Key_GamepadL3", ImGuiKey_GamepadL3,
-        "Key_GamepadR3", ImGuiKey_GamepadR3,
-        "Key_GamepadLStickLeft", ImGuiKey_GamepadLStickLeft,
-        "Key_GamepadLStickRight", ImGuiKey_GamepadLStickRight,
-        "Key_GamepadLStickUp", ImGuiKey_GamepadLStickUp,
-        "Key_GamepadLStickDown", ImGuiKey_GamepadLStickDown,
-        "Key_GamepadRStickLeft", ImGuiKey_GamepadRStickLeft,
-        "Key_GamepadRStickRight", ImGuiKey_GamepadRStickRight,
-        "Key_GamepadRStickUp", ImGuiKey_GamepadRStickUp,
-        "Key_GamepadRStickDown", ImGuiKey_GamepadRStickDown,
-        "Key_MouseLeft", ImGuiKey_MouseLeft,
-        "Key_MouseRight", ImGuiKey_MouseRight,
-        "Key_MouseMiddle", ImGuiKey_MouseMiddle,
-        "Key_MouseX1", ImGuiKey_MouseX1,
-        "Key_MouseX2", ImGuiKey_MouseX2,
-        "Key_MouseWheelX", ImGuiKey_MouseWheelX,
+        "Key_None", ImGuiKey_None, "Key_Tab", ImGuiKey_Tab, "Key_LeftArrow", ImGuiKey_LeftArrow, "Key_RightArrow", ImGuiKey_RightArrow,
+        "Key_UpArrow", ImGuiKey_UpArrow, "Key_DownArrow", ImGuiKey_DownArrow, "Key_PageUp", ImGuiKey_PageUp, "Key_PageDown",
+        ImGuiKey_PageDown, "Key_Home", ImGuiKey_Home, "Key_End", ImGuiKey_End, "Key_Insert", ImGuiKey_Insert, "Key_Delete", ImGuiKey_Delete,
+        "Key_Backspace", ImGuiKey_Backspace, "Key_Space", ImGuiKey_Space, "Key_Enter", ImGuiKey_Enter, "Key_Escape", ImGuiKey_Escape,
+        "Key_LeftCtrl", ImGuiKey_LeftCtrl, "Key_LeftShift", ImGuiKey_LeftShift, "Key_LeftAlt", ImGuiKey_LeftAlt, "Key_LeftSuper",
+        ImGuiKey_LeftSuper, "Key_RightCtrl", ImGuiKey_RightCtrl, "Key_RightShift", ImGuiKey_RightShift, "Key_RightAlt", ImGuiKey_RightAlt,
+        "Key_RightSuper", ImGuiKey_RightSuper, "Key_Menu", ImGuiKey_Menu, "Key_0", ImGuiKey_0, "Key_1", ImGuiKey_1, "Key_2", ImGuiKey_2,
+        "Key_3", ImGuiKey_3, "Key_4", ImGuiKey_4, "Key_5", ImGuiKey_5, "Key_6", ImGuiKey_6, "Key_7", ImGuiKey_7, "Key_8", ImGuiKey_8,
+        "Key_9", ImGuiKey_9, "Key_A", ImGuiKey_A, "Key_B", ImGuiKey_B, "Key_C", ImGuiKey_C, "Key_D", ImGuiKey_D, "Key_E", ImGuiKey_E,
+        "Key_F", ImGuiKey_F, "Key_G", ImGuiKey_G, "Key_H", ImGuiKey_H, "Key_I", ImGuiKey_I, "Key_J", ImGuiKey_J, "Key_K", ImGuiKey_K,
+        "Key_L", ImGuiKey_L, "Key_M", ImGuiKey_M, "Key_N", ImGuiKey_N, "Key_O", ImGuiKey_O, "Key_P", ImGuiKey_P, "Key_Q", ImGuiKey_Q,
+        "Key_R", ImGuiKey_R, "Key_S", ImGuiKey_S, "Key_T", ImGuiKey_T, "Key_U", ImGuiKey_U, "Key_V", ImGuiKey_V, "Key_W", ImGuiKey_W,
+        "Key_X", ImGuiKey_X, "Key_Y", ImGuiKey_Y, "Key_Z", ImGuiKey_Z, "Key_F1", ImGuiKey_F1, "Key_F2", ImGuiKey_F2, "Key_F3", ImGuiKey_F3,
+        "Key_F4", ImGuiKey_F4, "Key_F5", ImGuiKey_F5, "Key_F6", ImGuiKey_F6, "Key_F7", ImGuiKey_F7, "Key_F8", ImGuiKey_F8, "Key_F9",
+        ImGuiKey_F9, "Key_F10", ImGuiKey_F10, "Key_F11", ImGuiKey_F11, "Key_F12", ImGuiKey_F12, "Key_Apostrophe", ImGuiKey_Apostrophe,
+        "Key_Comma", ImGuiKey_Comma, "Key_Minus", ImGuiKey_Minus, "Key_Period", ImGuiKey_Period, "Key_Slash", ImGuiKey_Slash,
+        "Key_Semicolon", ImGuiKey_Semicolon, "Key_Equal", ImGuiKey_Equal, "Key_LeftBracket", ImGuiKey_LeftBracket, "Key_Backslash",
+        ImGuiKey_Backslash, "Key_RightBracket", ImGuiKey_RightBracket, "Key_GraveAccent", ImGuiKey_GraveAccent, "Key_CapsLock",
+        ImGuiKey_CapsLock, "Key_ScrollLock", ImGuiKey_ScrollLock, "Key_NumLock", ImGuiKey_NumLock, "Key_PrintScreen", ImGuiKey_PrintScreen,
+        "Key_Pause", ImGuiKey_Pause, "Key_Keypad0", ImGuiKey_Keypad0, "Key_Keypad1", ImGuiKey_Keypad1, "Key_Keypad2", ImGuiKey_Keypad2,
+        "Key_Keypad3", ImGuiKey_Keypad3, "Key_Keypad4", ImGuiKey_Keypad4, "Key_Keypad5", ImGuiKey_Keypad5, "Key_Keypad6", ImGuiKey_Keypad6,
+        "Key_Keypad7", ImGuiKey_Keypad7, "Key_Keypad8", ImGuiKey_Keypad8, "Key_Keypad9", ImGuiKey_Keypad9, "Key_KeypadDecimal",
+        ImGuiKey_KeypadDecimal, "Key_KeypadDivide", ImGuiKey_KeypadDivide, "Key_KeypadMultiply", ImGuiKey_KeypadMultiply,
+        "Key_KeypadSubtract", ImGuiKey_KeypadSubtract, "Key_KeypadAdd", ImGuiKey_KeypadAdd, "Key_KeypadEnter", ImGuiKey_KeypadEnter,
+        "Key_KeypadEqual", ImGuiKey_KeypadEqual, "Key_GamepadStart", ImGuiKey_GamepadStart, "Key_GamepadBack", ImGuiKey_GamepadBack,
+        "Key_GamepadFaceLeft", ImGuiKey_GamepadFaceLeft, "Key_GamepadFaceRight", ImGuiKey_GamepadFaceRight, "Key_GamepadFaceUp",
+        ImGuiKey_GamepadFaceUp, "Key_GamepadFaceDown", ImGuiKey_GamepadFaceDown, "Key_GamepadDpadLeft", ImGuiKey_GamepadDpadLeft,
+        "Key_GamepadDpadRight", ImGuiKey_GamepadDpadRight, "Key_GamepadDpadUp", ImGuiKey_GamepadDpadUp, "Key_GamepadDpadDown",
+        ImGuiKey_GamepadDpadDown, "Key_GamepadL1", ImGuiKey_GamepadL1, "Key_GamepadR1", ImGuiKey_GamepadR1, "Key_GamepadL2",
+        ImGuiKey_GamepadL2, "Key_GamepadR2", ImGuiKey_GamepadR2, "Key_GamepadL3", ImGuiKey_GamepadL3, "Key_GamepadR3", ImGuiKey_GamepadR3,
+        "Key_GamepadLStickLeft", ImGuiKey_GamepadLStickLeft, "Key_GamepadLStickRight", ImGuiKey_GamepadLStickRight, "Key_GamepadLStickUp",
+        ImGuiKey_GamepadLStickUp, "Key_GamepadLStickDown", ImGuiKey_GamepadLStickDown, "Key_GamepadRStickLeft", ImGuiKey_GamepadRStickLeft,
+        "Key_GamepadRStickRight", ImGuiKey_GamepadRStickRight, "Key_GamepadRStickUp", ImGuiKey_GamepadRStickUp, "Key_GamepadRStickDown",
+        ImGuiKey_GamepadRStickDown, "Key_MouseLeft", ImGuiKey_MouseLeft, "Key_MouseRight", ImGuiKey_MouseRight, "Key_MouseMiddle",
+        ImGuiKey_MouseMiddle, "Key_MouseX1", ImGuiKey_MouseX1, "Key_MouseX2", ImGuiKey_MouseX2, "Key_MouseWheelX", ImGuiKey_MouseWheelX,
         "Key_MouseWheelY", ImGuiKey_MouseWheelY,
 
         // Modifiers
-        "Mod_None", ImGuiMod_None,
-        "Mod_Ctrl", ImGuiMod_Ctrl,
-        "Mod_Shift", ImGuiMod_Shift,
-        "Mod_Alt", ImGuiMod_Alt,
-        "Mod_Super", ImGuiMod_Super,
-        "Mod_Mask_", ImGuiMod_Mask_
-    );
+        "Mod_None", ImGuiMod_None, "Mod_Ctrl", ImGuiMod_Ctrl, "Mod_Shift", ImGuiMod_Shift, "Mod_Alt", ImGuiMod_Alt, "Mod_Super",
+        ImGuiMod_Super, "Mod_Mask_", ImGuiMod_Mask_);
 
-    imgui.new_enum("ImGuiStyleVar",
-        "Alpha", ImGuiStyleVar_Alpha,
-        "DisabledAlpha", ImGuiStyleVar_DisabledAlpha,
-        "WindowPadding", ImGuiStyleVar_WindowPadding,
-        "WindowRounding", ImGuiStyleVar_WindowRounding,
-        "WindowBorderSize", ImGuiStyleVar_WindowBorderSize,
-        "WindowMinSize", ImGuiStyleVar_WindowMinSize,
-        "WindowTitleAlign", ImGuiStyleVar_WindowTitleAlign,
-        "ChildRounding", ImGuiStyleVar_ChildRounding,
-        "ChildBorderSize", ImGuiStyleVar_ChildBorderSize,
-        "PopupRounding", ImGuiStyleVar_PopupRounding,
-        "PopupBorderSize", ImGuiStyleVar_PopupBorderSize,
-        "FramePadding", ImGuiStyleVar_FramePadding,
-        "FrameRounding", ImGuiStyleVar_FrameRounding,
-        "FrameBorderSize", ImGuiStyleVar_FrameBorderSize,
-        "ItemSpacing", ImGuiStyleVar_ItemSpacing,
-        "ItemInnerSpacing", ImGuiStyleVar_ItemInnerSpacing,
-        "IndentSpacing", ImGuiStyleVar_IndentSpacing,
-        "CellPadding", ImGuiStyleVar_CellPadding,
-        "ScrollbarSize", ImGuiStyleVar_ScrollbarSize,
-        "ScrollbarRounding", ImGuiStyleVar_ScrollbarRounding,
-        "GrabMinSize", ImGuiStyleVar_GrabMinSize,
-        "GrabRounding", ImGuiStyleVar_GrabRounding,
-        "TabRounding", ImGuiStyleVar_TabRounding,
-        "ButtonTextAlign", ImGuiStyleVar_ButtonTextAlign,
-        "SelectableTextAlign", ImGuiStyleVar_SelectableTextAlign,
-        "SeparatorTextBorderSize", ImGuiStyleVar_SeparatorTextBorderSize,
-        "SeparatorTextAlign", ImGuiStyleVar_SeparatorTextAlign,
-        "SeparatorTextPadding", ImGuiStyleVar_SeparatorTextPadding,
-        "COUNT", ImGuiStyleVar_COUNT
-    );
+    imgui.new_enum("ImGuiStyleVar", "Alpha", ImGuiStyleVar_Alpha, "DisabledAlpha", ImGuiStyleVar_DisabledAlpha, "WindowPadding",
+        ImGuiStyleVar_WindowPadding, "WindowRounding", ImGuiStyleVar_WindowRounding, "WindowBorderSize", ImGuiStyleVar_WindowBorderSize,
+        "WindowMinSize", ImGuiStyleVar_WindowMinSize, "WindowTitleAlign", ImGuiStyleVar_WindowTitleAlign, "ChildRounding",
+        ImGuiStyleVar_ChildRounding, "ChildBorderSize", ImGuiStyleVar_ChildBorderSize, "PopupRounding", ImGuiStyleVar_PopupRounding,
+        "PopupBorderSize", ImGuiStyleVar_PopupBorderSize, "FramePadding", ImGuiStyleVar_FramePadding, "FrameRounding",
+        ImGuiStyleVar_FrameRounding, "FrameBorderSize", ImGuiStyleVar_FrameBorderSize, "ItemSpacing", ImGuiStyleVar_ItemSpacing,
+        "ItemInnerSpacing", ImGuiStyleVar_ItemInnerSpacing, "IndentSpacing", ImGuiStyleVar_IndentSpacing, "CellPadding",
+        ImGuiStyleVar_CellPadding, "ScrollbarSize", ImGuiStyleVar_ScrollbarSize, "ScrollbarRounding", ImGuiStyleVar_ScrollbarRounding,
+        "GrabMinSize", ImGuiStyleVar_GrabMinSize, "GrabRounding", ImGuiStyleVar_GrabRounding, "TabRounding", ImGuiStyleVar_TabRounding,
+        "ButtonTextAlign", ImGuiStyleVar_ButtonTextAlign, "SelectableTextAlign", ImGuiStyleVar_SelectableTextAlign,
+        "SeparatorTextBorderSize", ImGuiStyleVar_SeparatorTextBorderSize, "SeparatorTextAlign", ImGuiStyleVar_SeparatorTextAlign,
+        "SeparatorTextPadding", ImGuiStyleVar_SeparatorTextPadding, "COUNT", ImGuiStyleVar_COUNT);
+
+    imgui.new_usertype<ImDrawList>(
+        "ImDrawList", "push_clip_rect",
+        [](ImDrawList* draw_list, sol::object min, sol::object max, bool intersect_with_current_clip_rect) {
+            draw_list->PushClipRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), intersect_with_current_clip_rect);
+        },
+        "push_clip_rect_fullscreen", &ImDrawList::PushClipRectFullScreen, "pop_clip_rect", &ImDrawList::PopClipRect,
+
+        "add_line",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, uint32_t col, float thickness) {
+            draw_list->AddLine(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), col, thickness);
+        },
+        "add_rect",
+        [](ImDrawList* draw_list, sol::object min, sol::object max, uint32_t col, float rounding, ImDrawFlags flags, float thickness) {
+            draw_list->AddRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), col, rounding, flags, thickness);
+        },
+        "add_rect_filled",
+        [](ImDrawList* draw_list, sol::object min, sol::object max, uint32_t col, float rounding, ImDrawFlags flags) {
+            draw_list->AddRectFilled(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), col, rounding, flags);
+        },
+        "add_rect_filled_multi_color",
+        [](ImDrawList* draw_list, sol::object min, sol::object max, uint32_t col_upr_left, uint32_t col_upr_right, uint32_t col_bot_right,
+            uint32_t col_bot_left) {
+            draw_list->AddRectFilledMultiColor(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), col_upr_left,
+                col_upr_right, col_bot_right, col_bot_left);
+        },
+        "add_quad",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, sol::object p4, uint32_t col, float thickness) {
+            draw_list->AddQuad(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3),
+                ::api::imgui::create_imvec2(p4), col, thickness);
+        },
+        "add_quad_filled",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, sol::object p4, uint32_t col) {
+            draw_list->AddQuadFilled(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3),
+                ::api::imgui::create_imvec2(p4), col);
+        },
+        "add_triangle",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col, float thickness) {
+            draw_list->AddTriangle(
+                ::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, thickness);
+        },
+        "add_triangle_filled",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col) {
+            draw_list->AddTriangleFilled(
+                ::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col);
+        },
+        "add_circle",
+        [](ImDrawList* draw_list, sol::object center, float radius, uint32_t col, int num_segments, float thickness) {
+            draw_list->AddCircle(::api::imgui::create_imvec2(center), radius, col, num_segments, thickness);
+        },
+        "add_circle_filled",
+        [](ImDrawList* draw_list, sol::object center, float radius, uint32_t col, int num_segments) {
+            draw_list->AddCircleFilled(::api::imgui::create_imvec2(center), radius, col, num_segments);
+        },
+        "add_ngon",
+        [](ImDrawList* draw_list, sol::object center, float radius, uint32_t col, int num_segments, float thickness) {
+            draw_list->AddNgon(::api::imgui::create_imvec2(center), radius, col, num_segments, thickness);
+        },
+        "add_ngon_filled",
+        [](ImDrawList* draw_list, sol::object center, float radius, uint32_t col, int num_segments) {
+            draw_list->AddNgonFilled(::api::imgui::create_imvec2(center), radius, col, num_segments);
+        },
+       /* "add_ellipse",
+        [](ImDrawList* draw_list, sol::object center, sol::object radius, uint32_t col, float rot, int num_segments, float thickness) {
+            draw_list->AddEllipse(
+                ::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), col, num_segments, rot, thickness);
+        },
+        "add_ellipse_filled",
+        [](ImDrawList* draw_list, sol::object center, sol::object radius, uint32_t col, float rot, int num_segments) {
+            draw_list->AddEllipseFilled(::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), col, rot, num_segments);
+        },*/
+        "add_text",
+        [](ImDrawList* draw_list, sol::object pos, uint32_t col, const std::string& text) {
+            draw_list->AddText(::api::imgui::create_imvec2(pos), col, text.c_str());
+        },
+        "add_bezier_cubic",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, sol::object p4, uint32_t col, float thickness) {
+            draw_list->AddBezierCubic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3),
+                ::api::imgui::create_imvec2(p4), col, thickness);
+        },
+        "add_bezier_quadratic",
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col, float thickness) {
+            draw_list->AddBezierQuadratic(
+                ::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, thickness);
+        },
+
+        // Path APIs
+        "path_clear", &ImDrawList::PathClear, "path_line_to",
+        [](ImDrawList* draw_list, sol::object pos) { draw_list->PathLineTo(::api::imgui::create_imvec2(pos)); },
+        "path_line_to_merge_duplicate",
+        [](ImDrawList* draw_list, sol::object pos) { draw_list->PathLineToMergeDuplicate(::api::imgui::create_imvec2(pos)); },
+        "path_fill_convex", &ImDrawList::PathFillConvex, "path_stroke",
+        [](ImDrawList* draw_list, uint32_t col, ImDrawFlags flags, float thickness) { draw_list->PathStroke(col, flags, thickness); },
+        "path_arc_to",
+        [](ImDrawList* draw_list, sol::object center, float radius, float a_min, float a_max, int num_segments) {
+            draw_list->PathArcTo(::api::imgui::create_imvec2(center), radius, a_min, a_max, num_segments);
+        },
+        "path_arc_to_fast",
+        [](ImDrawList* draw_list, sol::object center, float radius, int a_min_of_12, int a_max_of_12) {
+            draw_list->PathArcToFast(::api::imgui::create_imvec2(center), radius, a_min_of_12, a_max_of_12);
+        },
+      /*  "path_elliptical_arc_to",
+        [](ImDrawList* draw_list, sol::object center, sol::object radius, float a_min, float a_max, int num_segments) {
+            draw_list->PathEllipticalArcTo(
+                ::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), a_min, a_max, num_segments);
+        },*/
+        "path_bezier_cubic_curve_to",
+        [](ImDrawList* draw_list, sol::object p2, sol::object p3, sol::object p4, int num_segments) {
+            draw_list->PathBezierCubicCurveTo(
+                ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), ::api::imgui::create_imvec2(p4), num_segments);
+        },
+        "path_bezier_quadratic_curve_to",
+        [](ImDrawList* draw_list, sol::object p2, sol::object p3, int num_segments) {
+            draw_list->PathBezierQuadraticCurveTo(::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), num_segments);
+        },
+        "path_rect",
+        [](ImDrawList* draw_list, sol::object min, sol::object max, float rounding, ImDrawFlags flags) {
+            draw_list->PathRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), rounding, flags);
+        });
 
     lua["imgui"] = imgui;
 
@@ -1898,5 +2582,14 @@ void bindings::open_imgui(sol::state_view& lua) {
     draw["outline_quad"] = api::draw::outline_quad;
     draw["filled_quad"] = api::draw::filled_quad;
 
+    //draw["world_to_screen"] = api::draw::world_to_screen;
+    //draw["world_text"] = api::draw::world_text;
+
+    //draw["sphere"] = api::draw::sphere;
+    //draw["capsule"] = api::draw::capsule;
+    //draw["gizmo"] = api::draw::gizmo;
+    //draw["cube"] = [](const Matrix4x4f& mat) { ::imgui::draw_cube(mat); };
+    //draw["grid"] = [](const Matrix4x4f& mat, float size) { ::imgui::draw_grid(mat, size); };
     lua["draw"] = draw;
+
 }

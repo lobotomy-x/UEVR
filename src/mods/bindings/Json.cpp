@@ -29,7 +29,7 @@ SOFTWARE.
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
-
+#include <sdk/UObject.hpp>
 #include "../LuaLoader.hpp"
 
 #include "Json.hpp"

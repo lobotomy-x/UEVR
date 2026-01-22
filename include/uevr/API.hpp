@@ -1180,6 +1180,102 @@ public:
         }
     };
 
+/*template <UObject T> class UObjectReference {
+    public:
+        UObjectReference(std::nullptr_t)
+            : m_object{nullptr}
+            , m_original_vtable{nullptr}
+            , m_internal_index{0}
+            , m_valid{false} {}
+
+        UObjectReference(T* object) { *this = object; }
+
+        UObjectReference(const UObjectReference& other) { *this = other; }
+
+        bool valid(bool cached = true) const {
+            if (!m_valid && cached) {
+                return false;
+            }
+
+            if (m_object == nullptr) {
+                m_valid = false;
+                return false;
+            }
+
+            auto object_item = FUObjectArray::get()->get_object(m_internal_index);
+
+            if (object_item == nullptr || object_item->object != m_object) {
+                m_valid = false;
+                return false;
+            }
+
+            m_valid = *(void**)m_object == m_original_vtable && m_internal_index == m_object->get_internal_index() &&
+                      !m_object->is_pending_kill_or_unreachable();
+
+            return m_valid;
+        }
+
+        T* get() const { return valid() ? m_object : nullptr; }
+
+        T* operator->() const { return m_object; }
+
+        operator T*() const { return valid() ? m_object : nullptr; }
+
+        operator UObject*() const { return valid() ? (UObject*)m_object : nullptr; }
+
+        operator bool() const { return valid(); }
+
+        UObjectReference& operator=(T* object) {
+            if (object == nullptr) {
+                *this = nullptr;
+                return *this;
+            }
+
+            m_object = object;
+            m_original_vtable = *(void**)object;
+            m_internal_index = object->get_internal_index();
+            m_valid = valid(false);
+
+            return *this;
+        }
+
+        UObjectReference& operator=(const UObjectReference& other) {
+            m_object = other.m_object;
+            m_original_vtable = other.m_original_vtable;
+            m_internal_index = other.m_internal_index;
+            m_valid = valid(false);
+
+            return *this;
+        }
+
+        UObjectReference& operator=(std::nullptr_t) {
+            m_object = nullptr;
+            m_original_vtable = nullptr;
+            m_internal_index = 0;
+            m_valid = false;
+            return *this;
+        }
+
+        bool operator==(T* object) const { return m_object == object; }
+
+        bool operator!=(T* object) const { return m_object != object; }
+
+        bool operator==(const UObjectReference& other) const { return m_object == other.m_object; }
+
+        bool operator!=(const UObjectReference& other) const { return m_object != other.m_object; }
+
+        bool operator==(std::nullptr_t) const { return m_object == nullptr || !valid(); }
+
+        bool operator!=(std::nullptr_t) const { return m_object != nullptr && valid(); }
+
+    private:
+        T* m_object{nullptr};
+        void* m_original_vtable{nullptr};
+        uint32_t m_internal_index{0};
+        mutable bool m_valid{false}; 
+    };*/
+
+
     struct FRHITexture2D {
         inline UEVR_FRHITexture2DHandle to_handle() { return (UEVR_FRHITexture2DHandle)this; }
         inline UEVR_FRHITexture2DHandle to_handle() const { return (UEVR_FRHITexture2DHandle)this; }

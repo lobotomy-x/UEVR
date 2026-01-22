@@ -28,6 +28,9 @@ public:
         return m_openxr;
     }
 
+    auto& get_input_state() {
+        return m_initial_imgui_input_state;
+    }
     struct IntersectState {
         bool intersecting{false};
         glm::vec2 quad_intersection_point{};
@@ -40,6 +43,10 @@ public:
 
     const auto& get_framework_intersect_state() const {
         return m_intersect_state;
+    }
+
+    const auto& get_ui_clear_color() {
+         return m_clear_color;
     }
 
     bool should_invert_ui_alpha() const {
@@ -75,12 +82,13 @@ private:
     vr::VROverlayHandle_t m_overlay_handle{};
     vr::VROverlayHandle_t m_thumbnail_handle{};
     vr::VROverlayHandle_t m_slate_overlay_handle{};
-
+   private:
     bool m_closed_ui{false};
     bool m_just_closed_ui{false};
     bool m_just_opened_ui{false};
     bool m_forced_aim{false};
     
+//    ImVec4 m_ui_clear_color(0.0f, 0.0f, 0.0f, 0.0f);
     glm::vec2 m_last_mouse_pos{};
     std::chrono::steady_clock::time_point m_last_mouse_move_time{};
 
@@ -99,6 +107,7 @@ private:
         "Cylinder"
     };
 
+
     const ModCombo::Ptr m_slate_overlay_type{ ModCombo::create("UI_OverlayType", s_overlay_type_names) };
     const ModSlider::Ptr m_slate_distance{ ModSlider::create("UI_Distance", 0.5f, 10.0f, 2.0f) };
     const ModSlider::Ptr m_slate_x_offset{ ModSlider::create("UI_X_Offset", -10.0f, 10.0f, 0.0f) };
@@ -107,7 +116,7 @@ private:
     const ModSlider::Ptr m_slate_cylinder_angle{ ModSlider::create("UI_Cylinder_Angle", 0.0f, 360.0f, 90.0f) };
     const ModToggle::Ptr m_ui_follows_view{ ModToggle::create("UI_FollowView", false) };
     const ModToggle::Ptr m_ui_invert_alpha{ ModToggle::create("UI_InvertAlpha", false) };
-
+ 
     const ModSlider::Ptr m_framework_distance{ ModSlider::create("UI_Framework_Distance", 0.5f, 10.0f, 1.75f) };
     const ModSlider::Ptr m_framework_size{ ModSlider::create("UI_Framework_Size", 0.5f, 10.0f, 2.0f) };
     const ModToggle::Ptr m_framework_ui_follows_view{ ModToggle::create("UI_Framework_FollowView", false) };

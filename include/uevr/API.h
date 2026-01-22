@@ -143,6 +143,7 @@ typedef struct {
     double roll;
 } UEVR_Rotatord;
 
+
 typedef struct {
     float m[4][4];
 } UEVR_Matrix4x4f;
@@ -223,6 +224,7 @@ typedef struct {
     int (*register_inline_hook)(void* target, void* dst, void** original);
     void (*unregister_inline_hook)(int hook_id);
     void (*dispatch_lua_event)(const char* event_name, const char* event_data);
+    void (*synchronize_lua_event)(void* lua_state_view, const char* event_name, const char* event_data);
 
     const char* (*get_commit_hash)();
     const char* (*get_tag)();
@@ -265,6 +267,16 @@ typedef struct {
     UEVR_UObjectHandle (*get_player_controller)(int index);
     UEVR_UObjectHandle (*get_local_pawn)(int index);
     UEVR_UObjectHandle (*spawn_object)(UEVR_UClassHandle klass, UEVR_UObjectHandle outer);
+
+   UEVR_UObjectHandle (*as_actor)(UEVR_UObjectHandle object);
+    bool (*is_actor)(UEVR_UObjectHandle object);
+
+    UEVR_UObjectHandle (*as_component)(UEVR_UObjectHandle object);
+    bool (*is_component)(UEVR_UObjectHandle object);   
+    
+    UEVR_UObjectHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
+    UEVR_UObjectHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, UEVR_FNameHandle socket, void* attach_rules);
+    UEVR_UObjectHandle (*detach)(UEVR_UObjectHandle object);
 
     /* Handles exec commands, find_console_command does not */
     void (*execute_command)(const wchar_t* command);
@@ -356,6 +368,8 @@ typedef struct {
     /* pointer to the property data, not the UProperty/FProperty */
     void* (*get_property_data)(UEVR_UObjectHandle object, const wchar_t* name);
     bool (*is_a)(UEVR_UObjectHandle object, UEVR_UClassHandle other);
+    
+ 
 
     void (*process_event)(UEVR_UObjectHandle object, UEVR_UFunctionHandle function, void* params);
     void (*call_function)(UEVR_UObjectHandle object, const wchar_t* name, void* params);

@@ -95,6 +95,8 @@ private:
         std::weak_ptr<uevr::ScriptState> state;
         std::string name;
         sol::protected_function fn;
+        // make sortable
+        bool operator<(const PanelEntry& other) const { return name < other.name; }
     };
     std::vector<PanelEntry> m_script_panels{};
 

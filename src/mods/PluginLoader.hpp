@@ -31,7 +31,7 @@ public:
     std::optional<std::string> on_initialize_d3d_thread() override;
     void on_draw_ui() override;
 
-    void on_present();
+    void on_present() override;
     void on_device_reset() override;
     bool on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_param) override;
     void on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE* state) override;

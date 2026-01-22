@@ -32,17 +32,11 @@ public:
     int setup_bindings();
     void setup_callback_bindings();
 
-    bool valid() {
-        return m_plugin_initialize_param != nullptr;
-    }
+    bool valid() { return m_plugin_initialize_param != nullptr; }
 
-    auto& lua() {
-        return m_lua;
-    }
+    auto& lua() { return m_lua; }
 
-    UEVR_PluginInitializeParam* plugin_initialize_param() {
-        return m_plugin_initialize_param;
-    }
+    UEVR_PluginInitializeParam* plugin_initialize_param() { return m_plugin_initialize_param; }
 
     sol::protected_function_result handle_protected_result(sol::protected_function_result result) {
         if (result.valid()) {
@@ -62,8 +56,7 @@ public:
         m_last_script_error_state.t = std::chrono::system_clock::now();
     }
 
-    template<typename T1, typename T2>
-    void add_callback(T1&& adder, T2&& cb) {
+    template <typename T1, typename T2> void add_callback(T1&& adder, T2&& cb) {
         std::scoped_lock _{m_mtx};
 
         if (m_plugin_initialize_param != nullptr) {
@@ -72,56 +65,58 @@ public:
         }
     }
 
-    auto& get_mutex() {
-        return m_mtx;
-    }
+    auto& get_mutex() { return m_mtx; }
 
     void script_reset() {
         std::scoped_lock _{m_mtx};
 
-        for (auto& cb : m_on_script_reset_callbacks) try {
-            handle_protected_result(cb());
-        } catch (const std::exception& e) {
-            log_error("Exception in on_script_reset: " + std::string(e.what()));
-        } catch (...) {
-            log_error("Unknown exception in on_script_reset");
-        }
+        for (auto& cb : m_on_script_reset_callbacks)
+            try {
+                handle_protected_result(cb());
+            } catch (const std::exception& e) {
+                log_error("Exception in on_script_reset: " + std::string(e.what()));
+            } catch (...) {
+                log_error("Unknown exception in on_script_reset");
+            }
     }
 
     void frame() {
         std::scoped_lock _{m_mtx};
 
-        for (auto& cb : m_on_frame_callbacks) try {
-            handle_protected_result(cb());
-        } catch (const std::exception& e) {
-            log_error("Exception in on_frame: " + std::string(e.what()));
-        } catch (...) {
-            log_error("Unknown exception in on_frame");
-        }
+        for (auto& cb : m_on_frame_callbacks)
+            try {
+                handle_protected_result(cb());
+            } catch (const std::exception& e) {
+                log_error("Exception in on_frame: " + std::string(e.what()));
+            } catch (...) {
+                log_error("Unknown exception in on_frame");
+            }
     }
 
     void draw_ui() {
         std::scoped_lock _{m_mtx};
 
-        for (auto& cb : m_on_draw_ui_callbacks) try {
-            handle_protected_result(cb());
-        } catch (const std::exception& e) {
-            log_error("Exception in on_draw_ui: " + std::string(e.what()));
-        } catch (...) {
-            log_error("Unknown exception in on_draw_ui");
-        }
+        for (auto& cb : m_on_draw_ui_callbacks)
+            try {
+                handle_protected_result(cb());
+            } catch (const std::exception& e) {
+                log_error("Exception in on_draw_ui: " + std::string(e.what()));
+            } catch (...) {
+                log_error("Unknown exception in on_draw_ui");
+            }
     }
 
     void dispatch_event(std::string_view event_name, std::string_view event_data) {
         std::scoped_lock _{m_mtx};
 
-        for (auto& cb : m_on_lua_event_callbacks) try {
-            handle_protected_result(cb(event_name, event_data));
-        } catch (const std::exception& e) {
-            log_error("Exception in on_lua_event: " + std::string(e.what()));
-        } catch (...) {
-            log_error("Unknown exception in on_lua_event");
-        }
+        for (auto& cb : m_on_lua_event_callbacks)
+            try {
+                handle_protected_result(cb(event_name, event_data));
+            } catch (const std::exception& e) {
+                log_error("Exception in on_lua_event: " + std::string(e.what()));
+            } catch (...) {
+                log_error("Unknown exception in on_lua_event");
+            }
     }
 
     struct ScriptErrorState {
@@ -166,10 +161,12 @@ private:
     std::vector<sol::protected_function> m_on_frame_callbacks{};
     std::vector<sol::protected_function> m_on_draw_ui_callbacks{};
     std::vector<sol::protected_function> m_on_script_reset_callbacks{};
+    std::vector<sol::protected_function> process_event_hooks{};
 
     struct UFunctionHookState {
         std::vector<sol::protected_function> pre_hooks{};
         std::vector<sol::protected_function> post_hooks{};
+
     };
 
     std::shared_mutex m_ufunction_hooks_mtx{};
@@ -183,14 +180,19 @@ private:
     static void on_post_engine_tick(UEVR_UGameEngineHandle engine, float delta_seconds);
     static void on_pre_slate_draw_window_render_thread(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info);
     static void on_post_slate_draw_window_render_thread(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info);
-    static void on_early_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters, UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
-    static void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters, UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
-    static void on_post_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters, UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
-    static void on_pre_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas);
-    static void on_post_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas);
+    static void on_early_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters,
+        UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
+    static void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters,
+        UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
+    static void on_post_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle device, int view_index, float world_to_meters,
+        UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double);
+    static void on_pre_viewport_client_draw(
+        UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas);
+    static void on_post_viewport_client_draw(
+        UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas);
     static void on_frame();
     static void on_draw_ui();
     static void on_script_reset();
     static void on_lua_event(std::string_view event_name, std::string_view event_data);
 };
-}
+} // namespace uevr

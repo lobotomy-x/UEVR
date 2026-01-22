@@ -166,13 +166,21 @@ void OverlayComponent::update_input_mouse_emulation() {
             }
 
             const auto right_stick_axis = vr->get_right_stick_axis();
-            
-            // Mousewheel
+           float deadzone = 0.15f;
+           float stick_y = right_stick_axis.y;
+
+            if (fabsf(stick_y) > deadzone) {
+                float normalized_y = (stick_y > 0) ? (stick_y - deadzone) : (stick_y + deadzone);
+                normalized_y /= (1.0f - deadzone);
+                float accelerated_val = normalized_y * fabsf(normalized_y) * fabsf(normalized_y);
+                io.MouseWheel += accelerated_val * delta_f * 25.0f;
+            }
+/*            // Mousewheel
             if (right_stick_axis.y > 0.5f) {
                 io.MouseWheel += right_stick_axis.y * delta_f * 10.0f;
             } else if (right_stick_axis.y < -0.5f) {
                 io.MouseWheel += right_stick_axis.y * delta_f * 10.0f;
-            }
+            }*/
 
             VR::get()->set_aim_allowed(false);
             m_forced_aim = true;
@@ -225,7 +233,8 @@ void OverlayComponent::on_draw_ui() {
         m_ui_follows_view->draw("UI Follows View");
         ImGui::SameLine();
         m_ui_invert_alpha->draw("UI Invert Alpha");
-
+        
+     
         m_framework_distance->draw("Framework Distance");
         m_framework_size->draw("Framework Size");
         m_framework_ui_follows_view->draw("Framework Follows View");
@@ -234,6 +243,12 @@ void OverlayComponent::on_draw_ui() {
             m_framework_wrist_ui->draw("Framework Wrist UI");
         }
         m_framework_mouse_emulation->draw("Framework Mouse Emulation");
+       /* if (g_framework->get_renderer_type() == 1) {
+            auto float[] color = m_ui_clear_color;
+                     if (ImGui::ColorEdit4("UI Clear Color",color, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_Float)) {
+                                          m_ui_clear_color  = color;
+            }
+    }*/
         ImGui::TreePop();
     }
 }

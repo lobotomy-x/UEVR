@@ -2,18 +2,20 @@
 
 #include <windows.h>
 
-#include "uevr/API.hpp"
 #include "ScriptState.hpp"
+#include "uevr/API.hpp"
 
 namespace api::ue {
 void msg(const char* text) {
-    MessageBoxA(GetForegroundWindow(), text, "LuaLoader Message", MB_ICONINFORMATION | MB_OK);
+    // Could technically find the wrong process still but this way it won't just grab a random foreground window
+    // previously if you had high script load times and got an error while another process was open or even worse, while actively tabbing,
+    // you could totally lose your error message
+    MessageBoxA(FindWindowA("UnrealWindow", nullptr), text, "LuaLoader Message", MB_ICONINFORMATION | MB_OK);
 }
-}
+} // namespace api::ue
 
 namespace uevr {
-ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR_PluginInitializeParam* param, bool is_main_state)
-{
+ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR_PluginInitializeParam* param, bool is_main_state) {
     if (param != nullptr) {
         uevr::API::initialize(param);
     }
@@ -21,24 +23,25 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
     if (param != nullptr && param->functions != nullptr) {
         param->functions->log_info("Creating new ScriptState...");
     }
-    
+
     m_is_main_state = is_main_state;
     m_lua.registry()["uevr_state"] = this;
-    m_lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::math, sol::lib::table, sol::lib::bit32,
+    m_lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::math, sol::lib::table, sol::lib::bit32,   sol::lib::debug,
         sol::lib::utf8, sol::lib::os, sol::lib::coroutine);
 
     // Disable garbage collection. We will manually do it at the end of each frame.
     gc_data_changed(gc_data);
-    
+
     // Restrict os library
     auto os = m_lua["os"];
-    os["remove"] = sol::nil;
+/*    os["remove"] = sol::nil;
     os["rename"] = sol::nil;
     os["execute"] = sol::nil;
     os["exit"] = sol::nil;
     os["setlocale"] = sol::nil;
-    os["getenv"] = sol::nil;
+    os["getenv"] = sol::nil;*/
 
+    auto debug = m_lua["debug"];
     // TODO: Make this actually support multiple states
     // This stores a global reference to itself, meaning it doesn't support multiple states
     // We pass along the shared_ptr (impl) so the context can keep it alive if for some reason the state is destroyed before the context
@@ -61,9 +64,9 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
         m_lua.registry()["package_path"] = m_lua["package"]["path"];
         m_lua.registry()["package_cpath"] = m_lua["package"]["cpath"];
         m_lua.registry()["package_searchers"] = m_lua.create_table();
-    
+
         sol::table package_searchers = m_lua["package"]["searchers"];
-    
+
         for (auto&& [k, v] : package_searchers) {
             m_lua.registry()["package_searchers"][k] = v;
         }
@@ -71,7 +74,6 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
 }
 
 ScriptState::~ScriptState() {
-
 }
 
 void ScriptState::run_script(const std::string& p) {
@@ -90,7 +92,7 @@ void ScriptState::run_script(const std::string& p) {
 
         package_path = old_path + ";" + dir.string() + "/?.lua";
         package_path = package_path + ";" + dir.string() + "/?/init.lua";
-        //package_path = package_path + ";" + dir.string() + "/?.dll";
+        // package_path = package_path + ";" + dir.string() + "/?.dll";
 
         cpath = old_pristine_cpath + ";" + dir.string() + "/?.dll";
 
@@ -101,10 +103,10 @@ void ScriptState::run_script(const std::string& p) {
 
         m_lua.safe_script_file(p);
     } catch (const std::exception& e) {
-        //LuaLoader::get()->spew_error(e.what());
+        // LuaLoader::get()->spew_error(e.what());
         api::ue::msg(e.what());
     } catch (...) {
-        //LuaLoader::get()->spew_error((std::stringstream{} << "Unknown error when running script " << p).str());
+        // LuaLoader::get()->spew_error((std::stringstream{} << "Unknown error when running script " << p).str());
         api::ue::msg((std::stringstream{} << "Unknown error when running script " << p).str().c_str());
     }
 
@@ -128,9 +130,9 @@ void ScriptState::gc_data_changed(GarbageCollectionData data) {
         break;
     }
 
-    // Type 
+    // Type
     if (data.gc_type >= ScriptState::GarbageCollectionType::LAST) {
-       data.gc_type = ScriptState::GarbageCollectionType::STEP;
+        data.gc_type = ScriptState::GarbageCollectionType::STEP;
     }
 
     // Mode
@@ -174,27 +176,25 @@ void ScriptState::on_frame() {
     auto _ = std::scoped_lock{m_context->get_mutex()};
 
     switch (m_gc_data.gc_type) {
-        case ScriptState::GarbageCollectionType::FULL:
-            lua_gc(m_lua, LUA_GCCOLLECT);
-            break;
-        case ScriptState::GarbageCollectionType::STEP: 
-            {
-                const auto now = std::chrono::high_resolution_clock::now();
+    case ScriptState::GarbageCollectionType::FULL:
+        lua_gc(m_lua, LUA_GCCOLLECT);
+        break;
+    case ScriptState::GarbageCollectionType::STEP: {
+        const auto now = std::chrono::high_resolution_clock::now();
 
-                if (m_gc_data.gc_mode == ScriptState::GarbageCollectionMode::GENERATIONAL) {
-                    lua_gc(m_lua, LUA_GCSTEP, 1);
-                } else {
-                    while (lua_gc(m_lua, LUA_GCSTEP, 1) == 0) {
-                        if (std::chrono::high_resolution_clock::now() - now >= m_gc_data.gc_budget) {
-                            break;
-                        }
-                    }
+        if (m_gc_data.gc_mode == ScriptState::GarbageCollectionMode::GENERATIONAL) {
+            lua_gc(m_lua, LUA_GCSTEP, 1);
+        } else {
+            while (lua_gc(m_lua, LUA_GCSTEP, 1) == 0) {
+                if (std::chrono::high_resolution_clock::now() - now >= m_gc_data.gc_budget) {
+                    break;
                 }
             }
-            break;
-        default:
-            lua_gc(m_lua, LUA_GCCOLLECT);
-            break;
+        }
+    } break;
+    default:
+        lua_gc(m_lua, LUA_GCCOLLECT);
+        break;
     };
 }
 
@@ -209,4 +209,4 @@ void ScriptState::dispatch_event(std::string_view event_name, std::string_view e
         m_context->dispatch_event(event_name, event_data);
     }
 }
-}
+} // namespace uevr

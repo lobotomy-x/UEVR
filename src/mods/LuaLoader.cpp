@@ -331,18 +331,301 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     auto& lua = state->lua();
     auto lua_table = lua.create_table();
 
+    auto duplicated = false;
     // TODO: Rework this to be within add_additional_bindings somehow without a weak_ptr
     lua_table["add_script_panel"] = [this, &state](sol::this_state s, std::string name, sol::function fn) {
-        m_script_panels.emplace_back(PanelEntry{
-            .state = std::weak_ptr<ScriptState>{state},
-            .name = name,
-            .fn = fn
-        });
+        m_script_panels.emplace_back(PanelEntry{.state = std::weak_ptr<ScriptState>{state}, .name = name, .fn = fn});
+        // at present requiring an autorun script with a panel in it will create a duplicate
+        // this can also be true for callbacks so this is more of a bandaid fix
+        // granted the better solution may be to just put anything with callbacks in a sub folder and require it
+        std::sort(m_script_panels.begin(), m_script_panels.end());
+        auto comp = [](const PanelEntry& a, const PanelEntry& b) { return (a.name == b.name); };
+        auto it = std::unique(m_script_panels.begin(), m_script_panels.end(), comp);
+        m_script_panels.erase(it, m_script_panels.end());                                                                          
     };
+    
+
+    lua.do_string(R"(
+    
+    local _cache = {}
+    setmetatable(_cache, {__mode = "v"})
+    function uevr.find_class(input)
+        assert(type(input) == "string")
+        if input:sub(1, 5) ~= "Class" and input:sub(1, 12) ~= "ScriptStruct" then                
+            local engine_input =  "Class /Script/Engine.".. input
+            if  _cache[engine_input] ~= nil and UEVR_UObjectHook.exists( _cache[engine_input]) then
+                return  _cache[engine_input]
+            else 
+                local temp = uevr.api:find_uobject(engine_input)
+                if temp ~= nil and UEVR_UObjectHook.exists(temp) then
+                    _cache[engine_input] = temp
+                    return _cache[engine_input] 
+                end
+            end
+        end
+        if _cache[input] ~= nil and UEVR_UObjectHook.exists( _cache[input])  then
+           return _cache[input] 
+        else
+            local temp = uevr.api:find_uobject(input)                              
+              _cache[input] = UEVR_UObjectHook.exists(temp) and temp or nil
+       end
+       return _cache[input]
+    end
+
+
+    local kismet_libs = {
+        Animation =    "Class /Script/AnimGraphRuntime.KismetAnimationLibrary",
+        Material =      "Class /Script/Engine.KismetMaterialLibrary",
+        Math =           "Class /Script/Engine.KismetMathLibrary",
+        Rendering =    "Class /Script/Engine.KismetRenderingLibrary",
+        System =        "Class /Script/Engine.KismetSystemLibrary",
+        String =          "Class /Script/Engine.KismetStringLibrary",
+        Text =            "Class /Script/Engine.KismetTextLibrary",
+        StringTable = "Class /Script/Engine.KismetStringTableLibrary",
+        Guid =             "Class /Script/Engine.KismetGuidLibrary",
+        NodeHelper = "Class /Script/Engine.KismetNodeHelperLibrary",
+        }
+        Kismet = setmetatable({kismet_cache = {}}, {
+                    __call = function(self, lib)
+                        self.kismet_cache[lib] = self.kismet_cache[lib] or
+                            (kismet_libs[lib] and
+                                (UEVR_UObjectHook.get_first_object_by_class(uevr.api:find_uobject(kismet_libs[lib]), true)
+                                or uevr.api:find_uobject(kismet_libs[lib]):get_class_default_object()))
+                        return self.kismet_cache[lib]
+                    end,
+                    __index = function(self, lib)
+                        return self.kismet_cache[lib] or self(lib)
+                })
+        uevr.Kismet = Kismet 
+
+        function Statics()
+            statics = statics or uevr.api:find_uobject("Class /Script/Engine.GameplayStatics"):get_class_default_object()
+            return statics
+        end
+        uevr.Statics = Statics()
+
+         local function Version()
+            local text = Kismet("System"):GetEngineVersion()
+            if text:contains("-") then
+                text = text:split("-")[1]
+            end
+            local nums = text:split(".")
+            local version = {
+                major = tonumber(nums[1]),
+                minor = tonumber(nums[2]),
+                patch = tonumber(nums[3]),
+            }
+            return version
+        end
+        local UE_Version = Version()
+        UE5 = UE_Version.major == 5 or false
+        UE4 = UE_Version.major == 4 or false
+        UE_Version_Minor = tonumber(tostring(UE_Version.minor)..tostring(UE_Version.patch))
+  
+        Vector3 = UE5 and Vector3d or Vector3f
+        Vector4 = UE5 and Vector4d or Vector4f
+        Vector2 = UE5 and Vector2d or Vector2f
+
+        Quat = UE5 and Quaterniond or Quaternionf
+
+        function is_array(_table)
+	        if _table[1] ~= nil then return true end
+        end
+        
+    function __genOrderedIndex(t)
+	    local orderedIndex = {}
+	    for key in pairs(t) do
+		    -- ensure correct sorting for rotator to Vector3 handling
+		    -- idk why its like this but it is
+		    if #t == 3 and (type(key) == "string") and (key:lower() == "pitch" or key:lower() == "yaw") then
+			    return {"pitch", "yaw", "roll"}
+		    end
+		    table.insert(t, key)
+	    end
+	    table.sort(orderedIndex)
+	    return orderedIndex
+    end
+
+
+
+-- pairs does not maintain order. maybe you heard this and thought it was no big deal
+-- but its actually borderline unusable. we are fixing that
+-- normally this will generate a hidden table with the ordered index based on alphabetical/numeric order
+-- but you can instead provide a table with the correct order in the orderedPairs function or directly set __orderedIndex
+-- this is crucial for dynamic param-building functions like BreakHitResult which requires empty table values with string keys
+function orderedNext(t, state)
+	if not t then return end
+	local key = (t.__orderedIndex ~= nil and state == nil) and t.__orderedIndex[1] or nil
+	if state == nil and t.__orderedIndex == nil then
+		-- generate the index the first time
+		t.__orderedIndex = __genOrderedIndex(t)
+		key = t.__orderedIndex[1]
+	else
+		-- fetch the next value
+		for i = 1, #t.__orderedIndex do
+			if t.__orderedIndex[i] == state then
+				key = t.__orderedIndex[i + 1]
+			end
+		end
+	end
+	if key then
+		return key, t[key]
+	end
+	return
+end
+
+-- this is how you actually iterate an ordered table
+-- if no orderedIndex exists yet we construct it on the first try
+-- you can prebuild your orderedIndex, directly assign it, or pass it here
+-- if you want to you can override pairs with orderedPairs in a local variable in your own script
+function orderedPairs(t, orderedIndex)
+    if keys ~= nil then
+		t.__orderedIndex = orderedIndex
+    end
+	return orderedNext, t, nil
+end
+
+-- basically python zip
+-- takes two arrays already in correct order and splices them into an orderedTable
+function build_ordered_table(keys, values)
+	local t = {}
+	assert(is_array(keys) and is_array(values))
+	for i = 1, #keys do
+		t[keys[i]] = values[i]
+	end
+	t.__orderedIndex = keys
+	return t
+end
+
+-- this is what I use most of the time
+-- very straight forward and simple to use
+function ordered_insert(tbl, new_key, new_value)
+	tbl.__orderedIndex = tbl.__orderedIndex or {}
+	local t = tbl.__orderedIndex
+	-- only update insertion order if its new
+	if tbl[new_key] == nil then
+		table.insert(t, new_key)
+	end
+	tbl[new_key] = new_value
+	return tbl
+end
+
+
+function extend_table(tbl1, tbl2)
+  if is_array(tbl1) and is_array(tbl2) then
+    for idx, val in ipairs(tbl2) do
+        local skip = false
+        for _idx, _val in ipairs(tbl1) do
+          if _val == val then skip = true end
+        end
+        if not skip and val ~= nil then
+          table.insert(tbl1, val)
+        end
+      table.insert(tbl1, val)
+    end
+  else
+    for k, v in orderedPairs(tbl2) do
+      if not tbl1[k] and v ~= nil then
+        tbl1[k] = v
+      end
+      if tbl1[k] then
+        tbl1[k] = v
+      end
+    end
+  end
+end
+
+function wipe_table(t)
+	while true do
+		local k = next(t)
+		if not k then break end
+		t[k] = nil
+	end
+end
+
+
+-- split table into keys and values so you can iterate key names as an array
+function break_table(_table)
+	local keys, values = {}, {}
+	for k, v in orderedPairs(_table) do
+		table.insert(keys, k)
+		table.insert(values, v)
+	end
+	return keys, values
+end
+
+-- split table into keys and values so you can iterate key names as an array
+function take_values(_table)
+	if is_array(_table) then return _table end
+	local values = {}
+	for k, v in orderedPairs(_table) do
+		table.insert(values, v)
+	end
+	return values
+end
+
+function can_index(lua_object)
+	local mt = getmetatable(lua_object)
+	return (not mt and type(lua_object) == "table") or (mt and not not mt.__index)
+end
+ 
+
+
+
+function print_to_ue_console(message)
+    pc = pc or uevr.api:get_player_controller(0)
+    pc:ClientSendMessage(message)
+end   
+
+local aactor = uevr.api:find_uobject("Class /Script/Engine.Actor")
+
+function UEVR_UObject:exists()
+    return (UEVR_UObjectHook.exists(self) and self) or false
+end
+
+ function UEVR_UClass:is_child_of(uclass)
+    return Kismet("Math"):ClassIsChildOf(self, uclass)
+end
+
+function UEVR_UObject:class_is_child_of(uclass)
+     local self_class = self.as_class and self:as_class() or self.get_class and self:get_class()
+     return self_class ~=nil and self_class:is_child_of(uclass) or nil
+end
+  
+function UEVR_UObject:add_component(uclass)
+    local t = uevr.api:add_component_by_class(
+        (self:is_child_class_of(aactor)) or self:get_outer(),
+        type(uclass) == "string" and uevr.find_class((uclass:sub(#uclass - 9, #uclass) == "Component") 
+        and uclass or uclass.."Component")) 
+        or uclass,
+        false)
+    )
+    if not t then print(inspect({uclass, self})) end
+    t:K2_SetRelativeTransform(self:as_component():GetRelativeTransform(), false, get_hitresult(), false)
+    return t
+end
+
+    )");
+    
+
 
     lua["uevr"]["lua"] = lua_table;
 }
+/*/// <summary>
+/// Request the creation of a separate script state from the main script state
+/// </summary>
+/// <returns>the lua state of the new script state</returns>
+lua_state& LuaLoader::create_state() {
+}
 
+/// <summary>
+/// Request the destruction of the script_state belonging to the lua state in question
+/// </summary>
+void LuaLoader::delete_state(lua_state) {
+
+}
+state& LuaLoader::add_on_lua_state_created(cb) {
+}*/
 void LuaLoader::add_additional_bindings(sol::state_view& lua) {
     bindings::open_imgui(lua);
     bindings::open_json(lua);

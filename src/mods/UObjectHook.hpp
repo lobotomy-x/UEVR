@@ -204,6 +204,7 @@ private:
         "Acknowledged Pawn",
         "Player Controller",
         "Camera Manager",
+        "Persistent Level",
         "World"
     };
 
@@ -492,13 +493,17 @@ private:
     bool m_fixed_visibilities{false};
     bool m_hide_default_classes{false};
 
+
     safetyhook::InlineHook m_process_event_hook{};
     bool m_process_event_listening{true};
     bool m_attempted_hook_process_event{false};
     bool m_hooked_process_event{false};
+
+public:
     void hook_process_event();
     static void* process_event_hook(sdk::UObject* obj, sdk::UFunction* func, void* params, void* r9);
 
+private:
     std::recursive_mutex m_function_mutex{};
 
     struct CalledFunctionInfo {
@@ -512,6 +517,7 @@ private:
         bool wants_heavy_data{false};
     };
 
+public:
     std::unordered_map<sdk::UFunction*, CalledFunctionInfo> m_called_functions{};
     std::deque<sdk::UFunction*> m_most_recent_functions{};
     std::unordered_set<sdk::UFunction*> m_ignored_recent_functions{};

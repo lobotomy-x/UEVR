@@ -751,7 +751,7 @@ private:
 
     vrmod::D3D11Component m_d3d11{};
     vrmod::D3D12Component m_d3d12{};
-    vrmod::OverlayComponent m_overlay_component;
+    vrmod::OverlayComponent m_overlay_component;   
     bool m_disable_overlay{false};
 
     // Action set handles
