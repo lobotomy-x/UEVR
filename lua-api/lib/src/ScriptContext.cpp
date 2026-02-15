@@ -19,6 +19,8 @@
 #include "datatypes/Quaternion.hpp"
 #include "datatypes/StructObject.hpp"
 #include "datatypes/Vector.hpp"
+#include "datatypes/Transform.hpp"
+#include "datatypes/Matrix.hpp"
 #include "datatypes/XInput.hpp"
 
 #include "ScriptContext.hpp"
@@ -328,6 +330,10 @@ __declspec(noinline) sol::object call_member_virtual(sol::this_state s, uevr::AP
     return sol::make_object(s, result); // TODO: convert?
 }
 
+struct UE_ProxyPtr {
+    void* ptr;
+    std::string type_name;
+};
 int ScriptContext::setup_bindings() {
     m_lua.registry()["uevr_context"] = this;
 
@@ -372,104 +378,15 @@ int ScriptContext::setup_bindings() {
 
         m_lua["__UEVRCachePtrInternalCreate"] = sol::make_object(m_lua, sol::nil);
     };
+ 
+
 
     lua::datatypes::bind_xinput(m_lua);
     lua::datatypes::bind_vectors(m_lua);
     lua::datatypes::bind_quaternions(m_lua);
+    lua::datatypes::bind_transform_struct(m_lua);
+    lua::datatypes::bind_matrix_struct(m_lua);
     lua::datatypes::bind_struct_object(m_lua);
-    using Matrix4x4f = glm::mat4;
-    using Matrix4x4d = glm::dmat4;
-    using Vector4f = lua::datatypes::Vector4f;
-    using Vector4d = lua::datatypes::Vector4d;
-    using Quaternionf = lua::datatypes::Quaternionf;
-    using Quaterniond = lua::datatypes::Quaterniond;
-      // add Matrix4x4f (glm::mat4) usertype
-    m_lua.new_usertype<Matrix4x4f>("Matrix4x4f",
-        sol::meta_function::construct, 
-         sol::constructors<
-         Matrix4x4f(),
-         Matrix4x4f(const Vector4f&, const Vector4f&, const Vector4f&, const Vector4f&),
-         Matrix4x4f(float, float, float, float,
-                    float, float, float, float,
-                    float, float, float, float,
-                    float, float, float, float)
-        >(),
-        "clone", [](Matrix4x4f& m) -> Matrix4x4f { return m; },
-        "identity", []() { return glm::identity<Matrix4x4f>(); },
-        "to_quat", [] (Matrix4x4f& m) -> Quaternionf{ return glm::quat(m); },
-        "inverse", [] (Matrix4x4f& m) { return glm::inverse(m); },
-        "invert", [] (Matrix4x4f& m) { m = glm::inverse(m); },
-//        "interpolate", [](Matrix4x4f& m1, Matrix4x4f& m2, float t) { return glm::interpolate(m1, m2, t); },
- //       "matrix_rotation", [](Matrix4x4f& m) { return glm::extractMatrixRotation(m); },
-        sol::meta_function::multiplication, sol::overload(
-            [](Matrix4x4f& lhs, Matrix4x4f& rhs) {
-                return lhs * rhs;
-            },
-            [](Matrix4x4f& lhs, Vector4f& rhs) {
-
-                return lhs * rhs;
-            }
-        ),
-        sol::meta_function::index, [](sol::this_state s, Matrix4x4f& lhs, sol::object index_obj) -> sol::object {
-            if (!index_obj.is<int>()) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-
-            const auto index = index_obj.as<int>();
-
-            if (index >= 4) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-
-            return sol::make_object(s, &lhs[index]);
-        },
-        sol::meta_function::new_index, [](Matrix4x4f& lhs, int index, Vector4f& rhs) {
-            lhs[index] = rhs;
-        }
-    );
- m_lua.new_usertype<Matrix4x4d>("Matrix4x4d",
-        sol::meta_function::construct, 
-         sol::constructors<
-         Matrix4x4d(),
-         Matrix4x4d(const Vector4d&, const Vector4d&, const Vector4d&, const Vector4d&),
-         Matrix4x4d(double, double, double, double,
-                    double, double, double, double,
-                    double, double, double, double,
-                    double, double, double, double)
-        >(),
-        "clone", [](Matrix4x4d& m) -> Matrix4x4d { return m; },
-        "identity", []() { return glm::identity<Matrix4x4d>(); },
-        "to_quat", [] (Matrix4x4d& m) -> Quaterniond{ return glm::quat(m); },
-        "inverse", [] (Matrix4x4d& m) { return glm::inverse(m); },
-        "invert", [] (Matrix4x4d& m) { m = glm::inverse(m); },
-//        "interpolate", [](Matrix4x4f& m1, Matrix4x4f& m2, float t) { return glm::interpolate(m1, m2, t); },
- //       "matrix_rotation", [](Matrix4x4f& m) { return glm::extractMatrixRotation(m); },
-        sol::meta_function::multiplication, sol::overload(
-            [](Matrix4x4d& lhs, Matrix4x4d& rhs) {
-                return lhs * rhs;
-            },
-            [](Matrix4x4d& lhs, Vector4d& rhs) {
-
-                return lhs * rhs;
-            }
-        ),
-        sol::meta_function::index, [](sol::this_state s, Matrix4x4d& lhs, sol::object index_obj) -> sol::object {
-            if (!index_obj.is<int>()) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-
-            const auto index = index_obj.as<int>();
-
-            if (index >= 4) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-
-            return sol::make_object(s, &lhs[index]);
-        },
-        sol::meta_function::new_index, [](Matrix4x4d& lhs, int index, Vector4d& rhs) {
-            lhs[index] = rhs;
-        }
-    );
     m_lua.new_usertype<UEVR_PluginInitializeParam>("UEVR_PluginInitializeParam", "uevr_module", &UEVR_PluginInitializeParam::uevr_module,
         "version", &UEVR_PluginInitializeParam::version, "functions", &UEVR_PluginInitializeParam::functions, "callbacks",
         &UEVR_PluginInitializeParam::callbacks, "renderer", &UEVR_PluginInitializeParam::renderer, "vr", &UEVR_PluginInitializeParam::vr,
@@ -574,6 +491,10 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         "set_rotation_offset", &UEVR_VRData::set_rotation_offset, "get_hmd_index", &UEVR_VRData::get_hmd_index, "get_left_controller_index",
         &UEVR_VRData::get_left_controller_index, "get_right_controller_index", &UEVR_VRData::get_right_controller_index, "get_pose",
         &UEVR_VRData::get_pose, "get_transform", &UEVR_VRData::get_transform, "get_eye_offset", &UEVR_VRData::get_eye_offset,
+        "get_grip_pose", &UEVR_VRData::get_grip_pose,
+        "get_aim_pose", &UEVR_VRData::get_aim_pose, "get_grip_transform",
+        &UEVR_VRData::get_grip_transform, "get_aim_transform", &UEVR_VRData::get_aim_transform,
+        "get_movement_orientation",&UEVR_VRData::get_movement_orientation,
         "get_ue_projection_matrix", &UEVR_VRData::get_ue_projection_matrix, "get_left_joystick_source",
         &UEVR_VRData::get_left_joystick_source, "get_right_joystick_source", &UEVR_VRData::get_right_joystick_source, "get_action_handle",
         &UEVR_VRData::get_action_handle, "is_action_active", &UEVR_VRData::is_action_active, "get_joystick_axis",
@@ -637,9 +558,7 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
             }
 
             return sol::make_object(s, &lhs.m[index]);
-        },
-        "as_full_binding",
-        [](UEVR_Matrix4x4f& self) -> Matrix4x4f { return *reinterpret_cast<Matrix4x4f*>(&self); });
+        });
 
     m_lua.new_usertype<UEVR_Matrix4x4d>(
         "UEVR_Matrix4x4d", sol::meta_function::index, [](sol::this_state s, UEVR_Matrix4x4d& lhs, sol::object index_obj) -> sol::object {
@@ -654,9 +573,7 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
             }
 
             return sol::make_object(s, &lhs.m[index]);
-        "as_full_binding",
-        [](UEVR_Matrix4x4d& self) -> Matrix4x4d { return *reinterpret_cast<Matrix4x4d*>(&self); });
-   
+        });
 
     m_lua.new_usertype<uevr::API::FName>(
         "UEVR_FName", "to_string", &uevr::API::FName::to_string, sol::meta_function::to_string, &uevr::API::FName::to_string);
@@ -667,6 +584,7 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         &uevr::API::UObject::get_fname, "get_short_name",
         [](sol::this_state s, uevr::API::UObject& self) -> sol::object {
             const auto wstr = self.get_fname()->to_string();
+            
             return sol::make_object(s, utility::narrow(wstr));
         },
         "get_full_name", &uevr::API::UObject::get_full_name, "is_a", &uevr::API::UObject::is_a, "as_class",
@@ -1199,6 +1117,10 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
 
     return out.push(m_lua.lua_state());
 }
+
+
+
+// TODO: attempt running each callback in a separate thread/state with a sandboxed copy of main environment
 
 bool ScriptContext::global_ufunction_pre_handler(uevr::API::UFunction* fn, uevr::API::UObject* obj, void* frame, void* out_result) {
     bool any_false = false;

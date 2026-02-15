@@ -30,7 +30,13 @@ public:
     bool is_advanced_mod() const override { return true; }
     std::optional<std::string> on_initialize_d3d_thread() override;
     void on_draw_ui() override;
-
+    void on_draw_ui_context(ImGuiContext* ctx);
+    void on_lua_state_created(lua_State& state);
+    void on_lua_state_destroyed(lua_State& state);
+    // this will call the imgui_frame cbs lua already uses
+    void on_frame() override;
+    // for plugins to call cimgui
+/*    bool on_imgui_frame(UEVR_OnImGuiFrameCb cb);*/
     void on_present() override;
     void on_device_reset() override;
     bool on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_param) override;
@@ -38,9 +44,9 @@ public:
     void on_xinput_set_state(uint32_t* retval, uint32_t user_index, XINPUT_VIBRATION* vibration) override;
 
     void on_post_render_vr_framework_dx11(ID3D11DeviceContext* context, ID3D11Texture2D*, ID3D11RenderTargetView* rtv) override;
+    void on_pre_engine_tick(sdk::UGameEngine* engine, float delta) override;                                                                                                                                                                                                         
     void on_post_render_vr_framework_dx12(ID3D12GraphicsCommandList* command_list, ID3D12Resource* rt, D3D12_CPU_DESCRIPTOR_HANDLE* rtv) override;
     
-    void on_pre_engine_tick(sdk::UGameEngine* engine, float delta) override;
     void on_post_engine_tick(sdk::UGameEngine* engine, float delta) override;
     void on_pre_slate_draw_window(void* renderer, void* command_list, sdk::FViewportInfo* viewport_info) override;
     void on_post_slate_draw_window(void* renderer, void* command_list, sdk::FViewportInfo* viewport_info) override;
@@ -58,7 +64,8 @@ public:
 public:
     void attempt_unload_plugins();
     void reload_plugins();
-
+    // using UEVRLuaStateCreatedCb = std::function<std::remove_pointer<::UEVRLuaStateCreatedCb>::type>;
+    //using UEVRLuaStateDestroyedCb = std::function<std::remove_pointer<::UEVRLuaStateDestroyedCb>::type>;
     /*using UEVR_OnPresentCb = std::function<std::remove_pointer<::UEVR_OnPresentCb>::type>;
     using UEVR_OnDeviceResetCb = std::function<std::remove_pointer<::UEVR_OnDeviceResetCb>::type>;
     using UEVR_OnMessageCb = std::function<std::remove_pointer<::UEVR_OnMessageCb>::type>;
@@ -74,7 +81,10 @@ public:
     //using UEVR_Slate_DrawWindow_RenderThreadCb = std::function<std::remove_pointer<::UEVR_Slate_DrawWindow_RenderThreadCb>::type>;
     //using UEVR_Stereo_CalculateStereoViewOffsetCb = std::function<std::remove_pointer<::UEVR_Stereo_CalculateStereoViewOffsetCb>::type>;
     //using UEVR_ViewportClient_DrawCb = std::function<std::remove_pointer<::UEVR_ViewportClient_DrawCb>::type>;
-
+    bool add_on_lua_state_created(UEVR_LuaStateCreatedCb cb);
+    bool add_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb);
+    bool add_on_frame(UEVR_OnFrameCb cb);
+/*    bool add_on_imgui_frame(UEVR_OnImGuiFrameCb cb);*/
     bool add_on_present(UEVR_OnPresentCb cb);
     bool add_on_device_reset(UEVR_OnDeviceResetCb cb);
     bool add_on_message(UEVR_OnMessageCb cb);
@@ -93,6 +103,10 @@ public:
     bool add_on_post_calculate_stereo_view_offset(UEVR_Stereo_CalculateStereoViewOffsetCb cb);
     bool add_on_pre_viewport_client_draw(UEVR_ViewportClient_DrawCb cb);
     bool add_on_post_viewport_client_draw(UEVR_ViewportClient_DrawCb cb);
+
+    void lock_lua();
+
+    void unlock_lua();
 
     bool remove_callback(void* cb) {
         {
@@ -150,7 +164,11 @@ public:
     bool hook_ufunction_ptr(UEVR_UFunctionHandle func, UEVR_UFunction_NativePreFn pre, UEVR_UFunction_NativePostFn post);
 
 private:
+    std::vector<UEVR_LuaStateCreatedCb> m_on_lua_state_created_cbs {};
+    std::vector<UEVR_LuaStateDestroyedCb> m_on_lua_state_destroyed_cbs {};
     std::shared_mutex m_api_cb_mtx;
+    std::vector<UEVR_OnFrameCb> m_on_frame_cbs{};
+    std::vector<UEVR_OnImGuiFrameCb> m_on_imgui_frame_cbs{};
     std::vector<UEVR_OnPresentCb> m_on_present_cbs{};
     std::vector<UEVR_OnDeviceResetCb> m_on_device_reset_cbs{};
     std::vector<UEVR_OnPostRenderVRFrameworkDX11Cb> m_on_post_render_vr_framework_dx11_cbs{};

@@ -31,7 +31,7 @@
 
 #include "UObjectHook.hpp"
 
-//#define VERBOSE_UOBJECTHOOK
+#define VERBOSE_UOBJECTHOOK
 
 std::shared_ptr<UObjectHook>& UObjectHook::get() {
     static std::shared_ptr<UObjectHook> instance = std::make_shared<UObjectHook>();
@@ -783,9 +783,9 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
         m_overlap_detection_actor->set_actor_location(right_hand_position, false, false);
         m_overlap_detection_actor->set_actor_rotation(right_hand_euler, false);
 
-        if (!g_framework->is_drawing_ui()) {
-            overlapped_components = std::move(m_overlap_detection_actor->get_overlapping_components());
-        }
+        //if (!g_framework->is_drawing_ui()) {
+         overlapped_components = std::move(m_overlap_detection_actor->get_overlapping_components());
+  //      }
     }
 
     // Update overlapped components and overlap actor transform (left)
@@ -849,10 +849,23 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                     }
                 }
 
+
+
+/*                auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(
+                    [&overlap]() -> sdk::UObject*{
+                    auto outer = overlap->get_outer();
+                    while (outer != nullptr) {
+                        if (outer->is_a(sdk::UWorld::static_class())) {
+                            return outer;
+                        }
+                    }
+                },  0);       */
+
                 const auto owner = overlap->get_owner();
                 bool owner_is_adjustment_vis = false;
 
-                if (owner == m_overlap_detection_actor || owner == m_overlap_detection_actor_left) {
+                if (owner == m_overlap_detection_actor || owner == m_overlap_detection_actor_left /*|| owner ==
+                        (sdk::AActor*)(player_controller->get_acknowledged_pawn())*/) {
                     continue;
                 }
 
@@ -1057,6 +1070,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
 
         if (!state.permanent) {
             GameThreadWorker::get().enqueue([this, comp, orig_position, orig_rotation]() {
+               
                 if (!this->exists(comp)) {
                     return;
                 }
@@ -1064,12 +1078,14 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                 comp->set_world_location(orig_position, false, false);
                 comp->set_world_rotation(orig_rotation, false, false);
             });
+            GameThreadWorker::get().execute();           
         }
     }
 }
 
 void UObjectHook::spawn_overlapper(uint32_t hand) {
-    GameThreadWorker::get().enqueue([this, hand]() {
+    GameThreadWorker::get().enqueue(
+[this, hand]() {
         auto ugs = sdk::UGameplayStatics::get();
         auto world = sdk::UGameEngine::get()->get_world();
 
@@ -1188,7 +1204,9 @@ void UObjectHook::spawn_overlapper(uint32_t hand) {
 
                 if (new_sphere != nullptr) {
                     new_sphere->attach_to(mesh, L"None", 0, true);
-                    new_sphere->set_local_transform(glm::vec3{}, glm::vec4{0, 0, 0, 1}, glm::vec3{1, 1, 1});
+                //   new_sphere->set_local_transform(glm::vec3{}, glm::vec4{0, 0, 0, 1}, glm::vec3{1, 1, 1});
+                    
+                    new_sphere->set_local_transform(glm::vec3{0, 0, 82}, glm::vec4{0, 0, 0, 1}, glm::vec3{1, 1, 1});
 
                     std::unique_lock _{m_mutex};
                     m_spawned_spheres.insert(new_sphere);
@@ -1200,6 +1218,7 @@ void UObjectHook::spawn_overlapper(uint32_t hand) {
             SPDLOG_ERROR("[UObjectHook] Failed to spawn actor for overlapper");
         }
     });
+    GameThreadWorker::get().execute();
 }
 
 void UObjectHook::destroy_overlapper() {
@@ -1774,6 +1793,23 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         }
         
         return player_controller->get_player_camera_manager();
+        break;
+    }
+
+    case "PersistentLevel"_fnv: {
+
+        auto world = engine->get_world();
+        if (world == nullptr) {
+            return nullptr;
+        }
+
+        auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
+
+        if (player_controller == nullptr) {
+            return nullptr;
+        }
+
+        return player_controller->get_outer();
         break;
     }
 
@@ -2711,6 +2747,7 @@ void UObjectHook::ui_standard_object_context_menu(sdk::UObjectBase* object) {
             const auto hex = (std::stringstream{} << std::hex << (uintptr_t)object).str();
             sc(hex);
         }
+
 
         ImGui::EndPopup();
     }
@@ -3953,7 +3990,7 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
         const auto& array_obj = *(sdk::TArray<sdk::FName*>*)((uintptr_t)addr + prop->get_offset());
 
         for (auto obj : array_obj) {
-        const auto wstr = obj.to_string();
+        const auto wstr = obj->to_string();
         const auto str = utility::narrow(wstr);
 
         ImGui::Text("%s: ", str.data());

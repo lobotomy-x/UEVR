@@ -35,7 +35,7 @@ public:
     bool valid() { return m_plugin_initialize_param != nullptr; }
 
     auto& lua() { return m_lua; }
-
+    struct UE_ProxyPtr;
     UEVR_PluginInitializeParam* plugin_initialize_param() { return m_plugin_initialize_param; }
 
     sol::protected_function_result handle_protected_result(sol::protected_function_result result) {

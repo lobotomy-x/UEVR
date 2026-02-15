@@ -67,6 +67,10 @@ public:
     }
 
     auto& lua() { return m_lua; }
+    bool is_main_state() { return m_is_main_state; }
+    void lock() { m_execution_mutex.lock(); }
+    void unlock() { m_execution_mutex.unlock(); }
+    auto scoped_lock() { return std::scoped_lock{m_execution_mutex}; }
 
 private:
     std::shared_ptr<sol::state> m_lua_impl{std::make_shared<sol::state>()};
@@ -75,5 +79,6 @@ private:
 
     GarbageCollectionData m_gc_data{};
     bool m_is_main_state;
+    std::recursive_mutex m_execution_mutex{};
 };
 }

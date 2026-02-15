@@ -42,6 +42,7 @@ extern "C" {
 
 namespace uevr {
 class API {
+
 private:
     static inline std::unique_ptr<API> s_instance{};
 
@@ -67,6 +68,23 @@ public:
         }
 
         return s_instance;
+    }
+
+public:
+    struct LuaLock {
+        LuaLock() { API::s_instance->lock_lua(); }
+
+        virtual ~LuaLock() { API::s_instance->unlock_lua(); }
+    };
+
+    void lock_lua() {
+        m_lua_mtx.lock();
+        m_param->functions->lock_lua();
+    }
+
+    void unlock_lua() {
+        m_param->functions->unlock_lua();
+        m_lua_mtx.unlock();
     }
 
 public:
@@ -146,6 +164,8 @@ public:
     struct UObjectHook;
     struct FRHITexture2D;
     struct IPooledRenderTarget;
+
+
 
     template<typename T>
     struct TArray;
@@ -699,6 +719,11 @@ public:
         uint64_t get_property_flags() const {
             static const auto fn = initialize()->get_property_flags;
             return fn(to_handle());
+        }
+
+        void set_property_flags(uint64_t flags) {
+            static const auto fn = initialize()->set_property_flags;
+            fn(to_handle(), flags);
         }
 
         bool is_param() const {
@@ -1803,5 +1828,6 @@ public:
 private:
     const UEVR_PluginInitializeParam* m_param;
     const UEVR_SDKData* m_sdk;
+    std::recursive_mutex m_lua_mtx{};
 };
 }

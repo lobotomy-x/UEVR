@@ -45,9 +45,9 @@ public:
         return m_intersect_state;
     }
 
-    const auto& get_ui_clear_color() {
-         return m_clear_color;
-    }
+    //const auto& get_ui_clear_color() {
+    //     return m_clear_color;
+    //}
 
     bool should_invert_ui_alpha() const {
         return m_ui_invert_alpha->value();

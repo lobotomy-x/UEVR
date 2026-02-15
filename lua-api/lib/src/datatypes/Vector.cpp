@@ -116,11 +116,11 @@ namespace lua::datatypes {
         #define BIND_VECTOR4_LIKE_END() \
             );
 
-        BIND_VECTOR4_LIKE(Vector4f, float),
+        BIND_VECTOR4_LIKE(Vector4f, float, Quaternionf)
             sol::meta_function::construct, sol::constructors<Vector4f(float, float, float, float)>()
         BIND_VECTOR4_LIKE_END();
 
-        BIND_VECTOR4_LIKE(Vector4d, double),
+        BIND_VECTOR4_LIKE(Vector4d, double, Quaterniond)
             sol::meta_function::construct, sol::constructors<Vector4d(double, double, double, double)>()
         BIND_VECTOR4_LIKE_END();
 

@@ -1,7 +1,15 @@
 #pragma once
 
 #include "uevr/API.h"
-#include <sdk/FRenderResource.hpp>
+namespace uevr {
+namespace frhitexture2d {
+void* get_native_resource(UEVR_FRHITexture2DHandle handle);
+
+extern UEVR_FRHITexture2DFunctions functions;
+} // namespace frhitexture2d
+} // namespace uevr
+
+/*#include <sdk/FRenderResource.hpp>
 #include <sdk/FTexture.hpp>
 #include <sdk/UTexture.hpp>
 #include <sdk/FRenderTarget.hpp>
@@ -19,11 +27,7 @@
 #include <sdk/UObjectReference.hpp>
 #include <sdk/AActor.hpp>
 #include <sdk/USceneCaptureComponent2D.hpp>
-#include <sdk/UTexture.hpp>
-namespace uevr {
-struct FRHICommandListImmediate;;
-struct UCanvas;
-struct IStereoLayers;
+#include <sdk/UTexture.hpp>		  
 
 namespace sdk {
 struct FSceneViewStateInterface;
@@ -36,7 +40,13 @@ class USceneCaptureComponent2D;
 class UTexture;
 class FSceneViewFamily;
 class FSceneView;
-}
+} // namespace sdk
+namespace uevr {
+struct FRHICommandListImmediate;;
+struct UCanvas;
+struct IStereoLayers;
+
+
 
 
 namespace frhitexture2d {
@@ -44,4 +54,4 @@ void* get_native_resource(UEVR_FRHITexture2DHandle handle);
 
 extern UEVR_FRHITexture2DFunctions functions;
 }
-}
+}*/

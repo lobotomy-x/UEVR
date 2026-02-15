@@ -218,7 +218,7 @@ uint32_t XInputHook::get_state_hook_1_4(uint32_t user_index, XINPUT_STATE* state
     const auto& mods = g_framework->get_mods()->get_mods();
 
     for (auto& mod : mods) {
-        mod->on_xinput_get_state(&ret, user_index, state);
+        mod->on_xinput_get_state(&ret, user_index, state);                                                                                     
     }
 
     return ret;

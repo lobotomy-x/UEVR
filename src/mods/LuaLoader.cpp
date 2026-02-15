@@ -72,7 +72,7 @@ void LuaLoader::on_frame() {
     }
 
     for (auto state_to_delete : m_states_to_delete) {
-        std::erase_if(m_states, [&](std::shared_ptr<ScriptState> state) { return state->lua().lua_state() == state_to_delete; });
+        std::erase_if(m_states, [&](std::shared_ptr<ScriptState> state) { return (lua_State*)state->lua().lua_state() == state_to_delete; });
     }
 
     m_states_to_delete.clear();
@@ -346,7 +346,33 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     
 
     lua.do_string(R"(
-    
+     local short_names
+    local function UniqueShortNames()
+
+        local s,r = pcall(function()
+            local t = json.load_file("class_short_names.json")
+            if #t > 0 then return t end
+        end)
+        if s then return r end
+        base_class = base_class or base_types("Class")
+        all_classes = base_class:get_objects_matching(false)
+        local short_names = {}
+        for i, v in ipairs(all_classes) do
+            if v.get_class and v:get_class() == base_class then
+                local short_name = v:get_fname():to_string()
+                local full_name = v:get_full_name()
+                if short_names[short_name] ~= nil
+                    then
+
+                   log("Duplicate short name "..short_name.." will be "..v:get_outer():get_short_name().."."..short_name)
+                        short_name = v:get_outer():get_short_name().."."..short_name
+                end
+                short_names[short_name] = full_name
+            end
+        end
+        json.dump_file("class_short_names.json", short_names, 4)
+        return short_names
+    end
     local _cache = {}
     setmetatable(_cache, {__mode = "v"})
     function uevr.find_class(input)
@@ -611,21 +637,16 @@ end
 
     lua["uevr"]["lua"] = lua_table;
 }
-/*/// <summary>
+/// <summary>
 /// Request the creation of a separate script state from the main script state
 /// </summary>
 /// <returns>the lua state of the new script state</returns>
-lua_state& LuaLoader::create_state() {
-}
 
 /// <summary>
 /// Request the destruction of the script_state belonging to the lua state in question
 /// </summary>
-void LuaLoader::delete_state(lua_state) {
 
-}
-state& LuaLoader::add_on_lua_state_created(cb) {
-}*/
+
 void LuaLoader::add_additional_bindings(sol::state_view& lua) {
     bindings::open_imgui(lua);
     bindings::open_json(lua);

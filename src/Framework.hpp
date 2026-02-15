@@ -24,7 +24,7 @@ class VR;
 #include "hooks/WindowsMessageHook.hpp"
 #include "hooks/XInputHook.hpp"
 #include "hooks/DInputHook.hpp"
-
+ #include <map>
 class UEVRSharedMemory {
 public:
     static inline int MESSAGE_IDENTIFIER = *(int*)"VRMOD";
@@ -169,13 +169,20 @@ public:
     void set_font_size(int size) { 
         if (m_font_size != size) {
             m_font_size = size;
-            m_fonts_need_updating = true;
+           // m_fonts_need_updating = true;
         }
     }
 
     auto get_font_size() const { return m_font_size; }
 
-    int add_font(const std::filesystem::path& filepath, int size, const std::vector<ImWchar>& ranges = {});
+    int add_font(const std::filesystem::path& filepath, int size/*, const std::vector<ImWchar>& ranges = {}*/);
+
+    void set_font(std::string path) {
+        m_default_font_file = path;
+        m_fonts_need_init = true;
+    }
+
+    int add_font(const std::filesystem::path& filepath, float size);
 
     ImFont* get_font(int index) const {
         if (index >= 0 && index < m_additional_fonts.size()) {
@@ -299,13 +306,17 @@ private:
 
     struct AdditionalFont {
         std::filesystem::path filepath{};
-        int size{16};
-        std::vector<ImWchar> ranges{};
+/*        int size{16};
+        std::vector<ImWchar> ranges{};*/
+        float size{16};
         ImFont* font{};
     };
 
-    bool m_fonts_need_updating{true};
-    int m_font_size{16};
+    std::string m_default_font_file = "DEFAULT";
+    bool m_fonts_need_init{true};
+    float m_font_size{16};
+    ImFont* m_default_font;
+    std::map<std::string, ImFont*> loaded_fonts{};
     std::vector<AdditionalFont> m_additional_fonts{};
 
     std::recursive_mutex m_input_mutex{};
@@ -444,7 +455,7 @@ private: // D3D12 members
         }
 
         uint32_t rt_width{};
-        uint32_t rt_height{};
+        uint32_t rt_height{};                                                                                                      
 
         std::array<void*, 2> imgui_backend_datas{};
     } m_d3d12{};
@@ -459,3 +470,5 @@ private:
 };
 
 extern std::unique_ptr<Framework> g_framework;
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam); // Use ImGui::GetCurrentContext()

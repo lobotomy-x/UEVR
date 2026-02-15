@@ -36,7 +36,7 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 
 std::unique_ptr<Framework> g_framework{};
-
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 UEVRSharedMemory::UEVRSharedMemory() {
     spdlog::info("Shared memory constructor!");
 
@@ -722,7 +722,7 @@ void Framework::on_reset(uint32_t w, uint32_t h) {
 
     if (m_initialized) {
         // fixes text boxes not being able to receive input
-        imgui::reset_keystates();
+ /*       imgui::reset_keystates();*/
     }
 
     // Crashes if we don't release it at this point.
@@ -1065,30 +1065,50 @@ void Framework::consume_input() {
     m_accumulated_mouse_delta[1] = 0.0f;
 }
 
-int Framework::add_font(const std::filesystem::path& filepath, int size, const std::vector<ImWchar>& ranges) {
+int Framework::add_font(const std::filesystem::path& filepath, int size/*, const std::vector<ImWchar>& ranges*/) {
     // Look for a font already matching this description.
     for (int i = 0; i < m_additional_fonts.size(); ++i) {
         const auto& font = m_additional_fonts[i];
 
-        if (font.filepath == filepath && font.size == size && font.ranges == ranges) {
+        if (font.filepath == filepath && abs(font.size - size) < 0.1 /*&& font.ranges == ranges*/) {
             return i;
         }
     }
-
-    m_additional_fonts.emplace_back(Framework::AdditionalFont{filepath, size, ranges, (ImFont*)nullptr});
-    m_fonts_need_updating = true;
+    AdditionalFont additional_font{filepath, size};
+    if (fs::exists(filepath)) {
+        auto path = filepath.string();
+        if (!loaded_fonts.contains(path)) {
+            loaded_fonts[path] = ImGui::GetIO().Fonts->AddFontFromFileTTF(path.c_str(), size);
+        }
+        additional_font.font = loaded_fonts[path];
+        // font.font = fonts->AddFontFromFileTTF(path.c_str(), font.size);
+    } else {
+        additional_font.font = m_default_font;
+    }
+    m_additional_fonts.emplace_back(additional_font);
+/*    m_additional_fonts.emplace_back(Framework::AdditionalFont{filepath, size, ranges, (ImFont*)nullptr});
+    m_fonts_need_updating = true;*/
 
     return m_additional_fonts.size() - 1;
 }
 
 void Framework::update_fonts() {
-    if (!m_fonts_need_updating) {
+    if (!m_fonts_need_init) {
         return;
     }
 
-    m_fonts_need_updating = false;
-
-    auto& fonts = ImGui::GetIO().Fonts;
+    m_fonts_need_init = false;
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontAtlas* const atlas = io.Fonts;
+    atlas->Clear();
+    const ImFontConfig* cfg{};
+    wchar_t windir[260]{};
+    GetWindowsDirectoryW(windir, 260);
+    
+  
+    m_default_font =
+        atlas->AddFontFromFileTTF((std::filesystem::path(windir) / "Fonts" / "Roboto-Medium.ttf").string().c_str(), m_font_size, cfg);
+  /*  auto& fonts = ImGui::GetIO().Fonts;
 
     fonts->Clear();
     fonts->AddFontFromMemoryCompressedTTF(RobotoMedium_compressed_data, RobotoMedium_compressed_size, (float)m_font_size);
@@ -1107,7 +1127,8 @@ void Framework::update_fonts() {
         }
     }
 
-    fonts->Build();
+    fonts->Build();*/
+    atlas->Build();
     m_wants_device_object_cleanup = true;
 }
 
@@ -1197,7 +1218,7 @@ void Framework::draw_ui() {
     } else {
         ImGui::SetNextWindowPos(ImVec2(centered_x, centered_y), ImGuiCond_Once);
     }
-
+    ImGui::PushFont(m_default_font, m_font_size);
     if (!m_last_draw_ui || m_cursor_state_changed) {
         m_cursor_state_changed = false;
     }
@@ -1365,7 +1386,7 @@ void Framework::draw_ui() {
                 ImGui::SetNextWindowFocus();
             }
 
-            ImGui::BeginChild("UEVRRightPane", ImVec2(0, 0), true, ImGuiWindowFlags_::ImGuiWindowFlags_AlwaysUseWindowPadding);
+            ImGui::BeginChild("UEVRRightPane", ImVec2(0, 0), ImGuiChildFlags_AlwaysUseWindowPadding);
             {
                 ImGui::BeginGroup();
 
@@ -1425,7 +1446,7 @@ void Framework::draw_ui() {
 
     m_last_window_pos = ImGui::GetWindowPos();
     m_last_window_size = ImGui::GetWindowSize();
-
+    ImGui::PopFont();
     ImGui::End();
 
     // save the menu state in config
@@ -2013,10 +2034,27 @@ bool Framework::init_d3d12() {
 
     auto& bb = m_d3d12.get_rt(D3D12::RTV::BACKBUFFER_0);
     auto bb_desc = bb->GetDesc();
-
+/*
     if (!ImGui_ImplDX12_Init(device, 3, bb_desc.Format, m_d3d12.srv_desc_heap.Get(),
-            m_d3d12.get_cpu_srv(device, D3D12::SRV::IMGUI_FONT_BACKBUFFER), m_d3d12.get_gpu_srv(device, D3D12::SRV::IMGUI_FONT_BACKBUFFER))) {
-        spdlog::error("[D3D12] Failed to initialize ImGui.");
+                m_d3d12.get_cpu_srv(device, D3D12::SRV::IMGUI_FONT_BACKBUFFER), m_d3d12.get_gpu_srv(device,
+       D3D12::SRV::IMGUI_FONT_BACKBUFFER))) {*/        // Create back buffer rtvs.
+    auto swapchain = m_d3d12_hook->get_swap_chain();
+
+    DXGI_SWAP_CHAIN_DESC swap_desc{};
+    swapchain->GetDesc(&swap_desc);
+
+ ImGui_ImplDX12_InitInfo init_info{};
+    init_info.Device = device;
+    init_info.CommandQueue = g_framework->get_d3d12_hook()->get_command_queue();
+    init_info.NumFramesInFlight = swap_desc.BufferCount;
+    init_info.RTVFormat = bb_desc.Format;
+    init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    init_info.SrvDescriptorHeap = m_d3d12.srv_desc_heap.Get();
+    init_info.LegacySingleSrvCpuDescriptor = m_d3d12.get_cpu_srv(device, D3D12::SRV::IMGUI_FONT_BACKBUFFER);
+    init_info.LegacySingleSrvGpuDescriptor = m_d3d12.get_gpu_srv(device, D3D12::SRV::IMGUI_FONT_BACKBUFFER);
+    if (!ImGui_ImplDX12_Init(&init_info)) {
+       spdlog::error("[D3D12] Failed to initialize ImGui.");
+
         return false;
     }
 
@@ -2027,10 +2065,23 @@ bool Framework::init_d3d12() {
     // Now initialize another one for the VR texture.
     auto& bb_vr = m_d3d12.get_rt(D3D12::RTV::IMGUI);
     auto bb_vr_desc = bb_vr->GetDesc();
-
+/*
     if (!ImGui_ImplDX12_Init(device, 3, bb_vr_desc.Format, m_d3d12.srv_desc_heap.Get(),
             m_d3d12.get_cpu_srv(device, D3D12::SRV::IMGUI_FONT_VR), m_d3d12.get_gpu_srv(device, D3D12::SRV::IMGUI_FONT_VR))) {
-        spdlog::error("[D3D12] Failed to initialize ImGui.");
+     */
+
+ImGui_ImplDX12_InitInfo init_info_vr{};
+    init_info_vr.Device = device;
+    init_info_vr.CommandQueue = g_framework->get_d3d12_hook()->get_command_queue();
+    init_info_vr.NumFramesInFlight = swap_desc.BufferCount;
+    init_info_vr.RTVFormat = bb_vr_desc.Format;
+    init_info_vr.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    init_info_vr.SrvDescriptorHeap = m_d3d12.srv_desc_heap.Get();
+    init_info_vr.LegacySingleSrvCpuDescriptor = m_d3d12.get_cpu_srv(device, D3D12::SRV::IMGUI_FONT_VR);
+    init_info_vr.LegacySingleSrvGpuDescriptor = m_d3d12.get_gpu_srv(device, D3D12::SRV::IMGUI_FONT_VR);
+
+    if (!ImGui_ImplDX12_Init(&init_info_vr)) {
+   spdlog::error("[D3D12] Failed to initialize ImGui.");
         return false;
     }
 

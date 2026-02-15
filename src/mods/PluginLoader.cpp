@@ -127,9 +127,46 @@ void dispatch_lua_event(const char* event_name, const char* event_data) {
 void dispatch_custom_event(const char* event_name, const char* event_data) {
     PluginLoader::get()->dispatch_custom_event(event_name, event_data);
 }
+ 
+void load_lua_file(const char* file_path) { 
+    auto ll = LuaLoader::get();
+    if (!ll) return;
+
+    auto state = ll->get_state();
+    if (!state) return;
+
+    auto& lua = state->context()->lua();
+    lua.load_file(file_path, sol::load_mode::any);
+};
+
+void load_lua_string(const char* lua_chunk, const char* chunk_name) { 
+    auto ll = LuaLoader::get();
+    if (!ll) return;
+
+    auto state = ll->get_state();
+    if (!state) return;
+
+    auto& lua = state->context()->lua();
+    // sizeof(lua_chunk) would give the size of the pointer; use strlen instead
+    lua.load_buffer(lua_chunk, (int)strlen(lua_chunk), chunk_name, sol::load_mode::any);
+};
+
+void get_lua_globals(void** out_globals) {
+    if (out_globals == nullptr) return;
+
+    auto ll = LuaLoader::get();
+    if (!ll) { *out_globals = nullptr; return; }
+
+    auto state = ll->get_state();
+    if (!state) { *out_globals = nullptr; return; }
+
+    auto& g = state->context()->lua().globals();
+    // return pointer to sol::object via out parameter (caller must delete)
+    sol::object* obj = new sol::object(g);
+    *out_globals = static_cast<void*>(obj);
+
 }
 
-namespace uevr {
 bool on_present(UEVR_OnPresentCb cb) {
     if (cb == nullptr) {
         return false;
@@ -216,6 +253,9 @@ UEVR_PluginFunctions g_plugin_functions {
     .register_inline_hook = uevr::register_inline_hook,
     .unregister_inline_hook = uevr::unregister_inline_hook,
     .dispatch_lua_event =::dispatch_lua_event,
+    .load_lua_file = ::load_lua_file,
+    .load_lua_string = ::load_lua_string,
+    .get_lua_globals = ::get_lua_globals,
 
     .get_commit_hash = []() -> const char* {
         return UEVR_COMMIT_HASH;
@@ -320,6 +360,82 @@ UEVR_SDKFunctions g_sdk_functions {
 
         return (UEVR_UObjectHandle)ugs->spawn_object((sdk::UClass*)klass, (sdk::UObject*)outer);
     },
+/*    // as_actor
+    [](UEVR_UObjectHandle object) -> UEVR_UObjectHandle {
+        if (object == nullptr) {
+            return nullptr;
+        }
+        
+        auto obj = (sdk::UObject*)object;
+        if (!obj->is_a(sdk::AActor::static_class())) {
+            return nullptr;
+        }
+        
+        return object;
+    },
+    // is_actor
+    [](UEVR_UObjectHandle object) -> bool {
+        if (object == nullptr) {
+            return false;
+        }
+        
+        return ((sdk::UObject*)object)->is_a(sdk::AActor::static_class());
+    },
+    // as_component
+    [](UEVR_UObjectHandle object) -> UEVR_UObjectHandle {
+        if (object == nullptr) {
+            return nullptr;
+        }
+        
+        auto obj = (sdk::UObject*)object;
+        if (!obj->is_a(sdk::UActorComponent::static_class())) {
+            return nullptr;
+        }
+        
+        return object;
+    },
+    // is_component
+    [](UEVR_UObjectHandle object) -> bool {
+        if (object == nullptr) {
+            return false;
+        }
+        
+        return ((sdk::UObject*)object)->is_a(sdk::UActorComponent::static_class());
+    },
+    // add_component
+    [](UEVR_UObjectHandle object, UEVR_UClassHandle klass) -> UEVR_UObjectHandle {
+        if (object == nullptr || klass == nullptr) {
+            return nullptr;
+        }
+        
+        auto actor = (sdk::AActor*)object;
+        return (UEVR_UObjectHandle)actor->add_component_by_class((sdk::UClass*)klass, false);
+    },
+    // attach
+    [](UEVR_UObjectHandle object, UEVR_UObjectHandle other, std::wstring& socket, uint8_t attach_rules) -> UEVR_UObjectHandle {
+        if (object == nullptr || other == nullptr) {
+            return nullptr;
+        }
+        
+        auto comp = (sdk::USceneComponent*)object;
+        auto parent = (sdk::USceneComponent*)other;
+        
+        // AttachToComponent with socket name and rules
+        comp->attach_to(parent, socket, attach_rules);
+        
+        return object;
+    },
+    // detach
+    [](UEVR_UObjectHandle object, bool keep_world, bool propagate) -> UEVR_UObjectHandle {
+        if (object == nullptr) {
+            return nullptr;
+        }
+        
+        auto comp = (sdk::USceneComponent*)object;
+        comp->detach_from_parent(keep_world, propagate);
+        
+        return object;
+    },*/
     // execute_command
     [](const wchar_t* command) -> void {
         if (command == nullptr) {
@@ -499,6 +615,9 @@ UEVR_FPropertyFunctions g_fproperty_functions {
     },
     .get_property_flags = [](UEVR_FPropertyHandle prop) -> uint64_t {
         return FPROPERTY(prop)->get_property_flags();
+    },
+    .set_property_flags = [](UEVR_FPropertyHandle prop, uint64_t flags) {
+        ((sdk::FProperty*)prop)->get_property_flags() = flags; 
     },
     .is_param = [](UEVR_FPropertyHandle prop) -> bool {
         return FPROPERTY(prop)->is_param();
@@ -1648,41 +1767,7 @@ UEVR_OpenXRData g_openxr_data {
     uevr::openxr::get_view_space
 };
 
-namespace uevr {
-namespace api {
-                   /// <summary>
-/// Request the creation of a separate script state from the main script state
-/// </summary>
-/// <returns>the lua state of the new script state</returns>
-lua_State* create_script_state() {
-    return LuaLoader::get()->create_state();
-}
-/// <summary>
-/// Request the destruction of the script_state belonging to the lua state in question
-/// </summary>
-void destroy_script_state(lua_State* lua_state) {
-    LuaLoader::get()->delete_state(lua_state);
-}
 
-bool on_lua_state_created(LuaStateCreatedCb cb) {
-    if (cb == nullptr) {
-        return false;
-    }
-
-    return LuaLoader::get()->add_on_lua_state_created(cb);
-}
-
-bool on_lua_state_destroyed(LuaStateDestroyedCb cb) {
-    if (cb == nullptr) {
-        return false;
-    }
-
-
-    return LuaLoader::get()->add_on_lua_state_destroyed(cb);
-}
-
-}
-}
 
 UEVR_LuaData g_lua_data {
     .get_lua_state = []() -> lua_State* {
@@ -1943,6 +2028,27 @@ void PluginLoader::reload_plugins() {
     early_init();
     on_initialize_d3d_thread();
 }
+/*// imgui draw ui.
+void PluginLoader::on_draw_ui() {
+    std::shared_lock _{m_api_cb_mtx};
+
+    if (!m_on_draw_ui_cbs.empty()) {
+        cimgui::setup_hook();
+
+        ::UEVRImGuiFrameCbData data{};
+        data.context = ImGui::GetCurrentContext();
+
+        ImGui::GetAllocatorFunctions((ImGuiMemAllocFunc*)&data.malloc_fn, (ImGuiMemFreeFunc*)&data.free_fn, &data.user_data);
+
+        for (auto&& cb : m_on_imgui_draw_ui_cbs) {
+            try {
+                cb(&data);
+            } catch (...) {
+                spdlog::error("[PluginLoader] Exception occurred in on_imgui_draw_ui callback; one of the plugins has an error.");
+            }
+        }
+    }
+}*/
 
 void PluginLoader::on_draw_ui() {
     std::scoped_lock _{m_mux};
@@ -1983,6 +2089,30 @@ void PluginLoader::on_draw_ui() {
     }
 }
 
+void PluginLoader::on_lua_state_created(lua_State& state) {
+    std::shared_lock _{m_api_cb_mtx};
+
+    for (auto& cb : m_on_lua_state_created_cbs) {
+        try {
+            cb(&state);
+        } catch (...) {
+            spdlog::error("[PluginLoader] Exception occurred in on_lua_state_created callback; one of the plugins has an error.");
+        }
+    }
+}
+
+void PluginLoader::on_lua_state_destroyed(lua_State& state) {
+    std::shared_lock _{m_api_cb_mtx};
+
+    for (auto& cb : m_on_lua_state_destroyed_cbs) {
+        try {
+            cb(&state);
+        } catch (...) {
+            spdlog::error("[PluginLoader] Exception occurred in on_lua_state_destroyed callback; one of the plugins has an error.");
+        }
+    }
+}
+
 void PluginLoader::on_present() {
     std::shared_lock _{m_api_cb_mtx};
 
@@ -2009,6 +2139,69 @@ void PluginLoader::on_present() {
         }
     }
 }
+// For cimgui redirection when on_imgui_frame is called.
+namespace cimgui {
+// Reframework uses minhook instead. I'm not sure why that's the case
+// I am more familiar with minhook than safetyhook but I don't want to add the dependency
+// So we're trying this. It should work I think
+static safetyhook::InlineHook g_load_library_ex_w_hook{};
+
+HMODULE WINAPI load_library_ex_w_hook(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) {
+    if (lpLibFileName != nullptr) {
+        if (std::wstring_view{lpLibFileName}.find(L"cimgui.dll") != std::wstring_view::npos) {
+            return g_framework->get_framework_module();
+        }
+    }
+
+    return g_load_library_ex_w_hook.stdcall<HMODULE>(lpLibFileName, hFile, dwFlags);
+}
+
+void setup_hook() {
+    auto llxw = GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryExW");
+
+    if (llxw != nullptr) {
+        g_load_library_ex_w_hook = safetyhook::create_inline(llxw, reinterpret_cast<void*>(load_library_ex_w_hook));
+        if (!g_load_library_ex_w_hook) {
+            spdlog::error("[UEVR] Failed to hook LoadLibraryExW for cimgui.dll redirection");
+            return;
+        }
+    }
+}
+} // namespace cimgui
+
+// imgui frame.
+void PluginLoader::on_frame() {
+    std::shared_lock _{m_api_cb_mtx};
+
+    if (!m_on_imgui_frame_cbs.empty()) {
+        cimgui::setup_hook();
+
+        ::UEVR_ImGuiFrameCbData data{};
+        data.context = ImGui::GetCurrentContext();
+
+        ImGui::GetAllocatorFunctions((ImGuiMemAllocFunc*)&data.malloc_fn, (ImGuiMemFreeFunc*)&data.free_fn, &data.user_data);
+
+        for (auto&& cb : m_on_imgui_frame_cbs) {
+            try {
+                cb(&data);
+            } catch (...) {
+                spdlog::error("[PluginLoader] Exception occurred in on_imgui_frame callback; one of the plugins has an error.");
+            }
+        }
+    }
+
+    if (!m_on_frame_cbs.empty()) {
+      
+        for (auto&& cb : m_on_frame_cbs) {
+            try {
+                cb();
+            } catch (...) {
+                spdlog::error("[PluginLoader] Exception occurred in on_frame callback; one of the plugins has an error.");
+            }
+        }
+    }
+}
+
 
 void PluginLoader::on_device_reset() {
     std::shared_lock _{m_api_cb_mtx};
@@ -2017,7 +2210,7 @@ void PluginLoader::on_device_reset() {
         try {
             cb();
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_device_reset callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_device_reset callback; one of the plugins has an error.");
         }
     }
 }
@@ -2029,7 +2222,7 @@ void PluginLoader::on_post_render_vr_framework_dx11(ID3D11DeviceContext* context
         try {
             cb((void*)context, (void*)tex, (void*)rtv);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_render_vr_framework_dx11 callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_render_vr_framework_dx11 callback; one of the plugins has an error.");
             continue;
         }
     }
@@ -2042,7 +2235,7 @@ void PluginLoader::on_post_render_vr_framework_dx12(ID3D12GraphicsCommandList* c
         try {
             cb((void*)command_list, (void*)tex, (void*)rtv);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_render_vr_framework_dx12 callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_render_vr_framework_dx12 callback; one of the plugins has an error.");
             continue;
         }
     }
@@ -2057,7 +2250,7 @@ bool PluginLoader::on_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
                 return false;
             }
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_message callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_message callback; one of the plugins has an error.");
             continue;
         }
     }
@@ -2072,7 +2265,7 @@ void PluginLoader::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XI
         try {
             cb(retval, user_index, (void*)state);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_xinput_get_state callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_xinput_get_state callback; one of the plugins has an error.");
             continue;
         }
     }
@@ -2085,7 +2278,7 @@ void PluginLoader::on_xinput_set_state(uint32_t* retval, uint32_t user_index, XI
         try {
             cb(retval, user_index, (void*)vibration);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_xinput_set_state callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_xinput_set_state callback; one of the plugins has an error.");
             continue;
         }
     }
@@ -2098,7 +2291,7 @@ void PluginLoader::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
         try {
             cb((UEVR_UGameEngineHandle)engine, delta);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_pre_engine_tick callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_pre_engine_tick callback; one of the plugins has an error.");
         }
     }
 }
@@ -2110,7 +2303,7 @@ void PluginLoader::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
         try {
             cb((UEVR_UGameEngineHandle)engine, delta);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_engine_tick callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_engine_tick callback; one of the plugins has an error.");
         }
     }
 }
@@ -2122,7 +2315,7 @@ void PluginLoader::on_pre_slate_draw_window(void* renderer, void* command_list, 
         try {
             cb((UEVR_FSlateRHIRendererHandle)renderer, (UEVR_FViewportInfoHandle)viewport_info);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_pre_slate_draw_window callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_pre_slate_draw_window callback; one of the plugins has an error.");
         }
     }
 }
@@ -2134,7 +2327,7 @@ void PluginLoader::on_post_slate_draw_window(void* renderer, void* command_list,
         try {
             cb((UEVR_FSlateRHIRendererHandle)renderer, (UEVR_FViewportInfoHandle)viewport_info);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_slate_draw_window callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_slate_draw_window callback; one of the plugins has an error.");
         }
     }
 }
@@ -2149,7 +2342,7 @@ void PluginLoader::on_early_calculate_stereo_view_offset(void* stereo_device, co
             cb( (UEVR_StereoRenderingDeviceHandle)stereo_device, view_index, world_to_meters, 
                 (UEVR_Vector3f*)view_location, (UEVR_Rotatorf*)view_rotation, is_double);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_early_calculate_stereo_view_offset callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_early_calculate_stereo_view_offset callback; one of the plugins has an error.");
         }
     }
 }
@@ -2164,7 +2357,7 @@ void PluginLoader::on_pre_calculate_stereo_view_offset(void* stereo_device, cons
             cb( (UEVR_StereoRenderingDeviceHandle)stereo_device, view_index, world_to_meters, 
                 (UEVR_Vector3f*)view_location, (UEVR_Rotatorf*)view_rotation, is_double);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_pre_calculate_stereo_view_offset callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_pre_calculate_stereo_view_offset callback; one of the plugins has an error.");
         }
     }
 }
@@ -2179,7 +2372,7 @@ void PluginLoader::on_post_calculate_stereo_view_offset(void* stereo_device, con
             cb( (UEVR_StereoRenderingDeviceHandle)stereo_device, view_index, world_to_meters, 
                 (UEVR_Vector3f*)view_location, (UEVR_Rotatorf*)view_rotation, is_double);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_calculate_stereo_view_offset callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_calculate_stereo_view_offset callback; one of the plugins has an error.");
         }
     }
 }
@@ -2191,7 +2384,7 @@ void PluginLoader::on_pre_viewport_client_draw(void* viewport_client, void* view
         try {
             cb((UEVR_UGameViewportClientHandle)viewport_client, (UEVR_FViewportHandle)viewport, (UEVR_FCanvasHandle)canvas);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_pre_viewport_client_draw callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_pre_viewport_client_draw callback; one of the plugins has an error.");
         }
     }
 }
@@ -2203,7 +2396,7 @@ void PluginLoader::on_post_viewport_client_draw(void* viewport_client, void* vie
         try {
             cb((UEVR_UGameViewportClientHandle)viewport_client, (UEVR_FViewportHandle)viewport, (UEVR_FCanvasHandle)canvas);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in on_post_viewport_client_draw callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in on_post_viewport_client_draw callback; one of the plugins has an error.");
         }
     }
 }
@@ -2215,9 +2408,30 @@ void PluginLoader::dispatch_custom_event(const char* event_name, const char* eve
         try {
             cb(event_name, event_data);
         } catch(...) {
-            spdlog::error("[APIProxy] Exception occurred in custom event callback; one of the plugins has an error.");
+            spdlog::error("[PluginLoader] Exception occurred in custom event callback; one of the plugins has an error.");
         }
     }
+}
+
+bool PluginLoader::add_on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
+    std::unique_lock _{m_api_cb_mtx};
+
+    m_on_lua_state_created_cbs.push_back(cb);
+
+    auto& state = LuaLoader::get()->get_state();
+
+    if (state != nullptr && state->lua().lua_state() != nullptr) {
+        cb(state->lua());
+    }
+
+    return true;
+}
+
+bool PluginLoader::add_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
+    std::unique_lock _{m_api_cb_mtx};
+
+    m_on_lua_state_destroyed_cbs.push_back(cb);
+    return true;
 }
 
 bool PluginLoader::add_on_present(UEVR_OnPresentCb cb) {
@@ -2339,3 +2553,49 @@ bool PluginLoader::add_on_post_viewport_client_draw(UEVR_ViewportClient_DrawCb c
     m_on_post_viewport_client_draw_cbs.push_back(cb);
     return true;
 }
+
+/// <summary>
+/// Request the creation of a separate script state from the main script state
+/// </summary>
+/// <returns>the lua state of the new script state</returns>
+lua_State* create_script_state() {
+    return LuaLoader::get()->create_state();
+}
+/// <summary>
+/// Request the destruction of the script_state belonging to the lua state in question
+/// </summary>
+void reframework_destroy_script_state(lua_State* lua_state) {
+    LuaLoader::get()->delete_state(lua_state);
+}
+
+bool reframework_on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
+    if (cb == nullptr) {
+        return false;
+    }
+
+    return  PluginLoader::get()->add_on_lua_state_created(cb);
+}
+
+bool reframework_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
+    if (cb == nullptr) {
+        return false;
+    }
+
+    return PluginLoader::get()->add_on_lua_state_destroyed(cb);
+}
+
+void PluginLoader::lock_lua() {
+    LuaLoader::get()->lock();
+}
+
+void PluginLoader::unlock_lua() {
+    LuaLoader::get()->unlock();
+}                                                                                                        
+
+/*bool PluginLoader::on_imgui_frame(UEVR_OnImGuiFrameCb cb) {
+    if (cb == nullptr) {
+        return false;
+    }
+
+    return PluginLoader::get()->add_on_imgui_frame(cb);
+}*/

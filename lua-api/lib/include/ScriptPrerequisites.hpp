@@ -14,6 +14,7 @@ concept CacheablePointer = std::is_base_of_v<uevr::API::UObject, T> || std::is_b
 constexpr uintptr_t FAKE_OBJECT_ADDR = 12345;
 }
 
+
 // Object pooling for UObject based pointers using a specialization for sol_lua_push
 template<detail::CacheablePointer T>
 int sol_lua_push(sol::types<T*>, lua_State* l, T* obj) {

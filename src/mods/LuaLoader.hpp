@@ -57,8 +57,41 @@ public:
         return m_states[index];
     }
 
-    std::scoped_lock<std::recursive_mutex> get_access_lock() {
-        return std::scoped_lock<std::recursive_mutex>{m_access_mutex};
+    void lock() {
+        m_access_mutex.lock();
+        for (auto& state : m_states) {
+            state->lock();
+        }
+
+        ++m_lock_depth;
+    }
+
+    void unlock() {
+        for (auto& state : m_states) {
+            state->unlock();
+        }
+        m_access_mutex.unlock();
+
+        if (m_lock_depth > 0) {
+            --m_lock_depth;
+        }
+    }
+    std::scoped_lock<std::recursive_mutex> get_access_lock() { return std::scoped_lock<std::recursive_mutex>{m_access_mutex}; }
+    lua_State* create_state() {
+        std::scoped_lock _{m_access_mutex};
+        UEVR_PluginInitializeParam* param{};
+        m_states.emplace_back(std::make_shared<ScriptState>(make_gc_data(), param,  false));
+
+        for (uint32_t i = 0; i < m_lock_depth; ++i) {
+            m_states.back()->lock();
+        }
+
+        return ( lua_State*)m_states.back().get()->lua().lua_state();
+    }
+
+    void delete_state(lua_State* lua_state) {
+        std::scoped_lock _{m_access_mutex};
+        m_states_to_delete.push_back(lua_state);
     }
 
     // Resets the ScriptState and runs autorun scripts again.
@@ -84,7 +117,7 @@ private:
     std::shared_ptr<ScriptState> m_main_state{};
     std::vector<std::shared_ptr<ScriptState>> m_states{};
     std::recursive_mutex m_access_mutex{};
-
+    std::atomic<uint32_t> m_lock_depth{0};
     // A list of Lua files that have been explicitly loaded either through the user manually loading the script, or
     // because the script was in the autorun directory.
     std::vector<std::string> m_loaded_scripts{};

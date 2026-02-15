@@ -603,7 +603,6 @@ public:
 
     virtual std::optional<std::string> on_initialize() { return std::nullopt; };
     virtual std::optional<std::string> on_initialize_d3d_thread() { return std::nullopt; };
-
     virtual std::vector<SidebarEntryInfo> get_sidebar_entries() { return {}; };
 
     // This gets called after updating stuff like keyboard/mouse input to imgui

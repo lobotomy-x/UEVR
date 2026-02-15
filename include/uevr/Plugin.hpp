@@ -43,7 +43,7 @@ namespace detail {
     static inline ::uevr::Plugin* g_plugin{nullptr};
 }
 
-class Plugin {
+    class Plugin {
 public:
     Plugin() { detail::g_plugin = this; }
 
@@ -74,6 +74,10 @@ public:
     virtual void on_post_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle) {}
 
     virtual void on_custom_event(const char* event_name, const char* event_data) {}
+
+    virtual void dispatch_lua_event(std::string_view event_name, std::string_view event_data) {}
+
+
 
 protected:
 };

@@ -41,7 +41,7 @@ SOFTWARE.
 
 #define UEVR_RENDERER_D3D11 0
 #define UEVR_RENDERER_D3D12 1
-
+struct lua_State;
 typedef struct {
     int major;
     int minor;
@@ -152,9 +152,16 @@ typedef struct {
     double m[4][4];
 } UEVR_Matrix4x4d;
 
+
+
+
+
 /* Generic DX renderer callbacks */
 typedef void (*UEVR_OnPresentCb)();
 typedef void (*UEVR_OnDeviceResetCb)();
+
+
+
 
 /* VR Specific renderer callbacks */
 typedef void (*UEVR_OnPostRenderVRFrameworkDX11Cb)(void*, void*, void*); /* immediate_context, ID3D11Texture2D* resource, ID3D11RenderTargetView* rtv */
@@ -188,7 +195,32 @@ typedef bool (*UEVR_OnMessageFn)(UEVR_OnMessageCb);
 typedef bool (*UEVR_OnXInputGetStateFn)(UEVR_OnXInputGetStateCb);
 typedef bool (*UEVR_OnXInputSetStateFn)(UEVR_OnXInputSetStateCb);
 
+
+/* ImGui / CImGui */
+// expose the onframe callback used by lua already without disturbing it too much
+typedef void (*UEVR_OnFrameCb)();
+typedef struct {
+    void* context;
+    void* malloc_fn;
+    void* free_fn;
+    void* user_data;
+} UEVR_ImGuiFrameCbData;
+// allow for plugins to use cimgui and pass data
+// these will still run during onframe
+typedef void (*UEVR_OnImGuiFrameCb)(UEVR_ImGuiFrameCbData*);
+// leaving that one out for now since onframe also runs during on_draw_ui
+/*typedef void (*UEVR_OnImGuiDrawUICb)(UEVR_ImGuiFrameCbData*);*/
+typedef bool (*UEVR_OnImGuiFrameFn)(UEVR_OnImGuiFrameCb);
 /* Lua */
+typedef struct lua_State* (*UEVR_CreateScriptState)();
+typedef void (*UEVR_DeleteScriptState)(struct lua_State*);
+
+typedef void (*UEVR_LuaLockUnlockFn)();
+typedef void (*UEVR_LuaStateCreatedCb)(struct lua_State*);
+typedef void (*UEVR_LuaStateDestroyedCb)(struct lua_State*);
+typedef void (*UEVR_OnLuaStateCreatedFn)(UEVR_LuaStateCreatedCb);
+typedef void (*UEVR_OnLuaStateDestroyedFn)(UEVR_LuaStateDestroyedCb);
+
 typedef void (*UEVR_OnCustomEventCb)(const char* evt, const char* evt_data);
 typedef bool (*UEVR_OnCustomEventFn)(UEVR_OnCustomEventCb);
 
@@ -223,7 +255,11 @@ typedef struct {
     unsigned int (*get_persistent_dir)(wchar_t* buffer, unsigned int buffer_size);
     int (*register_inline_hook)(void* target, void* dst, void** original);
     void (*unregister_inline_hook)(int hook_id);
+
     void (*dispatch_lua_event)(const char* event_name, const char* event_data);
+    void (*load_lua_file)(const char* file_path);
+    void (*load_lua_string)(const char* lua_chunk, const char* chunk_name);
+    void (*get_lua_globals)(void** out_globals);
     void (*synchronize_lua_event)(void* lua_state_view, const char* event_name, const char* event_data);
 
     const char* (*get_commit_hash)();
@@ -234,7 +270,13 @@ typedef struct {
     const char* (*get_build_time)();
     unsigned int (*get_commits_past_tag)();
     unsigned int (*get_total_commits)();
-
+    void (*reload_plugins)();
+    void (*attempt_unload_plugins)();
+    void (*reset_lua_scripts)();
+    UEVR_OnLuaStateDestroyedFn on_lua_state_destroyed;
+    UEVR_OnImGuiFrameFn on_imgui_frame;
+    UEVR_LuaLockUnlockFn lock_lua;
+    UEVR_LuaLockUnlockFn unlock_lua;
     /* Intended for C plugins to listen to via on_custom_event */
     void (*dispatch_custom_event)(const char* event_name, const char* event_data);
 } UEVR_PluginFunctions;
@@ -268,15 +310,15 @@ typedef struct {
     UEVR_UObjectHandle (*get_local_pawn)(int index);
     UEVR_UObjectHandle (*spawn_object)(UEVR_UClassHandle klass, UEVR_UObjectHandle outer);
 
-   UEVR_UObjectHandle (*as_actor)(UEVR_UObjectHandle object);
-    bool (*is_actor)(UEVR_UObjectHandle object);
+   //UEVR_UObjectHandle (*as_actor)(UEVR_UObjectHandle object);
+   // bool (*is_actor)(UEVR_UObjectHandle object);
 
-    UEVR_UObjectHandle (*as_component)(UEVR_UObjectHandle object);
-    bool (*is_component)(UEVR_UObjectHandle object);   
-    
-    UEVR_UObjectHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
-    UEVR_UObjectHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, UEVR_FNameHandle socket, void* attach_rules);
-    UEVR_UObjectHandle (*detach)(UEVR_UObjectHandle object);
+   // UEVR_UObjectHandle (*as_component)(UEVR_UObjectHandle object);
+   // bool (*is_component)(UEVR_UObjectHandle object);   
+   // 
+   // UEVR_UObjectHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
+   // UEVR_UObjectHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, const wchar_t* socket, uint8_t attach_rules);
+   // UEVR_UObjectHandle (*detach)(bool keep_world, bool propagate);
 
     /* Handles exec commands, find_console_command does not */
     void (*execute_command)(const wchar_t* command);
@@ -333,6 +375,7 @@ typedef struct {
 typedef struct {
     int (*get_offset)(UEVR_FPropertyHandle prop);
     unsigned long long (*get_property_flags)(UEVR_FPropertyHandle prop);
+    void (*set_property_flags)(UEVR_FPropertyHandle prop, unsigned long long flags);
     bool (*is_param)(UEVR_FPropertyHandle prop);
     bool (*is_out_param)(UEVR_FPropertyHandle prop);
     bool (*is_return_param)(UEVR_FPropertyHandle prop);
@@ -590,6 +633,10 @@ typedef struct {
     void (*get_grip_transform)(UEVR_TrackedDeviceIndex index, UEVR_Matrix4x4f* out_transform);
     void (*get_aim_transform)(UEVR_TrackedDeviceIndex index, UEVR_Matrix4x4f* out_transform);
 
+
+    void (*get_angular_velocity)(UEVR_TrackedDeviceIndex index, UEVR_Vector3f* out_velocity);
+
+
     void (*get_eye_offset)(UEVR_Eye eye, UEVR_Vector3f* out_position);
 
     /* Converted to UE projection matrix */
@@ -634,11 +681,12 @@ typedef struct {
     void (*reload_config)();
 } UEVR_VRData;
 
-struct lua_State;
+
 
 typedef struct {
     lua_State* (*get_lua_state)();
     void (*add_additional_bindings)(lua_State* L); /* for external Lua environments. adds json, fs, imgui, etc*/
+
 } UEVR_LuaData;
 
 typedef struct {
@@ -656,6 +704,7 @@ typedef struct {
     const UEVR_SDKData* sdk;
 
     const UEVR_LuaData* lua;
+
 } UEVR_PluginInitializeParam;
 
 typedef bool (*UEVR_PluginInitializeFn)(const UEVR_PluginInitializeParam*);

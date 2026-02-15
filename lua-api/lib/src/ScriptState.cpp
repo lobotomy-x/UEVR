@@ -10,7 +10,7 @@ void msg(const char* text) {
     // Could technically find the wrong process still but this way it won't just grab a random foreground window
     // previously if you had high script load times and got an error while another process was open or even worse, while actively tabbing,
     // you could totally lose your error message
-    MessageBoxA(FindWindowA("UnrealWindow", nullptr), text, "LuaLoader Message", MB_ICONINFORMATION | MB_OK);
+    MessageBoxA(nullptr, text, "LuaLoader Message", MB_ICONINFORMATION | MB_OK);
 }
 } // namespace api::ue
 
@@ -34,7 +34,7 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
 
     // Restrict os library
     auto os = m_lua["os"];
-/*    os["remove"] = sol::nil;
+/* os["remove"] = sol::nil;
     os["rename"] = sol::nil;
     os["execute"] = sol::nil;
     os["exit"] = sol::nil;
@@ -74,9 +74,12 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
 }
 
 ScriptState::~ScriptState() {
+    std::scoped_lock _{m_execution_mutex};
+
 }
 
 void ScriptState::run_script(const std::string& p) {
+    std::scoped_lock _{m_execution_mutex};
     uevr::API::get()->log_info(std::format("Running script {}...", p).c_str());
 
     const std::string old_pristine_path = m_lua.registry()["package_path"];
@@ -116,6 +119,7 @@ void ScriptState::run_script(const std::string& p) {
 }
 
 void ScriptState::gc_data_changed(GarbageCollectionData data) {
+std::scoped_lock _{m_execution_mutex};
     // Handler
     switch (data.gc_handler) {
     case ScriptState::GarbageCollectionHandler::UEVR_MANAGED:
@@ -157,6 +161,7 @@ void ScriptState::gc_data_changed(GarbageCollectionData data) {
 }
 
 void ScriptState::on_script_reset() {
+
     if (m_context == nullptr) {
         return;
     }
@@ -165,6 +170,7 @@ void ScriptState::on_script_reset() {
 }
 
 void ScriptState::on_frame() {
+
     if (m_context != nullptr) {
         m_context->frame();
     }
@@ -196,6 +202,8 @@ void ScriptState::on_frame() {
         lua_gc(m_lua, LUA_GCCOLLECT);
         break;
     };
+
+
 }
 
 void ScriptState::on_draw_ui() {

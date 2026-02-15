@@ -24,24 +24,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
+#ifndef LUA_DEBUG 
+#define LUA_DEBUG = 1
+#endif
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <unordered_map>
+#include <cstdint>
+#include <vector>
+#include <algorithm>
 
 #include "../LuaLoader.hpp"
 #include "Framework.hpp"
 #include "utility/ImGui.hpp"
-#include <sdk/UTexture.hpp>
-#include <sdk/FRenderResource.hpp>
-#include <sdk/FTexture.hpp>
-#include <sdk/FTextureRenderTargetResource.hpp>
- #include <sdk/FTextureResource.hpp>
+
 #include "ImGui.hpp"
+#include <uevr/API.h>
 // set the imgui texture pointer to our own data format
-// borrowed this trick from otis_inf's reshade shadertoggler
-#define ImTextureID UEVR_FRHITexture2DHandle
+#define ImTextureID uint64_t
+
+namespace {
+    // Storage for drag-drop payloads from Lua
+    static std::unordered_map<uint64_t, sol::object> g_drag_drop_payloads;
+    static uint64_t g_next_payload_id = 1;
+    
+    // Cleanup old payloads (call this periodically, e.g., in NewFrame or EndFrame binding)
+    static void cleanup_old_payloads() {
+        // Keep only the last 100 payloads to prevent memory leaks
+        if (g_drag_drop_payloads.size() > 100) {
+            auto it = g_drag_drop_payloads.begin();
+            std::advance(it, g_drag_drop_payloads.size() - 100);
+            g_drag_drop_payloads.erase(g_drag_drop_payloads.begin(), it);
+        }
+    }
+}
 
 namespace api::imgui {
+void text_colored(const char* text, sol::object color);
 int32_t g_disabled_counts{0};
 
 void cleanup() {
@@ -79,7 +98,7 @@ ImVec2 create_imvec2(sol::object obj) {
     } 
 
     return out;
-};
+}
 
 ImVec4 create_imvec4(sol::object obj) {
     ImVec4 out{0.0f, 0.0f, 0.0f, 0.0f};
@@ -104,9 +123,8 @@ ImVec4 create_imvec4(sol::object obj) {
     }
 
     return out;
-};
+}
 
-// unify all color accepting functions (previously couldn't take tables directly and choice of vector or hex color was somewhat arbitrary)
 ImVec4 create_imvec4_color(sol::object obj) {
     ImVec4 out{1.0f, 1.0f, 1.0f, 1.0f};
 
@@ -137,37 +155,44 @@ ImVec4 create_imvec4_color(sol::object obj) {
             throw sol::error{"Invalid table passed. Table size must be 4."};
         }
     }
-    return out;
-};
+        return out;
+}
 
 
 
-// unify all color accepting functions (previously couldn't take tables directly and choice of vector or hex color was somewhat arbitrary)
 ImU32 create_imu32_color(sol::object obj) {
-    ImVec4 out{1.0f, 1.0f, 1.0f, 1.0f};
-
     if (obj.is<unsigned int>()) {
         return obj.as<ImU32>();
     } 
     else if (obj.is<Vector4f>()) {
-      auto r = math.floor(math.max(0, math.min(255, vec.x * 255 + 0.5)))
-      auto g = math.floor(math.max(0, math.min(255, vec.y * 255 + 0.5)))
-      auto b = math.floor(math.max(0, math.min(255, vec.z * 255 + 0.5)))
-      auto a = math.floor(math.max(0, math.min(255, vec.w * 255 + 0.5)))
-return (a << 24) | (b << 16) | (g << 8) | r
-    } else if (obj.is<sol::table>()) {
+        const auto& vec = obj.as<Vector4f>();
+        auto r = (unsigned int)std::fmin(255, (int)(vec.x * 255.0f + 0.5f));
+        auto g = (unsigned int)std::fmin(255, (int)(vec.y * 255.0f + 0.5f));
+        auto b = (unsigned int)std::fmin(255, (int)(vec.z * 255.0f + 0.5f));
+        auto a = (unsigned int)std::fmin(255, (int)(vec.w * 255.0f + 0.5f));
+        return (a << 24) | (b << 16) | (g << 8) | r;
+    }
+    else if (obj.is<sol::table>()) {
         auto table = obj.as<sol::table>();
         if (table.size() == 4) {
-            out.x = table.get<float>(1);
-            out.y = table.get<float>(2);
-            out.z = table.get<float>(3);
-            out.w = table.get<float>(4);
+            float r = table.get<float>(1);
+            float g = table.get<float>(2);
+            float b = table.get<float>(3);
+            float a = table.get<float>(4);
+            
+            auto ri = (unsigned int)std::fmin(255, (int)(r * 255.0f + 0.5f));
+            auto gi = (unsigned int)std::fmin(255, (int)(g * 255.0f + 0.5f));
+            auto bi = (unsigned int)std::fmin(255, (int)(b * 255.0f + 0.5f));
+            auto ai = (unsigned int)std::fmin(255, (int)(a * 255.0f + 0.5f));
+            return (ai << 24) | (bi << 16) | (gi << 8) | ri;
         } else {
             throw sol::error{"Invalid table passed. Table size must be 4."};
         }
     }
-    return out;
-};
+    
+    return 0xFFFFFFFF;
+}
+
 // Use buttonex to allow passing flags, e.g. hold to repeat
 bool button(const char* label, sol::object size_object, sol::object flags_object) {
     if (label == nullptr) {
@@ -216,21 +241,46 @@ bool arrow_button(const char* str_id, int dir) {
 }
 
 
-#if LUA_DEBUG
-void show_metrics_window(bool enabled){
-    ImGui::ShowMetricsWindow(enabled);
+//#if LUA_DEBUG==1
+void show_metrics_window(sol::object open_obj) {
+    bool open = true;
+    bool* open_p = nullptr;
+
+    if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+        open = open_obj.as<bool>();
+        open_p = &open;
+    }
+
+
+
+    ImGui::ShowMetricsWindow(open_p);
 }
 void show_font_atlas(){
-    ImGui::ShowFontAtlas() {}
+    ImGui::ShowFontAtlas(ImGui::GetIO().Fonts);
 }
 
 
-void show_debug_log_window(bool enabled){
-    ImGui::ShowDebugLogWindow(enabled);
-}
-void show_stack_tool_window(bool enabled){
-    ImGui::ShowStackToolWindow(enabled);
+void show_debug_log_window(sol::object open_obj) {
+        bool open = true;
+        bool* open_p = nullptr;
 
+        if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+            open = open_obj.as<bool>();
+            open_p = &open;
+        }
+
+        ImGui::ShowDebugLogWindow(open_p);
+    }
+void show_stack_tool_window(sol::object open_obj) {
+    bool open = true;
+    bool* open_p = nullptr;
+
+    if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+        open = open_obj.as<bool>();
+        open_p = &open;
+    }
+
+    ImGui::ShowStackToolWindow(open_p);
 }
 
 
@@ -238,12 +288,19 @@ void show_font_selector(const char* label){
     ImGui::ShowFontSelector(label);
 }
 
-void show_demo_window(bool enabled) {
-    ImGui::ShowDemoWindow(enabled);
-}
+void show_demo_window(sol::object open_obj) {
+        bool open = true;
+        bool* open_p = nullptr;
+
+        if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+            open = open_obj.as<bool>();
+            open_p = &open;
+            }
+    ImGui::ShowDemoWindow(open_p);
+    }
 
 
-#endif 
+//#endif 
 bool begin_drag_drop_source(sol::object flags_object) {
     
     ImGuiDragDropFlags flags = 0;
@@ -258,22 +315,33 @@ void end_drag_drop_source() {
     ImGui::EndDragDropSource();
 }
                        
+
 bool set_drag_drop_payload(const char* type, sol::object data) {
-    return ImGui::SetDragDropPayload(type, data, sizeof(data),  ImGuiCond_Always );
+    cleanup_old_payloads();
+    uint64_t id = g_next_payload_id++;
+    g_drag_drop_payloads[id] = data;
+    return ImGui::SetDragDropPayload(type, &id, sizeof(id));
 }
 
 bool is_payload_accepted(){
     return ImGui::IsDragDropPayloadBeingAccepted();
 }
 
-sol::object accept_payload(const char* type, sol::object flags_object) {
+sol::object accept_payload(sol::this_state s, const char* type, sol::object flags_object) {
   ImGuiDragDropFlags flags = 0;
 
     if (flags_object.is<int>()) {
         flags = (ImGuiDragDropFlags)(flags_object.as<int>());
     }
-    ImGuiPayload* payload = ImGui::AcceptDragDropPayload(type, flags);
-    return payload->Data;                                                                                                                    
+    const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(type, flags);
+    if (payload && payload->Data && payload->DataSize == sizeof(uint64_t)) {
+        uint64_t id = *(const uint64_t*)payload->Data;
+        auto it = g_drag_drop_payloads.find(id);
+        if (it != g_drag_drop_payloads.end()) {
+            return sol::make_object(s, it->second);
+        }
+    }
+    return sol::nil;
 }
 
 
@@ -290,12 +358,13 @@ void render_drag_drop(sol::object rect_start, sol::object rect_end) {
    const auto rectstart = create_imvec2(rect_start);
    const auto rectend = create_imvec2(rect_end);
     ImRect bb (rectstart, rectend);
-    ImGui::RenderDragDropTargetRect(bb);
+   ImGui::RenderDragDropTargetRectForItem(bb);
  
 }
                                                          
-void accept_drag_drop() {
-    ImGui::AcceptDragDropPayload();
+
+void accept_drag_drop(const char* type) {
+    ImGui::AcceptDragDropPayload(type);
 }
 
 void text(const char* text, sol::object flags_object) {
@@ -364,6 +433,52 @@ sol::variadic_results checkbox(sol::this_state s, const char* label, bool v) {
 
     results.push_back(sol::make_object(s, changed));
     results.push_back(sol::make_object(s, v));
+
+    return results;
+}
+
+sol::variadic_results combo(sol::this_state s, const char* label, sol::object selection, sol::table values) {
+    if (label == nullptr) {
+        label = "";
+    }
+
+    const char* preview_value = "";
+
+    if (!values.empty()) {
+        if (selection.is<sol::nil_t>() || values.get_or(selection, sol::make_object(s, sol::nil)).is<sol::nil_t>()) {
+            selection = (*values.begin()).first;
+        }
+
+        auto val_at_selection = values[selection].get<sol::object>();
+
+        if (val_at_selection.is<const char*>()) {
+            preview_value = val_at_selection.as<const char*>();
+        }
+    }
+
+    auto selection_changed = false;
+
+    if (ImGui::BeginCombo(label, preview_value)) {
+        for (auto& [key, val] : values) {
+            auto val_at_k = values[key].get<sol::object>();
+
+            if (val_at_k.is<const char*>()) {
+                auto entry = val_at_k.as<const char*>();
+
+                if (ImGui::Selectable(entry, selection == key)) {
+                    selection = key;
+                    selection_changed = true;
+                }
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    sol::variadic_results results{};
+
+    results.push_back(sol::make_object(s, selection_changed));
+    results.push_back(sol::make_object(s, selection));
 
     return results;
 }
@@ -533,6 +648,7 @@ sol::variadic_results slider_int(
 // NULL,
 //     const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0);)
 
+
 //   IMGUI_API bool Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0,
 // const ImVec2& size = ImVec2(0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so
 //                                    // you can modify your selection state. size.x==0.0: use remaining width, size.x>0.0: specify width.
@@ -549,7 +665,6 @@ sol::variadic_results input_text(
 
     // if (callback_object) {
     //     flags = (ImGuiSliderFlags)(flags_object.as<int>());
-    // }
 
     static std::string buffer{""};
     buffer = v;
@@ -615,53 +730,6 @@ sol::variadic_results input_text_multiline(
     results.push_back(sol::make_object(s, std::string{buffer.data()}));
     results.push_back(sol::make_object(s, selection_start));
     results.push_back(sol::make_object(s, selection_end));
-
-    return results;
-}
-
-sol::variadic_results combo(sol::this_state s, const char* label, sol::object selection, sol::table values) {
-    if (label == nullptr) {
-        label = "";
-    }
-
-    const char* preview_value = "";
-
-    if (!values.empty()) {
-        if (selection.is<sol::nil_t>() || values.get_or(selection, sol::make_object(s, sol::nil)).is<sol::nil_t>()) {
-            selection = (*values.begin()).first;
-        }
-
-        auto val_at_selection = values[selection].get<sol::object>();
-
-        if (val_at_selection.is<const char*>()) {
-            preview_value = val_at_selection.as<const char*>();
-        }
-    }
-
-    auto selection_changed = false;
-
-    if (ImGui::BeginCombo(label, preview_value)) {
-        // for (auto i = 1u; i <= values.size(); ++i) {
-        for (auto& [key, val] : values) {
-            auto val_at_k = values[key].get<sol::object>();
-
-            if (val_at_k.is<const char*>()) {
-                auto entry = val_at_k.as<const char*>();
-
-                if (ImGui::Selectable(entry, selection == key)) {
-                    selection = key;
-                    selection_changed = true;
-                }
-            }
-        }
-
-        ImGui::EndCombo();
-    }
-
-    sol::variadic_results results{};
-
-    results.push_back(sol::make_object(s, selection_changed));
-    results.push_back(sol::make_object(s, selection));
 
     return results;
 }
@@ -734,15 +802,15 @@ bool is_item_hovered(sol::object flags_obj) {
 ImGuiID get_active_id() {
     return ImGui::GetActiveID();
 }
-
-  ImGuiID get_focus_id() {
-    return ImGui::GetFocusID;
-}
+//
+//  ImGuiID get_focus_id() {
+//    return ImGui::GetFocusID;
+//}
 
 
 
   ImGuiID get_hovered_id() {
-    return ImGui::GetHoveredID;
+    return ImGui::GetHoveredID();
 }
 
   ImGuiID get_item_id() {
@@ -750,8 +818,18 @@ ImGuiID get_active_id() {
 }
 
  void active_item_by_id(sol::object id) {
-       auto ID = imgui::get_id(id);
-        ImGui::ActivateItemByID(id);
+    ImGuiID ID{};
+    if (id.is<int>()) {
+        ID = id.as<ImGuiID>();
+    } else if (id.is<const char*>()) {
+        ID = ImGui::GetID(id.as<const char*>());
+    } else if (id.is<void*>()) {
+        ID = ImGui::GetID(id.as<void*>());
+    } else {
+        throw sol::error("Type must be int, const char* or void*");
+    }
+
+    ImGui::ActivateItemByID(ID);
 
  }
 
@@ -767,8 +845,10 @@ ImGuiID get_active_id() {
 
 
 void focus_window() {
-     ImGui::FocusWindow();    
-  
+    if (ImGuiWindow* w = ImGui::GetCurrentWindow()) {
+        ImGui::FocusWindow(w);
+    }
+
  }
 
 void text_wrapped(const char* text) {
@@ -855,14 +935,15 @@ void set_next_window_dock_id(sol::object dockid, sol::object condition_obj) {
 
     if (condition_obj.is<int>()) {
         condition = (ImGuiCond)condition_obj.as<int>();
+    }
 
-        ImGuiID dockID{};
-        if (dockid.is<int>()) {
-            dockID = ImGui::GetID(dockid.as<int>());
-        } else if (dockid.is<const char*>()) {
-            dockID = ImGui::GetID(dockid.as<const char*>());
-        } else if (dockid.is<void*>()) {
-            dockID = ImGui::GetID(dockid.as<void*>());
+    ImGuiID dockID{};
+    if (dockid.is<int>()) {
+        dockID = ImGui::GetID(dockid.as<int>());
+    } else if (dockid.is<const char*>()) {
+        dockID = ImGui::GetID(dockid.as<const char*>());
+    } else if (dockid.is<void*>()) {
+        dockID = ImGui::GetID(dockid.as<void*>());
 
             ImGui::SetNextWindowDockID(dockID, condition);
         }
@@ -977,12 +1058,12 @@ bool collapsing_header(const char* name) {
     return ImGui::CollapsingHeader(name);
 }
 
-int load_font(sol::object filepath_obj, int size, sol::object ranges) {
+int load_font(sol::object filepath_obj, int size/*, sol::object ranges*/) {
     namespace fs = std::filesystem;
     const char* filepath = "doesnt-exist.not-a-real-font";
 
     if (filepath_obj.is<const char*>()) {
-        filepath = filepath_obj.as<const char*>();
+        filepath = filepath_obj.as<const char*> ();
     }
 
     if (std::filesystem::path(filepath).is_absolute()) {
@@ -1004,15 +1085,15 @@ int load_font(sol::object filepath_obj, int size, sol::object ranges) {
     fs::create_directories(fonts_path);
     std::vector<ImWchar> ranges_vec{};
 
-    if (ranges.is<sol::table>()) {
+ /*   if (ranges.is<sol::table>()) {
         sol::table ranges_table = ranges;
 
         for (auto i = 1u; i <= ranges_table.size(); ++i) {
             ranges_vec.push_back(ranges_table[i].get<ImWchar>());
         }
-    }
+    }*/
 
-    return g_framework->add_font(font_path, size, ranges_vec);
+    return g_framework->add_font(font_path, size/*, ranges_vec*/);
 }
 
 void push_font(int font) {
@@ -1022,9 +1103,14 @@ void push_font(int font) {
 void pop_font() {
     ImGui::PopFont();
 }
-
+void push_font_size(float size) {
+    ImGui::PushFont(nullptr, size);
+}
 int get_default_font_size() {
     return g_framework->get_font_size();
+}
+void pop_font_size() {
+    ImGui::PopFont();
 }
 
 sol::variadic_results color_picker(sol::this_state s, const char* label, unsigned int color, sol::object flags_obj) {
@@ -1408,7 +1494,7 @@ bool is_mouse_double_clicked(int button) {
 // IMGUI_API ImVec2 GetMouseDragDelta(ImGuiMouseButton button = 0,
 //    float lock_threshold = -1.0f); // return the delta from the initial clicking position while the mouse button is pressed or was just
 //                                   // released. This is locked and return 0.0f until the mouse moves past a distance threshold at least
-//                                   once
+//                                   // once
 //                                   // (uses io.MouseDraggingThreshold if lock_threshold < 0.0f)
 // IMGUI_API void ResetMouseDragDelta(ImGuiMouseButton button = 0);
 
@@ -1648,7 +1734,7 @@ bool menu_item(const char* label, sol::object shortcut_obj, sol::object selected
     bool enabled{true};
 
     if (shortcut_obj.is<const char*>()) {
-        shortcut = shortcut_obj.as<const char*>();
+        shortcut = shortcut_obj.as<const char*> ();
     } else {
         shortcut = "";
     }
@@ -1694,7 +1780,8 @@ float calc_item_width() {
     return ImGui::CalcItemWidth();
 }
 float calc_item_size() {
-    return ImGui::CalcItemSize();
+    // ImGui::CalcItemSize requires parameters; expose wrapper returning 0.0 by default
+    return 0.0f;
 }
 void item_size(sol::object pos, sol::object size, sol::object text_baseline_y) {
     if (text_baseline_y.is<float>()) {
@@ -1730,27 +1817,27 @@ bool is_item_edited() {
                     
 bool is_item_visible()
 {
-    return ImGui::IsItemVisible()
+    return ImGui::IsItemVisible();
 }
 
 bool is_any_item_hovered()
 {
-    return ImGui::IsAnyItemHovered()
+    return ImGui::IsAnyItemHovered();
 }
 
 bool is_item_toggled_selection()
 {
-    return ImGui::IsItemToggledSelection()
+    return ImGui::IsItemToggledSelection();
 }
 
 bool is_any_item_active()
 {
-    return ImGui::IsAnyItemActive()
+    return ImGui::IsAnyItemActive();
 }
 
 bool is_any_item_focused()
 {
-    return ImGui::IsAnyItemFocused()
+    return ImGui::IsAnyItemFocused();
 }
                 
 bool is_item_toggled_open() {
@@ -1787,10 +1874,14 @@ void pop_item_flag() {
 }
 
 bool selectable(const char* label, bool selected, sol::object flags_obj) {
+    ImGuiSelectableFlags flags = 0;
     if (flags_obj.is<int>()) {
         flags = (ImGuiSelectableFlags)flags_obj.as<int>();
     }
-    return ImGui::Selectable()
+    if (label == nullptr) {
+        label = "";
+    }
+    return ImGui::Selectable(label, selected, flags);
 }
 
 // as the kind of psychopath who actually intentionally used the potential memory leak here to style the GUI, we should not allow that
@@ -1997,10 +2088,11 @@ ImDrawList* get_foreground_draw_list() {
     return ImGui::GetForegroundDrawList();
 }
 
+// probably does not work
 void draw_image(sol::object image, sol::object min, sol::object max, sol::object uvmin, sol::object uvmax, sol::object color) {
        if (auto dl = ImGui::GetWindowDrawList(); dl != nullptr) {
         auto texture = image.as<UEVR_FRHITexture2DHandle>();
-        dl->AddImage(texture, create_imvec2 (min), create_imvec2(max), create_imvec2(uvmin), create_imvec2(uvmax), create_u32_color(color));
+        dl->AddImage(texture, create_imvec2 (min), create_imvec2(max), create_imvec2(uvmin), create_imvec2(uvmax), create_imu32_color(color));
         }
 
 }
@@ -2104,6 +2196,102 @@ void outline_quad(float x1, float y1, float x2, float y2, float x3, float y3, fl
 void filled_quad(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, ImU32 color) {
     ImGui::GetWindowDrawList()->AddQuadFilled(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, ImVec2{x4, y4}, color);
 }
+
+void outline_triangle(float x1, float y1, float x2, float y2, float x3, float y3, ImU32 color) {
+    ImGui::GetWindowDrawList()->AddTriangle(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, color);
+}
+
+void filled_triangle(float x1, float y1, float x2, float y2, float x3, float y3, ImU32 color) {
+    ImGui::GetWindowDrawList()->AddTriangleFilled(ImVec2{x1, y1}, ImVec2{x2, y2}, ImVec2{x3, y3}, color);
+}
+
+void outline_polyline(sol::object points, ImU32 color, float thickness) {
+    if (points.is<sol::table>()) {
+        sol::table points_table = points;
+
+        auto count = points_table.size();
+
+        for (auto i = 1u; i <= count; ++i) {
+            sol::object point = points_table.get<sol::object>(i);
+
+            if (point.is<Vector2f>()) {
+                auto vec = point.as<Vector2f>();
+
+                ImGui::GetWindowDrawList()->AddLine(
+                    ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
+            }
+        }
+    }
+}
+
+void closed_polyline(sol::object points, ImU32 color, float thickness) {
+    if (points.is<sol::table>()) {
+        sol::table points_table = points;
+
+        auto count = points_table.size();
+
+        for (auto i = 1u; i <= count; ++i) {
+            sol::object point = points_table.get<sol::object>(i);
+
+            if (point.is<Vector2f>()) {
+                auto vec = point.as<Vector2f>();
+
+                ImGui::GetWindowDrawList()->AddLine(
+                    ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
+            }
+        }
+
+        // Connect last to first
+        sol::object first = points_table.get<sol::object>(1);
+        sol::object last = points_table.get<sol::object>(count);
+        if (first.is<Vector2f>() && last.is<Vector2f>()) {
+            auto f = first.as<Vector2f>();
+            auto l = last.as<Vector2f>();
+            ImGui::GetWindowDrawList()->AddLine(ImVec2{f.x, f.y}, ImVec2{l.x, l.y}, color, thickness);
+        }
+    }
+}
+
+void draw_line(Vector2f p1, Vector2f p2, ImU32 color, float thickness) {
+    ImGui::GetWindowDrawList()->AddLine(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, color, thickness);
+}
+
+void draw_rect(Vector2f pos, Vector2f size, ImU32 color, float rounding, float thickness) {
+    ImGui::GetWindowDrawList()->AddRect(ImVec2{pos.x, pos.y}, ImVec2{pos.x + size.x, pos.y + size.y}, color, rounding, thickness);
+}
+
+void draw_filled_rect(Vector2f pos, Vector2f size, ImU32 color, float rounding) {
+    ImGui::GetWindowDrawList()->AddRectFilled(ImVec2{pos.x, pos.y}, ImVec2{pos.x + size.x, pos.y + size.y}, color, rounding);
+}
+
+void draw_circle(Vector2f center, float radius, ImU32 color, int num_segments, float thickness) {
+    ImGui::GetWindowDrawList()->AddCircle(ImVec2{center.x, center.y}, radius, color, num_segments, thickness);
+}
+
+void draw_filled_circle(Vector2f center, float radius, ImU32 color, int num_segments) {
+    ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2{center.x, center.y}, radius, color, num_segments);
+}
+
+void draw_ngon(Vector2f center, float radius, ImU32 color, int num_segments, float thickness) {
+    ImGui::GetWindowDrawList()->AddNgon(ImVec2{center.x, center.y}, radius, color, num_segments, thickness);
+}
+
+void draw_filled_ngon(Vector2f center, float radius, ImU32 color, int num_segments) {
+    ImGui::GetWindowDrawList()->AddNgonFilled(ImVec2{center.x, center.y}, radius, color, num_segments);
+}
+
+void draw_bezier_curve(Vector2f p1, Vector2f p2, Vector2f p3, ImU32 color, float thickness) {
+    // ImDrawList::AddBezierCubic expects 4 control points; approximate using available points by duplicating p3
+    ImGui::GetWindowDrawList()->AddBezierCubic(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p3.x, p3.y}, color, thickness);
+}
+
+void draw_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 color, float thickness) {
+    ImGui::GetWindowDrawList()->AddQuad(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p4.x, p4.y}, color, thickness);
+}
+
+void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 color) {
+    ImGui::GetWindowDrawList()->AddQuadFilled(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p4.x, p4.y}, color);
+}
 }
 //
 //ImVec2 world_to_screen(sol::object world_pos_object) {
@@ -2168,7 +2356,7 @@ void filled_quad(float x1, float y1, float x2, float y2, float x3, float y3, flo
 //    } else {
 //        return;
 //    }
-//
+
 //    Vector3f end_pos{};
 //
 //    if (end_pos_object.is<Vector2f>()) {
@@ -2203,6 +2391,7 @@ void filled_quad(float x1, float y1, float x2, float y2, float x3, float y3, flo
 void bindings::open_imgui(sol::state_view& lua) {
     auto imgui = lua.create_table();
 
+    // Basic widgets
     imgui["button"] = api::imgui::button;
     imgui["small_button"] = api::imgui::small_button;
     imgui["invisible_button"] = api::imgui::invisible_button;
@@ -2296,6 +2485,58 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
     imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
     imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
+    imgui["accept_drag_drop"] = api::imgui::accept_drag_drop;
+    imgui["accept_payload"] = api::imgui::accept_payload;
+
+    imgui["active_item_by_id"] = api::imgui::active_item_by_id;
+    imgui["begin_drag_drop_source"] = api::imgui::begin_drag_drop_source;
+    imgui["begin_drag_drop_target"] = api::imgui::begin_drag_drop_target;
+    imgui["bullet"] = api::imgui::bullet;
+    imgui["bullet_text"] = api::imgui::bullet_text;
+    imgui["begin_popup_modal"] = api::imgui::begin_popup_modal;
+    imgui["calc_item_size"] = api::imgui::calc_item_size;
+    imgui["clear_active_id"] = api::imgui::clear_active_id;
+    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
+    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
+    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
+    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
+
+    imgui["focus_item"] = api::imgui::focus_item;
+    imgui["focus_window"] = api::imgui::focus_window;
+    imgui["get_active_id"] = api::imgui::get_active_id;
+    imgui["get_content_region_available"] = api::imgui::get_content_region_available;
+    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
+    imgui["get_hovered_id"] = api::imgui::get_hovered_id;
+    imgui["get_item_id"] = api::imgui::get_item_id;
+    imgui["get_key_index"] = api::imgui::get_key_index;
+    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
+    imgui["is_item_active"] = api::imgui::is_item_active;
+    imgui["is_item_clicked"] = api::imgui::is_item_clicked;
+    imgui["is_item_edited"] = api::imgui::is_item_edited;
+    imgui["is_item_focused"] = api::imgui::is_item_focused;
+    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
+    imgui["is_item_toggled_open"] = api::imgui::is_item_toggled_open;
+    imgui["label_text"] = api::imgui::label_text;
+    imgui["push_button_repeat"] = api::imgui::push_button_repeat;
+    imgui["push_clip_rect"] = api::imgui::push_clip_rect;
+    imgui["pop_button_repeat"] = api::imgui::pop_button_repeat;
+    imgui["pop_clip_rect"] = api::imgui::pop_clip_rect;
+    imgui["create_imu32_color"] = api::imgui::create_imu32_color;
+    imgui["render_drag_drop"] = api::imgui::render_drag_drop;
+    imgui["selectable"] = api::imgui::selectable;
+    imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
+
+                   imgui["set_next_item_width"] = api::imgui::set_next_item_width;
+
+  
+
+                     imgui["show_metrics_window"] = api::imgui::show_metrics_window;
+                     imgui["show_font_atlas"] = api::imgui::show_font_atlas;
+                     imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
+                     imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
+                     imgui["show_font_selector"] = api::imgui::show_font_selector;
+                     imgui["show_demo_window"] = api::imgui::show_demo_window;
+
 
     // Item
     imgui["push_item_width"] = api::imgui::push_item_width;
@@ -2306,7 +2547,8 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["item_size"] = api::imgui::item_size;
     imgui["push_item_flag"] = api::imgui::push_item_flag;
     imgui["pop_item_flag"] = api::imgui::pop_item_flag;
-
+    imgui["push_font_size"] = api::imgui::push_font_size;
+    imgui["pop_font_size"] = api::imgui::pop_font_size;
     imgui["push_style_color"] = api::imgui::push_style_color;
     imgui["pop_style_color"] = api::imgui::pop_style_color;
     imgui["push_style_var"] = api::imgui::push_style_var;
@@ -2368,7 +2610,7 @@ void bindings::open_imgui(sol::state_view& lua) {
         });
     imgui.new_usertype<ImGuiTableColumnSortSpecs>("TableColumnSortSpecs", "user_id", &ImGuiTableColumnSortSpecs::ColumnUserID,
         "column_index", &ImGuiTableColumnSortSpecs::ColumnIndex, "sort_order", &ImGuiTableColumnSortSpecs::SortOrder, "sort_direction",
-        sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; }));
+        sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; } ));
     imgui.new_enum("TableFlags", "None", ImGuiTableFlags_None, "Resizable", ImGuiTableFlags_Resizable, "Reorderable",
         ImGuiTableFlags_Reorderable, "Hideable", ImGuiTableFlags_Hideable, "Sortable", ImGuiTableFlags_Sortable, "NoSavedSettings",
         ImGuiTableFlags_NoSavedSettings, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody, "RowBg", ImGuiTableFlags_RowBg,
@@ -2511,28 +2753,17 @@ void bindings::open_imgui(sol::state_view& lua) {
         [](ImDrawList* draw_list, sol::object center, float radius, uint32_t col, int num_segments) {
             draw_list->AddNgonFilled(::api::imgui::create_imvec2(center), radius, col, num_segments);
         },
-       /* "add_ellipse",
-        [](ImDrawList* draw_list, sol::object center, sol::object radius, uint32_t col, float rot, int num_segments, float thickness) {
-            draw_list->AddEllipse(
-                ::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), col, num_segments, rot, thickness);
-        },
-        "add_ellipse_filled",
-        [](ImDrawList* draw_list, sol::object center, sol::object radius, uint32_t col, float rot, int num_segments) {
-            draw_list->AddEllipseFilled(::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), col, rot, num_segments);
-        },*/
         "add_text",
         [](ImDrawList* draw_list, sol::object pos, uint32_t col, const std::string& text) {
             draw_list->AddText(::api::imgui::create_imvec2(pos), col, text.c_str());
         },
         "add_bezier_cubic",
         [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, sol::object p4, uint32_t col, float thickness) {
-            draw_list->AddBezierCubic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3),
-                ::api::imgui::create_imvec2(p4), col, thickness);
+            draw_list->AddBezierCubic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), ::api::imgui::create_imvec2(p4), col, thickness);
         },
         "add_bezier_quadratic",
-        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col, float thickness) {
-            draw_list->AddBezierQuadratic(
-                ::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, thickness);
+        [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col, int num_segments) {
+            draw_list->AddBezierQuadratic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, num_segments);
         },
 
         // Path APIs
@@ -2550,11 +2781,12 @@ void bindings::open_imgui(sol::state_view& lua) {
         [](ImDrawList* draw_list, sol::object center, float radius, int a_min_of_12, int a_max_of_12) {
             draw_list->PathArcToFast(::api::imgui::create_imvec2(center), radius, a_min_of_12, a_max_of_12);
         },
-      /*  "path_elliptical_arc_to",
+        "path_elliptical_arc_to",
         [](ImDrawList* draw_list, sol::object center, sol::object radius, float a_min, float a_max, int num_segments) {
-            draw_list->PathEllipticalArcTo(
-                ::api::imgui::create_imvec2(center), ::api::imgui::create_imvec2(radius), a_min, a_max, num_segments);
-        },*/
+            // Fallback to circular arc using radius.x
+            auto r = ::api::imgui::create_imvec2(radius);
+            draw_list->PathArcTo(::api::imgui::create_imvec2(center), r.x, a_min, a_max, num_segments);
+        },
         "path_bezier_cubic_curve_to",
         [](ImDrawList* draw_list, sol::object p2, sol::object p3, sol::object p4, int num_segments) {
             draw_list->PathBezierCubicCurveTo(
@@ -2568,7 +2800,6 @@ void bindings::open_imgui(sol::state_view& lua) {
         [](ImDrawList* draw_list, sol::object min, sol::object max, float rounding, ImDrawFlags flags) {
             draw_list->PathRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), rounding, flags);
         });
-
     lua["imgui"] = imgui;
 
     auto draw = lua.create_table();
