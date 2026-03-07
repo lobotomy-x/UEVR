@@ -7,6 +7,8 @@
 #include <glm/vec4.hpp>
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/vector_angle.hpp>
+#include <glm/ext/quaternion_float.hpp>
+#include <glm/ext/quaternion_double.hpp>
 
 #include "ScriptPrerequisites.hpp"
 #include <uevr/API.hpp>
@@ -18,6 +20,8 @@ namespace lua::datatypes {
     using Vector3d = glm::dvec3;
     using Vector4f = glm::vec4;
     using Vector4d = glm::dvec4;
-
+    using Quaternionf = glm::quat;
+    using Quaterniond = glm::dquat;
+    
     void bind_vectors(sol::state_view& lua);
 }
