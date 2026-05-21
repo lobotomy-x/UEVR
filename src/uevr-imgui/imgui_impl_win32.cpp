@@ -187,11 +187,11 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc) {
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_win32";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
- //   io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
-   //io.BackendFlags |= ImGuiBackendFlags_HasParentViewport;       // We can honor viewport->ParentViewportId by applying the corresponding
-                                                                  // parent/child relationship at platform levle (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasParentViewport;       // We can honor viewport->ParentViewportId by applying the corresponding
+                                                                  // parent/child relationship at platform level (optional)
 
     bd->hWnd = (HWND)hwnd;
     bd->TicksPerSecond = perf_frequency;
@@ -1269,121 +1269,111 @@ static HWND ImGui_ImplWin32_GetHwndFromViewport(ImGuiViewport* viewport) {
 
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = IM_NEW(ImGui_ImplWin32_ViewportData)();
-    if (vd) {
+    viewport->PlatformUserData = vd;
 
-        viewport->PlatformUserData = vd;
+    // Select style and parent window
+    ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &vd->DwStyle, &vd->DwExStyle);
+    vd->HwndParent = ImGui_ImplWin32_GetHwndFromViewport(viewport->ParentViewport);
 
-        // Select style and parent window
-        ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &vd->DwStyle, &vd->DwExStyle);
-        vd->HwndParent = ImGui_ImplWin32_GetHwndFromViewport(viewport->ParentViewport);
+    // Create window
+    RECT rect = {(LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x),
+        (LONG)(viewport->Pos.y + viewport->Size.y)};
+    ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
+    vd->Hwnd = ::CreateWindowExW(vd->DwExStyle, L"ImGui Platform", L"Untitled", vd->DwStyle, // Style, class name, window name
+        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,                 // Window area
+        vd->HwndParent, nullptr, ::GetModuleHandle(nullptr), nullptr);                       // Owner window, Menu, Instance, Param
+    vd->HwndOwned = true;
+    viewport->PlatformRequestResize = false;
+    viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
 
-        // Create window
-        RECT rect = {(LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x),
-            (LONG)(viewport->Pos.y + viewport->Size.y)};
-        ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
-        vd->Hwnd = ::CreateWindowExW(vd->DwExStyle, L"ImGui Platform", L"Untitled", vd->DwStyle, // Style, class name, window name
-            rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,                 // Window area
-            vd->HwndParent, nullptr, ::GetModuleHandle(nullptr), nullptr);                       // Owner window, Menu, Instance, Param
-        vd->HwndOwned = true;
-        viewport->PlatformRequestResize = false;
-        viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
-
-        // Secondary viewports store their imgui context
-        ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
-        SetParent(vd->Hwnd, nullptr);
-        BringWindowToTop(vd->Hwnd);
-        SwitchToThisWindow(vd->Hwnd, false);
-    }
+    // Secondary viewports store their imgui context
+    ::SetPropA(vd->Hwnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport) {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     if (ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData) {
-        if (vd) {
-            if (::GetCapture() == vd->Hwnd) {
-                // Transfer capture so if we started dragging from a window that later disappears, we'll still receive the MOUSEUP event.
-                ::ReleaseCapture();
-                ::SetCapture(bd->hWnd);
-            }
-            if (vd->Hwnd && vd->HwndOwned)
-                ::DestroyWindow(vd->Hwnd);
-            vd->Hwnd = nullptr;
-            IM_DELETE(vd);
+        if (::GetCapture() == vd->Hwnd) {
+            // Transfer capture so if we started dragging from a window that later disappears, we'll still receive the MOUSEUP event.
+            ::ReleaseCapture();
+            ::SetCapture(bd->hWnd);
         }
-        viewport->PlatformUserData = viewport->PlatformHandle = nullptr;
+        if (vd->Hwnd && vd->HwndOwned)
+            ::DestroyWindow(vd->Hwnd);
+        vd->Hwnd = nullptr;
+        IM_DELETE(vd);
     }
+    viewport->PlatformUserData = viewport->PlatformHandle = nullptr;
 }
 
 static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
+    IM_ASSERT(vd->Hwnd != 0);
 
-        // ShowParent() also brings parent to front, which is not always desirable,
-        // so we temporarily disable parenting. (#7354)
-        if (vd->HwndParent != NULL)
-            ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR) nullptr);
+    // ShowParent() also brings parent to front, which is not always desirable,
+    // so we temporarily disable parenting. (#7354)
+    if (vd->HwndParent != NULL)
+        ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR) nullptr);
 
-        if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
-            ::ShowWindow(vd->Hwnd, SW_SHOWNA);
-        else
-            ::ShowWindow(vd->Hwnd, SW_SHOW);
+    if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
+        ::ShowWindow(vd->Hwnd, SW_SHOWNA);
+    else
+        ::ShowWindow(vd->Hwnd, SW_SHOW);
 
-        // Restore
-        if (vd->HwndParent != NULL)
-            ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
-    }
+    // Restore
+    if (vd->HwndParent != NULL)
+        ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
 }
 
 static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
+    IM_ASSERT(vd->Hwnd != 0);
 
-        // Update Win32 parent if it changed _after_ creation
-        // Unlike style settings derived from configuration flags, this is more likely to change for advanced apps that are manipulating
-        // ParentViewportID manually.
-        HWND new_parent = ImGui_ImplWin32_GetHwndFromViewport(viewport->ParentViewport);
-        if (new_parent != vd->HwndParent) {
-            // Win32 windows can either have a "Parent" (for WS_CHILD window) or an "Owner" (which among other thing keeps window above its
-            // owner). Our Dear Imgui-side concept of parenting only mostly care about what Win32 call "Owner". The parent parameter of
-            // CreateWindowEx() sets up Parent OR Owner depending on WS_CHILD flag. In our case an Owner as we never use WS_CHILD. Calling
-            // ::SetParent() here would be incorrect: it will create a full child relation, alter coordinate system and clipping. Calling
-            // ::SetWindowLongPtr() with GWLP_HWNDPARENT seems correct although poorly documented.
-            // https://devblogs.microsoft.com/oldnewthing/20100315-00/?p=14613
-            vd->HwndParent = new_parent;
-            ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
-        }
+    // Update Win32 parent if it changed _after_ creation
+    // Unlike style settings derived from configuration flags, this is more likely to change for advanced apps that are manipulating
+    // ParentViewportID manually.
+    HWND new_parent = ImGui_ImplWin32_GetHwndFromViewport(viewport->ParentViewport);
+    if (new_parent != vd->HwndParent) {
+        // Win32 windows can either have a "Parent" (for WS_CHILD window) or an "Owner" (which among other thing keeps window above its
+        // owner). Our Dear Imgui-side concept of parenting only mostly care about what Win32 call "Owner". The parent parameter of
+        // CreateWindowEx() sets up Parent OR Owner depending on WS_CHILD flag. In our case an Owner as we never use WS_CHILD. Calling
+        // ::SetParent() here would be incorrect: it will create a full child relation, alter coordinate system and clipping. Calling
+        // ::SetWindowLongPtr() with GWLP_HWNDPARENT seems correct although poorly documented.
+        // https://devblogs.microsoft.com/oldnewthing/20100315-00/?p=14613
+        vd->HwndParent = new_parent;
+        ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
+    }
 
-        // (Optional) Update Win32 style if it changed _after_ creation.
-        // Generally they won't change unless configuration flags are changed, but advanced uses (such as manually rewriting viewport flags)
-        // make this useful.
-        DWORD new_style;
-        DWORD new_ex_style;
-        ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &new_style, &new_ex_style);
+    // (Optional) Update Win32 style if it changed _after_ creation.
+    // Generally they won't change unless configuration flags are changed, but advanced uses (such as manually rewriting viewport flags)
+    // make this useful.
+    DWORD new_style;
+    DWORD new_ex_style;
+    ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &new_style, &new_ex_style);
 
-        // Only reapply the flags that have been changed from our point of view (as other flags are being modified by Windows)
-        if (vd->DwStyle != new_style || vd->DwExStyle != new_ex_style) {
-            // (Optional) Update TopMost state if it changed _after_ creation
-            bool top_most_changed = (vd->DwExStyle & WS_EX_TOPMOST) != (new_ex_style & WS_EX_TOPMOST);
-            HWND insert_after = top_most_changed ? ((viewport->Flags & ImGuiViewportFlags_TopMost) ? HWND_TOPMOST : HWND_NOTOPMOST) : 0;
-            UINT swp_flag = top_most_changed ? 0 : SWP_NOZORDER;
+    // Only reapply the flags that have been changed from our point of view (as other flags are being modified by Windows)
+    if (vd->DwStyle != new_style || vd->DwExStyle != new_ex_style) {
+        // (Optional) Update TopMost state if it changed _after_ creation
+        bool top_most_changed = (vd->DwExStyle & WS_EX_TOPMOST) != (new_ex_style & WS_EX_TOPMOST);
+        HWND insert_after = top_most_changed ? ((viewport->Flags & ImGuiViewportFlags_TopMost) ? HWND_TOPMOST : HWND_NOTOPMOST) : 0;
+        UINT swp_flag = top_most_changed ? 0 : SWP_NOZORDER;
 
-            // Apply flags and position (since it is affected by flags)
-            vd->DwStyle = new_style;
-            vd->DwExStyle = new_ex_style;
-            ::SetWindowLong(vd->Hwnd, GWL_STYLE, vd->DwStyle);
-            ::SetWindowLong(vd->Hwnd, GWL_EXSTYLE, vd->DwExStyle);
-            RECT rect = {(LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x),
-                (LONG)(viewport->Pos.y + viewport->Size.y)};
-            ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
-            ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
-                swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-            ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
-            viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
-        }
+        // Apply flags and position (since it is affected by flags)
+        vd->DwStyle = new_style;
+        vd->DwExStyle = new_ex_style;
+        ::SetWindowLong(vd->Hwnd, GWL_STYLE, vd->DwStyle);
+        ::SetWindowLong(vd->Hwnd, GWL_EXSTYLE, vd->DwExStyle);
+        RECT rect = {(LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x),
+            (LONG)(viewport->Pos.y + viewport->Size.y)};
+        ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
+        ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
+            swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
+        viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
     }
 }
+
+
 static ImVec2 ImGui_ImplWin32_GetWindowPos(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
@@ -1418,61 +1408,48 @@ static ImVec2 ImGui_ImplWin32_GetWindowSize(ImGuiViewport* viewport) {
 
 static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        RECT rect = {0, 0, (LONG)size.x, (LONG)size.y};
-        if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
-            ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport);       // Not our window, poll style before using
-        ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
-        ::SetWindowPos(vd->Hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
-    }
+    IM_ASSERT(vd->Hwnd != 0);
+    RECT rect = {0, 0, (LONG)size.x, (LONG)size.y};
+    if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
+        ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport);       // Not our window, poll style before using
+    ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
+    ::SetWindowPos(vd->Hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
 }
 
 static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        ::BringWindowToTop(vd->Hwnd);
-        ::SetForegroundWindow(vd->Hwnd);
-        ::SetFocus(vd->Hwnd);
-    }
+    IM_ASSERT(vd->Hwnd != 0);
+    ::BringWindowToTop(vd->Hwnd);
+    ::SetForegroundWindow(vd->Hwnd);
+    ::SetFocus(vd->Hwnd);
 }
 
 static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        return ::GetForegroundWindow() == vd->Hwnd;
-    }
-    return false;
+    IM_ASSERT(vd->Hwnd != 0);
+    return ::GetForegroundWindow() == vd->Hwnd;
 }
 
 static bool ImGui_ImplWin32_GetWindowMinimized(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        return ::IsIconic(vd->Hwnd) != 0;
-    }
-    return false;
+    IM_ASSERT(vd->Hwnd != 0);
+    return ::IsIconic(vd->Hwnd) != 0;
 }
 
 static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* title) {
-
     // ::SetWindowTextA() doesn't properly handle UTF-8 so we explicitely convert our string.
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        int n = ::MultiByteToWideChar(CP_UTF8, 0, title, -1, nullptr, 0);
-        ImVector<wchar_t> title_w;
-        title_w.resize(n);
-        ::MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w.Data, n);
+    IM_ASSERT(vd->Hwnd != 0);
+    int n = ::MultiByteToWideChar(CP_UTF8, 0, title, -1, nullptr, 0);
+    ImVector<wchar_t> title_w;
+    title_w.resize(n);
+    ::MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w.Data, n);
 
-        // Calling SetWindowTextW() in a project where UNICODE is not set doesn't work but there's a trick
-        // which is to pass it directly to the DefWindowProcW() handler.
-        // See: https://stackoverflow.com/questions/9410681/setwindowtextw-in-an-ansi-project
-        //::SetWindowTextW(vd->Hwnd, title_w.Data);
-        ::DefWindowProcW(vd->Hwnd, WM_SETTEXT, 0, (LPARAM)title_w.Data);
-    }
+    // Calling SetWindowTextW() in a project where UNICODE is not set doesn't work but there's a trick
+    // which is to pass it directly to the DefWindowProcW() handler.
+    // See: https://stackoverflow.com/questions/9410681/setwindowtextw-in-an-ansi-project
+    //::SetWindowTextW(vd->Hwnd, title_w.Data);
+    ::DefWindowProcW(vd->Hwnd, WM_SETTEXT, 0, (LPARAM)title_w.Data);
 }
 
 static void ImGui_ImplWin32_SetWindowAlpha(ImGuiViewport* viewport, float alpha) {
@@ -1491,11 +1468,8 @@ static void ImGui_ImplWin32_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
 
 static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    if (vd) {
-        IM_ASSERT(vd->Hwnd != 0);
-        return ImGui_ImplWin32_GetDpiScaleForHwnd(vd->Hwnd);
-    }
-    return 1.0f;
+    IM_ASSERT(vd->Hwnd != 0);
+    return ImGui_ImplWin32_GetDpiScaleForHwnd(vd->Hwnd);
 }
 
 // FIXME-DPI: Testing DPI related ideas
