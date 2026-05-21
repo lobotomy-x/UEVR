@@ -457,8 +457,6 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
         } else {
             ImGui::Text("No scripts loaded.");
         }
-
-        ImGui::TreePop();
     }
 
 
@@ -472,8 +470,6 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
         for (auto& state : m_states) {
             state->on_draw_ui();
         }
-
-        ImGui::TreePop();
     }
 
     {

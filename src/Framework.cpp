@@ -1478,7 +1478,6 @@ void Framework::draw_ui() {
                             
                             if (range.has_sidebar_entries) {
                                 range.mod->on_draw_sidebar_entry(sidebar_entries[m_sidebar_state.selected_entry].m_label);
-                                ImGui::TreePop();
                             } else {
                                 range.mod->on_draw_ui();
                             }

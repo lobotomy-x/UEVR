@@ -2406,8 +2406,6 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         get_runtime()->on_draw_ui();
 
         m_overlay_component.on_draw_ui();
-
-        ImGui::TreePop();
     }
 
     if (selected_page == PAGE_UNREAL) {
