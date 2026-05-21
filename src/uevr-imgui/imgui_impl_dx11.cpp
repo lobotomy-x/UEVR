@@ -701,6 +701,24 @@ bool ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_conte
     bd->pd3dDevice->AddRef();
     bd->pd3dDeviceContext->AddRef();
 
+    // Default swap-chain template for secondary viewports.
+    // Without this, ImGui_ImplDX11_CreateWindow's loop over SwapChainDescsForViewports runs zero
+    // times for any secondary viewport, the IM_ASSERT(SUCCEEDED(hr)) fires (or asserts disabled,
+    // the next RenderWindow call dereferences a null SwapChain). Mirrors the upstream behavior:
+    // host apps can override via ImGui_ImplDX11_SetSwapChainDescs.
+    DXGI_SWAP_CHAIN_DESC default_sd{};
+    default_sd.BufferCount = 1;
+    default_sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    default_sd.BufferDesc.RefreshRate.Numerator = 60;
+    default_sd.BufferDesc.RefreshRate.Denominator = 1;
+    default_sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    default_sd.SampleDesc.Count = 1;
+    default_sd.SampleDesc.Quality = 0;
+    default_sd.Windowed = TRUE;
+    default_sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    default_sd.Flags = 0;
+    ImGui_ImplDX11_SetSwapChainDescs(&default_sd, 1);
+
     ImGui_ImplDX11_InitMultiViewportSupport();
 
     return true;
@@ -765,7 +783,7 @@ void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates
 void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count) {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     bd->SwapChainDescsForViewports.resize(desc_templates_count);
-    memcpy(bd->SwapChainDescsForViewports.Data, desc_templates, sizeof(DXGI_SWAP_CHAIN_DESC));
+    memcpy(bd->SwapChainDescsForViewports.Data, desc_templates, sizeof(DXGI_SWAP_CHAIN_DESC) * (size_t)desc_templates_count);
 }
 
 static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport) {
