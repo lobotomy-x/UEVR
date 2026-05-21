@@ -61,7 +61,7 @@ public:
     FRHITexture2D* get_render_target() {
         return render_target; 
     }
-
+    FRHITexture2D* get_render_target(const wchar_t* name);
     FRHITexture2D* get_scene_capture_render_target();
     void set_render_target(FRHITexture2D* rt) { render_target = rt; }
 

@@ -3,30 +3,23 @@
 #include <memory>
 
 #include <utility/String.hpp>
-// #include "../UESDK/src/sdk/UEngine.hpp"
-//  #include "../UESDK/src/sdk/AActor.hpp"
-//#include "../UESDK/src/sdk/USceneComponent.hpp"
-//   #include "../UESDK/src/sdk/UGameplayStatics.hpp"
-//  #include "../UESDK/src/sdk/USceneCaptureComponent2D.hpp"
-
-
 #include <windows.h>
 
-#include <Xinput.h>
-#include <asmjit/asmjit.h>
-
 #include "datatypes/FFrame.hpp"
+#include "datatypes/Matrix.hpp"
 #include "datatypes/Quaternion.hpp"
 #include "datatypes/StructObject.hpp"
-#include "datatypes/Vector.hpp"
 #include "datatypes/Transform.hpp"
-#include "datatypes/Matrix.hpp"
+#include "datatypes/Vector.hpp"
 #include "datatypes/XInput.hpp"
+#include <Xinput.h>
+#include <asmjit/asmjit.h>
 
 #include "ScriptContext.hpp"
 #include "ScriptUtility.hpp"
 
 namespace uevr {
+
 class ScriptContexts {
 public:
     void add(std::shared_ptr<ScriptContext> ctx) {
@@ -349,7 +342,6 @@ int ScriptContext::setup_bindings() {
         _sol_lua_push_objects_Field = setmetatable({}, { __mode = "v" })
         _sol_lua_push_objects_Enum = setmetatable({}, { __mode = "v" })
         _sol_lua_push_objects_GameViewportClient = setmetatable({}, { __mode = "v" })
-
         -- Not a real UObject but is cacheable
         _sol_lua_push_objects_MotionControllerState = setmetatable({}, { __mode = "v" })
 
@@ -378,8 +370,6 @@ int ScriptContext::setup_bindings() {
 
         m_lua["__UEVRCachePtrInternalCreate"] = sol::make_object(m_lua, sol::nil);
     };
- 
-
 
     lua::datatypes::bind_xinput(m_lua);
     lua::datatypes::bind_vectors(m_lua);
@@ -407,61 +397,6 @@ int ScriptContext::setup_bindings() {
 
     m_lua.new_usertype<UEVR_RendererData>("UEVR_RendererData", "renderer_type", &UEVR_RendererData::renderer_type, "device",
         &UEVR_RendererData::device, "swapchain", &UEVR_RendererData::swapchain, "command_queue", &UEVR_RendererData::command_queue);
-
-  //   m_lua.new_usertype<UEVR_FRHITexture2DHandle>("UEVR_FRHITexture2DHandle", "texture", &UEVR_FRHITexture2DHandle);
-
-
-
-
-//UEVR_IPooledRenderTargetHandle render_target_pool_hook::get_render_target(const wchar_t* name) {
-/*    const auto& vr = VR::get();
-    if (auto& hook = vr->get_render_target_pool_hook(); hook != nullptr) {
-        return (UEVR_IPooledRenderTargetHandle)hook->get_render_target(name);
-    }
-
-    return nullptr;
-}
-                   void render_target_pool_hook::activate() {
-    const auto& vr = VR::get();
-    if (auto& hook = vr->get_render_target_pool_hook(); hook != nullptr) {
-        hook->activate();
-    }
-}
-
-UEVR_IPooledRenderTargetHandle render_target_pool_hook::get_render_target(const wchar_t* name) {
-    const auto& vr = VR::get();
-    if (auto& hook = vr->get_render_target_pool_hook(); hook != nullptr) {
-        return (UEVR_IPooledRenderTargetHandle)hook->get_render_target(name);
-    }
-
-    return nullptr;
-}
-
-UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
-    .activate = &render_target_pool_hook::activate,
-    .get_render_target = &render_target_pool_hook::get_render_target
-};
-
-UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
-    .activate = &render_target_pool_hook::activate,
-    .get_render_target = &render_target_pool_hook::get_render_target
-};
-}*/
-//    m_lua.new_usertype<UEVR_FRenderTargetPoolHookFunctions>("UEVR_FRenderTargetPoolHookFunctions",/*
-//    "activate",&UEVR_FRenderTargetPoolHookFunctions::activate, "get_render_target", [](UEVR_FRenderTargetPoolHookFunctions &hook,  const std::wstring& name)->UEVR_IPooledRenderTargetHandle{
-//        return hook.get_render_target(name.c_str()); });
-//typedef struct {
-//
-//    UEVR_FRHITexture2DHandle (*get_scene_render_target)();
-//    UEVR_FRHITexture2DHandle (*get_ui_render_target)();
-//} UEVR_FFakeStereoRenderingHookFunctions;
-//
-//typedef struct {
-//    void* (*get_native_resource)(UEVR_FRHITexture2DHandle texture);
-//} UEVR_FRHITexture2DFunctions;
-//
-//    m_lua.new_usertype<UEVR_FRHITexture2DFunctions>(
-//    "UEVR_FRHITexture2DFunctions", "get_native_resource", (UEVR_FRHITexture2DHandle)UEVR_FRHITexture2DFunctions::get_native_resource);*/
 
     m_lua.new_usertype<UEVR_SDKFunctions>("UEVR_SDKFunctions", "get_uengine", &UEVR_SDKFunctions::get_uengine, "set_cvar_int",
         &UEVR_SDKFunctions::set_cvar_int, "get_uobject_array", &UEVR_SDKFunctions::get_uobject_array, "get_player_controller",
@@ -491,21 +426,20 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         "set_rotation_offset", &UEVR_VRData::set_rotation_offset, "get_hmd_index", &UEVR_VRData::get_hmd_index, "get_left_controller_index",
         &UEVR_VRData::get_left_controller_index, "get_right_controller_index", &UEVR_VRData::get_right_controller_index, "get_pose",
         &UEVR_VRData::get_pose, "get_transform", &UEVR_VRData::get_transform, "get_eye_offset", &UEVR_VRData::get_eye_offset,
-        "get_grip_pose", &UEVR_VRData::get_grip_pose,
-        "get_aim_pose", &UEVR_VRData::get_aim_pose, "get_grip_transform",
-        &UEVR_VRData::get_grip_transform, "get_aim_transform", &UEVR_VRData::get_aim_transform,
-        "get_movement_orientation",&UEVR_VRData::get_movement_orientation,
-        "get_ue_projection_matrix", &UEVR_VRData::get_ue_projection_matrix, "get_left_joystick_source",
-        &UEVR_VRData::get_left_joystick_source, "get_right_joystick_source", &UEVR_VRData::get_right_joystick_source, "get_action_handle",
-        &UEVR_VRData::get_action_handle, "is_action_active", &UEVR_VRData::is_action_active, "get_joystick_axis",
-        &UEVR_VRData::get_joystick_axis, "trigger_haptic_vibration", &UEVR_VRData::trigger_haptic_vibration, "is_using_controllers",
-        &UEVR_VRData::is_using_controllers, "get_lowest_xinput_index", &UEVR_VRData::get_lowest_xinput_index, "recenter_view",
-        &UEVR_VRData::recenter_view, "recenter_horizon", &UEVR_VRData::recenter_horizon, "get_aim_method", &UEVR_VRData::get_aim_method,
-        "set_aim_method", &UEVR_VRData::set_aim_method, "is_aim_allowed", &UEVR_VRData::is_aim_allowed, "set_aim_allowed",
-        &UEVR_VRData::set_aim_allowed, "get_hmd_width", &UEVR_VRData::get_hmd_width, "get_hmd_height", &UEVR_VRData::get_hmd_height,
-        "get_ui_width", &UEVR_VRData::get_ui_width, "get_ui_height", &UEVR_VRData::get_ui_height, "is_snap_turn_enabled",
-        &UEVR_VRData::is_snap_turn_enabled, "set_snap_turn_enabled", &UEVR_VRData::set_snap_turn_enabled, "set_decoupled_pitch_enabled",
-        &UEVR_VRData::set_decoupled_pitch_enabled, "set_mod_value", &UEVR_VRData::set_mod_value, "get_mod_value",
+        "get_grip_pose", &UEVR_VRData::get_grip_pose, "get_aim_pose", &UEVR_VRData::get_aim_pose, "get_grip_transform",
+        &UEVR_VRData::get_grip_transform, "get_aim_transform", &UEVR_VRData::get_aim_transform, "get_movement_orientation",
+        &UEVR_VRData::get_movement_orientation, "get_ue_projection_matrix", &UEVR_VRData::get_ue_projection_matrix,
+        "get_left_joystick_source", &UEVR_VRData::get_left_joystick_source, "get_right_joystick_source",
+        &UEVR_VRData::get_right_joystick_source, "get_action_handle", &UEVR_VRData::get_action_handle, "is_action_active",
+        &UEVR_VRData::is_action_active, "get_joystick_axis", &UEVR_VRData::get_joystick_axis, "trigger_haptic_vibration",
+        &UEVR_VRData::trigger_haptic_vibration, "is_using_controllers", &UEVR_VRData::is_using_controllers, "get_lowest_xinput_index",
+        &UEVR_VRData::get_lowest_xinput_index, "recenter_view", &UEVR_VRData::recenter_view, "recenter_horizon",
+        &UEVR_VRData::recenter_horizon, "get_aim_method", &UEVR_VRData::get_aim_method, "set_aim_method", &UEVR_VRData::set_aim_method,
+        "is_aim_allowed", &UEVR_VRData::is_aim_allowed, "set_aim_allowed", &UEVR_VRData::set_aim_allowed, "get_hmd_width",
+        &UEVR_VRData::get_hmd_width, "get_hmd_height", &UEVR_VRData::get_hmd_height, "get_ui_width", &UEVR_VRData::get_ui_width,
+        "get_ui_height", &UEVR_VRData::get_ui_height, "is_snap_turn_enabled", &UEVR_VRData::is_snap_turn_enabled, "set_snap_turn_enabled",
+        &UEVR_VRData::set_snap_turn_enabled, "set_decoupled_pitch_enabled", &UEVR_VRData::set_decoupled_pitch_enabled, "set_mod_value",
+        &UEVR_VRData::set_mod_value, "get_mod_value",
         [](UEVR_VRData& self, const char* name) {
             char out[256]{0};
             self.get_mod_value(name, out, sizeof(out));
@@ -535,8 +469,6 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         &UEVR_Quaternionf::z, "w", &UEVR_Quaternionf::w, "as_full_binding",
         [](UEVR_Quaternionf& self) -> lua::datatypes::Quaternionf { return *reinterpret_cast<lua::datatypes::Quaternionf*>(&self); });
 
-
-
     m_lua.new_usertype<UEVR_Rotatorf>("UEVR_Rotatorf", "pitch", &UEVR_Rotatorf::pitch, "yaw", &UEVR_Rotatorf::yaw, "roll",
         &UEVR_Rotatorf::roll, "cast_to_vector",
         [](UEVR_Rotatorf& self) -> lua::datatypes::Vector3f { return *reinterpret_cast<lua::datatypes::Vector3f*>(&self); });
@@ -546,7 +478,8 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         [](UEVR_Rotatord& self) -> lua::datatypes::Vector3d { return *reinterpret_cast<lua::datatypes::Vector3d*>(&self); });
 
     m_lua.new_usertype<UEVR_Matrix4x4f>(
-        "UEVR_Matrix4x4f", sol::meta_function::index, [](sol::this_state s, UEVR_Matrix4x4f& lhs, sol::object index_obj) -> sol::object {
+        "UEVR_Matrix4x4f", sol::meta_function::index,
+        [](sol::this_state s, UEVR_Matrix4x4f& lhs, sol::object index_obj) -> sol::object {
             if (!index_obj.is<int>()) {
                 return sol::make_object(s, sol::lua_nil);
             }
@@ -558,10 +491,13 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
             }
 
             return sol::make_object(s, &lhs.m[index]);
-        });
+        },
+        "as_full_binding",
+        [](UEVR_Matrix4x4f& self) -> lua::datatypes::Matrix4x4f { return *reinterpret_cast<lua::datatypes::Matrix4x4f*>(&self); });
 
     m_lua.new_usertype<UEVR_Matrix4x4d>(
-        "UEVR_Matrix4x4d", sol::meta_function::index, [](sol::this_state s, UEVR_Matrix4x4d& lhs, sol::object index_obj) -> sol::object {
+        "UEVR_Matrix4x4d", sol::meta_function::index,
+        [](sol::this_state s, UEVR_Matrix4x4d& lhs, sol::object index_obj) -> sol::object {
             if (!index_obj.is<int>()) {
                 return sol::make_object(s, sol::lua_nil);
             }
@@ -573,7 +509,9 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
             }
 
             return sol::make_object(s, &lhs.m[index]);
-        });
+        },
+        "as_full_binding",
+        [](UEVR_Matrix4x4d& self) -> lua::datatypes::Matrix4x4d { return *reinterpret_cast<lua::datatypes::Matrix4x4d*>(&self); });
 
     m_lua.new_usertype<uevr::API::FName>(
         "UEVR_FName", "to_string", &uevr::API::FName::to_string, sol::meta_function::to_string, &uevr::API::FName::to_string);
@@ -584,7 +522,7 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         &uevr::API::UObject::get_fname, "get_short_name",
         [](sol::this_state s, uevr::API::UObject& self) -> sol::object {
             const auto wstr = self.get_fname()->to_string();
-            
+
             return sol::make_object(s, utility::narrow(wstr));
         },
         "get_full_name", &uevr::API::UObject::get_full_name, "is_a", &uevr::API::UObject::is_a, "as_class",
@@ -709,6 +647,7 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         },
         "get_child_properties", &uevr::API::UStruct::get_child_properties, "get_properties_size", &uevr::API::UStruct::get_properties_size,
         "get_children", &uevr::API::UStruct::get_children);
+
 
     create_uobject_ptr_gc((API::UStruct*)nullptr);
 
@@ -835,10 +774,10 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         });
 
     m_lua.new_usertype<uevr::API::FProperty>("UEVR_FProperty", sol::base_classes, sol::bases<uevr::API::FField>(), "get_offset",
-        &uevr::API::FProperty::get_offset, "get_property_flags", &uevr::API::FProperty::get_property_flags, "is_param",
-        &uevr::API::FProperty::is_param, "is_out_param", &uevr::API::FProperty::is_out_param, "is_return_param",
-        &uevr::API::FProperty::is_return_param, "is_reference_param", &uevr::API::FProperty::is_reference_param, "is_pod",
-        &uevr::API::FProperty::is_pod);
+        &uevr::API::FProperty::get_offset, "set_property_flags", &uevr::API::FProperty::set_property_flags, "get_property_flags",
+        &uevr::API::FProperty::get_property_flags, "is_param", &uevr::API::FProperty::is_param, "is_out_param",
+        &uevr::API::FProperty::is_out_param, "is_return_param", &uevr::API::FProperty::is_return_param, "is_reference_param",
+        &uevr::API::FProperty::is_reference_param, "is_pod", &uevr::API::FProperty::is_pod);
 
     m_lua.new_usertype<uevr::API::FArrayProperty>("UEVR_FArrayProperty", sol::base_classes, sol::bases<uevr::API::FField>(), "get_inner",
         [](uevr::API::FArrayProperty& self) { return self.get_inner(); });
@@ -1016,7 +955,6 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
         },
         "find_uobject",
         [](sol::this_state s, uevr::API* api, const std::wstring& name) -> sol::object {
-            
             auto result = api->find_uobject<uevr::API::UObject>(name);
 
             if (result == nullptr) {
@@ -1040,16 +978,16 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
 
             return sol::make_object(s, engine);
         },
-/*        "get_world",
-        [](sol::this_state s, uevr::API* api) -> sol::object {
-            auto engine = (sdk::UEngine*)api->get_engine();
-            auto world = (API::UObject*)engine->get_world();
-            if (world == nullptr) {
-                return sol::make_object(s, sol::lua_nil);
-            }
+        /*        "get_world",
+                [](sol::this_state s, uevr::API* api) -> sol::object {
+                    auto engine = (sdk::UEngine*)api->get_engine();
+                    auto world = (API::UObject*)engine->get_world();
+                    if (world == nullptr) {
+                        return sol::make_object(s, sol::lua_nil);
+                    }
 
-            return sol::make_object(s, world);
-        },   */
+                    return sol::make_object(s, world);
+                },   */
         "get_player_controller",
         [](sol::this_state s, uevr::API* api, int32_t index) -> sol::object {
             auto controller = (API::UObject*)api->get_player_controller(index);
@@ -1117,8 +1055,6 @@ UEVR_FRenderTargetPoolHookFunctions render_target_pool_hook::functions {
 
     return out.push(m_lua.lua_state());
 }
-
-
 
 // TODO: attempt running each callback in a separate thread/state with a sandboxed copy of main environment
 

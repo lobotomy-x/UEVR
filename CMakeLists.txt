@@ -338,9 +338,14 @@ set(CMKR_TARGET plugin_renderlib)
 set(plugin_renderlib_SOURCES "")
 
 list(APPEND plugin_renderlib_SOURCES
+	"examples/renderlib/imgui/cimgui.cpp"
+	"examples/renderlib/imgui/imgui.cpp"
+	"examples/renderlib/imgui/imgui_draw.cpp"
 	"examples/renderlib/imgui/imgui_impl_dx11.cpp"
 	"examples/renderlib/imgui/imgui_impl_dx12.cpp"
 	"examples/renderlib/imgui/imgui_impl_win32.cpp"
+	"examples/renderlib/imgui/imgui_tables.cpp"
+	"examples/renderlib/imgui/imgui_widgets.cpp"
 	"examples/renderlib/rendering/d3d11.cpp"
 	"examples/renderlib/rendering/d3d12.cpp"
 	"examples/renderlib/imgui/font_robotomedium.hpp"
@@ -348,9 +353,16 @@ list(APPEND plugin_renderlib_SOURCES
 	"examples/renderlib/rendering/d3d11.hpp"
 	"examples/renderlib/rendering/d3d12.hpp"
 	"examples/renderlib/rendering/shared.hpp"
+	"examples/renderlib/imgui/cimgui.h"
+	"examples/renderlib/imgui/imconfig.h"
+	"examples/renderlib/imgui/imgui.h"
 	"examples/renderlib/imgui/imgui_impl_dx11.h"
 	"examples/renderlib/imgui/imgui_impl_dx12.h"
 	"examples/renderlib/imgui/imgui_impl_win32.h"
+	"examples/renderlib/imgui/imgui_internal.h"
+	"examples/renderlib/imgui/imstb_rectpack.h"
+	"examples/renderlib/imgui/imstb_textedit.h"
+	"examples/renderlib/imgui/imstb_truetype.h"
 )
 
 list(APPEND plugin_renderlib_SOURCES
@@ -601,7 +613,6 @@ set(CMKR_TARGET luavrlib)
 set(luavrlib_SOURCES "")
 
 list(APPEND luavrlib_SOURCES
-	"lua-api/lib/include/Source1.cpp"
 	"lua-api/lib/src/ScriptContext.cpp"
 	"lua-api/lib/src/ScriptState.cpp"
 	"lua-api/lib/src/ScriptUtility.cpp"

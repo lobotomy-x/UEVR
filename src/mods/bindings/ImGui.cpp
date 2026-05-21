@@ -24,40 +24,54 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef LUA_DEBUG 
-#define LUA_DEBUG = 1
+#ifndef LUA_DEBUG
+#define LUA_DEBUG 1 // Fixed: removed '=' from define
 #endif
+#include <algorithm>
+#include <cstdint>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <unordered_map>
-#include <cstdint>
 #include <vector>
-#include <algorithm>
+
+// Add sol2 include before using sol types
+#include <sol/sol.hpp>
 
 #include "../LuaLoader.hpp"
+//#include "../dependencies/submodules/ImGuizmo/ImGuizmo.h"
+//#include "../dependencies/submodules/ImGuizmo/ImSequencer.h"
+
+//#include "../dependencies/submodules/imnodes/imnodes.h"
 #include "Framework.hpp"
 #include "utility/ImGui.hpp"
 
 #include "ImGui.hpp"
-#include <uevr/API.h>
+
+
+
 // set the imgui texture pointer to our own data format
 #define ImTextureID uint64_t
 
 namespace {
-    // Storage for drag-drop payloads from Lua
-    static std::unordered_map<uint64_t, sol::object> g_drag_drop_payloads;
-    static uint64_t g_next_payload_id = 1;
-    
-    // Cleanup old payloads (call this periodically, e.g., in NewFrame or EndFrame binding)
-    static void cleanup_old_payloads() {
-        // Keep only the last 100 payloads to prevent memory leaks
-        if (g_drag_drop_payloads.size() > 100) {
-            auto it = g_drag_drop_payloads.begin();
-            std::advance(it, g_drag_drop_payloads.size() - 100);
-            g_drag_drop_payloads.erase(g_drag_drop_payloads.begin(), it);
-        }
+
+
+
+            
+// Storage for drag-drop payloads from Lua
+static std::unordered_map<uint64_t, sol::object> g_drag_drop_payloads{};
+ static uint64_t g_next_payload_id = 1;
+
+// Cleanup old payloads (call this periodically, e.g., in NewFrame or EndFrame binding)
+static void cleanup_old_payloads() {
+     if (g_drag_drop_payloads.empty()) return;
+    // Keep only the last 100 payloads to prevent memory leaks
+    if (g_drag_drop_payloads.size() > 100) {
+        auto it = g_drag_drop_payloads.begin();
+        std::advance(it, g_drag_drop_payloads.size() - 100);
+        g_drag_drop_payloads.erase(g_drag_drop_payloads.begin(), it);
     }
 }
+} // namespace
 
 namespace api::imgui {
 void text_colored(const char* text, sol::object color);
@@ -73,7 +87,7 @@ void cleanup() {
 
 ImVec2 create_imvec2(sol::object obj) {
     ImVec2 out{0.0f, 0.0f};
-
+    if (!obj) return out;
     if (obj.is<Vector2f>()) {
         auto vec = obj.as<Vector2f>();
         out.x = vec.x;
@@ -95,7 +109,7 @@ ImVec2 create_imvec2(sol::object obj) {
         auto vec = obj.as<Vector4f>();
         out.x = vec.x;
         out.y = vec.y;
-    } 
+    }
 
     return out;
 }
@@ -155,31 +169,27 @@ ImVec4 create_imvec4_color(sol::object obj) {
             throw sol::error{"Invalid table passed. Table size must be 4."};
         }
     }
-        return out;
+    return out;
 }
-
-
 
 ImU32 create_imu32_color(sol::object obj) {
     if (obj.is<unsigned int>()) {
         return obj.as<ImU32>();
-    } 
-    else if (obj.is<Vector4f>()) {
+    } else if (obj.is<Vector4f>()) {
         const auto& vec = obj.as<Vector4f>();
         auto r = (unsigned int)std::fmin(255, (int)(vec.x * 255.0f + 0.5f));
         auto g = (unsigned int)std::fmin(255, (int)(vec.y * 255.0f + 0.5f));
         auto b = (unsigned int)std::fmin(255, (int)(vec.z * 255.0f + 0.5f));
         auto a = (unsigned int)std::fmin(255, (int)(vec.w * 255.0f + 0.5f));
         return (a << 24) | (b << 16) | (g << 8) | r;
-    }
-    else if (obj.is<sol::table>()) {
+    } else if (obj.is<sol::table>()) {
         auto table = obj.as<sol::table>();
         if (table.size() == 4) {
             float r = table.get<float>(1);
             float g = table.get<float>(2);
             float b = table.get<float>(3);
             float a = table.get<float>(4);
-            
+
             auto ri = (unsigned int)std::fmin(255, (int)(r * 255.0f + 0.5f));
             auto gi = (unsigned int)std::fmin(255, (int)(g * 255.0f + 0.5f));
             auto bi = (unsigned int)std::fmin(255, (int)(b * 255.0f + 0.5f));
@@ -189,9 +199,31 @@ ImU32 create_imu32_color(sol::object obj) {
             throw sol::error{"Invalid table passed. Table size must be 4."};
         }
     }
-    
+
     return 0xFFFFFFFF;
 }
+
+ImVec4 convert_ue32_to_vec4(ImU32 in) {
+    return ImGui::ColorConvertU32ToFloat4(in);
+}
+
+unsigned int convert_vec4_to_u32(const ImVec4 in) {
+    return ImGui::ColorConvertFloat4ToU32(in);
+}
+
+
+void draw_scene_texture(sol::object size_obj) {
+    UEVR_FRHITexture2DHandle Handle = uevr::API::get()->param()->sdk->stereo_hook->get_scene_render_target();
+    void* native = uevr::API::get()->param()->sdk->frhitexture2d->get_native_resource(Handle);
+    ImGui::Image((ImTextureID)native, create_imvec2(size_obj), ImVec2(0, 0), ImGui::GetBackgroundDrawList()->GetClipRectMax());
+    /*    if (auto renderer = uevr::API ::get()->param()->renderer; renderer->renderer_type == 0) {
+        ()
+    }*/
+}
+
+
+
+#include "../dependencies/submodules/cimgui/cimgui.h"
 
 // Use buttonex to allow passing flags, e.g. hold to repeat
 bool button(const char* label, sol::object size_object, sol::object flags_object) {
@@ -240,8 +272,7 @@ bool arrow_button(const char* str_id, int dir) {
     return ImGui::ArrowButton(str_id, (ImGuiDir)dir);
 }
 
-
-//#if LUA_DEBUG==1
+// #if LUA_DEBUG==1
 void show_metrics_window(sol::object open_obj) {
     bool open = true;
     bool* open_p = nullptr;
@@ -251,26 +282,23 @@ void show_metrics_window(sol::object open_obj) {
         open_p = &open;
     }
 
-
-
     ImGui::ShowMetricsWindow(open_p);
 }
-void show_font_atlas(){
+void show_font_atlas() {
     ImGui::ShowFontAtlas(ImGui::GetIO().Fonts);
 }
 
-
 void show_debug_log_window(sol::object open_obj) {
-        bool open = true;
-        bool* open_p = nullptr;
+    bool open = true;
+    bool* open_p = nullptr;
 
-        if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
-            open = open_obj.as<bool>();
-            open_p = &open;
-        }
-
-        ImGui::ShowDebugLogWindow(open_p);
+    if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+        open = open_obj.as<bool>();
+        open_p = &open;
     }
+
+    ImGui::ShowDebugLogWindow(open_p);
+}
 void show_stack_tool_window(sol::object open_obj) {
     bool open = true;
     bool* open_p = nullptr;
@@ -283,38 +311,38 @@ void show_stack_tool_window(sol::object open_obj) {
     ImGui::ShowStackToolWindow(open_p);
 }
 
-
-void show_font_selector(const char* label){
+void show_font_selector(const char* label) {
     ImGui::ShowFontSelector(label);
 }
 
 void show_demo_window(sol::object open_obj) {
-        bool open = true;
-        bool* open_p = nullptr;
+    bool open = true;
+    bool* open_p = nullptr;
 
-        if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
-            open = open_obj.as<bool>();
-            open_p = &open;
-            }
-    ImGui::ShowDemoWindow(open_p);
+    if (!open_obj.is<sol::nil_t>() && open_obj.is<bool>()) {
+        open = open_obj.as<bool>();
+        open_p = &open;
     }
+    ImGui::ShowDemoWindow(open_p);
+}
 
-
-//#endif 
+// #endif
 bool begin_drag_drop_source(sol::object flags_object) {
-    
+
     ImGuiDragDropFlags flags = 0;
 
     if (flags_object.is<int>()) {
         flags = (ImGuiDragDropFlags)(flags_object.as<int>());
+
     }
-   return ImGui::BeginDragDropSource(flags);
+    return ImGui::BeginDragDropSource(flags);
 }
- 
+
+
+
 void end_drag_drop_source() {
     ImGui::EndDragDropSource();
 }
-                       
 
 bool set_drag_drop_payload(const char* type, sol::object data) {
     cleanup_old_payloads();
@@ -323,12 +351,12 @@ bool set_drag_drop_payload(const char* type, sol::object data) {
     return ImGui::SetDragDropPayload(type, &id, sizeof(id));
 }
 
-bool is_payload_accepted(){
+bool is_payload_accepted() {
     return ImGui::IsDragDropPayloadBeingAccepted();
 }
 
 sol::object accept_payload(sol::this_state s, const char* type, sol::object flags_object) {
-  ImGuiDragDropFlags flags = 0;
+    ImGuiDragDropFlags flags = 0;
 
     if (flags_object.is<int>()) {
         flags = (ImGuiDragDropFlags)(flags_object.as<int>());
@@ -338,16 +366,16 @@ sol::object accept_payload(sol::this_state s, const char* type, sol::object flag
         uint64_t id = *(const uint64_t*)payload->Data;
         auto it = g_drag_drop_payloads.find(id);
         if (it != g_drag_drop_payloads.end()) {
+
             return sol::make_object(s, it->second);
         }
     }
     return sol::nil;
 }
 
+bool begin_drag_drop_target() {
 
- bool begin_drag_drop_target() {
-
-   return ImGui::BeginDragDropTarget();
+    return ImGui::BeginDragDropTarget();
 }
 
 void end_drag_drop_target() {
@@ -355,13 +383,11 @@ void end_drag_drop_target() {
 }
 
 void render_drag_drop(sol::object rect_start, sol::object rect_end) {
-   const auto rectstart = create_imvec2(rect_start);
-   const auto rectend = create_imvec2(rect_end);
-    ImRect bb (rectstart, rectend);
-   ImGui::RenderDragDropTargetRectForItem(bb);
- 
+    const auto rectstart = create_imvec2(rect_start);
+    const auto rectend = create_imvec2(rect_end);
+    ImRect bb(rectstart, rectend);
+    ImGui::RenderDragDropTargetRectForItem(bb);
 }
-                                                         
 
 void accept_drag_drop(const char* type) {
     ImGui::AcceptDragDropPayload(type);
@@ -391,7 +417,6 @@ void text_colored(const char* text, sol::object color) {
     ImGui::TextColored(out_color, text);
 }
 
-
 void bullet() {
     ImGui::Bullet();
 }
@@ -410,7 +435,6 @@ void label_text(const char* label, const char* fmt) {
 // you can also set flags individually to get repeat now
 void push_button_repeat(bool v) {
     ImGui::PushButtonRepeat(v);
-
 }
 
 void pop_button_repeat() {
@@ -420,7 +444,6 @@ void pop_button_repeat() {
 void separator_text(const char* text) {
     ImGui::SeparatorText(text);
 }
-
 
 sol::variadic_results checkbox(sol::this_state s, const char* label, bool v) {
     if (label == nullptr) {
@@ -636,6 +659,52 @@ sol::variadic_results slider_int(
 
     return results;
 }
+
+
+sol::variadic_results vslider_float(sol::this_state s, const char* label, float v, float v_min, float v_max,
+    const char* display_format = "%.3f", sol::object size_object = nullptr, sol::object flags_object = 0) {
+    if (label == nullptr) {
+        label = "";
+    }
+
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::VSliderFloat(label, create_imvec2(size_object),  & v, v_min, v_max, display_format, flags);
+
+    sol::variadic_results results{};
+
+    results.push_back(sol::make_object(s, changed));
+    results.push_back(sol::make_object(s, v));
+
+    return results;
+}
+// putting size out of order compared to the actual functions to make it easier to just add a v to existing slider clode
+sol::variadic_results vslider_int(sol::this_state s, const char* label,  int v, int v_min, int v_max,
+    const char* display_format = "%.3f", sol::object size_object = nullptr, sol::object flags_object = 0) {
+    if (label == nullptr) {
+        label = "";
+    }
+
+    ImGuiSliderFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    auto changed = ImGui::VSliderInt(label, create_imvec2(size_object), &v, v_min, v_max, display_format, flags);
+
+    sol::variadic_results results{};
+
+    results.push_back(sol::make_object(s, changed));
+    results.push_back(sol::make_object(s, v));
+
+    return results;
+}
+
 //
 // InputFloat(
 // InputFloat2
@@ -647,7 +716,6 @@ sol::variadic_results slider_int(
 // sol::variadic_results input_scalar(sol::this_state s, const char* label, ImGuiDataType data_type, void* p_data, const void* p_step =
 // NULL,
 //     const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0);)
-
 
 //   IMGUI_API bool Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0,
 // const ImVec2& size = ImVec2(0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so
@@ -744,8 +812,21 @@ bool tree_node(const char* label, sol::object flags_object) {
         flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
     }
 
-     ImGui::PushID(label);
-    return ImGui::TreeNodeEx(label, flags);
+    auto tree = ImGui::TreeNodeEx(label, flags);
+    //ImGui::PushID(label);
+    return tree;
+}
+bool begin_multi_select(sol::object flags_object, int selection_size, int items_count) {
+    ImGuiMultiSelectFlags flags = 0;
+
+    if (flags_object.is<int>()) {
+        flags = (ImGuiMultiSelectFlags)(flags_object.as<int>());
+    }
+    return ImGui::BeginMultiSelect(flags, selection_size, items_count);
+}
+
+void end_multi_select() {
+    ImGui::EndMultiSelect();
 }
 
 bool tree_node_ptr_id(const void* id, const char* label, sol::object flags_object) {
@@ -753,7 +834,7 @@ bool tree_node_ptr_id(const void* id, const char* label, sol::object flags_objec
         label = "";
     }
     // Previously if you call ptr/str id version you would think that does enough
-    // to distinguish items when iterating a table 
+    // to distinguish items when iterating a table
     // it does for the nodes but anything inside the nodes doesn't seem to be covered
     // and therefore even when using ptr_id the expansion state can be screwed up
     ImGuiTreeNodeFlags flags = 0;
@@ -762,11 +843,33 @@ bool tree_node_ptr_id(const void* id, const char* label, sol::object flags_objec
         flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
     }
 
-    ImGui::PushID(label);
-    return ImGui::TreeNodeEx(id,flags, label);
+    auto tree = ImGui::TreeNodeEx(label, flags);
+ //   ImGui::PushID(label);
+    return tree;
+}
+                                      
+
+void push_override_id(sol::object id){
+    ImGuiID ID{};
+    if (id.is<int>()) {
+        ID = id.as<ImGuiID>();
+    } else if (id.is<const char*>()) {
+        ID = ImGui::GetID(id.as<const char*>());
+    } else if (id.is<void*>()) {
+        ID = ImGui::GetID(id.as<void*>());
+    } else {
+        throw sol::error("Type must be int, const char* or void*");
+    }
+
+
+    ImGui::PushOverrideID(ID);
 }
 
-bool tree_node_str_id(const char* id, const char* label, sol::object flags_object) {
+ImGuiID get_id_from_pos(sol::object pos) {
+    return ImGui::GetCurrentWindow()->GetIDFromPos(create_imvec2(pos));
+}
+
+ bool tree_node_str_id(const char* id, const char* label, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
@@ -775,13 +878,14 @@ bool tree_node_str_id(const char* id, const char* label, sol::object flags_objec
     if (flags_object.is<int>()) {
         flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
     }
-
-    ImGui::PushID(label);
-    return ImGui::TreeNodeEx(id,flags, label);
-}
+    
+    auto tree = ImGui::TreeNodeEx(label, flags);
+ //   ImGui::PushID(label);
+    return tree;
+ }
 
 void tree_pop() {
-    ImGui::PopID();
+  //  ImGui::PopID();
     ImGui::TreePop();
 }
 
@@ -796,6 +900,7 @@ bool is_item_hovered(sol::object flags_obj) {
         flags = (ImGuiHoveredFlags)flags_obj.as<int>();
     }
 
+
     return ImGui::IsItemHovered(flags);
 }
 
@@ -807,17 +912,15 @@ ImGuiID get_active_id() {
 //    return ImGui::GetFocusID;
 //}
 
-
-
-  ImGuiID get_hovered_id() {
+ImGuiID get_hovered_id() {
     return ImGui::GetHoveredID();
 }
 
-  ImGuiID get_item_id() {
+ImGuiID get_item_id() {
     return ImGui::GetItemID();
 }
 
- void active_item_by_id(sol::object id) {
+void activate_item_by_id(sol::object id) {
     ImGuiID ID{};
     if (id.is<int>()) {
         ID = id.as<ImGuiID>();
@@ -830,84 +933,108 @@ ImGuiID get_active_id() {
     }
 
     ImGui::ActivateItemByID(ID);
+}
 
- }
+void clear_active_id() {
+    ImGui::ClearActiveID();
+}
 
-  void clear_active_id() {
-     ImGui::ClearActiveID();
-
-
- }
-
-   void focus_item() {
-     ImGui::FocusItem();
- }
-
+void focus_item() {
+    ImGui::FocusItem();
+}
 
 void focus_window() {
     if (ImGuiWindow* w = ImGui::GetCurrentWindow()) {
         ImGui::FocusWindow(w);
     }
+}
 
- }
+ImGuiContext* create_context(ImFontAtlas* shared_font_atlas) {
+    return ImGui::CreateContext(shared_font_atlas);
+}
+void destroy_context(ImGuiContext* ctx) {
+    ImGui::DestroyContext(ctx);
+}
+
+ImGuiContext*  get_current_context() {
+    return ImGui::GetCurrentContext();
+}
+
+void begin_viewport_sidebar(const char* name, sol::object dir, sol::object size, sol::object flags_object = 0) {
+    ImGuiViewport* vp  = ImGui::GetMainViewport();
+    ImGui::BeginViewportSideBar(name, vp, (ImGuiDir)dir.as<int>(), (float)size.as<float>(), (ImGuiWindowFlags)flags_object.as<int>());
+}
+void platform_create_window(sol::object vp) {
+    ImGuiViewport* viewport;
+    if (vp.is<int>()) {
+        viewport = ImGui::FindViewportByID(vp.as<int>());
+    }
+    ImGuiPlatformIO io = ImGui::GetPlatformIO();
+    io.Platform_CreateWindow(viewport);
+}
+
+//bool set_shortcut_routing(sol::object key_chord, sol::object input_flags, sol::object owner_id) {
+//    ImGuiID OwnerID = get_id(owner_id);
+//    if (key_chord.is<sol::lua_table>()) {
+//    }
+//}
+//ImGui::SetShortcutRouting(.)
+//}
 
 void text_wrapped(const char* text) {
-     ImGui::TextWrapped(text);
- }
+    ImGui::TextWrapped(text);
+}
 
-
-
-
-     //
+//
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
 ////       SetKeyOwner(key, GetItemID());
-//// Extensive uses of that (e.g. many calls for a single item) may want to manually perform the tests once and then call SetKeyOwner() multiple times.
-//// More advanced usage scenarios may want to call SetKeyOwner() manually based on different condition.
-//// Worth noting is that only one item can be hovered and only one item can be active, therefore this usage pattern doesn't need to bother with routing and priority.
-//void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
+//// Extensive uses of that (e.g. many calls for a single item) may want to manually perform the tests once and then call SetKeyOwner()
+///multiple times. / More advanced usage scenarios may want to call SetKeyOwner() manually based on different condition. / Worth noting is
+///that only one item can be hovered and only one item can be active, therefore this usage pattern doesn't need to bother with routing and
+///priority.
+// void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
 //{
-//    ImGuiContext& g = *GImGui;
-//    ImGuiID id = g.LastItemData.ID;
-//    if (id == 0 || (g.HoveredId != id && g.ActiveId != id))
-//        return;
-//    if ((flags & ImGuiInputFlags_CondMask_) == 0)
-//        flags |= ImGuiInputFlags_CondDefault_;
-//    if ((g.HoveredId == id && (flags & ImGuiInputFlags_CondHovered)) || (g.ActiveId == id && (flags & ImGuiInputFlags_CondActive)))
-//    {
-//        IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetItemKeyOwner) == 0); // Passing flags not supported by this function!
-//        SetKeyOwner(key, id, flags & ~ImGuiInputFlags_CondMask_);
-//    }
-//}
+//     ImGuiContext& g = *GImGui;
+//     ImGuiID id = g.LastItemData.ID;
+//     if (id == 0 || (g.HoveredId != id && g.ActiveId != id))
+//         return;
+//     if ((flags & ImGuiInputFlags_CondMask_) == 0)
+//         flags |= ImGuiInputFlags_CondDefault_;
+//     if ((g.HoveredId == id && (flags & ImGuiInputFlags_CondHovered)) || (g.ActiveId == id && (flags & ImGuiInputFlags_CondActive)))
+//     {
+//         IM_ASSERT((flags & ~ImGuiInputFlags_SupportedBySetItemKeyOwner) == 0); // Passing flags not supported by this function!
+//         SetKeyOwner(key, id, flags & ~ImGuiInputFlags_CondMask_);
+//     }
+// }
 //
-//bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
+// bool ImGui::Shortcut(ImGuiKeyChord key_chord, ImGuiID owner_id, ImGuiInputFlags flags)
 //{
-//    ImGuiContext& g = *GImGui;
+//     ImGuiContext& g = *GImGui;
 //
-//    // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine with he 0/Any.
-//    if ((flags & ImGuiInputFlags_RouteMask_) == 0)
-//        flags |= ImGuiInputFlags_RouteFocused;
-//    if (!SetShortcutRouting(key_chord, owner_id, flags))
-//        return false;
+//     // When using (owner_id == 0/Any): SetShortcutRouting() will use CurrentFocusScopeId and filter with this, so IsKeyPressed() is fine
+//     with he 0/Any. if ((flags & ImGuiInputFlags_RouteMask_) == 0)
+//         flags |= ImGuiInputFlags_RouteFocused;
+//     if (!SetShortcutRouting(key_chord, owner_id, flags))
+//         return false;
 //
-//    if (key_chord & ImGuiMod_Shortcut)
-//        key_chord = ConvertShortcutMod(key_chord);
-//    ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
-//    if (g.IO.KeyMods != mods)
-//        return false;
+//     if (key_chord & ImGuiMod_Shortcut)
+//         key_chord = ConvertShortcutMod(key_chord);
+//     ImGuiKey mods = (ImGuiKey)(key_chord & ImGuiMod_Mask_);
+//     if (g.IO.KeyMods != mods)
+//         return false;
 //
-//    // Special storage location for mods
-//    ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
-//    if (key == ImGuiKey_None)
-//        key = ConvertSingleModFlagToKey(&g, mods);
+//     // Special storage location for mods
+//     ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
+//     if (key == ImGuiKey_None)
+//         key = ConvertSingleModFlagToKey(&g, mods);
 //
-//    if (!IsKeyPressed(key, owner_id, (flags & (ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateMask_))))
-//        return false;
-//    IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByShortcut) == 0); // Passing flags not supported by this function!
+//     if (!IsKeyPressed(key, owner_id, (flags & (ImGuiInputFlags_Repeat | (ImGuiInputFlags)ImGuiInputFlags_RepeatRateMask_))))
+//         return false;
+//     IM_ASSERT((flags & ~ImGuiInputFlags_SupportedByShortcut) == 0); // Passing flags not supported by this function!
 //
-//    return true;
-//}
-
+//     return true;
+// }
 
 bool is_item_active() {
     return ImGui::IsItemActive();
@@ -917,7 +1044,7 @@ bool is_item_focused() {
     return ImGui::IsItemFocused();
 }
 
-/*// dock in main panel
+// dock in main panel
 void set_next_window_docked(sol::object condition_obj) {
     ImGuiCond condition{};
 
@@ -927,9 +1054,9 @@ void set_next_window_docked(sol::object condition_obj) {
 
     ImGuiID dockID = ImGui::GetID("UEVR_Dockspace");
     ImGui::SetNextWindowDockID(dockID, condition);
-}*/
+}
 
-/*// I'm not sure how far we'll go with this but I'll at least expose basic dockspace creation to lua
+// I'm not sure how far we'll go with this but I'll at least expose basic dockspace creation to lua
 void set_next_window_dock_id(sol::object dockid, sol::object condition_obj) {
     ImGuiCond condition{};
 
@@ -945,10 +1072,10 @@ void set_next_window_dock_id(sol::object dockid, sol::object condition_obj) {
     } else if (dockid.is<void*>()) {
         dockID = ImGui::GetID(dockid.as<void*>());
 
-            ImGui::SetNextWindowDockID(dockID, condition);
-        }
+        ImGui::SetNextWindowDockID(dockID, condition);
     }
-}*/
+}
+
 bool begin_window(const char* name, sol::object open_obj, ImGuiWindowFlags flags = 0) {
     if (name == nullptr) {
         name = "";
@@ -1058,12 +1185,12 @@ bool collapsing_header(const char* name) {
     return ImGui::CollapsingHeader(name);
 }
 
-int load_font(sol::object filepath_obj, int size/*, sol::object ranges*/) {
+int load_font(sol::object filepath_obj, int size /*, sol::object ranges*/) {
     namespace fs = std::filesystem;
     const char* filepath = "doesnt-exist.not-a-real-font";
 
     if (filepath_obj.is<const char*>()) {
-        filepath = filepath_obj.as<const char*> ();
+        filepath = filepath_obj.as<const char*>();
     }
 
     if (std::filesystem::path(filepath).is_absolute()) {
@@ -1085,15 +1212,15 @@ int load_font(sol::object filepath_obj, int size/*, sol::object ranges*/) {
     fs::create_directories(fonts_path);
     std::vector<ImWchar> ranges_vec{};
 
- /*   if (ranges.is<sol::table>()) {
-        sol::table ranges_table = ranges;
+    /*   if (ranges.is<sol::table>()) {
+           sol::table ranges_table = ranges;
 
-        for (auto i = 1u; i <= ranges_table.size(); ++i) {
-            ranges_vec.push_back(ranges_table[i].get<ImWchar>());
-        }
-    }*/
+           for (auto i = 1u; i <= ranges_table.size(); ++i) {
+               ranges_vec.push_back(ranges_table[i].get<ImWchar>());
+           }
+       }*/
 
-    return g_framework->add_font(font_path, size/*, ranges_vec*/);
+    return g_framework->add_font(font_path, size /*, ranges_vec*/);
 }
 
 void push_font(int font) {
@@ -1386,6 +1513,23 @@ void set_next_window_size(sol::object size_obj, sol::object condition_obj) {
     ImGui::SetNextWindowSize(size, condition);
 }
 
+void set_next_window_scroll(sol::object scroll_obj) {
+    auto scroll = create_imvec2(scroll_obj);
+    ImGui::SetNextWindowScroll({scroll.x, scroll.y});
+}
+
+void align_text_to_frame_padding() {
+    ImGui::AlignTextToFramePadding();
+}
+
+float get_frame_height() {
+    return ImGui::GetFrameHeight();
+}
+
+bool radio_button(const char* label, bool active) {
+    return ImGui::RadioButton(label, active);
+}
+
 void push_id(sol::object id) {
     if (id.is<int>()) {
         ImGui::PushID(id.as<int>());
@@ -1467,8 +1611,6 @@ bool is_mouse_released(int button) {
 bool is_mouse_double_clicked(int button) {
     return ImGui::IsMouseDoubleClicked(button);
 }
-
-
 
 //    IMGUI_API bool IsMouseReleasedWithDelay(ImGuiMouseButton button,
 //    float delay); // delayed mouse release (use very sparingly!). Generally used with 'delay >= io.MouseDoubleClickTime' + combined with a
@@ -1597,7 +1739,7 @@ bool is_popup_open(const char* str_id) {
 }
 
 Vector2f calc_text_size(const char* text, sol::object text_end, sol::object double_hash_hides_text, sol::object wrap_width) {
-   
+
     auto _text_end = text_end.is<const char*>() ? text_end.as<const char*>() : 0;
     bool hide_text_after_double_hash = double_hash_hides_text.is<bool>() ? double_hash_hides_text.as<bool>() : false;
     float text_wrap_width = wrap_width.is<float>() ? wrap_width.as<float>() : -1.0f;
@@ -1610,11 +1752,8 @@ Vector2f calc_text_size(const char* text, sol::object text_end, sol::object doub
 
 Vector2f get_content_region_available() {
     const auto result = ImGui::GetContentRegionAvail();
-    return Vector2f {
-            result.x,
-            result.y
-        };
-    }
+    return Vector2f{result.x, result.y};
+}
 
 Vector2f get_window_size() {
     const auto result = ImGui::GetWindowSize();
@@ -1655,17 +1794,17 @@ bool begin_list_box(const char* label, sol::object size_obj) {
 }
 
 //
-//sol::variadic_results list_box(sol::this_state s, const char* label, sol::table items, sol::object selection, sol::object size_obj) {
+// sol::variadic_results list_box(sol::this_state s, const char* label, sol::table items, sol::object selection, sol::object size_obj) {
 //    if (label == nullptr) {
 //        label = "";
 //    }
-//    auto count = items.size();        
-// 
+//    auto count = items.size();
+//
 //    auto space = ImGui::GetContentRegionAvail();
 //    auto size = create_imvec2(size_obj);
-//    
+//
 //    ImGui::PushID(label);
-//    if (ImGui::BeginListBox(label, size)) 
+//    if (ImGui::BeginListBox(label, size))
 //    {
 //        auto it = 0;
 //        for (auto& [key, val] : items)
@@ -1673,11 +1812,11 @@ bool begin_list_box(const char* label, sol::object size_obj) {
 //            try {
 //                    auto id = imgui::get_id(key);
 //                    ImGui::PushID(id);
-//            } 
+//            }
 //            catch (...) {
 //                        ImGui::PushID(it);
 //            }
-//            
+//
 //            const bool is_selected = (key == selection);
 //            if (ImGui::Selectable(val.as<const char*>, is_selected, ImGuiSelectableFlags_AllowDoubleClick))
 //                if (is_selected)
@@ -1734,7 +1873,7 @@ bool menu_item(const char* label, sol::object shortcut_obj, sol::object selected
     bool enabled{true};
 
     if (shortcut_obj.is<const char*>()) {
-        shortcut = shortcut_obj.as<const char*> ();
+        shortcut = shortcut_obj.as<const char*>();
     } else {
         shortcut = "";
     }
@@ -1807,46 +1946,39 @@ bool item_add(const char* label, sol::object pos, sol::object size) {
 
 // for tree nodes
 bool is_item_clicked() {
-    return   ImGui::IsItemClicked();
-}      
+    return ImGui::IsItemClicked();
+}
 
 bool is_item_edited() {
     return ImGui::IsItemEdited();
-
 }
-                    
-bool is_item_visible()
-{
+
+bool is_item_visible() {
     return ImGui::IsItemVisible();
 }
 
-bool is_any_item_hovered()
-{
+bool is_any_item_hovered() {
     return ImGui::IsAnyItemHovered();
 }
 
-bool is_item_toggled_selection()
-{
+bool is_item_toggled_selection() {
     return ImGui::IsItemToggledSelection();
 }
 
-bool is_any_item_active()
-{
+bool is_any_item_active() {
     return ImGui::IsAnyItemActive();
 }
 
-bool is_any_item_focused()
-{
+bool is_any_item_focused() {
     return ImGui::IsAnyItemFocused();
 }
-                
+
 bool is_item_toggled_open() {
     return ImGui::IsItemToggledOpen();
 }
-  
 
-void set_next_item_allow_overlap(){
-        ImGui::SetNextItemAllowOverlap();
+void set_next_item_allow_overlap() {
+    ImGui::SetNextItemAllowOverlap();
 }
 
 void push_clip_rect(sol::object min, sol::object max, bool intersect) {
@@ -1875,6 +2007,7 @@ void pop_item_flag() {
 
 bool selectable(const char* label, bool selected, sol::object flags_obj) {
     ImGuiSelectableFlags flags = 0;
+
     if (flags_obj.is<int>()) {
         flags = (ImGuiSelectableFlags)flags_obj.as<int>();
     }
@@ -2090,11 +2223,11 @@ ImDrawList* get_foreground_draw_list() {
 
 // probably does not work
 void draw_image(sol::object image, sol::object min, sol::object max, sol::object uvmin, sol::object uvmax, sol::object color) {
-       if (auto dl = ImGui::GetWindowDrawList(); dl != nullptr) {
+    if (auto dl = ImGui::GetWindowDrawList(); dl != nullptr) {
         auto texture = image.as<UEVR_FRHITexture2DHandle>();
-        dl->AddImage(texture, create_imvec2 (min), create_imvec2(max), create_imvec2(uvmin), create_imvec2(uvmax), create_imu32_color(color));
-        }
-
+        dl->AddImage(
+            texture, create_imvec2(min), create_imvec2(max), create_imvec2(uvmin), create_imvec2(uvmax), create_imu32_color(color));
+    }
 }
 
 void draw_list_path_clear() {
@@ -2160,11 +2293,46 @@ void set_scroll_from_pos_y(float local_y, float center_y_ratio = 0.5f) {
 }
 } // namespace api::imgui
 
+/*std::optional<Vector2f> world_to_screen(sol::object world_pos_object) {
+/*
+    if (world_pos_object.is<sol::nil_t>()) {
+        return std::nullopt;
+    }
+
+    Vector4f world_pos{};
+
+    if (world_pos_object.is<Vector2f>()) {
+        auto& v2f = world_pos_object.as<Vector2f&>();
+        world_pos = Vector4f{v2f.x, v2f.y, 0.0f, 1.0f};
+    } else if (world_pos_object.is<Vector3f>()) {
+        auto& v3f = world_pos_object.as<Vector3f&>();
+        world_pos = Vector4f{v3f.x, v3f.y, v3f.z, 1.0f};
+    } else if (world_pos_object.is<Vector4f>()) {
+        auto& v4f = world_pos_object.as<Vector4f&>();
+        world_pos = Vector4f{v4f.x, v4f.y, v4f.z, v4f.w};
+    } else {
+        return std::nullopt;
+    }
+    */
+
+/*void world_text(const char* text, sol::object world_pos_object, ImU32 color = 0xFFFFFFFF) {
+    auto screen_pos = world_to_screen(world_pos_object);
+
+    if (!screen_pos) {
+        return;
+    }
+
+    auto draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->AddText(ImVec2{screen_pos->x, screen_pos->y}, color, text);
+}*/
 namespace api::draw {
 void text(const char* text, float x, float y, ImU32 color) {
     ImGui::GetWindowDrawList()->AddText(ImVec2{x, y}, color, text);
 }
-
+void text_ex(const char* text, float x, float y, ImU32 color, int font, float size) {
+    ImFont* _font = g_framework->get_font(font);
+    ImGui::GetWindowDrawList()->AddText(_font, size, ImVec2{x, y}, color, text);
+}
 void filled_rect(float x, float y, float w, float h, ImU32 color) {
     ImGui::GetWindowDrawList()->AddRectFilled(ImVec2{x, y}, ImVec2{x + w, y + h}, color);
 }
@@ -2217,8 +2385,7 @@ void outline_polyline(sol::object points, ImU32 color, float thickness) {
             if (point.is<Vector2f>()) {
                 auto vec = point.as<Vector2f>();
 
-                ImGui::GetWindowDrawList()->AddLine(
-                    ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
+                ImGui::GetWindowDrawList()->AddLine(ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
             }
         }
     }
@@ -2236,8 +2403,7 @@ void closed_polyline(sol::object points, ImU32 color, float thickness) {
             if (point.is<Vector2f>()) {
                 auto vec = point.as<Vector2f>();
 
-                ImGui::GetWindowDrawList()->AddLine(
-                    ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
+                ImGui::GetWindowDrawList()->AddLine(ImVec2{vec.x, vec.y}, ImVec2{vec.x, vec.y}, color, thickness);
             }
         }
 
@@ -2282,7 +2448,8 @@ void draw_filled_ngon(Vector2f center, float radius, ImU32 color, int num_segmen
 
 void draw_bezier_curve(Vector2f p1, Vector2f p2, Vector2f p3, ImU32 color, float thickness) {
     // ImDrawList::AddBezierCubic expects 4 control points; approximate using available points by duplicating p3
-    ImGui::GetWindowDrawList()->AddBezierCubic(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p3.x, p3.y}, color, thickness);
+    ImGui::GetWindowDrawList()->AddBezierCubic(
+        ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p3.x, p3.y}, color, thickness);
 }
 
 void draw_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 color, float thickness) {
@@ -2292,9 +2459,47 @@ void draw_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 color, 
 void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 color) {
     ImGui::GetWindowDrawList()->AddQuadFilled(ImVec2{p1.x, p1.y}, ImVec2{p2.x, p2.y}, ImVec2{p3.x, p3.y}, ImVec2{p4.x, p4.y}, color);
 }
-}
+
+// sol::variadic_results gizmo(sol::this_state s, int64_t unique_id, Matrix4x4f& transform, sol::object operation_obj, sol::object mode_obj)
+// {
+//     if (!ImGui::GetIO().MouseDown[0]) {
+//         ImGuizmo::Enable(false);
+//         ImGuizmo::Enable(true);
+//     }
 //
-//ImVec2 world_to_screen(sol::object world_pos_object) {
+//     ImGuizmo::OPERATION operation{};
+//     ImGuizmo::MODE mode{};
+//
+//     if (mode_obj.is<sol::nil_t>()) {
+//         mode = ImGuizmo::MODE::WORLD;
+//     } else if (mode_obj.is<int>()) {
+//         mode = (ImGuizmo::MODE)mode_obj.as<int>();
+//     } else {
+//         throw sol::error("Invalid mode passed to gizmo");
+//     }
+//
+//     if (operation_obj.is<sol::nil_t>()) {
+//         operation = ImGuizmo::OPERATION::UNIVERSAL;
+//     } else if (operation_obj.is<int>()) {
+//         operation = (ImGuizmo::OPERATION)operation_obj.as<int>();
+//     } else {
+//         throw sol::error("Invalid operation passed to gizmo");
+//     }
+//
+//     ImGuizmo::SetID(unique_id);
+//     bool changed = ::imgui::draw_gizmo(transform, operation, mode);
+//
+//     sol::variadic_results results{};
+//
+//     results.push_back(sol::make_object<bool>(s, changed));
+//     results.push_back(sol::make_object<Matrix4x4f>(s, transform));
+//
+//     return results;
+// }
+
+} // namespace api::draw
+//
+// ImVec2 world_to_screen(sol::object world_pos_object) {
 //    static auto engine = sdk::UEngine::get();
 //    static auto world = engine->get_world();
 //    static auto player_controller = sdk::UGameplayStatics::get_player_controller(world, 0);
@@ -2304,12 +2509,12 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 //        return std::nullopt;
 //    }
 //    Vector2f pos = sdk::UGameplayStatics::world_to_screen(player_controller, v3f);
-// 
+//
 //
 //    return imgui::create_imvec2(pos);
 //}
 //
-//void world_text(const char* text, sol::object world_pos_object, ImU32 color = 0xFFFFFFFF) {
+// void world_text(const char* text, sol::object world_pos_object, ImU32 color = 0xFFFFFFFF) {
 //    auto screen_pos = world_to_screen(world_pos_object);
 //
 //    if (!screen_pos) {
@@ -2321,7 +2526,8 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 //}
 //
 //
-//void sphere(sol::object camera_up, sol::object screen_pos_center, sol::object world_pos_object, float radius, ImU32 color, bool outline) {
+// void sphere(sol::object camera_up, sol::object screen_pos_center, sol::object world_pos_object, float radius, ImU32 color, bool outline)
+// {
 //    Vector3f world_pos{};
 //
 //    if (world_pos_object.is<Vector2f>()) {
@@ -2336,11 +2542,12 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 //    } else {
 //        return;
 //    }
-//
+
 //    ::imgui::draw_sphere(world_pos, radius, color, outline);
 //}
 //
-//void capsule(sol::object camera_up, sol::object screen_pos_center, sol::object start_pos_object, sol::object end_pos_object, float radius,
+// void capsule(sol::object camera_up, sol::object screen_pos_center, sol::object start_pos_object, sol::object end_pos_object, float
+// radius,
 //    ImU32 color, bool outline) {
 //    Vector3f start_pos{};
 //
@@ -2371,7 +2578,7 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 //    } else {
 //        return;
 //    }
-//
+
 //    ::imgui::draw_capsule(start_pos, end_pos, radius, color, outline);
 //}
 
@@ -2404,6 +2611,8 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["drag_int"] = api::imgui::drag_int;
     imgui["slider_float"] = api::imgui::slider_float;
     imgui["slider_int"] = api::imgui::slider_int;
+    imgui["vslider_float"] = api::imgui::vslider_float;
+    imgui["vslider_int"] = api::imgui::vslider_int;
     imgui["input_text"] = api::imgui::input_text;
     imgui["input_text_multiline"] = api::imgui::input_text_multiline;
     imgui["text"] = api::imgui::text;
@@ -2474,32 +2683,20 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_next_item_open"] = api::imgui::set_next_item_open;
     imgui["begin_list_box"] = api::imgui::begin_list_box;
     imgui["end_list_box"] = api::imgui::end_list_box;
-    imgui["begin_menu_bar"] = api::imgui::begin_menu_bar;
-    imgui["end_menu_bar"] = api::imgui::end_menu_bar;
+    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
+    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
+    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
+    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
     imgui["begin_main_menu_bar"] = api::imgui::begin_main_menu_bar;
     imgui["end_main_menu_bar"] = api::imgui::end_main_menu_bar;
     imgui["begin_menu"] = api::imgui::begin_menu;
     imgui["end_menu"] = api::imgui::end_menu;
     imgui["menu_item"] = api::imgui::menu_item;
     imgui["get_display_size"] = api::imgui::get_display_size;
-    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
-    imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
-    imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
-    imgui["accept_drag_drop"] = api::imgui::accept_drag_drop;
-    imgui["accept_payload"] = api::imgui::accept_payload;
+  ///  imgui["set_shortcut_routing"] = api::imgui::set_shortcut_routing;
+    imgui["create_platform_window"] = api::imgui::platform_create_window;
+    imgui["draw_scene_texture"] = api::imgui::draw_scene_texture;
 
-    imgui["active_item_by_id"] = api::imgui::active_item_by_id;
-    imgui["begin_drag_drop_source"] = api::imgui::begin_drag_drop_source;
-    imgui["begin_drag_drop_target"] = api::imgui::begin_drag_drop_target;
-    imgui["bullet"] = api::imgui::bullet;
-    imgui["bullet_text"] = api::imgui::bullet_text;
-    imgui["begin_popup_modal"] = api::imgui::begin_popup_modal;
-    imgui["calc_item_size"] = api::imgui::calc_item_size;
-    imgui["clear_active_id"] = api::imgui::clear_active_id;
-    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
-    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
-    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
-    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
 
     imgui["focus_item"] = api::imgui::focus_item;
     imgui["focus_window"] = api::imgui::focus_window;
@@ -2525,24 +2722,26 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["render_drag_drop"] = api::imgui::render_drag_drop;
     imgui["selectable"] = api::imgui::selectable;
     imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
+    imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
+    imgui["radio_button"] = api::imgui::radio_button;
+    imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
+    imgui["get_frame_height"] = api::imgui::get_frame_height;
 
-                   imgui["set_next_item_width"] = api::imgui::set_next_item_width;
+    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
 
-  
-
-                     imgui["show_metrics_window"] = api::imgui::show_metrics_window;
-                     imgui["show_font_atlas"] = api::imgui::show_font_atlas;
-                     imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
-                     imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
-                     imgui["show_font_selector"] = api::imgui::show_font_selector;
-                     imgui["show_demo_window"] = api::imgui::show_demo_window;
-
+    imgui["show_metrics_window"] = api::imgui::show_metrics_window;
+    imgui["show_font_atlas"] = api::imgui::show_font_atlas;
+    imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
+    imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
+    imgui["show_font_selector"] = api::imgui::show_font_selector;
+    imgui["show_demo_window"] = api::imgui::show_demo_window;
 
     // Item
     imgui["push_item_width"] = api::imgui::push_item_width;
     imgui["pop_item_width"] = api::imgui::pop_item_width;
     imgui["set_next_item_width"] = api::imgui::set_next_item_width;
     imgui["calc_item_width"] = api::imgui::calc_item_width;
+    imgui["calc_text_size"] = api::imgui::calc_text_size;
     imgui["item_add"] = api::imgui::item_add;
     imgui["item_size"] = api::imgui::item_size;
     imgui["push_item_flag"] = api::imgui::push_item_flag;
@@ -2562,7 +2761,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_clipboard"] = api::imgui::set_clipboard;
     imgui["get_clipboard"] = api::imgui::get_clipboard;
     imgui["progress_bar"] = api::imgui::progress_bar;
-
+    imgui["get_display_size"] = api::imgui::get_display_size;
     // Draw list
     imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
     imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
@@ -2598,6 +2797,320 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["table_get_column_flags"] = api::imgui::table_get_column_flags;
     imgui["table_set_bg_color"] = api::imgui::table_set_bg_color;
 
+
+     imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
+    imgui["arrow_button"] = api::imgui::arrow_button;
+    imgui["begin_child_window"] = api::imgui::begin_child_window;
+    imgui["begin_disabled"] = api::imgui::begin_disabled;
+    imgui["begin_group"] = api::imgui::begin_group;
+    imgui["begin_menu_bar"] = api::imgui::begin_menu_bar;
+    imgui["begin_popup"] = api::imgui::begin_popup;
+    imgui["begin_popup_context_item"] = api::imgui::begin_popup_context_item;
+    imgui["begin_rect"] = api::imgui::begin_rect;
+    imgui["begin_tooltip"] = api::imgui::begin_tooltip;
+    imgui["begin_window"] = api::imgui::begin_window;
+    imgui["button"] = api::imgui::button;
+    imgui["calc_item_width"] = api::imgui::calc_item_width;
+    imgui["calc_text_size"] = api::imgui::calc_text_size;
+    imgui["checkbox"] = api::imgui::checkbox;
+    imgui["close_current_popup"] = api::imgui::close_current_popup;
+    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
+    imgui["collapsing_header"] = api::imgui::collapsing_header;
+    imgui["color_edit"] = api::imgui::color_edit;
+    imgui["color_edit3"] = api::imgui::color_edit3;
+    imgui["color_edit4"] = api::imgui::color_edit4;
+    imgui["color_edit_argb"] = api::imgui::color_edit_argb;
+    imgui["color_picker"] = api::imgui::color_picker;
+    imgui["color_picker3"] = api::imgui::color_picker3;
+    imgui["color_picker4"] = api::imgui::color_picker4;
+    imgui["color_picker_argb"] = api::imgui::color_picker_argb;
+    imgui["combo"] = api::imgui::combo;
+    imgui["create_imu32_color"] = api::imgui::create_imu32_color;
+    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
+    imgui["drag_float"] = api::imgui::drag_float;
+    imgui["drag_float2"] = api::imgui::drag_float2;
+    imgui["drag_float3"] = api::imgui::drag_float3;
+    imgui["drag_float4"] = api::imgui::drag_float4;
+    imgui["drag_int"] = api::imgui::drag_int;
+    imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
+    imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
+    imgui["draw_list_path_stroke"] = api::imgui::draw_list_path_stroke;
+    imgui["end_child_window"] = api::imgui::end_child_window;
+    imgui["end_disabled"] = api::imgui::end_disabled;
+    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
+    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
+    imgui["end_group"] = api::imgui::end_group;
+    imgui["end_menu_bar"] = api::imgui::end_menu_bar;
+    imgui["end_popup"] = api::imgui::end_popup;
+    imgui["end_rect"] = api::imgui::end_rect;
+    imgui["end_tooltip"] = api::imgui::end_tooltip;
+    imgui["end_window"] = api::imgui::end_window;
+    imgui["focus_item"] = api::imgui::focus_item;
+    imgui["focus_window"] = api::imgui::focus_window;
+    imgui["get_active_id"] = api::imgui::get_active_id;
+    imgui["get_clipboard"] = api::imgui::get_clipboard;
+    imgui["get_content_region_available"] = api::imgui::get_content_region_available;
+    imgui["get_cursor_pos"] = api::imgui::get_cursor_pos;
+    imgui["get_cursor_screen_pos"] = api::imgui::get_cursor_screen_pos;
+    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
+    imgui["get_default_font_size"] = api::imgui::get_default_font_size;
+    imgui["get_display_size"] = api::imgui::get_display_size;
+    imgui["get_frame_height"] = api::imgui::get_frame_height;
+    imgui["get_hovered_id"] = api::imgui::get_hovered_id;
+    imgui["get_id"] = api::imgui::get_id;
+    imgui["get_item_id"] = api::imgui::get_item_id;
+    imgui["get_key_index"] = api::imgui::get_key_index;
+    imgui["get_mouse"] = api::imgui::get_mouse;
+    imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
+    imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
+    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
+    imgui["indent"] = api::imgui::indent;
+    imgui["input_text"] = api::imgui::input_text;
+    imgui["input_text_multiline"] = api::imgui::input_text_multiline;
+    imgui["invisible_button"] = api::imgui::invisible_button;
+    imgui["is_item_active"] = api::imgui::is_item_active;
+    imgui["is_item_clicked"] = api::imgui::is_item_clicked;
+    imgui["is_item_edited"] = api::imgui::is_item_edited;
+    imgui["is_item_focused"] = api::imgui::is_item_focused;
+    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
+    imgui["is_item_toggled_open"] = api::imgui::is_item_toggled_open;
+    imgui["is_key_down"] = api::imgui::is_key_down;
+    imgui["is_key_pressed"] = api::imgui::is_key_pressed;
+    imgui["is_key_released"] = api::imgui::is_key_released;
+    imgui["is_mouse_clicked"] = api::imgui::is_mouse_clicked;
+    imgui["is_mouse_double_clicked"] = api::imgui::is_mouse_double_clicked;
+    imgui["is_mouse_down"] = api::imgui::is_mouse_down;
+    imgui["is_mouse_released"] = api::imgui::is_mouse_released;
+    imgui["item_add"] = api::imgui::item_add;
+    imgui["item_size"] = api::imgui::item_size;
+    imgui["label_text"] = api::imgui::label_text;
+    imgui["load_font"] = api::imgui::load_font;
+    imgui["new_line"] = api::imgui::new_line;
+    imgui["open_popup"] = api::imgui::open_popup;
+    imgui["pop_button_repeat"] = api::imgui::pop_button_repeat;
+    imgui["pop_clip_rect"] = api::imgui::pop_clip_rect;
+    imgui["pop_font"] = api::imgui::pop_font;
+    imgui["pop_font_size"] = api::imgui::pop_font_size;
+    imgui["pop_id"] = api::imgui::pop_id;
+    imgui["pop_item_flag"] = api::imgui::pop_item_flag;
+    imgui["pop_item_width"] = api::imgui::pop_item_width;
+    imgui["pop_style_color"] = api::imgui::pop_style_color;
+    imgui["pop_style_var"] = api::imgui::pop_style_var;
+    imgui["progress_bar"] = api::imgui::progress_bar;
+    imgui["push_button_repeat"] = api::imgui::push_button_repeat;
+    imgui["push_clip_rect"] = api::imgui::push_clip_rect;
+    imgui["push_font"] = api::imgui::push_font;
+    imgui["push_font_size"] = api::imgui::push_font_size;
+    imgui["push_id"] = api::imgui::push_id;
+    imgui["push_item_flag"] = api::imgui::push_item_flag;
+    imgui["push_item_width"] = api::imgui::push_item_width;
+    imgui["push_style_color"] = api::imgui::push_style_color;
+    imgui["push_style_var"] = api::imgui::push_style_var;
+    imgui["radio_button"] = api::imgui::radio_button;
+    imgui["render_drag_drop"] = api::imgui::render_drag_drop;
+    imgui["same_line"] = api::imgui::same_line;
+    imgui["selectable"] = api::imgui::selectable;
+    imgui["separator"] = api::imgui::separator;
+    imgui["set_clipboard"] = api::imgui::set_clipboard;
+    imgui["set_cursor_pos"] = api::imgui::set_cursor_pos;
+    imgui["set_cursor_screen_pos"] = api::imgui::set_cursor_screen_pos;
+    imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
+    imgui["set_item_default_focus"] = api::imgui::set_item_default_focus;
+    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
+    imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
+    imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
+    imgui["set_next_window_docked"] = api::imgui::set_next_window_docked;
+    imgui["set_next_window_dock_id"] = api::imgui::set_next_window_dock_id;
+    imgui["set_next_item_allow_overlap"] = api::imgui::set_next_item_allow_overlap;
+    imgui["set_next_item_open"] = api::imgui::set_next_item_open;
+    imgui["set_next_window_size"] = api::imgui::set_next_window_size;
+    imgui["set_tooltip"] = api::imgui::set_tooltip;
+    imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
+    imgui["show_demo_window"] = api::imgui::show_demo_window;
+    imgui["show_font_atlas"] = api::imgui::show_font_atlas;
+    imgui["show_font_selector"] = api::imgui::show_font_selector;
+    imgui["show_metrics_window"] = api::imgui::show_metrics_window;
+    imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
+    imgui["slider_float"] = api::imgui::slider_float;
+    imgui["slider_int"] = api::imgui::slider_int;
+    imgui["small_button"] = api::imgui::small_button;
+    imgui["spacing"] = api::imgui::spacing;
+    imgui["text"] = api::imgui::text;
+    imgui["text_colored"] = api::imgui::text_colored;
+    imgui["tree_node"] = api::imgui::tree_node;
+    imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
+    imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
+    imgui["tree_pop"] = api::imgui::tree_pop;
+    imgui["unindent"] = api::imgui::unindent;
+    imgui["accept_drag_drop"] = api::imgui::accept_drag_drop;
+    imgui["accept_payload"] = api::imgui::accept_payload;
+    imgui["activate_item_by_id"] = api::imgui::activate_item_by_id;
+    imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
+    imgui["arrow_button"] = api::imgui::arrow_button;
+    imgui["begin_disabled"] = api::imgui::begin_disabled;
+    imgui["begin_drag_drop_source"] = api::imgui::begin_drag_drop_source;
+    imgui["begin_drag_drop_target"] = api::imgui::begin_drag_drop_target;
+    imgui["begin_group"] = api::imgui::begin_group;
+    imgui["begin_list_box"] = api::imgui::begin_list_box;
+    imgui["begin_main_menu_bar"] = api::imgui::begin_main_menu_bar;
+    imgui["begin_menu"] = api::imgui::begin_menu;
+    imgui["begin_menu_bar"] = api::imgui::begin_menu_bar;
+    imgui["begin_multi_select"] = api::imgui::begin_multi_select;
+    imgui["begin_popup"] = api::imgui::begin_popup;
+    imgui["begin_popup_context_item"] = api::imgui::begin_popup_context_item;
+    imgui["begin_popup_modal"] = api::imgui::begin_popup_modal;
+    imgui["begin_rect"] = api::imgui::begin_rect;
+    imgui["begin_table"] = api::imgui::begin_table;
+    imgui["begin_tooltip"] = api::imgui::begin_tooltip;
+    imgui["begin_viewport_sidebar"] = api::imgui::begin_viewport_sidebar;
+    imgui["bullet"] = api::imgui::bullet;
+    imgui["bullet_text"] = api::imgui::bullet_text;
+    imgui["button"] = api::imgui::button;
+    imgui["calc_item_size"] = api::imgui::calc_item_size;
+    imgui["calc_item_width"] = api::imgui::calc_item_width;
+    imgui["calc_text_size"] = api::imgui::calc_text_size;
+    imgui["checkbox"] = api::imgui::checkbox;
+    imgui["clear_active_id"] = api::imgui::clear_active_id;
+    imgui["close_current_popup"] = api::imgui::close_current_popup;
+    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
+    imgui["collapsing_header"] = api::imgui::collapsing_header;
+    imgui["color_edit"] = api::imgui::color_edit;
+    imgui["color_edit3"] = api::imgui::color_edit3;
+    imgui["color_edit4"] = api::imgui::color_edit4;
+    imgui["color_edit_argb"] = api::imgui::color_edit_argb;
+    imgui["color_picker"] = api::imgui::color_picker;
+    imgui["color_picker3"] = api::imgui::color_picker3;
+    imgui["color_picker4"] = api::imgui::color_picker4;
+    imgui["color_picker_argb"] = api::imgui::color_picker_argb;
+    imgui["combo"] = api::imgui::combo;
+    imgui["end_child_window"] = api::imgui::end_child_window;
+    imgui["end_disabled"] = api::imgui::end_disabled;
+    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
+    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
+    imgui["end_group"] = api::imgui::end_group;
+    imgui["end_list_box"] = api::imgui::end_list_box;
+    imgui["end_main_menu_bar"] = api::imgui::end_main_menu_bar;
+    imgui["end_menu"] = api::imgui::end_menu;
+    imgui["end_menu_bar"] = api::imgui::end_menu_bar;
+    imgui["end_multi_select"] = api::imgui::end_multi_select;
+    imgui["end_popup"] = api::imgui::end_popup;
+    imgui["end_rect"] = api::imgui::end_rect;
+    imgui["end_table"] = api::imgui::end_table;
+    imgui["end_tooltip"] = api::imgui::end_tooltip;
+    imgui["end_window"] = api::imgui::end_window;
+    imgui["focus_item"] = api::imgui::focus_item;
+    imgui["focus_window"] = api::imgui::focus_window;
+    imgui["get_clipboard"] = api::imgui::get_clipboard;
+    imgui["get_content_region_available"] = api::imgui::get_content_region_available;
+    imgui["get_cursor_pos"] = api::imgui::get_cursor_pos;
+    imgui["get_cursor_screen_pos"] = api::imgui::get_cursor_screen_pos;
+    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
+    imgui["get_default_font_size"] = api::imgui::get_default_font_size;
+    imgui["get_display_size"] = api::imgui::get_display_size;
+    imgui["get_frame_height"] = api::imgui::get_frame_height;
+    imgui["get_key_index"] = api::imgui::get_key_index;
+    imgui["get_mouse"] = api::imgui::get_mouse;
+    imgui["get_window_pos"] = api::imgui::get_window_pos;
+    imgui["get_window_size"] = api::imgui::get_window_size;
+    imgui["indent"] = api::imgui::indent;
+    imgui["invisible_button"] = api::imgui::invisible_button;
+    imgui["is_any_item_active"] = api::imgui::is_any_item_active;
+    imgui["is_any_item_focused"] = api::imgui::is_any_item_focused;
+    imgui["is_any_item_hovered"] = api::imgui::is_any_item_hovered;
+    imgui["is_item_active"] = api::imgui::is_item_active;
+    imgui["is_item_clicked"] = api::imgui::is_item_clicked;
+    imgui["is_item_edited"] = api::imgui::is_item_edited;
+    imgui["is_item_focused"] = api::imgui::is_item_focused;
+    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
+    imgui["is_item_toggled_open"] = api::imgui::is_item_toggled_open;
+    imgui["is_item_toggled_selection"] = api::imgui::is_item_toggled_selection;
+    imgui["is_item_visible"] = api::imgui::is_item_visible;
+    imgui["is_key_down"] = api::imgui::is_key_down;
+    imgui["is_key_pressed"] = api::imgui::is_key_pressed;
+    imgui["is_key_released"] = api::imgui::is_key_released;
+    imgui["is_mouse_clicked"] = api::imgui::is_mouse_clicked;
+    imgui["is_mouse_double_clicked"] = api::imgui::is_mouse_double_clicked;
+    imgui["is_mouse_down"] = api::imgui::is_mouse_down;
+    imgui["is_mouse_released"] = api::imgui::is_mouse_released;
+    imgui["is_payload_accepted"] = api::imgui::is_payload_accepted;
+    imgui["is_popup_open"] = api::imgui::is_popup_open;
+    imgui["item_add"] = api::imgui::item_add;
+    imgui["item_size"] = api::imgui::item_size;
+    imgui["label_text"] = api::imgui::label_text;
+    imgui["load_font"] = api::imgui::load_font;
+    imgui["menu_item"] = api::imgui::menu_item;
+    imgui["new_line"] = api::imgui::new_line;
+    imgui["open_popup"] = api::imgui::open_popup;
+    imgui["pop_button_repeat"] = api::imgui::pop_button_repeat;
+    imgui["pop_clip_rect"] = api::imgui::pop_clip_rect;
+    imgui["pop_font"] = api::imgui::pop_font;
+    imgui["pop_font_size"] = api::imgui::pop_font_size;
+    imgui["pop_id"] = api::imgui::pop_id;
+    imgui["pop_item_flag"] = api::imgui::pop_item_flag;
+    imgui["pop_item_width"] = api::imgui::pop_item_width;
+    imgui["pop_style_color"] = api::imgui::pop_style_color;
+    imgui["pop_style_var"] = api::imgui::pop_style_var;
+    imgui["progress_bar"] = api::imgui::progress_bar;
+    imgui["push_button_repeat"] = api::imgui::push_button_repeat;
+    imgui["push_clip_rect"] = api::imgui::push_clip_rect;
+    imgui["push_font"] = api::imgui::push_font;
+    imgui["push_font_size"] = api::imgui::push_font_size;
+    imgui["push_id"] = api::imgui::push_id;
+    imgui["push_item_flag"] = api::imgui::push_item_flag;
+    imgui["push_item_width"] = api::imgui::push_item_width;
+    imgui["push_style_color"] = api::imgui::push_style_color;
+    imgui["push_style_var"] = api::imgui::push_style_var;
+    imgui["radio_button"] = api::imgui::radio_button;
+    imgui["render_drag_drop"] = api::imgui::render_drag_drop;
+    imgui["same_line"] = api::imgui::same_line;
+    imgui["selectable"] = api::imgui::selectable;
+    imgui["separator"] = api::imgui::separator;
+    imgui["separator_text"] = api::imgui::separator_text;
+    imgui["set_clipboard"] = api::imgui::set_clipboard;
+    imgui["set_cursor_pos"] = api::imgui::set_cursor_pos;
+    imgui["set_cursor_screen_pos"] = api::imgui::set_cursor_screen_pos;
+    imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
+    imgui["set_item_default_focus"] = api::imgui::set_item_default_focus;
+    imgui["set_next_item_allow_overlap"] = api::imgui::set_next_item_allow_overlap;
+    imgui["set_next_item_open"] = api::imgui::set_next_item_open;
+    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
+    imgui["set_next_window_dock_id"] = api::imgui::set_next_window_dock_id;
+    imgui["set_next_window_docked"] = api::imgui::set_next_window_docked;
+    imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
+    imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
+    imgui["set_next_window_size"] = api::imgui::set_next_window_size;
+    imgui["set_tooltip"] = api::imgui::set_tooltip;
+    imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
+    imgui["show_demo_window"] = api::imgui::show_demo_window;
+    imgui["show_font_atlas"] = api::imgui::show_font_atlas;
+    imgui["show_font_selector"] = api::imgui::show_font_selector;
+    imgui["show_metrics_window"] = api::imgui::show_metrics_window;
+    imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
+    imgui["small_button"] = api::imgui::small_button;                                                                
+    imgui["spacing"] = api::imgui::spacing;
+    imgui["table_get_column_count"] = api::imgui::table_get_column_count;
+    imgui["table_get_column_index"] = api::imgui::table_get_column_index;
+    imgui["table_get_column_name"] = api::imgui::table_get_column_name;
+    imgui["table_get_row_index"] = api::imgui::table_get_row_index;
+    imgui["table_header"] = api::imgui::table_header;
+    imgui["table_headers_row"] = api::imgui::table_headers_row;
+    imgui["table_next_column"] = api::imgui::table_next_column;
+    imgui["table_next_row"] = api::imgui::table_next_row;
+    imgui["table_set_column_index"] = api::imgui::table_set_column_index;
+    imgui["table_setup_column"] = api::imgui::table_setup_column;
+    imgui["table_setup_scroll_freeze"] = api::imgui::table_setup_scroll_freeze;
+    imgui["text"] = api::imgui::text;
+    imgui["text_colored"] = api::imgui::text_colored;
+    imgui["text_wrapped"] = api::imgui::text_wrapped;
+    imgui["tree_node"] = api::imgui::tree_node;
+    imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
+    imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
+    imgui["tree_pop"] = api::imgui::tree_pop;
+    imgui["push_override_id"] = api::imgui::push_override_id;
+    imgui["get_id_from_pos"] = api::imgui::get_id_from_pos;
+    imgui["vslider_float"] = api::imgui::vslider_float;
+    imgui["vslider_int"] = api::imgui::vslider_int;
+    imgui["unindent"] = api::imgui::unindent;
     imgui.new_usertype<ImGuiTableSortSpecs>(
         "TableSortSpecs", "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty, "get_specs", [](ImGuiTableSortSpecs* specs) {
             std::vector<ImGuiTableColumnSortSpecs*> out{};
@@ -2610,7 +3123,7 @@ void bindings::open_imgui(sol::state_view& lua) {
         });
     imgui.new_usertype<ImGuiTableColumnSortSpecs>("TableColumnSortSpecs", "user_id", &ImGuiTableColumnSortSpecs::ColumnUserID,
         "column_index", &ImGuiTableColumnSortSpecs::ColumnIndex, "sort_order", &ImGuiTableColumnSortSpecs::SortOrder, "sort_direction",
-        sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; } ));
+        sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; }));
     imgui.new_enum("TableFlags", "None", ImGuiTableFlags_None, "Resizable", ImGuiTableFlags_Resizable, "Reorderable",
         ImGuiTableFlags_Reorderable, "Hideable", ImGuiTableFlags_Hideable, "Sortable", ImGuiTableFlags_Sortable, "NoSavedSettings",
         ImGuiTableFlags_NoSavedSettings, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody, "RowBg", ImGuiTableFlags_RowBg,
@@ -2634,6 +3147,194 @@ void bindings::open_imgui(sol::state_view& lua) {
         "PreferSortDescending", ImGuiTableColumnFlags_PreferSortDescending, "IndentEnable", ImGuiTableColumnFlags_IndentEnable,
         "IndentDisable", ImGuiTableColumnFlags_IndentDisable, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsVisible",
         ImGuiTableColumnFlags_IsVisible, "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsHovered", ImGuiTableColumnFlags_IsHovered);
+    imgui.new_enum("BackendFlags", "HasGamepad", ImGuiBackendFlags_HasGamepad, "HasMouseCursors", ImGuiBackendFlags_HasMouseCursors,
+            "HasMouseHoveredViewport", ImGuiBackendFlags_HasMouseHoveredViewport, "HasParentViewport", ImGuiBackendFlags_HasParentViewport,
+            "HasSetMousePos", ImGuiBackendFlags_HasSetMousePos, "None", ImGuiBackendFlags_None, "PlatformHasViewports",
+            ImGuiBackendFlags_PlatformHasViewports, "RendererHasTextures", ImGuiBackendFlags_RendererHasTextures, "RendererHasViewports",
+            ImGuiBackendFlags_RendererHasViewports, "RendererHasVtxOffset", ImGuiBackendFlags_RendererHasVtxOffset);
+
+            imgui.new_enum("ButtonFlags", "EnableNav", ImGuiButtonFlags_EnableNav, "MouseButtonLeft", ImGuiButtonFlags_MouseButtonLeft,
+            "MouseButtonMask_", ImGuiButtonFlags_MouseButtonMask_, "MouseButtonMiddle", ImGuiButtonFlags_MouseButtonMiddle,
+            "MouseButtonRight", ImGuiButtonFlags_MouseButtonRight, "None", ImGuiButtonFlags_None);
+
+            imgui.new_enum("ChildFlags", "AlwaysAutoResize", ImGuiChildFlags_AlwaysAutoResize, "AlwaysUseWindowPadding",
+            ImGuiChildFlags_AlwaysUseWindowPadding, "AutoResizeX", ImGuiChildFlags_AutoResizeX, "AutoResizeY", ImGuiChildFlags_AutoResizeY,
+            "Borders", ImGuiChildFlags_Borders, "FrameStyle", ImGuiChildFlags_FrameStyle, "NavFlattened", ImGuiChildFlags_NavFlattened,
+            "None", ImGuiChildFlags_None, "ResizeX", ImGuiChildFlags_ResizeX, "ResizeY", ImGuiChildFlags_ResizeY);
+
+            imgui.new_enum("Col", "TreeLines", ImGuiCol_TreeLines);
+
+            imgui.new_enum("ColorEditFlags", "AlphaBar", ImGuiColorEditFlags_AlphaBar, "AlphaMask_", ImGuiColorEditFlags_AlphaMask_, "AlphaNoBg",
+            ImGuiColorEditFlags_AlphaNoBg, "AlphaOpaque", ImGuiColorEditFlags_AlphaOpaque, "AlphaPreview", ImGuiColorEditFlags_AlphaPreview,
+            "AlphaPreviewHalf", ImGuiColorEditFlags_AlphaPreviewHalf, "DataTypeMask_", ImGuiColorEditFlags_DataTypeMask_, "DefaultOptions_",
+            ImGuiColorEditFlags_DefaultOptions_, "DisplayHex", ImGuiColorEditFlags_DisplayHex, "DisplayHSV", ImGuiColorEditFlags_DisplayHSV,
+            "DisplayMask_", ImGuiColorEditFlags_DisplayMask_, "DisplayRGB", ImGuiColorEditFlags_DisplayRGB, "Float",
+            ImGuiColorEditFlags_Float, "HDR", ImGuiColorEditFlags_HDR, "InputHSV", ImGuiColorEditFlags_InputHSV, "InputMask_",
+            ImGuiColorEditFlags_InputMask_, "InputRGB", ImGuiColorEditFlags_InputRGB, "NoAlpha", ImGuiColorEditFlags_NoAlpha, "NoBorder",
+            ImGuiColorEditFlags_NoBorder, "NoDragDrop", ImGuiColorEditFlags_NoDragDrop, "NoInputs", ImGuiColorEditFlags_NoInputs, "NoLabel",
+            ImGuiColorEditFlags_NoLabel, "None", ImGuiColorEditFlags_None, "NoOptions", ImGuiColorEditFlags_NoOptions, "NoPicker",
+            ImGuiColorEditFlags_NoPicker, "NoSidePreview", ImGuiColorEditFlags_NoSidePreview, "NoSmallPreview",
+            ImGuiColorEditFlags_NoSmallPreview, "NoTooltip", ImGuiColorEditFlags_NoTooltip, "PickerHueBar",
+            ImGuiColorEditFlags_PickerHueBar, "PickerHueWheel", ImGuiColorEditFlags_PickerHueWheel, "PickerMask_",
+            ImGuiColorEditFlags_PickerMask_, "Uint8", ImGuiColorEditFlags_Uint8);
+
+            imgui.new_enum("ComboFlags", "HeightLarge", ImGuiComboFlags_HeightLarge, "HeightLargest", ImGuiComboFlags_HeightLargest, "HeightMask_",
+            ImGuiComboFlags_HeightMask_, "HeightRegular", ImGuiComboFlags_HeightRegular, "HeightSmall", ImGuiComboFlags_HeightSmall,
+            "NoArrowButton", ImGuiComboFlags_NoArrowButton, "None", ImGuiComboFlags_None, "NoPreview", ImGuiComboFlags_NoPreview,
+            "PopupAlignLeft", ImGuiComboFlags_PopupAlignLeft, "WidthFitPreview", ImGuiComboFlags_WidthFitPreview);
+
+            imgui.new_enum("ConfigFlags", "DockingEnable", ImGuiConfigFlags_DockingEnable, "DpiEnableScaleFonts",
+            ImGuiConfigFlags_DpiEnableScaleFonts, "DpiEnableScaleViewports", ImGuiConfigFlags_DpiEnableScaleViewports, "IsSRGB",
+            ImGuiConfigFlags_IsSRGB, "IsTouchScreen", ImGuiConfigFlags_IsTouchScreen, "NavEnableGamepad", ImGuiConfigFlags_NavEnableGamepad,
+            "NavEnableKeyboard", ImGuiConfigFlags_NavEnableKeyboard, "NavEnableSetMousePos", ImGuiConfigFlags_NavEnableSetMousePos,
+            "NavNoCaptureKeyboard", ImGuiConfigFlags_NavNoCaptureKeyboard, "NoKeyboard", ImGuiConfigFlags_NoKeyboard, "NoMouse",
+            ImGuiConfigFlags_NoMouse, "NoMouseCursorChange", ImGuiConfigFlags_NoMouseCursorChange, "None", ImGuiConfigFlags_None,
+            "ViewportsEnable", ImGuiConfigFlags_ViewportsEnable);
+
+            imgui.new_enum("DockNodeFlags", "AutoHideTabBar", ImGuiDockNodeFlags_AutoHideTabBar, "KeepAliveOnly", ImGuiDockNodeFlags_KeepAliveOnly,
+            "NoDockingInCentralNode", ImGuiDockNodeFlags_NoDockingInCentralNode, "NoDockingOverCentralNode",
+            ImGuiDockNodeFlags_NoDockingOverCentralNode, "NoDockingSplit", ImGuiDockNodeFlags_NoDockingSplit, "None",
+            ImGuiDockNodeFlags_None, "NoResize", ImGuiDockNodeFlags_NoResize, "NoSplit", ImGuiDockNodeFlags_NoSplit, "NoUndocking",
+            ImGuiDockNodeFlags_NoUndocking, "PassthruCentralNode", ImGuiDockNodeFlags_PassthruCentralNode);
+
+            imgui.new_enum("DragDropFlags", "AcceptBeforeDelivery", ImGuiDragDropFlags_AcceptBeforeDelivery, "AcceptDrawAsHovered",
+            ImGuiDragDropFlags_AcceptDrawAsHovered, "AcceptNoDrawDefaultRect", ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
+            "AcceptNoPreviewTooltip", ImGuiDragDropFlags_AcceptNoPreviewTooltip, "AcceptPeekOnly", ImGuiDragDropFlags_AcceptPeekOnly,
+            "None", ImGuiDragDropFlags_None, "PayloadAutoExpire", ImGuiDragDropFlags_PayloadAutoExpire, "PayloadNoCrossContext",
+            ImGuiDragDropFlags_PayloadNoCrossContext, "PayloadNoCrossProcess", ImGuiDragDropFlags_PayloadNoCrossProcess,
+            "SourceAllowNullID", ImGuiDragDropFlags_SourceAllowNullID, "SourceAutoExpirePayload",
+            ImGuiDragDropFlags_SourceAutoExpirePayload, "SourceExtern", ImGuiDragDropFlags_SourceExtern, "SourceNoDisableHover",
+            ImGuiDragDropFlags_SourceNoDisableHover, "SourceNoHoldToOpenOthers", ImGuiDragDropFlags_SourceNoHoldToOpenOthers,
+            "SourceNoPreviewTooltip", ImGuiDragDropFlags_SourceNoPreviewTooltip);
+
+            imgui.new_enum("FocusedFlags", "AnyWindow", ImGuiFocusedFlags_AnyWindow, "ChildWindows", ImGuiFocusedFlags_ChildWindows, "DockHierarchy",
+            ImGuiFocusedFlags_DockHierarchy, "None", ImGuiFocusedFlags_None, "NoPopupHierarchy", ImGuiFocusedFlags_NoPopupHierarchy,
+            "RootAndChildWindows", ImGuiFocusedFlags_RootAndChildWindows, "RootWindow", ImGuiFocusedFlags_RootWindow);
+
+            imgui.new_enum("HoveredFlags", "AllowWhenBlockedByActiveItem", ImGuiHoveredFlags_AllowWhenBlockedByActiveItem, "AllowWhenBlockedByPopup",
+            ImGuiHoveredFlags_AllowWhenBlockedByPopup, "AllowWhenDisabled", ImGuiHoveredFlags_AllowWhenDisabled, "AllowWhenOverlapped",
+            ImGuiHoveredFlags_AllowWhenOverlapped, "AllowWhenOverlappedByItem", ImGuiHoveredFlags_AllowWhenOverlappedByItem,
+            "AllowWhenOverlappedByWindow", ImGuiHoveredFlags_AllowWhenOverlappedByWindow, "AnyWindow", ImGuiHoveredFlags_AnyWindow,
+            "ChildWindows", ImGuiHoveredFlags_ChildWindows, "DelayNone", ImGuiHoveredFlags_DelayNone, "DelayNormal",
+            ImGuiHoveredFlags_DelayNormal, "DelayShort", ImGuiHoveredFlags_DelayShort, "DockHierarchy", ImGuiHoveredFlags_DockHierarchy,
+            "ForTooltip", ImGuiHoveredFlags_ForTooltip, "NoNavOverride", ImGuiHoveredFlags_NoNavOverride, "None", ImGuiHoveredFlags_None,
+            "NoPopupHierarchy", ImGuiHoveredFlags_NoPopupHierarchy, "NoSharedDelay", ImGuiHoveredFlags_NoSharedDelay, "RectOnly",
+            ImGuiHoveredFlags_RectOnly, "RootAndChildWindows", ImGuiHoveredFlags_RootAndChildWindows, "RootWindow",
+            ImGuiHoveredFlags_RootWindow, "Stationary", ImGuiHoveredFlags_Stationary);
+
+            imgui.new_enum("InputFlags", "None", ImGuiInputFlags_None, "Repeat", ImGuiInputFlags_Repeat, "RouteActive", ImGuiInputFlags_RouteActive,
+            "RouteAlways", ImGuiInputFlags_RouteAlways, "RouteFocused", ImGuiInputFlags_RouteFocused, "RouteFromRootWindow",
+            ImGuiInputFlags_RouteFromRootWindow, "RouteGlobal", ImGuiInputFlags_RouteGlobal, "RouteOverActive",
+            ImGuiInputFlags_RouteOverActive, "RouteOverFocused", ImGuiInputFlags_RouteOverFocused, "RouteUnlessBgFocused",
+            ImGuiInputFlags_RouteUnlessBgFocused, "Tooltip", ImGuiInputFlags_Tooltip);
+
+            imgui.new_enum("InputTextFlags", "AllowTabInput", ImGuiInputTextFlags_AllowTabInput, "AlwaysOverwrite",
+            ImGuiInputTextFlags_AlwaysOverwrite, "AutoSelectAll", ImGuiInputTextFlags_AutoSelectAll, "CallbackAlways",
+            ImGuiInputTextFlags_CallbackAlways, "CallbackCharFilter", ImGuiInputTextFlags_CallbackCharFilter, "CallbackCompletion",
+            ImGuiInputTextFlags_CallbackCompletion, "CallbackEdit", ImGuiInputTextFlags_CallbackEdit, "CallbackHistory",
+            ImGuiInputTextFlags_CallbackHistory, "CallbackResize", ImGuiInputTextFlags_CallbackResize, "CharsDecimal",
+            ImGuiInputTextFlags_CharsDecimal, "CharsHexadecimal", ImGuiInputTextFlags_CharsHexadecimal, "CharsNoBlank",
+            ImGuiInputTextFlags_CharsNoBlank, "CharsScientific", ImGuiInputTextFlags_CharsScientific, "CharsUppercase",
+            ImGuiInputTextFlags_CharsUppercase, "CtrlEnterForNewLine", ImGuiInputTextFlags_CtrlEnterForNewLine, "DisplayEmptyRefVal",
+            ImGuiInputTextFlags_DisplayEmptyRefVal, "ElideLeft", ImGuiInputTextFlags_ElideLeft, "EnterReturnsTrue",
+            ImGuiInputTextFlags_EnterReturnsTrue, "EscapeClearsAll", ImGuiInputTextFlags_EscapeClearsAll, "NoHorizontalScroll",
+            ImGuiInputTextFlags_NoHorizontalScroll, "None", ImGuiInputTextFlags_None, "NoUndoRedo", ImGuiInputTextFlags_NoUndoRedo,
+            "ParseEmptyRefVal", ImGuiInputTextFlags_ParseEmptyRefVal, "Password", ImGuiInputTextFlags_Password, "ReadOnly",
+            ImGuiInputTextFlags_ReadOnly, "WordWrap", ImGuiInputTextFlags_WordWrap);
+
+            imgui.new_enum("ItemFlags", "AllowDuplicateId", ImGuiItemFlags_AllowDuplicateId, "AutoClosePopups", ImGuiItemFlags_AutoClosePopups,
+            "ButtonRepeat", ImGuiItemFlags_ButtonRepeat, "NoNav", ImGuiItemFlags_NoNav, "NoNavDefaultFocus",
+            ImGuiItemFlags_NoNavDefaultFocus, "None", ImGuiItemFlags_None, "NoTabStop", ImGuiItemFlags_NoTabStop);
+
+            imgui.new_enum("PopupFlags", "AnyPopup", ImGuiPopupFlags_AnyPopup, "AnyPopupId", ImGuiPopupFlags_AnyPopupId, "AnyPopupLevel",
+            ImGuiPopupFlags_AnyPopupLevel, "MouseButtonDefault_", ImGuiPopupFlags_MouseButtonDefault_, "MouseButtonLeft",
+            ImGuiPopupFlags_MouseButtonLeft, "MouseButtonMask_", ImGuiPopupFlags_MouseButtonMask_, "MouseButtonMiddle",
+            ImGuiPopupFlags_MouseButtonMiddle, "MouseButtonRight", ImGuiPopupFlags_MouseButtonRight, "None", ImGuiPopupFlags_None,
+            "NoOpenOverExistingPopup", ImGuiPopupFlags_NoOpenOverExistingPopup, "NoOpenOverItems", ImGuiPopupFlags_NoOpenOverItems,
+            "NoReopen", ImGuiPopupFlags_NoReopen);
+
+            imgui.new_enum("SelectableFlags", "AllowDoubleClick", ImGuiSelectableFlags_AllowDoubleClick, "AllowOverlap",
+            ImGuiSelectableFlags_AllowOverlap, "Disabled", ImGuiSelectableFlags_Disabled, "DontClosePopups",
+            ImGuiSelectableFlags_DontClosePopups, "Highlight", ImGuiSelectableFlags_Highlight, "NoAutoClosePopups",
+            ImGuiSelectableFlags_NoAutoClosePopups, "None", ImGuiSelectableFlags_None, "SelectOnNav", ImGuiSelectableFlags_SelectOnNav,
+            "SpanAllColumns", ImGuiSelectableFlags_SpanAllColumns);
+
+            imgui.new_enum("SliderFlags", "AlwaysClamp", ImGuiSliderFlags_AlwaysClamp, "ClampOnInput", ImGuiSliderFlags_ClampOnInput,
+            "ClampZeroRange", ImGuiSliderFlags_ClampZeroRange, "InvalidMask_", ImGuiSliderFlags_InvalidMask_, "Logarithmic",
+            ImGuiSliderFlags_Logarithmic, "NoInput", ImGuiSliderFlags_NoInput, "None", ImGuiSliderFlags_None, "NoRoundToFormat",
+            ImGuiSliderFlags_NoRoundToFormat, "NoSpeedTweaks", ImGuiSliderFlags_NoSpeedTweaks, "WrapAround", ImGuiSliderFlags_WrapAround);
+
+            imgui.new_enum("TabBarFlags", "AutoSelectNewTabs", ImGuiTabBarFlags_AutoSelectNewTabs, "DrawSelectedOverline",
+            ImGuiTabBarFlags_DrawSelectedOverline, "FittingPolicyDefault_", ImGuiTabBarFlags_FittingPolicyDefault_, "FittingPolicyMask_",
+            ImGuiTabBarFlags_FittingPolicyMask_, "FittingPolicyMixed", ImGuiTabBarFlags_FittingPolicyMixed, "FittingPolicyResizeDown",
+            ImGuiTabBarFlags_FittingPolicyResizeDown, "FittingPolicyScroll", ImGuiTabBarFlags_FittingPolicyScroll, "FittingPolicyShrink",
+            ImGuiTabBarFlags_FittingPolicyShrink, "NoCloseWithMiddleMouseButton", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton, "None",
+            ImGuiTabBarFlags_None, "NoTabListScrollingButtons", ImGuiTabBarFlags_NoTabListScrollingButtons, "NoTooltip",
+            ImGuiTabBarFlags_NoTooltip, "Reorderable", ImGuiTabBarFlags_Reorderable, "TabListPopupButton",
+            ImGuiTabBarFlags_TabListPopupButton);
+
+            imgui.new_enum("TabItemFlags", "Leading", ImGuiTabItemFlags_Leading, "NoAssumedClosure", ImGuiTabItemFlags_NoAssumedClosure,
+            "NoCloseWithMiddleMouseButton", ImGuiTabItemFlags_NoCloseWithMiddleMouseButton, "None", ImGuiTabItemFlags_None, "NoPushId",
+            ImGuiTabItemFlags_NoPushId, "NoReorder", ImGuiTabItemFlags_NoReorder, "NoTooltip", ImGuiTabItemFlags_NoTooltip, "SetSelected",
+            ImGuiTabItemFlags_SetSelected, "Trailing", ImGuiTabItemFlags_Trailing, "UnsavedDocument", ImGuiTabItemFlags_UnsavedDocument);
+
+            imgui.new_enum("TableColumnFlags", "AngledHeader", ImGuiTableColumnFlags_AngledHeader, "DefaultHide", ImGuiTableColumnFlags_DefaultHide,
+            "DefaultSort", ImGuiTableColumnFlags_DefaultSort, "Disabled", ImGuiTableColumnFlags_Disabled, "IndentDisable",
+            ImGuiTableColumnFlags_IndentDisable, "IndentEnable", ImGuiTableColumnFlags_IndentEnable, "IndentMask_",
+            ImGuiTableColumnFlags_IndentMask_, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsHovered", ImGuiTableColumnFlags_IsHovered,
+            "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsVisible", ImGuiTableColumnFlags_IsVisible, "NoClip",
+            ImGuiTableColumnFlags_NoClip, "NoDirectResize_", ImGuiTableColumnFlags_NoDirectResize_, "NoHeaderLabel",
+            ImGuiTableColumnFlags_NoHeaderLabel, "NoHeaderWidth", ImGuiTableColumnFlags_NoHeaderWidth, "NoHide",
+            ImGuiTableColumnFlags_NoHide, "None", ImGuiTableColumnFlags_None, "NoReorder", ImGuiTableColumnFlags_NoReorder, "NoResize",
+            ImGuiTableColumnFlags_NoResize, "NoSort", ImGuiTableColumnFlags_NoSort, "NoSortAscending",
+            ImGuiTableColumnFlags_NoSortAscending, "NoSortDescending", ImGuiTableColumnFlags_NoSortDescending, "PreferSortAscending",
+            ImGuiTableColumnFlags_PreferSortAscending, "PreferSortDescending", ImGuiTableColumnFlags_PreferSortDescending, "StatusMask_",
+            ImGuiTableColumnFlags_StatusMask_, "WidthFixed", ImGuiTableColumnFlags_WidthFixed, "WidthMask_",
+            ImGuiTableColumnFlags_WidthMask_, "WidthStretch", ImGuiTableColumnFlags_WidthStretch);
+
+            imgui.new_enum("TableFlags", "Borders", ImGuiTableFlags_Borders, "BordersH", ImGuiTableFlags_BordersH, "BordersInner",
+            ImGuiTableFlags_BordersInner, "BordersInnerH", ImGuiTableFlags_BordersInnerH, "BordersInnerV", ImGuiTableFlags_BordersInnerV,
+            "BordersOuter", ImGuiTableFlags_BordersOuter, "BordersOuterH", ImGuiTableFlags_BordersOuterH, "BordersOuterV",
+            ImGuiTableFlags_BordersOuterV, "BordersV", ImGuiTableFlags_BordersV, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody,
+            "Hideable", ImGuiTableFlags_Hideable, "HighlightHoveredColumn", ImGuiTableFlags_HighlightHoveredColumn, "NoBordersInBody",
+            ImGuiTableFlags_NoBordersInBody, "NoBordersInBodyUntilResize", ImGuiTableFlags_NoBordersInBodyUntilResize, "NoClip",
+            ImGuiTableFlags_NoClip, "NoHostExtendX", ImGuiTableFlags_NoHostExtendX, "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
+            "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible, "None", ImGuiTableFlags_None, "NoPadInnerX",
+            ImGuiTableFlags_NoPadInnerX, "NoPadOuterX", ImGuiTableFlags_NoPadOuterX, "NoSavedSettings", ImGuiTableFlags_NoSavedSettings,
+            "PadOuterX", ImGuiTableFlags_PadOuterX, "PreciseWidths", ImGuiTableFlags_PreciseWidths, "Reorderable",
+            ImGuiTableFlags_Reorderable, "Resizable", ImGuiTableFlags_Resizable, "RowBg", ImGuiTableFlags_RowBg, "ScrollX",
+            ImGuiTableFlags_ScrollX, "ScrollY", ImGuiTableFlags_ScrollY, "SizingFixedFit", ImGuiTableFlags_SizingFixedFit,
+            "SizingFixedSame", ImGuiTableFlags_SizingFixedSame, "SizingMask_", ImGuiTableFlags_SizingMask_, "SizingStretchProp",
+            ImGuiTableFlags_SizingStretchProp, "SizingStretchSame", ImGuiTableFlags_SizingStretchSame, "Sortable", ImGuiTableFlags_Sortable,
+            "SortMulti", ImGuiTableFlags_SortMulti, "SortTristate", ImGuiTableFlags_SortTristate);
+
+            imgui.new_enum("TableRowFlags", "Headers", ImGuiTableRowFlags_Headers, "None", ImGuiTableRowFlags_None);
+
+            imgui.new_enum("TreeNodeFlags", "AllowOverlap", ImGuiTreeNodeFlags_AllowOverlap, "Bullet", ImGuiTreeNodeFlags_Bullet, "CollapsingHeader",
+            ImGuiTreeNodeFlags_CollapsingHeader, "DefaultOpen", ImGuiTreeNodeFlags_DefaultOpen, "DrawLinesFull",
+            ImGuiTreeNodeFlags_DrawLinesFull, "DrawLinesNone", ImGuiTreeNodeFlags_DrawLinesNone, "DrawLinesToNodes",
+            ImGuiTreeNodeFlags_DrawLinesToNodes, "Framed", ImGuiTreeNodeFlags_Framed, "FramePadding", ImGuiTreeNodeFlags_FramePadding,
+            "LabelSpanAllColumns", ImGuiTreeNodeFlags_LabelSpanAllColumns, "Leaf", ImGuiTreeNodeFlags_Leaf, "NavLeftJumpsBackHere",
+            ImGuiTreeNodeFlags_NavLeftJumpsBackHere, "NavLeftJumpsToParent", ImGuiTreeNodeFlags_NavLeftJumpsToParent, "NoAutoOpenOnLog",
+            ImGuiTreeNodeFlags_NoAutoOpenOnLog, "None", ImGuiTreeNodeFlags_None, "NoTreePushOnOpen", ImGuiTreeNodeFlags_NoTreePushOnOpen,
+            "OpenOnArrow", ImGuiTreeNodeFlags_OpenOnArrow, "OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick, "Selected",
+            ImGuiTreeNodeFlags_Selected, "SpanAllColumns", ImGuiTreeNodeFlags_SpanAllColumns, "SpanAvailWidth",
+            ImGuiTreeNodeFlags_SpanAvailWidth, "SpanFullWidth", ImGuiTreeNodeFlags_SpanFullWidth, "SpanLabelWidth",
+            ImGuiTreeNodeFlags_SpanLabelWidth, "SpanTextWidth", ImGuiTreeNodeFlags_SpanTextWidth);
+
+            imgui.new_enum("WindowFlags", "AlwaysAutoResize", ImGuiWindowFlags_AlwaysAutoResize, "AlwaysHorizontalScrollbar",
+            ImGuiWindowFlags_AlwaysHorizontalScrollbar, "AlwaysVerticalScrollbar", ImGuiWindowFlags_AlwaysVerticalScrollbar, "ChildMenu",
+            ImGuiWindowFlags_ChildMenu, "ChildWindow", ImGuiWindowFlags_ChildWindow, "DockNodeHost", ImGuiWindowFlags_DockNodeHost,
+            "HorizontalScrollbar", ImGuiWindowFlags_HorizontalScrollbar, "MenuBar", ImGuiWindowFlags_MenuBar, "Modal",
+            ImGuiWindowFlags_Modal, "NoBackground", ImGuiWindowFlags_NoBackground, "NoBringToFrontOnFocus",
+            ImGuiWindowFlags_NoBringToFrontOnFocus, "NoCollapse", ImGuiWindowFlags_NoCollapse, "NoDecoration",
+            ImGuiWindowFlags_NoDecoration, "NoDocking", ImGuiWindowFlags_NoDocking, "NoFocusOnAppearing",
+            ImGuiWindowFlags_NoFocusOnAppearing, "NoInputs", ImGuiWindowFlags_NoInputs, "NoMouseInputs", ImGuiWindowFlags_NoMouseInputs,
+            "NoMove", ImGuiWindowFlags_NoMove, "NoNav", ImGuiWindowFlags_NoNav, "NoNavFocus", ImGuiWindowFlags_NoNavFocus, "NoNavInputs",
+            ImGuiWindowFlags_NoNavInputs, "None", ImGuiWindowFlags_None, "NoResize", ImGuiWindowFlags_NoResize, "NoSavedSettings",
+            ImGuiWindowFlags_NoSavedSettings, "NoScrollbar", ImGuiWindowFlags_NoScrollbar, "NoScrollWithMouse",
+            ImGuiWindowFlags_NoScrollWithMouse, "NoTitleBar", ImGuiWindowFlags_NoTitleBar, "Popup", ImGuiWindowFlags_Popup, "Tooltip",
+            ImGuiWindowFlags_Tooltip, "UnsavedDocument", ImGuiWindowFlags_UnsavedDocument);
 
     imgui.new_enum("ImGuiKey",
 
@@ -2759,11 +3460,13 @@ void bindings::open_imgui(sol::state_view& lua) {
         },
         "add_bezier_cubic",
         [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, sol::object p4, uint32_t col, float thickness) {
-            draw_list->AddBezierCubic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), ::api::imgui::create_imvec2(p4), col, thickness);
+            draw_list->AddBezierCubic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3),
+                ::api::imgui::create_imvec2(p4), col, thickness);
         },
         "add_bezier_quadratic",
         [](ImDrawList* draw_list, sol::object p1, sol::object p2, sol::object p3, uint32_t col, int num_segments) {
-            draw_list->AddBezierQuadratic(::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, num_segments);
+            draw_list->AddBezierQuadratic(
+                ::api::imgui::create_imvec2(p1), ::api::imgui::create_imvec2(p2), ::api::imgui::create_imvec2(p3), col, num_segments);
         },
 
         // Path APIs
@@ -2800,7 +3503,27 @@ void bindings::open_imgui(sol::state_view& lua) {
         [](ImDrawList* draw_list, sol::object min, sol::object max, float rounding, ImDrawFlags flags) {
             draw_list->PathRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), rounding, flags);
         });
+
+    //imgui.new_enum("ImGuizmoOperation", "TRANSLATE", ImGuizmo::OPERATION::TRANSLATE, "ROTATE", ImGuizmo::OPERATION::ROTATE, "SCALE",
+    //    ImGuizmo::OPERATION::SCALE, "SCALEU", ImGuizmo::OPERATION::SCALEU, "UNIVERSAL", ImGuizmo::OPERATION::UNIVERSAL);
+    //imgui.new_enum("ImGuizmoMode", "WORLD", ImGuizmo::MODE::WORLD, "LOCAL", ImGuizmo::MODE::LOCAL);
+    imgui.new_usertype<ImGuiTableSortSpecs>(
+        "TableSortSpecs", "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty, "get_specs", [](ImGuiTableSortSpecs* specs) {
+            std::vector<ImGuiTableColumnSortSpecs*> out{};
+
+            for (int i = 0; i < specs->SpecsCount; ++i) {
+                out.push_back(const_cast<ImGuiTableColumnSortSpecs*>(specs->Specs + i));
+            }
+
+            return out;
+        });
     lua["imgui"] = imgui;
+    //auto imguizmo = lua.create_table();
+
+    //imguizmo["is_over"] = [] { return ImGuizmo::IsOver(); };
+    //imguizmo["is_using"] = [] { return ImGuizmo::IsUsing(); };
+
+    //lua["imguizmo"] = imguizmo;
 
     auto draw = lua.create_table();
 
@@ -2813,14 +3536,13 @@ void bindings::open_imgui(sol::state_view& lua) {
     draw["outline_quad"] = api::draw::outline_quad;
     draw["filled_quad"] = api::draw::filled_quad;
 
-    //draw["world_to_screen"] = api::draw::world_to_screen;
-    //draw["world_text"] = api::draw::world_text;
+    // draw["world_to_screen"] = api::draw::world_to_screen;
+    // draw["world_text"] = api::draw::world_text;
 
-    //draw["sphere"] = api::draw::sphere;
-    //draw["capsule"] = api::draw::capsule;
-    //draw["gizmo"] = api::draw::gizmo;
-    //draw["cube"] = [](const Matrix4x4f& mat) { ::imgui::draw_cube(mat); };
-    //draw["grid"] = [](const Matrix4x4f& mat, float size) { ::imgui::draw_grid(mat, size); };
+    // draw["sphere"] = api::draw::sphere;
+    // draw["capsule"] = api::draw::capsule;
+    // draw["gizmo"] = api::draw::gizmo;
+    // draw["cube"] = [](const Matrix4x4f& mat) { ::imgui::draw_cube(mat); };
+    // draw["grid"] = [](const Matrix4x4f& mat, float size) { ::imgui::draw_grid(mat, size); };
     lua["draw"] = draw;
-
 }

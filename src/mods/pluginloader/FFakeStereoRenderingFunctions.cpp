@@ -16,6 +16,7 @@ UEVR_FRHITexture2DHandle stereo_hook::get_scene_render_target() {
     return nullptr;
 }
 
+
 UEVR_FRHITexture2DHandle stereo_hook::get_ui_render_target() {
     const auto& vr = VR::get();
     if (auto& hook = vr->get_fake_stereo_hook(); hook != nullptr) {

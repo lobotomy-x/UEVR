@@ -192,7 +192,15 @@ private:
         UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas);
     static void on_frame();
     static void on_draw_ui();
-    static void on_script_reset();
+    static void on_script_reset();                                                                                                                                                                                                                                                                                                                                 // Dump the current state of the Lua stack
+
     static void on_lua_event(std::string_view event_name, std::string_view event_data);
+
+
+    auto dump_stack(lua_State*, const char* message = "") -> void;
+
+    auto get_stack_dump(lua_State* lua_state, const char* message = "") -> std::string;
+
+
 };
 } // namespace uevr

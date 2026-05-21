@@ -1,38 +1,40 @@
+#include <cstdint>
 #include <format>
 #include <string>
-#include <cstdint>
 
 #include <utility/String.hpp>
 
-#include <datatypes/Vector.hpp>
-#include <datatypes/Quaternion.hpp>
-#include <datatypes/Matrix.hpp>
-#include <datatypes/Transform.hpp>
-#include <datatypes/StructObject.hpp>
 #include <ScriptUtility.hpp>
+#include <datatypes/Matrix.hpp>
+#include <datatypes/Quaternion.hpp>
+#include <datatypes/StructObject.hpp>
+#include <datatypes/Transform.hpp>
+#include <datatypes/Vector.hpp>
 
 namespace lua::utility {
-    extern struct UE_ProxyPtr;
-     
-    using Vector2f = lua::datatypes::Vector2f;
-    using Vector2d = lua::datatypes::Vector2d;
-    using Vector3f = lua::datatypes::Vector3f;
-    using Vector3d = lua::datatypes::Vector3d;
-    using Vector4f = lua::datatypes::Vector4f;
-    using Vector4d = lua::datatypes::Vector4d;
-    using Quaternionf = lua::datatypes::Quaternionf;
-    using Quaterniond = lua::datatypes::Quaterniond;
-    using Matrix4f = lua::datatypes::Matrix4x4f;
-    using Matrix4d = lua::datatypes::Matrix4x4d;
+extern struct UE_ProxyPtr;
 
-   using Transformf = lua::datatypes::Transform<Vector3f, Quaternionf>;
-   using Transformd = lua::datatypes::Transform<Vector3d, Quaterniond>;
+using Vector2f = lua::datatypes::Vector2f;
+using Vector2d = lua::datatypes::Vector2d;
+using Vector3f = lua::datatypes::Vector3f;
+using Vector3d = lua::datatypes::Vector3d;
+using Vector4f = lua::datatypes::Vector4f;
+using Vector4d = lua::datatypes::Vector4d;
+using Quaternionf = lua::datatypes::Quaternionf;
+using Quaterniond = lua::datatypes::Quaterniond;
+using Matrix4f = lua::datatypes::Matrix4x4f;
+using Matrix4d = lua::datatypes::Matrix4x4d;
+using Transformf = lua::datatypes::Transform<Vector3f, Quaternionf>;
+using Transformd = lua::datatypes::Transform<Vector3d, Quaterniond>;
+
 sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API::UFunction* fn, sol::variadic_args args);
 
 uevr::API::UScriptStruct* get_vector_struct() {
     static auto vector_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Vector");
-        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Vector") : nullptr;
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Vector")
+                                                       : nullptr;
 
         return modern_class != nullptr ? modern_class : old_class;
     }();
@@ -43,7 +45,9 @@ uevr::API::UScriptStruct* get_vector_struct() {
 uevr::API::UScriptStruct* get_rotator_struct() {
     static auto rotator_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Rotator");
-        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Rotator") : nullptr;
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Rotator")
+                                                       : nullptr;
 
         return modern_class != nullptr ? modern_class : old_class;
     }();
@@ -54,7 +58,9 @@ uevr::API::UScriptStruct* get_rotator_struct() {
 uevr::API::UScriptStruct* get_vector4_struct() {
     static auto vector_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Vector4");
-        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Vector4") : nullptr;
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Vector4")
+                                                       : nullptr;
         return modern_class != nullptr ? modern_class : old_class;
     }();
 
@@ -100,7 +106,9 @@ uevr::API::UScriptStruct* get_vector3f_struct() {
 uevr::API::UScriptStruct* get_vector2d_struct() {
     static auto vector_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Vector2D");
-        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Vector2D") : nullptr;
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Vector2D")
+                                                       : nullptr;
         return modern_class != nullptr ? modern_class : old_class;
     }();
 
@@ -110,7 +118,8 @@ uevr::API::UScriptStruct* get_vector2d_struct() {
 uevr::API::UScriptStruct* get_linearcolor_struct() {
     static auto linear_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.LinearColor");
-        if (modern_class != nullptr) return modern_class;
+        if (modern_class != nullptr)
+            return modern_class;
         return uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.LinearColor");
     }();
 
@@ -120,7 +129,8 @@ uevr::API::UScriptStruct* get_linearcolor_struct() {
 uevr::API::UScriptStruct* get_color_struct() {
     static auto color_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Color");
-        if (modern_class != nullptr) return modern_class;
+        if (modern_class != nullptr)
+            return modern_class;
         return uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Color");
     }();
 
@@ -130,7 +140,8 @@ uevr::API::UScriptStruct* get_color_struct() {
 uevr::API::UScriptStruct* get_quat_struct() {
     static auto quat_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Quat");
-        if (modern_class != nullptr) return modern_class;
+        if (modern_class != nullptr)
+            return modern_class;
         return uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Quat");
     }();
 
@@ -140,22 +151,27 @@ uevr::API::UScriptStruct* get_quat_struct() {
 uevr::API::UScriptStruct* get_transform_struct() {
     static auto transform_struct = []() {
         const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Transform");
-        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Object.Transform") : nullptr;
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Transform")
+                                                       : nullptr;
         return modern_class != nullptr ? modern_class : old_class;
     }();
 
     return transform_struct;
 }
 
-uevr::API::UScriptStruct* get_hitresult_struct() {
-    static auto hitresult_struct = []() {
-        const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/Engine.HitResult");
-        if (modern_class != nullptr) return modern_class;
-        return uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/Engine.HitResult");
+uevr::API::UScriptStruct* get_matrix_struct() {
+    static auto matrix_struct = []() {
+        const auto modern_class = uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(L"ScriptStruct /Script/CoreUObject.Matrix");
+        const auto old_class = modern_class == nullptr ? uevr::API::get()->find_uobject<uevr::API::UScriptStruct>(
+                                                             L"ScriptStruct /Script/CoreUObject.Object.Matrix")
+                                                       : nullptr;
+        return modern_class != nullptr ? modern_class : old_class;
     }();
-
-    return hitresult_struct;
+    return matrix_struct;
 }
+
+
 template <typename T>
 void SyncLuaTableToTArray(const sol::lua_table& lua_table, void* array_ptr, std::vector<std::vector<T>>& dynamic_storage) {
     // 1. Cast the raw buffer to the UEVR TArray structure
@@ -178,7 +194,6 @@ void SyncLuaTableToTArray(const sol::lua_table& lua_table, void* array_ptr, std:
 sol::table TArrayToLuaTable(sol::state_view& lua, void* array_ptr, const std::string& type_name) {
     sol::table out_table = lua.create_table();
 
-    // We treat it as UObject* by default for UEVR
     auto& ue_arr = *(uevr::API::TArray<uevr::API::UObject*>*)array_ptr;
 
     for (int32_t i = 0; i < ue_arr.count; ++i) {
@@ -192,10 +207,9 @@ template <typename T> void ProcessTArray(const sol::object& arg, void* params_pt
         sol::lua_table tbl = arg.as<sol::lua_table>();
         auto& ue_arr = *(uevr::API::TArray<T>*)params_ptr;
 
-        // Use a type that isn't specialized like vector<bool>
         using StorageType = std::conditional_t<std::is_same_v<T, bool>, uint8_t, T>;
 
-        static std::vector<StorageType> buffer;
+        std::vector<StorageType> buffer;
         buffer.clear();
         buffer.reserve(tbl.size());
 
@@ -211,17 +225,16 @@ template <typename T> void ProcessTArray(const sol::object& arg, void* params_pt
     }
 }
 using DispatchFunc = void (*)(const sol::object&, void*);
-     using FString = uevr::API::TArray<wchar_t>;
-static const std::unordered_map<std::string_view, DispatchFunc> TypeDispatcher = {
+using FString = uevr::API::TArray<wchar_t>;
+const std::unordered_map<std::string_view, DispatchFunc> TypeDispatcher = {
 
-
-    {"FloatProperty", ProcessTArray<float>}, 
-    {"ObjectProperty", ProcessTArray<uevr::API::UObject*>}, 
+    {"FloatProperty", ProcessTArray<float>},
+    {"ObjectProperty", ProcessTArray<uevr::API::UObject*>},
     {"BoolProperty", ProcessTArray<uint8_t>},
     {"ByteProperty", ProcessTArray<uint8_t>},
     {"DoubleProperty", ProcessTArray<double>},
     {"NameProperty", ProcessTArray<uevr::API::FName*>},
-    {"StringProperty", ProcessTArray<FString*>}, 
+    {"StringProperty", ProcessTArray<FString*>},
     {"Int8Property", ProcessTArray<int8_t>},
     {"Int16Property", ProcessTArray<int16_t>},
     {"UIntProperty", ProcessTArray<uint16_t>},
@@ -236,7 +249,8 @@ static const std::unordered_map<std::string_view, DispatchFunc> TypeDispatcher =
 };
 
 // General overload that header declares. Forward to existing implementations when possible.
-sol::object prop_to_object(sol::this_state s, void* self, const int32_t offset, const size_t name_hash, uevr::API::FProperty* desc, bool is_self_temporary) {
+sol::object prop_to_object(
+    sol::this_state s, void* self, const int32_t offset, const size_t name_hash, uevr::API::FProperty* desc, bool is_self_temporary) {
     if (desc != nullptr) {
         return prop_to_object(s, self, desc, is_self_temporary);
     }
@@ -255,7 +269,7 @@ bool is_ue5() {
 
         return c->get_struct_size() == sizeof(glm::dvec3);
     }();
-    
+
     return cached_result;
 }
 
@@ -270,8 +284,7 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
     const auto offset = desc->get_offset();
 
     switch (name_hash) {
-    case L"BoolProperty"_fnv:
-    {
+    case L"BoolProperty"_fnv: {
         const auto fbp = (uevr::API::FBoolProperty*)desc;
         return sol::make_object(s, fbp->get_value_from_object(self));
     }
@@ -296,8 +309,7 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
         return sol::make_object(s, *(uint64_t*)((uintptr_t)self + offset));
     case L"Int64Property"_fnv:
         return sol::make_object(s, *(int64_t*)((uintptr_t)self + offset));
-    case L"EnumProperty"_fnv:
-    {
+    case L"EnumProperty"_fnv: {
         const auto ep = (uevr::API::FEnumProperty*)desc;
         const auto np = ep->get_underlying_prop();
 
@@ -341,13 +353,56 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
     }
     case L"NameProperty"_fnv:
         return sol::make_object(s, *(uevr::API::FName*)((uintptr_t)self + offset));
-    case L"StrProperty"_fnv:
-    {
+    case L"StrProperty"_fnv: {
         using FString = uevr::API::TArray<wchar_t>;
         const auto& str = *(FString*)((uintptr_t)self + offset);
         if (str.data == nullptr || str.count == 0) {
             return sol::make_object(s, "");
         }
+        return sol::make_object(s, std::wstring(str.data, str.count));
+    }
+    case L"TextProperty"_fnv: {
+        uevr::API::UObject* KismetTextLibrary = uevr::API::get()
+                                                    ->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.KismetTextLibrary")
+                                                    ->get_class_default_object();
+
+        if (KismetTextLibrary == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+
+        uevr::API::UFunction* TextToString = nullptr;
+        if (auto cls = KismetTextLibrary->get_class(); cls != nullptr) {
+            TextToString = cls->find_function(L"Conv_TextToString");
+        }
+
+        if (TextToString == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+
+        uevr::API::FProperty* InTextProp = TextToString->find_property(L"InText");
+        uevr::API::FProperty* ReturnValue = TextToString->find_property(L"ReturnValue");
+
+        if (InTextProp == nullptr || ReturnValue == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+
+        using FString = uevr::API::TArray<wchar_t>;
+        struct Params {
+            void* InText{};
+            FString OutStr{};
+        };
+
+        Params parms{};
+        parms.InText = (void*)((uintptr_t)self + offset);
+
+        // Call the function and safely handle missing implementation
+        KismetTextLibrary->process_event(TextToString, &parms);
+
+        const auto& str = parms.OutStr;
+        if (str.data == nullptr || str.count == 0) {
+            return sol::make_object(s, std::wstring());
+        }
+
         return sol::make_object(s, std::wstring(str.data, str.count));
     }
     case L"InterfaceProperty"_fnv:
@@ -365,8 +420,7 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
         return sol::make_object(s, *(uevr::API::UClass**)((uintptr_t)self + offset));
     case L"Function"_fnv:
         return sol::make_object(s, (uevr::API::UFunction*)desc); // Not actually a property inside the object
-    case L"StructProperty"_fnv:
-    {
+    case L"StructProperty"_fnv: {
         const auto struct_data = (void*)((uintptr_t)self + offset);
         const auto struct_desc = ((uevr::API::FStructProperty*)desc)->get_struct();
 
@@ -381,47 +435,76 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
 
         if (struct_desc == get_vector4_struct() || struct_desc == get_vector4d_struct()) {
             if (is_ue5()) {
-            if (is_self_temporary)
-                return sol::make_object(s, *(lua::datatypes::Vector4d*)struct_data);
-            return sol::make_object(s, (lua::datatypes::Vector4d*)struct_data); 
+                if (is_self_temporary)
+                    return sol::make_object(s, *(lua::datatypes::Vector4d*)struct_data);
+                return sol::make_object(s, (lua::datatypes::Vector4d*)struct_data);
+            } else {
+                if (is_self_temporary)
+                    return sol::make_object(s, *(lua::datatypes::Vector4f*)struct_data);
+                return sol::make_object(s, (lua::datatypes::Vector4f*)struct_data);
             }
-            else{
-            if (is_self_temporary)
-                return sol::make_object(s, *(lua::datatypes::Vector4f*)struct_data);
-            return sol::make_object(s, (lua::datatypes::Vector4f*)struct_data);
         }
 
-        }
-
-    if (struct_desc == get_vector2d_struct()) {
+        if (struct_desc == get_vector2d_struct()) {
             if (is_ue5()) {
-            if (is_self_temporary)
-                return sol::make_object(s, *(lua::datatypes::Vector2d*)struct_data);
-            return sol::make_object(s, (lua::datatypes::Vector2d*)struct_data);
-        }
-        else {
+                if (is_self_temporary)
+                    return sol::make_object(s, *(lua::datatypes::Vector2d*)struct_data);
+                return sol::make_object(s, (lua::datatypes::Vector2d*)struct_data);
+            } else {
                 if (is_self_temporary)
                     return sol::make_object(s, *(lua::datatypes::Vector2f*)struct_data);
                 return sol::make_object(s, (lua::datatypes::Vector2f*)struct_data);
-    }
-}
-
-
-        if (struct_desc == get_quat_struct()) {
-    if (is_ue5()) {
-            if (is_self_temporary)
-                return sol::make_object(s, *(lua::datatypes::Quaterniond*)struct_data);
-            return sol::make_object(s, (lua::datatypes::Quaterniond*)struct_data);
+            }
         }
-else {
-        if (is_self_temporary)
-            return sol::make_object(s, *(lua::datatypes::Quaternionf*)struct_data);
-        return sol::make_object(s, (lua::datatypes::Quaternionf*)struct_data);
+
+        else if (struct_desc == get_quat_struct()) {
+            if (is_ue5()) {
+                if (is_self_temporary)
+                    return sol::make_object(s, *(lua::datatypes::Quaterniond*)struct_data);
+                return sol::make_object(s, (lua::datatypes::Quaterniond*)struct_data);
+            } else {
+                if (is_self_temporary)
+                    return sol::make_object(s, *(lua::datatypes::Quaternionf*)struct_data);
+                return sol::make_object(s, (lua::datatypes::Quaternionf*)struct_data);
+            }
+        }    
+        else if (struct_desc == get_transform_struct()) {
+            static const auto quat_offset =struct_desc->find_property(L"Rotation")->get_offset();
+            static const auto loc_offset = struct_desc->find_property(L"Translation")->get_offset();
+            static const auto scale_offset = struct_desc->find_property(L"Scale3D")->get_offset();
+            if (is_ue5()) {
+                Transformd t = Transformd();
+
+                t.rotation = *(Quaterniond*)((uintptr_t)self + offset + quat_offset);
+                t.translation = *(Vector3d*)((uintptr_t)self + offset + loc_offset);
+                t.scale3d = *(Vector3d*)((uintptr_t)self + offset + scale_offset);
+                return sol::make_object(s, t);
+            } else {
+                Transformf t = Transformf();
+
+                t.rotation = *(Quaternionf*)((uintptr_t)self + offset + quat_offset);
+                t.translation = *(Vector3f*)((uintptr_t)self + offset + loc_offset);
+                t.scale3d = *(Vector3f*)((uintptr_t)self + offset + scale_offset);
+                return sol::make_object(s, t);
+
+            }
+
+         /*   if (is_ue5()) {     
+                return sol::make_object(s, *(lua::datatypes::Transformd*)struct_data);
+            } else {
+                return sol::make_object(s, *(lua::datatypes::Transformf*)struct_data);
+            }*/
         }
-}
+        // New Matrix Integration
+        else if (struct_desc == get_matrix_struct()) {
+            if (is_ue5()) {
+                return sol::make_object(s, *(lua::datatypes::Matrix4x4d*)struct_data);
+            } else {
+                return sol::make_object(s, *(lua::datatypes::Matrix4x4f*)struct_data);
+            }
+        }
 
-
-        if (struct_desc == get_vector_struct() || struct_desc == get_rotator_struct()) {
+        else if (struct_desc == get_vector_struct() || struct_desc == get_rotator_struct()) {
             if (is_ue5()) {
                 if (is_self_temporary) {
                     return sol::make_object(s, *(lua::datatypes::Vector3d*)struct_data);
@@ -446,8 +529,7 @@ else {
         auto new_object = std::make_unique<lua::datatypes::StructObject>(struct_data, struct_desc);
         return sol::make_object(s, std::move(new_object));
     }
-    case L"ArrayProperty"_fnv:
-    {
+    case L"ArrayProperty"_fnv: {
         const auto inner_prop = ((uevr::API::FArrayProperty*)desc)->get_inner();
 
         if (inner_prop == nullptr) {
@@ -463,9 +545,55 @@ else {
         const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
         switch (inner_name_hash) {
+       
+            case L"FloatProperty"_fnv: {
+                const auto& arr = *(uevr::API::TArray<float*>*)((uintptr_t)self + offset);
+                return tarray_to_table<float*>(s, arr);
+            }
+            case L"DoubleProperty"_fnv: {
+                const auto& arr = *(uevr::API::TArray<double*>*)((uintptr_t)self + offset);
+                return tarray_to_table<double*>(s, arr);
+            }
+            case L"ByteProperty"_fnv: {
+                const auto& arr = *(uevr::API::TArray<uint8_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint8_t*>(s, arr);
+            }
+            case L"Int8Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<int8_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<int8_t*>(s, arr);
+            }
+            case L"Int16Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<int16_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<int16_t*>(s, arr);
+            }
+            case L"UInt16Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<uint16_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint16_t*>(s, arr);
+            }
+            case L"IntProperty"_fnv: {
+                const auto& arr = *(uevr::API::TArray<int32_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<int32_t*>(s, arr);
+            }
+            case L"UIntProperty"_fnv:
+            case L"UInt32Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<uint32_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint32_t*>(s, arr);
+            }
+            case L"UInt64Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<uint64_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint64_t*>(s, arr);
+            }
+            case L"Int64Property"_fnv: {
+                const auto& arr = *(uevr::API::TArray<int64_t*>*)((uintptr_t)self + offset);
+                return tarray_to_table<int64_t*>(s, arr);
+            }
+            case L"StrProperty"_fnv: {
+                using FString = uevr::API::TArray<wchar_t>;
+                const auto& arr = *(uevr::API::TArray<FString*>*)((uintptr_t)self + offset);
+                return tarray_to_table<FString*>(s, arr);
+            }
         case L"InterfaceProperty"_fnv:
-        case L"ObjectProperty"_fnv:
-        {
+        case L"ObjectProperty"_fnv: {
             const auto& arr = *(uevr::API::TArray<uevr::API::UObject*>*)((uintptr_t)self + offset);
 
             if (arr.data == nullptr || arr.count == 0) {
@@ -480,8 +608,7 @@ else {
 
             return sol::make_object(s, lua_arr);
         }
-        case L"ClassProperty"_fnv:
-        {
+        case L"ClassProperty"_fnv: {
             const auto& arr = *(uevr::API::TArray<uevr::API::UClass*>*)((uintptr_t)self + offset);
 
             if (arr.data == nullptr || arr.count == 0) {
@@ -497,22 +624,21 @@ else {
             return sol::make_object(s, lua_arr);
         }
         case L"NameProperty"_fnv: {
-            const auto& arr = *(uevr::API::TArray<uevr::API::FName*>*)((uintptr_t)self + offset);
+            const auto& arr = *(uevr::API::TArray<uevr::API::FName>*)((uintptr_t)self + offset);
 
             if (arr.data == nullptr || arr.count == 0) {
                 return sol::make_object(s, sol::lua_nil);
             }
 
             auto lua_arr = sol::state_view{s}.create_table();
-
             for (size_t i = 0; i < arr.count; ++i) {
                 lua_arr[i + 1] = sol::make_object(s, arr.data[i]);
             }
-
             return sol::make_object(s, lua_arr);
         }
+    
 
-        // TODO: Add support for other types
+            // TODO: Add support for other types
         };
 
         return sol::make_object(s, sol::lua_nil);
@@ -549,7 +675,8 @@ sol::object prop_to_object(sol::this_state s, uevr::API::UObject* self, const st
     return prop_to_object(s, self, c, name);
 }
 
-void set_property(sol::this_state s, void* self, uevr::API::UStruct* c, const std::wstring& name, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
+void set_property(sol::this_state s, void* self, uevr::API::UStruct* c, const std::wstring& name, sol::object value,
+    std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto desc = c->find_property(name.c_str());
 
     if (desc == nullptr) {
@@ -559,7 +686,8 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* c, const st
     set_property(s, self, c, desc, value, dynamic_strings);
 }
 
-void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, uevr::API::FProperty* desc, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
+void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, uevr::API::FProperty* desc, sol::object value,
+    std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto propc = desc->get_class();
 
     if (propc == nullptr) {
@@ -570,8 +698,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     const auto offset = desc->get_offset();
 
     switch (name_hash) {
-    case L"BoolProperty"_fnv:
-    {
+    case L"BoolProperty"_fnv: {
         const auto fbp = (uevr::API::FBoolProperty*)desc;
         fbp->set_value_in_object(self, value.as<bool>());
         return;
@@ -607,8 +734,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     case L"Int64Property"_fnv:
         *(int64_t*)((uintptr_t)self + offset) = value.as<int64_t>();
         return;
-    case L"EnumProperty"_fnv:
-    {
+    case L"EnumProperty"_fnv: {
         const auto ep = (uevr::API::FEnumProperty*)desc;
         const auto np = ep->get_underlying_prop();
 
@@ -682,55 +808,58 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     case L"ClassProperty"_fnv:
         *(uevr::API::UClass**)((uintptr_t)self + offset) = value.as<uevr::API::UClass*>();
         return;
-    case L"ArrayProperty"_fnv: 
+    case L"ArrayProperty"_fnv:
+        {
+                if (!value.is<sol::lua_table>()) {
+                    throw sol::error("Setting TArray from non-table is not implemented");
+                }
 
-    //{
-    //        if (!value.is<sol::lua_table>()) {
-    //            throw sol::error("Setting TArray from non-table is not implemented");
-    //        }
+                const auto inner_prop = ((uevr::API::FArrayProperty*)desc)->get_inner();
+                if (inner_prop == nullptr)
+                    throw sol::error("Array property has no inner property");
+                const auto inner_c = inner_prop->get_class();
+                if (inner_c == nullptr)
+                    throw sol::error("Array inner property has no class");
+                const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
-    //        const auto inner_prop = ((uevr::API::FArrayProperty*)desc)->get_inner();
-    //        if (inner_prop == nullptr)
-    //            throw sol::error("Array property has no inner property");
-    //        const auto inner_c = inner_prop->get_class();
-    //        if (inner_c == nullptr)
-    //            throw sol::error("Array inner property has no class");
-    //        const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
-
-    //        auto tbl = value.as<sol::table>();
-
-    //        switch (inner_name_hash) {
-    //        case L"FloatProperty"_fnv:
-    //            return create_tarray_from_table<float>(s, self, offset, tbl);
-    //        case L"DoubleProperty"_fnv:
-    //            return create_tarray_from_table<double>(s, self, offset, tbl);
-    //        case L"ByteProperty"_fnv:
-    //            return create_tarray_from_table<uint8_t>(s, self, offset, tbl);
-    //        case L"Int8Property"_fnv:
-    //            return create_tarray_from_table<int8_t>(s, self, offset, tbl);
-    //        case L"Int16Property"_fnv:
-    //            return create_tarray_from_table<int16_t>(s, self, offset, tbl);
-    //        case L"UInt16Property"_fnv:
-    //            return create_tarray_from_table<uint16_t>(s, self, offset, tbl);
-    //        case L"IntProperty"_fnv:
-    //            return create_tarray_from_table<int32_t>(s, self, offset, tbl);
-    //        case L"UIntProperty"_fnv:
-    //        case L"UInt32Property"_fnv:
-    //            return create_tarray_from_table<uint32_t>(s, self, offset, tbl);
-    //        case L"UInt64Property"_fnv:
-    //            return create_tarray_from_table<uint64_t>(s, self, offset, tbl);
-    //        case L"Int64Property"_fnv:
-    //            return create_tarray_from_table<int64_t>(s, self, offset, tbl);
-    //        case L"InterfaceProperty"_fnv:
-    //        case L"ClassProperty"_fnv:
-    //        case L"ObjectProperty"_fnv:
-    //            return create_tarray_from_table<uevr::API::UObject*>(s, self, offset, tbl);
-            default:
-                throw sol::error("Setting TArray for this element type is not implemented");
-            //}
-    
-    case L"StrProperty"_fnv:
-    {
+                auto tbl = value.as<sol::table>();
+                uintptr_t address = (uintptr_t)self + offset;                                                                                 
+                switch (inner_name_hash) {
+                case L"FloatProperty"_fnv:
+                    create_tarray_from_table<float>(s, address, tbl);
+                case L"DoubleProperty"_fnv:
+                    create_tarray_from_table<double>(s, address, tbl);
+                case L"ByteProperty"_fnv:
+                    create_tarray_from_table<uint8_t>(s, address, tbl);
+                case L"Int8Property"_fnv:
+                    create_tarray_from_table<int8_t>(s, address, tbl);
+                case L"Int16Property"_fnv:
+                    create_tarray_from_table<int16_t>(s, address, tbl);
+                case L"UInt16Property"_fnv:
+                    create_tarray_from_table<uint16_t>(s, address, tbl);
+                case L"IntProperty"_fnv:
+                    create_tarray_from_table<int32_t>(s, address, tbl);
+                case L"UIntProperty"_fnv:
+                case L"UInt32Property"_fnv:
+                    create_tarray_from_table<uint32_t>(s, address, tbl);
+                case L"UInt64Property"_fnv:
+                    create_tarray_from_table<uint64_t>(s, address, tbl);
+                case L"Int64Property"_fnv:
+                    create_tarray_from_table<int64_t>(s, address, tbl);
+                case L"NameProperty"_fnv:
+                    create_tarray_from_table<uevr::API::FName>(s, address, tbl);
+                case L"WeakObjectProperty"_fnv:
+                case L"InterfaceProperty"_fnv:
+                case L"ClassProperty"_fnv:
+                case L"ObjectProperty"_fnv:
+                    create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
+                case L"Property"_fnv:
+                    create_tarray_from_table<void*>(s, address, tbl);
+                default:
+                    throw sol::error("Setting TArray for this element type is not implemented");
+            }
+        }
+    case L"StrProperty"_fnv: {
         const auto arg_obj = value;
         using FString = uevr::API::TArray<wchar_t>;
 
@@ -745,7 +874,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
                 std::copy(src.begin(), src.end(), buffer.get());
                 buffer[src.size()] = L'\0';
-    
+
                 fstr.count = src.size() + 1;
                 fstr.capacity = fstr.count;
                 fstr.data = buffer.get();
@@ -753,7 +882,6 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 dynamic_strings->push_back(std::move(buffer));
             } else {
                 // Use FMalloc (TODO)
-
             }
         } else if (arg_obj.is<std::string>()) {
             const auto src = ::utility::widen(arg_obj.as<std::string>());
@@ -793,8 +921,57 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
 
         return;
     }
-    case L"StructProperty"_fnv:
-    {
+    case L"TextProperty"_fnv: {
+        const auto arg_obj = value;
+
+        uevr::API::UObject* KismetTextLibrary =
+            uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.KismetTextLibrary")->get_class_default_object();
+
+        if (KismetTextLibrary == nullptr) {
+            return;
+        }
+
+        uevr::API::UFunction* StringToText= nullptr;
+        if (auto cls = KismetTextLibrary->get_class(); cls != nullptr) {
+            StringToText = cls->find_function(L"Conv_StringToText");
+        }
+
+        if (StringToText == nullptr) {
+            return;
+        }
+
+        uevr::API::FProperty* InTextProp = StringToText->find_property(L"InString");
+        uevr::API::FProperty* ReturnValue = StringToText->find_property(L"ReturnValue");
+
+        if (InTextProp == nullptr || ReturnValue == nullptr) {
+            return;
+        }
+
+        using FString = uevr::API::TArray<wchar_t>;
+        struct Params {
+            FString InString{};
+            void* ReturnValue{};
+        };
+
+        Params parms{};
+
+    
+        if (arg_obj.is<std::wstring>()) {
+            const auto src = arg_obj.as<std::wstring>();
+            auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
+            std::copy(src.begin(), src.end(), buffer.get());
+            buffer[src.size()] = L'\0';
+
+             parms.InString.count = src.size() + 1;
+            parms.InString.capacity = parms.InString.count;
+             parms.InString.data = buffer.get();
+
+        KismetTextLibrary->process_event(StringToText, &parms);
+             *(void**)((uintptr_t)self + offset) = parms.ReturnValue;
+
+        }
+    }
+    case L"StructProperty"_fnv: {
         const auto struct_desc = ((uevr::API::FStructProperty*)desc)->get_struct();
 
         if (struct_desc == nullptr) {
@@ -807,11 +984,12 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 if (!key.is<std::wstring>()) {
                     throw sol::error("Invalid key type for struct property (expected string)");
                 }
-                
+
                 const auto prop = struct_desc->find_property(key.as<std::wstring>().c_str());
 
                 if (prop == nullptr) {
-                    throw sol::error(std::format("Struct property '{}' not found in {}", ::utility::narrow(key.as<std::wstring>()), ::utility::narrow(struct_desc->get_fname()->to_string())));
+                    throw sol::error(std::format("Struct property '{}' not found in {}", ::utility::narrow(key.as<std::wstring>()),
+                        ::utility::narrow(struct_desc->get_fname()->to_string())));
                 }
 
                 set_property(s, (void*)((uintptr_t)self + offset), struct_desc, prop, val, dynamic_strings);
@@ -821,15 +999,16 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
 
             if (arg.desc != struct_desc) {
                 if (arg.desc != nullptr) {
-                    throw sol::error(std::format("Invalid struct type for struct property (expected {}, got {})", ::utility::narrow(struct_desc->get_fname()->to_string()), ::utility::narrow(arg.desc->get_fname()->to_string())));
+                    throw sol::error(std::format("Invalid struct type for struct property (expected {}, got {})",
+                        ::utility::narrow(struct_desc->get_fname()->to_string()), ::utility::narrow(arg.desc->get_fname()->to_string())));
                 } else {
-                    throw sol::error(std::format("Invalid struct type for struct property (expected {})", ::utility::narrow(struct_desc->get_fname()->to_string())));
+                    throw sol::error(std::format(
+                        "Invalid struct type for struct property (expected {})", ::utility::narrow(struct_desc->get_fname()->to_string())));
                 }
             }
 
             memcpy((void*)((uintptr_t)self + offset), arg.object, struct_desc->get_struct_size());
-        }
- else if (struct_desc == get_vector_struct() || struct_desc == get_rotator_struct()) { // Same layout
+        } else if (struct_desc == get_vector_struct() || struct_desc == get_rotator_struct()) { // Same layout
             if (value.is<lua::datatypes::Vector3f>()) {
                 const auto arg = value.as<lua::datatypes::Vector3f>();
 
@@ -849,10 +1028,10 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
             } else {
                 throw sol::error("Invalid argument type for FVector");
             }
-        
-}
 
-     else if (struct_desc == get_vector2d_struct() ) { // Same layout
+        }
+
+        else if (struct_desc == get_vector2d_struct()) { // Same layout
             if (value.is<lua::datatypes::Vector2d>()) {
                 const auto arg = value.as<lua::datatypes::Vector2f>();
 
@@ -870,32 +1049,79 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                     *(lua::datatypes::Vector2f*)((uintptr_t)self + offset) = arg;
                 }
             }
-}
-
-      else if (struct_desc == get_vector4d_struct()) { // Same layout
-    if (value.is<lua::datatypes::Vector4d>()) {
-        const auto arg = value.as<lua::datatypes::Vector4f>();
-
-        if (is_ue5()) {
-            *(lua::datatypes::Vector4d*)((uintptr_t)self + offset) = arg;
-        } else {
-            *(lua::datatypes::Vector4f*)((uintptr_t)self + offset) = arg;
         }
-    } else if (value.is<lua::datatypes::Vector4d>()) {
-        const auto arg = value.as<lua::datatypes::Vector4d>();
 
-        if (is_ue5()) {
-            *(lua::datatypes::Vector4d*)((uintptr_t)self + offset) = arg;
-        } else {
-            *(lua::datatypes::Vector4f*)((uintptr_t)self + offset) = arg;
+        else if (struct_desc == get_vector4d_struct()) { // Same layout
+            if (value.is<lua::datatypes::Vector4d>()) {
+                const auto arg = value.as<lua::datatypes::Vector4f>();
+
+                if (is_ue5()) {
+                    *(lua::datatypes::Vector4d*)((uintptr_t)self + offset) = arg;
+                } else {
+                    *(lua::datatypes::Vector4f*)((uintptr_t)self + offset) = arg;
+                }
+            } else if (value.is<lua::datatypes::Vector4d>()) {
+                const auto arg = value.as<lua::datatypes::Vector4d>();
+
+                if (is_ue5()) {
+                    *(lua::datatypes::Vector4d*)((uintptr_t)self + offset) = arg;
+                } else {
+                    *(lua::datatypes::Vector4f*)((uintptr_t)self + offset) = arg;
+                }
+            }
         }
-    }
-} 
+        if (struct_desc == get_transform_struct()) {
+            static const auto quat_offset = struct_desc->find_property(L"Rotation")->get_offset();
+            static const auto loc_offset = struct_desc->find_property(L"Translation")->get_offset();
+            static const auto scale_offset = struct_desc->find_property(L"Scale3D")->get_offset();
+                Transformf t = Transformf();
 
-
-
-
- else if (struct_desc == get_quat_struct() ) { 
+                t.rotation = *(Quaternionf*)((uintptr_t)self + offset + quat_offset);
+                t.translation = *(Vector3f*)((uintptr_t)self + offset + loc_offset);
+                t.scale3d = *(Vector3f*)((uintptr_t)self + offset + scale_offset);
+            if (value.is<lua::datatypes::Transformf>()) {
+                auto val = value.as<lua::datatypes::Transformf>();
+                if (is_ue5()) {
+                    *(Quaterniond*)((uintptr_t)self + offset + quat_offset) = val.rotation;
+                    *(Vector3d*)((uintptr_t)self + offset + loc_offset) = val.translation;
+                  *(Vector3d*)((uintptr_t)self + offset + scale_offset) =  val.scale3d;
+                } else {
+                    *(Quaternionf*)((uintptr_t)self + offset + quat_offset) = val.rotation;
+                    *(Vector3f*)((uintptr_t)self + offset + loc_offset) = val.translation;
+                    *(Vector3f*)((uintptr_t)self + offset + scale_offset) = val.scale3d;
+                }
+            } else if (value.is<Transformd>()) {
+                auto val = value.as<Transformd>();
+                if (is_ue5()) {
+                    *(Quaterniond*)((uintptr_t)self + offset + quat_offset) = val.rotation;
+                    *(Vector3d*)((uintptr_t)self + offset + loc_offset) = val.translation;
+                    *(Vector3d*)((uintptr_t)self + offset + scale_offset) = val.scale3d;
+                } else {
+                    *(Quaternionf*)((uintptr_t)self + offset + quat_offset) = val.rotation;
+                    *(Vector3f*)((uintptr_t)self + offset + loc_offset) = val.translation;
+                    *(Vector3f*)((uintptr_t)self + offset + scale_offset) = val.scale3d;
+                }
+            }
+        }
+        // Handle Matrix
+        else if (struct_desc == get_matrix_struct()) {
+            if (value.is<lua::datatypes::Matrix4x4f>()) {
+                auto val = value.as<lua::datatypes::Matrix4x4f>();
+                if (is_ue5()) {
+                    *(lua::datatypes::Matrix4x4d*)((uintptr_t)self + offset) = val;
+                } else {
+                    *(lua::datatypes::Matrix4x4f*)((uintptr_t)self + offset) = val;
+                }
+            } else if (value.is<lua::datatypes::Matrix4x4d>()) {
+                auto val = value.as<lua::datatypes::Matrix4x4d>();
+                if (is_ue5()) {
+                    *(lua::datatypes::Matrix4x4d*)((uintptr_t)self + offset) = val;
+                } else {
+                    *(lua::datatypes::Matrix4x4f*)((uintptr_t)self + offset) = val;
+                }
+            }
+        }
+        else if (struct_desc == get_quat_struct()) {
             if (value.is<lua::datatypes::Quaternionf>()) {
                 const auto arg = value.as<lua::datatypes::Quaternionf>();
 
@@ -917,8 +1143,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
             }
         }
 
-
- else {
+        else {
             throw sol::error("Invalid argument type for struct property");
         }
 
@@ -929,7 +1154,8 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     // NONE
 }
 
-void set_property(sol::this_state s, uevr::API::UObject* self, const std::wstring& name, sol::object value, std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
+void set_property(sol::this_state s, uevr::API::UObject* self, const std::wstring& name, sol::object value,
+    std::vector<std::unique_ptr<wchar_t[]>>* dynamic_strings) {
     const auto c = self->get_class();
 
     if (c == nullptr) {
@@ -963,7 +1189,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
     bool ret_is_bool{false};
     bool ret_is_array{false};
 
-    //std::vector<uint8_t> dynamic_data{};
+    // std::vector<uint8_t> dynamic_data{};
     std::vector<std::unique_ptr<wchar_t[]>> dynamic_strings{};
     std::vector<std::vector<uevr::API::UObject*>> dynamic_object_arrays{};
     std::unordered_map<uevr::API::FProperty*, size_t> prop_to_arg_index{}; // For out parameters
@@ -1062,31 +1288,30 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
 
             const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
-            switch (inner_name_hash) {
+/*            switch (inner_name_hash) {
             case L"InterfaceProperty"_fnv:
             case L"ObjectProperty"_fnv:
-            case L"ClassProperty"_fnv:
-            {
+            case L"ClassProperty"_fnv: {
                 const auto arg_obj = args[args_index++];
-                
+
                 if (arg_obj.is<sol::lua_table>()) {
                     const auto arg_table = arg_obj.as<sol::lua_table>();
 
                     auto& arr = *(uevr::API::TArray<uevr::API::UObject*>*)&params[offset];
 
-                    //if (!prop_desc->is_out_param()) {
-                        auto& dynamic_arr = dynamic_object_arrays.emplace_back();
-                        dynamic_arr.resize(arg_table.size());
+                    // if (!prop_desc->is_out_param()) {
+                    auto& dynamic_arr = dynamic_object_arrays.emplace_back();
+                    dynamic_arr.resize(arg_table.size());
 
-                        for (size_t i = 0; i < arg_table.size(); ++i) {
-                            dynamic_arr[i] = arg_table[i + 1];
-                        }
+                    for (size_t i = 0; i < arg_table.size(); ++i) {
+                        dynamic_arr[i] = arg_table[i + 1];
+                    }
 
-                        arr.count = dynamic_arr.size();
-                        arr.capacity = dynamic_arr.size();
-                        arr.data = dynamic_arr.data();
+                    arr.count = dynamic_arr.size();
+                    arr.capacity = dynamic_arr.size();
+                    arr.data = dynamic_arr.data();
                     //} else {
-                       //throw sol::error("Cannot set an out parameter with an array (yet)");
+                    // throw sol::error("Cannot set an out parameter with an array (yet)");
                     //}
                 } else {
                     throw sol::error("Invalid argument type for ArrayProperty<ObjectProperty>");
@@ -1094,6 +1319,47 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
             }
             default:
                 continue;
+            }*/
+            const auto arg_obj = args[args_index++];
+
+            if (arg_obj.is<sol::lua_table>()) {
+            
+                const auto tbl = arg_obj.as<sol::lua_table>();
+                auto address = (uintptr_t)params[offset];
+            switch (inner_name_hash) {
+            case L"FloatProperty"_fnv:
+                create_tarray_from_table<float>(s, address, tbl);
+            case L"DoubleProperty"_fnv:
+                create_tarray_from_table<double>(s, address, tbl);
+            case L"ByteProperty"_fnv:
+                create_tarray_from_table<uint8_t>(s, address, tbl);
+            case L"Int8Property"_fnv:
+                create_tarray_from_table<int8_t>(s, address, tbl);
+            case L"Int16Property"_fnv:
+                create_tarray_from_table<int16_t>(s, address, tbl);
+            case L"UInt16Property"_fnv:
+                create_tarray_from_table<uint16_t>(s, address, tbl);
+            case L"IntProperty"_fnv:
+                create_tarray_from_table<int32_t>(s, address, tbl);
+            case L"UIntProperty"_fnv:
+            case L"UInt32Property"_fnv:
+                create_tarray_from_table<uint32_t>(s, address, tbl);
+            case L"UInt64Property"_fnv:
+                create_tarray_from_table<uint64_t>(s, address, tbl);
+            case L"Int64Property"_fnv:
+                create_tarray_from_table<int64_t>(s, address, tbl);
+            case L"NameProperty"_fnv:
+                create_tarray_from_table<uevr::API::FName>(s, address, tbl);
+            case L"WeakObjectProperty"_fnv:
+            case L"InterfaceProperty"_fnv:
+            case L"ClassProperty"_fnv:
+            case L"ObjectProperty"_fnv:
+                create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
+            case L"Property"_fnv:
+                create_tarray_from_table<void*>(s, address, tbl);
+            default:
+                throw sol::error("Setting TArray for this element type is not implemented");
+            }       
             }
         } else {
             // Might need to check if this causes issues
@@ -1104,6 +1370,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
 
             set_property(s, params.data(), fn, prop_desc, args[args_index++], &dynamic_strings);
         }
+
     }
 
     fn->call(self, params.data());
@@ -1112,7 +1379,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
     for (const auto& [prop, arg_index] : prop_to_arg_index) {
         const auto prop_c = prop->get_class();
         const auto prop_name_hash = ::utility::hash(prop_c->get_fname()->to_string());
-        
+
         if (args[arg_index].is<lua::datatypes::StructObject>()) {
             if (prop_name_hash != L"StructProperty"_fnv) {
                 throw sol::error("Invalid struct type for out parameter");
@@ -1124,9 +1391,11 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
 
             if (structprop->get_struct() != arg.desc) {
                 if (arg.desc != nullptr) {
-                    throw sol::error(std::format("Invalid struct type for out parameter (expected {}, got {})", ::utility::narrow(prop_c->get_fname()->to_string()), ::utility::narrow(arg.desc->get_fname()->to_string())));
+                    throw sol::error(std::format("Invalid struct type for out parameter (expected {}, got {})",
+                        ::utility::narrow(prop_c->get_fname()->to_string()), ::utility::narrow(arg.desc->get_fname()->to_string())));
                 } else {
-                    throw sol::error(std::format("Invalid struct type for out parameter (expected {})", ::utility::narrow(prop_c->get_fname()->to_string())));
+                    throw sol::error(std::format(
+                        "Invalid struct type for out parameter (expected {})", ::utility::narrow(prop_c->get_fname()->to_string())));
                 }
             }
 
@@ -1134,10 +1403,10 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
         } else if (args[arg_index].is<sol::lua_table>()) {
             auto tbl = args[arg_index].as<sol::lua_table>();
             const auto tbl_was_empty = tbl.empty();
-            auto result = prop_to_object(s, params.data(), prop, true);
+            auto result = prop_to_object(s, params.data(), return_prop, true);
 
             if (prop_name_hash == L"ArrayProperty"_fnv) {
-                auto& arr = *(uevr::API::TArray<uevr::API::UObject*>*)((uintptr_t)params.data() + prop->get_offset());
+                auto& arr = *(uevr::API::TArray<void*>*)((uintptr_t)params.data() + prop->get_offset());
 
                 if (!arr.empty() && tbl_was_empty) {
                     // Shallow copy the array into the table
@@ -1145,7 +1414,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
                     for (const auto& [k, v] : result_tbl) {
                         tbl[k] = v;
                     }
-                    
+
                     arr.~TArray(); // This should be safe, as this is not our array
                 } else {
                     tbl["result"] = result;
@@ -1156,7 +1425,8 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
         } else if (args[args_index].is<sol::nil_t>()) {
             // Do nothing
         } else {
-            throw sol::error(std::format("Invalid argument type for argument {} ({})", arg_index, ::utility::narrow(prop_c->get_fname()->to_string())));
+            throw sol::error(
+                std::format("Invalid argument type for argument {} ({})", arg_index, ::utility::narrow(prop_c->get_fname()->to_string())));
         }
     }
 
@@ -1186,17 +1456,15 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
             switch (inner_name_hash) {
             case L"InterfaceProperty"_fnv:
             case L"ClassProperty"_fnv:
-            case L"ObjectProperty"_fnv:
-            {
-                //printf("ArrayProperty<ObjectProperty> cleanup\n");
+            case L"ObjectProperty"_fnv: {
+                // printf("ArrayProperty<ObjectProperty> cleanup\n");
                 auto& arr = *(uevr::API::TArray<uevr::API::UObject*>*)&params[return_prop->get_offset()];
                 arr.~TArray();
                 break;
             }
-            default:
-            {
-                //printf("ArrayProperty cleanup\n");
-                // This will not work correctly on non-trivial types, but... we'll deal with that later
+            default: {
+                // printf("ArrayProperty cleanup\n");
+                //  This will not work correctly on non-trivial types, but... we'll deal with that later
                 auto& arr = *(uevr::API::TArray<void*>*)&params[return_prop->get_offset()];
                 arr.~TArray();
                 break;
@@ -1225,4 +1493,4 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, const std
 
     return call_function(s, self, fn, args);
 }
-}
+} // namespace lua::utility

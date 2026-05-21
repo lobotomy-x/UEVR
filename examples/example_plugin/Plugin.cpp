@@ -21,11 +21,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#include <sstream>
-#include <mutex>
-#include <memory>
-#include <locale>
 #include <codecvt>
+#include <locale>
+#include <memory>
+#include <mutex>
+#include <sstream>
 
 #include <Windows.h>
 #include <filesystem>
@@ -36,22 +36,19 @@ SOFTWARE.
 
 #include "rendering/d3d11.hpp"
 #include "rendering/d3d12.hpp"
- #include "rendering/shared.hpp"
+#include "rendering/shared.hpp"
 
 #include "uevr/Plugin.hpp"
-        #include <algorithm>
+#include <algorithm>
 #include <chrono>
-#include <string>
-#include <regex>
 #include <cmath>
-#include <limits>
 #include <fstream>
-
-
+#include <imgui_impl_win32.h>
+#include <limits>
+#include <regex>
+#include <string>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
-
-
 
 template <class InputIt1, class InputIt2, class BinaryPredicate>
 bool equals(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, BinaryPredicate p) {
@@ -311,7 +308,7 @@ void TextEditor::AddUndo(UndoRecord& aValue) {
     //	aValue.mBefore.mCursorPosition.mLine, aValue.mBefore.mCursorPosition.mColumn,
     //	aValue.mAdded.c_str(), aValue.mAddedStart.mLine, aValue.mAddedStart.mColumn, aValue.mAddedEnd.mLine, aValue.mAddedEnd.mColumn,
     //	aValue.mRemoved.c_str(), aValue.mRemovedStart.mLine, aValue.mRemovedStart.mColumn, aValue.mRemovedEnd.mLine,
-    //aValue.mRemovedEnd.mColumn, 	aValue.mAfter.mCursorPosition.mLine, aValue.mAfter.mCursorPosition.mColumn
+    // aValue.mRemovedEnd.mColumn, 	aValue.mAfter.mCursorPosition.mLine, aValue.mAfter.mCursorPosition.mColumn
     //	);
 
     mUndoBuffer.resize((size_t)(mUndoIndex + 1));
@@ -714,7 +711,7 @@ void TextEditor::HandleKeyboardInputs() {
         else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_A))
             SelectAll();
         else if (ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_Slash))
-          ToggleComment(shift);
+            ToggleComment(shift);
         else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGuiKey_Enter))
             EnterCharacter('\n', false);
         else if (!IsReadOnly() && !ctrl && !alt && ImGui::IsKeyPressed(ImGuiKey_Tab)) {
@@ -829,7 +826,7 @@ void TextEditor::Render() {
 
     auto lineNo = (int)floor(scrollY / mCharAdvance.y);
     auto globalLineMax = (int)mLines.size();
-    auto lineMax = max(0,min((int)mLines.size() - 1, lineNo + (int)floor((scrollY + contentSize.y) / mCharAdvance.y)));
+    auto lineMax = max(0, min((int)mLines.size() - 1, lineNo + (int)floor((scrollY + contentSize.y) / mCharAdvance.y)));
 
     // Deduce mTextStart by evaluating mLines size (global lineMax) plus two spaces as text width
     char buf[16];
@@ -1042,7 +1039,7 @@ void TextEditor::Render() {
         if (ImGui::IsItemClicked(0))
             ImGui::CloseCurrentPopup();
         if (command("Copy", "Ctrl-C", selected, ImGuiKey_C)) {
-          Copy();
+            Copy();
             ImGui::CloseCurrentPopup();
         } else if (command("Cut", "Ctrl-X", selected, ImGuiKey_X)) {
             Cut();
@@ -1053,7 +1050,7 @@ void TextEditor::Render() {
         } else if (command("Select All", "Ctrl-A", selected, ImGuiKey_A)) {
             SelectAll();
             ImGui::CloseCurrentPopup();
-        } 
+        }
         ImGui::EndPopup();
     }
     ImGui::Dummy(ImVec2((longest + 2), mLines.size() * mCharAdvance.y));
@@ -3048,7 +3045,6 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::C() {
     return langDef;
 }
 
-
 const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua() {
     static bool inited = false;
     static LanguageDefinition langDef;
@@ -3059,24 +3055,23 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua() {
         for (auto& k : keywords)
             langDef.mKeywords.insert(k);
 
-        static const char* const identifiers[] = {"assert", "collectgarbage", "dofile", "error", "getmetatable", "ipairs",
-            "load", "next", "pairs", "pcall", "print", "rawequal", "rawlen", "rawget", "rawset", "select", "setmetatable",
-            "tonumber", "tostring", "type", "xpcall", "_G", "_VERSION", "_ENV", "and", "not", "or",  
-            "create", "resume", "running", "status", "wrap", "yield", "isyieldable",
-            "lines", "open", "output", "read", "tmpfile", "type", "write", "close", "flush", "lines", "read", "seek", "setvbuf",
-            "write", "__gc", "__tostring", "abs", "acos", "asin", "atan", "ceil", "cos", "deg", "exp", "tointeger", "floor", "fmod", "ult",
-            "log", "max", "min", "modf", "rad", "random", "randomseed", "sin", "sqrt", "string", "tan", "type", "cosh", "sinh",
-            "tanh", "pow", "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall",
-            "preload", "cpath", "path", "searchers", "loaded", "module", "require", "clock", "date", "difftime", "execute", "exit",
-            "getenv", "remove", "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len",
-            "lower", "match", "rep", "reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack",
-            "remove", "move", "sort", "offset", "codepoint", "char", "len", "codes", "charpattern", "coroutine", "table", "io", "os", "uevr", "api",
+        static const char* const identifiers[] = {"assert", "collectgarbage", "dofile", "error", "getmetatable", "ipairs", "load", "next",
+            "pairs", "pcall", "print", "rawequal", "rawlen", "rawget", "rawset", "select", "setmetatable", "tonumber", "tostring", "type",
+            "xpcall", "_G", "_VERSION", "_ENV", "and", "not", "or", "create", "resume", "running", "status", "wrap", "yield", "isyieldable",
+            "lines", "open", "output", "read", "tmpfile", "type", "write", "close", "flush", "lines", "read", "seek", "setvbuf", "write",
+            "__gc", "__tostring", "abs", "acos", "asin", "atan", "ceil", "cos", "deg", "exp", "tointeger", "floor", "fmod", "ult", "log",
+            "max", "min", "modf", "rad", "random", "randomseed", "sin", "sqrt", "string", "tan", "type", "cosh", "sinh", "tanh", "pow",
+            "frexp", "ldexp", "log10", "pi", "huge", "maxinteger", "mininteger", "loadlib", "searchpath", "seeall", "preload", "cpath",
+            "path", "searchers", "loaded", "module", "require", "clock", "date", "difftime", "execute", "exit", "getenv", "remove",
+            "rename", "setlocale", "time", "tmpname", "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", "lower", "match",
+            "rep", "reverse", "sub", "upper", "pack", "packsize", "unpack", "concat", "maxn", "insert", "pack", "unpack", "remove", "move",
+            "sort", "offset", "codepoint", "char", "len", "codes", "charpattern", "coroutine", "table", "io", "os", "uevr", "api",
             " UEVR_UObjectHook", "UEVR_UObject", "UEVR_UClass", "UEVR_UFunction", "as_struct", "as_class", "as_function", "get_class",
             "super", "to_string", "get_fname", "find_uobject", "to_uobject", "get_player_controller", "add_component_by_class",
             "spawn_object", "get_local_pawn", "get_address", "uevr.sdk.callbacks", "is_runtime_ready", "is_hmd_active", "get_uengine",
-            "Vector3f", "Vector4f", "Vector2f", "Quaternionf", "Quaterniond",
-            "get_objects_matching",
-            "string", "utf8", "bit32", "math", "package"};
+            "Vector3f", "Vector4f", "Vector2f", "Quaternionf", "Quaterniond", "Vector3d", "Vector2f", "Vector2d", "Vector4d",
+            "UEVR_Vector3f", "UEVR_Vector3d", "UEVR_Rotatorf", "UEVR_Quaternionf", "Matrix4x4f", "Matrix4x4d", "Transformf", "Transformd",
+            "get_objects_matching", "string", "utf8", "bit32", "math", "package"};
         for (auto& k : identifiers) {
             Identifier id;
             id.mDeclaration = "Built-in function";
@@ -3110,10 +3105,10 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua() {
 
 using namespace uevr;
 
-#define PLUGIN_LOG_ONCE(...) \
-    static bool _logged_ = false; \
-    if (!_logged_) { \
-        _logged_ = true; \
+#define PLUGIN_LOG_ONCE(...)               \
+    static bool _logged_ = false;          \
+    if (!_logged_) {                       \
+        _logged_ = true;                   \
         API::get()->log_info(__VA_ARGS__); \
     }
 static std::string lua_text{};
@@ -3228,7 +3223,8 @@ public:
         g_d3d11.render_imgui_vr(context, rtv);
     }
 
-    void on_post_render_vr_framework_dx12(ID3D12GraphicsCommandList* command_list, ID3D12Resource* rt, D3D12_CPU_DESCRIPTOR_HANDLE* rtv) override {
+    void on_post_render_vr_framework_dx12(
+        ID3D12GraphicsCommandList* command_list, ID3D12Resource* rt, D3D12_CPU_DESCRIPTOR_HANDLE* rtv) override {
         PLUGIN_LOG_ONCE("Post Render VR Framework DX12");
 
         const auto vr_active = API::get()->param()->vr->is_hmd_active();
@@ -3247,12 +3243,6 @@ public:
 
         ImGui_ImplDX12_NewFrame();
         g_d3d12.render_imgui_vr(command_list, rtv);
-    }
-
-    bool on_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override { 
-        ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam);
-
-        return !ImGui::GetIO().WantCaptureMouse && !ImGui::GetIO().WantCaptureKeyboard;
     }
 
     void on_custom_event(const char* event_name, const char* event_data) override {
@@ -3364,8 +3354,6 @@ public:
             API::get()->log_error("Failed to find console manager");
         }
     }
-    
-
 
     void test_engine(API::UGameEngine* engine) {
         // Log the UEngine name.
@@ -3422,7 +3410,6 @@ public:
                 if (local_players.count > 0 && local_players.data != nullptr) {
                     const auto local_player = local_players.data[0];
 
-                    
                 } else {
                     API::get()->log_error("Failed to find LocalPlayers");
                 }
@@ -3500,7 +3487,7 @@ public:
             if (openwindow) {
                 internal_frame();
             }
-            if( ImGui::IsKeyReleased(ImGuiKey_F2))
+            if (ImGui::IsKeyReleased(ImGuiKey_F2))
                 openwindow = !openwindow;
 
             ImGui::EndFrame();
@@ -3508,9 +3495,7 @@ public:
         }
     }
 
-    void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
-        PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-    }
+    void on_post_engine_tick(API::UGameEngine* engine, float delta) override { PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta); }
 
     void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
         PLUGIN_LOG_ONCE("Pre Slate Draw Window");
@@ -3520,9 +3505,8 @@ public:
         PLUGIN_LOG_ONCE("Post Slate Draw Window");
     }
 
-    void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters, 
-                                             UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double) override
-    {
+    void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
+        UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double) override {
         PLUGIN_LOG_ONCE("Pre Calculate Stereo View Offset");
 
         auto rotationd = (UEVR_Rotatord*)rotation;
@@ -3535,17 +3519,18 @@ public:
         }
     }
 
-    void on_post_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters, 
-                                              UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
-    {
+    void on_post_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
+        UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double) {
         PLUGIN_LOG_ONCE("Post Calculate Stereo View Offset");
     }
 
-    void on_pre_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas) {
+    void on_pre_viewport_client_draw(
+        UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas) {
         PLUGIN_LOG_ONCE("Pre Viewport Client Draw");
     }
 
-    void on_post_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas) {
+    void on_post_viewport_client_draw(
+        UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle canvas) {
         PLUGIN_LOG_ONCE("Post Viewport Client Draw");
     }
 
@@ -3589,17 +3574,16 @@ private:
         return true;
     }
 
-    std::string_view read_file(std::filesystem::path path ){
-            std::ifstream inputFile(path.string());
-            std::stringstream buffer;
-            buffer << inputFile.rdbuf();             // Read the entire file buffer into the stringstream
-            std::string fileContents = buffer.str(); // Convert the stringstream to a std::string
-            return fileContents;
+    std::string_view read_file(std::filesystem::path path) {
+        std::ifstream inputFile(path.string());
+        std::stringstream buffer;
+        buffer << inputFile.rdbuf();             // Read the entire file buffer into the stringstream
+        std::string fileContents = buffer.str(); // Convert the stringstream to a std::string
+        return fileContents;
     }
 
-void spawn_mesh_widget()
-{ 
-    API::get()->dispatch_lua_event("exec", R"(
+    void spawn_mesh_widget() {
+        API::get()->dispatch_lua_event("exec", R"(
             local function func()
                 local api = uevr.api
                 local pawn = api:get_local_pawn(0)
@@ -3610,302 +3594,284 @@ void spawn_mesh_widget()
                 
 
                     )");
+    }
 
+    void internal_frame() {
 
-}
-
-    void internal_frame() {    
-        
-   
-            ImGui::Begin("Lua Exec");  
-            auto size = ImGui::GetContentRegionAvail();
-            static bool open{false};
-            ImGui::BeginChild("Console", ImVec2(size.x, size.y * 0.8f), true, ImGuiWindowFlags_AlwaysAutoResize);           
-            if (ImGui::Button("Toggle Full Editor")) {
-                full_editor = !full_editor; 
-                if (full_editor) {
-                                    text_editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
-                                    text_editor.SetPalette(TextEditor::GetDarkPalette());
-                                    text_editor.SetTabSize(2);
-                                    text_editor.SetShowWhitespaces(false);
-                                    text_editor.SetColorizerEnable(true);
-                                    text_editor.SetText(lua_text);
-                    
-                    }        
-                }
-                size = ImGui::GetContentRegionAvail();
-                if (open) {
-                       size.y *= 0.25f;
-                }
+        ImGui::Begin("Lua Exec");
+        auto size = ImGui::GetContentRegionAvail();
+        static bool open{false};
+        ImGui::BeginChild("Console", ImVec2(size.x, size.y * 0.8f), true, ImGuiWindowFlags_AlwaysAutoResize);
+        if (ImGui::Button("Toggle Full Editor")) {
+            full_editor = !full_editor;
             if (full_editor) {
-                  
-                    text_editor.Render("Lua Editor");
-                    if (text_editor.IsTextChanged()) {
-                        lua_text = text_editor.GetText();
-                    }
+                text_editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
+                text_editor.SetPalette(TextEditor::GetDarkPalette());
+                text_editor.SetTabSize(2);
+                text_editor.SetShowWhitespaces(false);
+                text_editor.SetColorizerEnable(true);
+                text_editor.SetText(lua_text);
             }
-            else {
-                static char input[4096]{};
-                auto space = ImGui::GetContentRegionAvail();
-                auto width = min(space.x * 0.75f, 250);
-                auto linect = 3;
-                for (auto c : input) {
-                    if (c == '\n') {
-                        ++linect;
-                    }
-                }
-                auto height = linect * ImGui::CalcTextSize("T").y;
-                if (ImGui::InputTextMultiline("##luainput", input, sizeof(input), ImGui::GetContentRegionAvail(),
-                        ImGuiInputTextFlags_AllowTabInput |
-                            ImGuiInputTextFlags_CallbackHistory)) {
-                    lua_text = input;
-                }
+        }
+        size = ImGui::GetContentRegionAvail();
+        if (open) {
+            size.y *= 0.25f;
+        }
+        if (full_editor) {
 
+            text_editor.Render("Lua Editor");
+            if (text_editor.IsTextChanged()) {
+                lua_text = text_editor.GetText();
+            }
+        } else {
+            static char input[4096]{};
+            auto space = ImGui::GetContentRegionAvail();
+            auto width = min(space.x * 0.75f, 250);
+            auto linect = 3;
+            for (auto c : input) {
+                if (c == '\n') {
+                    ++linect;
+                }
+            }
+            auto height = linect * ImGui::CalcTextSize("T").y;
+            if (ImGui::InputTextMultiline("##luainput", input, sizeof(input), ImGui::GetContentRegionAvail(),
+                    ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackHistory)) {
+                lua_text = input;
+            }
+        }
+
+        ImGui::EndChild();
+        if (ImGui::Button("Execute")) {
+            API::get()->dispatch_lua_event("exec", lua_text);
+        }
+        ImGui::SameLine();
+        static auto filepath = API::get()->get_persistent_dir() / "data";
+        static char input[256]{};
+        if (ImGui::InputText("Name", input, sizeof(input))) {
+            filepath /= input;
+        }
+        if (ImGui::Button("Save") && !filepath.string().empty()) {
+            std::filesystem::create_directories(filepath.parent_path());
+
+            std::ofstream file{filepath};
+
+            file << lua_text;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("Browse for Script")) {
+            open = !open;
+        }
+        if (open) {
+            auto get_sorted_entries = [](const std::string& path, bool dirs_first) {
+                std::vector<std::pair<std::string, bool>> entries;
+                for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                    std::string name = entry.path().filename().string();
+                    if (entry.path().has_extension() && entry.path().extension() != ".lua")
+                        continue;
+                    entries.emplace_back(name, entry.is_directory());
+                }
+                std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
+                    if (a.second != b.second)
+                        return dirs_first ? a.second > b.second : a.second < b.second;
+                    return a.first < b.first;
+                });
+                return entries;
+            };
+
+            const auto activated_key = [](bool is_selected = false) -> bool {
+                return ImGui::IsMouseDoubleClicked(0) ||
+                       is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
+                                          ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown));
+            };
+            ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0, 0));
+            ImGui::BeginPopupModal("File Browser", &open, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            if (ImGui::Button("Close")) {
+
+                open = false;
+                ImGui::CloseCurrentPopup();
+            }
+            static const std::filesystem::path scripts_path = API::get()->get_persistent_dir(L"scripts");
+            static const std::filesystem::path global_path = API::get()->get_persistent_dir(L"..\\UEVR\\scripts");
+            static const std::filesystem::path unrealvrmod = API::get()->get_persistent_dir(L"..");
+
+            static const std::filesystem::path downloads = std::filesystem::path(getenv("USERPROFILE")) / "Downloads";
+            static std::string current_path = scripts_path.string();
+            static std::string filter = "";
+            static char filter_buffer[256] = "";
+            bool dirs_first = true;
+            static bool only_lua = true;
+            static int selected_entry = -1;
+            static std::string script_path{};
+            ImGui::BeginChild("###filebrowser", ImVec2(700, 400), true,
+                ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            // Set focus when opened
+            if (ImGui::IsWindowAppearing()) {
+                ImGui::SetWindowFocus();
+                selected_entry = -1;
             }
 
-            ImGui::EndChild();
-            if (ImGui::Button("Execute")) {
-                 API::get()->dispatch_lua_event("exec", lua_text);
+            ImGui::Text("Current Path: %s", current_path.c_str());
+
+            // Filter input
+            ImGui::InputText("Filter", filter_buffer, sizeof(filter_buffer), ImGuiInputTextFlags_EscapeClearsAll);
+            filter = filter_buffer;
+            static std::string copy_buffer{};
+            // Navigation buttons
+            bool can_go_up = std::filesystem::path(current_path).has_parent_path() &&
+                             std::filesystem::path(current_path).parent_path().string().find("UnrealVRMod") != std::string::npos;
+            if ((can_go_up &&
+                    (ImGui::Button("Up") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow))) ||
+                ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+                current_path = std::filesystem::path(current_path).parent_path().string();
+                selected_entry = -1;
             }
             ImGui::SameLine();
-            static auto filepath = API::get()->get_persistent_dir() / "data"; 
-            static char input[256]{};
-            if (ImGui::InputText("Name", input, sizeof(input))) {
-                  filepath /= input; 
+            if (ImGui::Button("Home") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
+                current_path = scripts_path.string();
+                selected_entry = -1;
             }
-            if (ImGui::Button("Save") && !filepath.string().empty()) {
-                std::filesystem::create_directories(filepath.parent_path());
-
-                std::ofstream file{filepath};
-
-                file << lua_text;                                                                         
+            ImGui::SameLine();
+            if (ImGui::Button("Global") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
+                current_path = global_path.string();
+                selected_entry = -1;
             }
-            ImGui::SameLine();  
 
-            if (ImGui::Button("Browse for Script")) {
-                open = ! open;
-            }
-            if (open) 
-            {
-                auto get_sorted_entries = [](const std::string& path, bool dirs_first) {
-                    std::vector<std::pair<std::string, bool>> entries;
-                    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-                        std::string name = entry.path().filename().string();
-                        if (entry.path().has_extension() && entry.path().extension() != ".lua")
-                            continue;
+            ImGui::BeginChild("FileList", ImVec2(0, 0), true);
+            try {
+                // Allow navigating to absolute path if entered in filter (for testing)
+                if (std::filesystem::path(filter).is_absolute() && std::filesystem::path(filter).has_stem() &&
+                    std::filesystem::exists(std::filesystem::path(filter))) {
+                    current_path = std::filesystem::path(filter).string();
+                    filter.clear();
+                    strncpy_s(filter_buffer, filter.c_str(), sizeof(filter_buffer));
+                    selected_entry = -1;
+                }
+
+                // Toggle directories first/last
+
+                if (ImGui::ArrowButton("##dirs_first", dirs_first ? ImGuiDir_Down : ImGuiDir_Up)) {
+                    dirs_first = !dirs_first;
+                }
+                ImGui::SameLine();
+                ImGui::Text(dirs_first ? "Sort Files First" : "Sort Directories First");
+                ImGui::Separator();
+
+                // Collect entries
+                std::vector<std::pair<std::string, bool>> entries; // {name, is_directory}
+                for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
+                    std::string name = entry.path().filename().string();
+                    if (only_lua && entry.is_regular_file() && entry.path().extension() != ".lua") {
+                        continue;
+                    }
+                    if (filter.empty() || name.find(filter) != std::string::npos) {
                         entries.emplace_back(name, entry.is_directory());
                     }
-                    std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
-                        if (a.second != b.second)
-                            return dirs_first ? a.second > b.second : a.second < b.second;
-                        return a.first < b.first;
-                    });
-                    return entries;
-                };
-
-                const auto activated_key = [](bool is_selected = false) -> bool {
-                    return ImGui::IsMouseDoubleClicked(0) ||
-                           is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
-                                              ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown));
-                };
-                ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0,0));
-                ImGui::BeginPopupModal("File Browser", &open, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                if (ImGui::Button("Close")) 
-                {
-                
-                        open = false;
-                    ImGui::CloseCurrentPopup();                
                 }
-                static const std::filesystem::path scripts_path = API::get()->get_persistent_dir(L"scripts");
-                static const std::filesystem::path global_path = API::get()->get_persistent_dir(L"..\\UEVR\\scripts");
-                static const std::filesystem::path unrealvrmod = API::get()->get_persistent_dir(L"..");
-   
-                    static const std::filesystem::path downloads = std::filesystem::path(getenv("USERPROFILE")) / "Downloads";
-                    static std::string current_path = scripts_path.string();
-                    static std::string filter = "";
-                    static char filter_buffer[256] = "";
-                    bool dirs_first = true;
-                    static bool only_lua = true;
-                    static int selected_entry = -1;
-                    static std::string script_path{};
-                    ImGui::BeginChild("###filebrowser", ImVec2(700, 400), true,
-                                ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                            // Set focus when opened
-                            if (ImGui::IsWindowAppearing()) {
-                                ImGui::SetWindowFocus();
+
+                // Sort entries
+                std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
+                    if (a.second != b.second)
+                        return dirs_first ? a.second > b.second : a.second < b.second;
+                    return a.first < b.first;
+                });
+
+                // Custom nav inputs - Vr compatible gamepad controls, arrow key movements, or mouse only
+                ImGuiIO& io = ImGui::GetIO();
+                float scroll_y = ImGui::GetScrollY();
+                float scroll_max_y = ImGui::GetScrollMaxY();
+
+                bool no_mouse_input = io.MouseDelta.x == 0.0f && io.MouseDelta.y == 0.0f && !ImGui::IsMouseClicked(0);
+                int entry_count = entries.size();
+                if (no_mouse_input && entry_count > 0) {
+                    static int prev_selected = selected_entry;
+                    if (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickUp)) {
+                        selected_entry = (selected_entry <= 0) ? entry_count - 1 : selected_entry - 1;
+                    }
+                    if (ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickDown)) {
+                        selected_entry = (selected_entry >= entry_count - 1) ? 0 : selected_entry + 1;
+                    }
+
+                    selected_entry = std::clamp(selected_entry, -1, entry_count - 1);
+                }
+
+                // Render entries
+                for (int i = 0; i < entries.size(); ++i) {
+                    const auto& [name, is_directory] = entries[i];
+                    std::string display_name = is_directory ? name + "/" : name;
+                    bool is_lua = !is_directory && std::filesystem::path(name).extension() == ".lua";
+
+                    bool is_selected = (i == selected_entry);
+
+                    ImGui::PushID(i);
+
+                    // Color styling
+                    if (is_selected) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow
+                    }
+
+                    // Selectable item
+                    if (ImGui::Selectable(display_name.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        selected_entry = i;
+                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
+                        if (is_lua)
+                            script_path = entry_path.string();
+                        ImGui::SetScrollHereY(i / (entries.size() - 1));
+
+                        if (ImGui::IsMouseDoubleClicked(0)) {
+
+                            if (is_directory) {
+                                current_path = entry_path.string();
                                 selected_entry = -1;
+                                script_path.clear();
+                            } else if (is_lua) {
+                                lua_text = read_file(script_path);
+
+                                text_editor.SetText(lua_text.data());
+                                open = false;
+                                ImGui::CloseCurrentPopup();
                             }
-
-                            ImGui::Text("Current Path: %s", current_path.c_str());
-
-                            // Filter input
-                            ImGui::InputText("Filter", filter_buffer, sizeof(filter_buffer), ImGuiInputTextFlags_EscapeClearsAll);
-                            filter = filter_buffer;
-                            static std::string copy_buffer{};
-                            // Navigation buttons
-                            bool can_go_up =
-                                std::filesystem::path(current_path).has_parent_path() &&
-                                std::filesystem::path(current_path).parent_path().string().find("UnrealVRMod") != std::string::npos;
-                            if ((can_go_up && (ImGui::Button("Up") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight) ||
-                                                  ImGui::IsKeyPressed(ImGuiKey_LeftArrow))) ||
-                                ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
-                                current_path = std::filesystem::path(current_path).parent_path().string();
-                                selected_entry = -1;
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button("Home") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
-                                current_path = scripts_path.string();
-                                selected_entry = -1;
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button("Global") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
-                                current_path = global_path.string();
-                                selected_entry = -1;
-                            }
-
-              
-
-                            ImGui::BeginChild("FileList", ImVec2(0, 0), true);
-                            try {
-                                // Allow navigating to absolute path if entered in filter (for testing)
-                                if (std::filesystem::path(filter).is_absolute() && std::filesystem::path(filter).has_stem() &&
-                                    std::filesystem::exists(std::filesystem::path(filter))) {
-                                    current_path = std::filesystem::path(filter).string();
-                                    filter.clear();
-                                    strncpy_s(filter_buffer, filter.c_str(), sizeof(filter_buffer));
-                                    selected_entry = -1;
-                                }
-
-                                // Toggle directories first/last
-
-                                if (ImGui::ArrowButton("##dirs_first", dirs_first ? ImGuiDir_Down : ImGuiDir_Up)) {
-                                    dirs_first = !dirs_first;
-                                }
-                                ImGui::SameLine();
-                                ImGui::Text(dirs_first ? "Sort Files First" : "Sort Directories First");
-                                ImGui::Separator();
-
-                                // Collect entries
-                                std::vector<std::pair<std::string, bool>> entries; // {name, is_directory}
-                                for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
-                                    std::string name = entry.path().filename().string();
-                                    if (only_lua && entry.is_regular_file() && entry.path().extension() != ".lua") {
-                                        continue;
-                                    }
-                                    if (filter.empty() || name.find(filter) != std::string::npos) {
-                                        entries.emplace_back(name, entry.is_directory());
-                                    }
-                                }
-
-                                // Sort entries
-                                std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
-                                    if (a.second != b.second)
-                                        return dirs_first ? a.second > b.second : a.second < b.second;
-                                    return a.first < b.first;
-                                });
-
-                                // Custom nav inputs - Vr compatible gamepad controls, arrow key movements, or mouse only
-                                ImGuiIO& io = ImGui::GetIO();
-                                float scroll_y = ImGui::GetScrollY();
-                                float scroll_max_y = ImGui::GetScrollMaxY();
-
-                                bool no_mouse_input = io.MouseDelta.x == 0.0f && io.MouseDelta.y == 0.0f && !ImGui::IsMouseClicked(0);
-                                int entry_count = entries.size();
-                                if (no_mouse_input && entry_count > 0) {
-                                    static int prev_selected = selected_entry;
-                                    if (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickUp)) {
-                                        selected_entry = (selected_entry <= 0) ? entry_count - 1 : selected_entry - 1;
-                                    }
-                                    if (ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickDown)) {
-                                        selected_entry = (selected_entry >= entry_count - 1) ? 0 : selected_entry + 1;
-                                    }
-
-                                    selected_entry = std::clamp(selected_entry, -1, entry_count - 1);
-                                }
-
-                                // Render entries
-                                for (int i = 0; i < entries.size(); ++i) {
-                                    const auto& [name, is_directory] = entries[i];
-                                    std::string display_name = is_directory ? name + "/" : name;
-                                    bool is_lua = !is_directory && std::filesystem::path(name).extension() == ".lua";
-
-
-                                    bool is_selected = (i == selected_entry);
-
-                                    ImGui::PushID(i);
-
-                                    // Color styling
-                                    if (is_selected) {
-                                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow
-                                    } 
-
-                                    // Selectable item
-                                    if (ImGui::Selectable(display_name.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
-                                        selected_entry = i;
-                                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
-                                        if (is_lua)
-                                            script_path = entry_path.string();
-                                        ImGui::SetScrollHereY(i / (entries.size() - 1));
-
-                                        if (ImGui::IsMouseDoubleClicked(0)) {
-
-                                            if (is_directory) {
-                                                current_path = entry_path.string();
-                                                selected_entry = -1;
-                                                script_path.clear();
-                                            } else if (is_lua){
-                                                lua_text = read_file(script_path);
-
-                                                text_editor.SetText(lua_text.data());
-                                                open = false;
-                                                ImGui::CloseCurrentPopup();                
-
-                                            }
-                                        }
-                                    }
-
-                                    if (is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
-                                                           ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown))) {
-                   
-                                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
-                                        if (is_directory) {
-                                            current_path = entry_path.string();
-                                            ImGui::SetScrollHereY();
-                                            selected_entry = -1;
-                                            script_path.clear();
-                                        } else if (is_lua) {
-                                            lua_text = read_file(script_path);
-
-                                            text_editor.SetText(lua_text.data());
-                                            open = false;
-                                            ImGui::CloseCurrentPopup();          
-
-                                        }
-                                    }
-
-                                    ImGui::PopStyleColor(is_selected  ? 1 : 0);
-                                    ImGui::PopID();
-                                }
-
-                            } catch (const std::filesystem::filesystem_error& e) {
-                                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", e.what());
-                            }
-                            ImGui::EndChild();
-                            ImGui::EndChild();
-                            ImGui::EndPopup();
                         }
+                    }
 
-            ImGui::End();
+                    if (is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
+                                           ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown))) {
 
-       
-         
+                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
+                        if (is_directory) {
+                            current_path = entry_path.string();
+                            ImGui::SetScrollHereY();
+                            selected_entry = -1;
+                            script_path.clear();
+                        } else if (is_lua) {
+                            lua_text = read_file(script_path);
+
+                            text_editor.SetText(lua_text.data());
+                            open = false;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+
+                    ImGui::PopStyleColor(is_selected ? 1 : 0);
+                    ImGui::PopID();
+                }
+
+            } catch (const std::filesystem::filesystem_error& e) {
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", e.what());
+            }
+            ImGui::EndChild();
+            ImGui::EndChild();
+            ImGui::EndPopup();
+        }
+
+        ImGui::End();
     }
 
 private:
     HWND m_wnd{};
     bool m_initialized{false};
     bool m_was_rendering_desktop{false};
-    std::vector<std::string> lua_chunks {};
+    std::vector<std::string> lua_chunks{};
 
     std::recursive_mutex m_imgui_mutex{};
     bool full_editor{false};

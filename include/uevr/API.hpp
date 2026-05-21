@@ -750,6 +750,14 @@ public:
             static const auto fn = initialize()->is_pod;
             return fn(to_handle());
         }
+        //bool is_editable() {
+        //    static const auto fn = initialize()->get_property_flags;
+        //    return (fn(to_handle()) & (uint64_t)0x0000000000000001) != 0;   
+        //}
+        //bool is_read_only() {
+        //    static const auto fn = initialize()->get_property_flags;
+        //    return (fn(to_handle()) & (uint64_t)0x0000000000000010) != 0;
+        //}
 
     private:
         static inline const UEVR_FPropertyFunctions* s_functions{nullptr};
@@ -1165,9 +1173,45 @@ public:
     // because these have never changed, if they do its because of bespoke code
     template <typename T>
     struct TArray {
-        T* data;
-        int32_t count;
-        int32_t capacity;
+        T* data{nullptr};
+        int32_t count{0};
+        int32_t capacity{0};
+
+        // Move constructor
+        TArray(TArray&& other) noexcept
+            : data(other.data)
+            , count(other.count)
+            , capacity(other.capacity) {
+            other.data = nullptr;
+            other.count = 0;
+            other.capacity = 0;
+        }
+
+        // Move assignment operator
+        TArray& operator=(TArray&& other) noexcept {
+            if (&other != this) {
+                if (data != nullptr) {
+                    this->~TArray(); // call destructor to free the current data
+                }
+
+                data = other.data;
+                count = other.count;
+                capacity = other.capacity;
+
+                other.data = nullptr;
+                other.count = 0;
+                other.capacity = 0;
+            }
+
+            return *this;
+        }
+
+        TArray() = default;
+
+        // Delete copy constructor and copy assignment operator
+        TArray(const TArray&) = delete;
+        TArray& operator=(const TArray&) = delete;
+
 
         ~TArray() {
             if (data != nullptr) {
@@ -1200,9 +1244,28 @@ public:
             return data + count;
         }
 
+        // operator[]
+        T& operator[](int32_t index) { return data[index]; }
+
+        const T& operator[](int32_t index) const { return data[index]; }
+
+        // size
+        int32_t size() const { return count; }
+
+
         bool empty() const {
             return count == 0 || data == nullptr;
         }
+
+         void clear(bool shrink = true) {
+            if (data != nullptr) {
+                FMalloc::get()->free(data);
+                data = nullptr;
+            }
+
+            count = 0;
+        }
+
     };
 
 /*template <UObject T> class UObjectReference {

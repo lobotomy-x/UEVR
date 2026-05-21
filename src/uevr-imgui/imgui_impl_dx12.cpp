@@ -239,7 +239,7 @@ static void ImGui_ImplDX12_SetupRenderState(
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
-    command_list->RSSetViewports(1, &vp);
+    command_list->RSSetViewports(3, &vp);
 
     // Bind shader and vertex buffers
     unsigned int stride = sizeof(ImDrawVert);

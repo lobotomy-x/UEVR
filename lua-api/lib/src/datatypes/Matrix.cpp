@@ -1,6 +1,6 @@
 #include <datatypes/StructObject.hpp>
 #include "datatypes/Matrix.hpp"
-
+#include "datatypes/Transform.hpp"
 
 namespace lua::datatypes {
 
@@ -25,8 +25,8 @@ void bind_matrix_struct(sol::state_view& lua) {
         >(),
         "clone", [](Matrix4x4f& m) -> Matrix4x4f { return m; },
         "identity", []() { return glm::identity<Matrix4x4f>(); },
-        "to_quat", [] (Matrix4x4f& m) -> Quaternionf{ return glm::quat(m); },
-        "inverse", [] (Matrix4x4f& m) { return glm::inverse(m); },
+        "to_quat", [] (Matrix4x4f& m) -> Quaternionf{ return glm::quat(m); }, 
+        "inverse", [](Matrix4x4f& m) -> Matrix4x4f { return glm::inverse(m); },
         "invert", [] (Matrix4x4f& m) { m = glm::inverse(m); },
 //        "interpolate", [](Matrix4x4f& m1, Matrix4x4f& m2, float t) { return glm::interpolate(m1, m2, t); },
  //       "matrix_rotation", [](Matrix4x4f& m) { return glm::extractMatrixRotation(m); },
@@ -39,6 +39,23 @@ void bind_matrix_struct(sol::state_view& lua) {
                 return lhs * rhs;
             }
         ),
+        "decompose",
+        [](const Matrix4x4f& m) -> Transformf {
+            auto t = Transformf();
+            glm::vec3 scale, translation, skew;
+            glm::quat rotation;
+            glm::vec4 perspective;
+            glm::decompose(m, scale, rotation, translation, skew, perspective);
+            t.translation = translation;
+            t.rotation = rotation;
+            t.scale3d = scale;
+            return t;
+        },
+        "transform_point", [](const Matrix4x4f& m, const Vector3f& p) { return Vector3f(m * glm::vec4(p, 1.0f)); },
+        "transform_vector",
+        [](const Matrix4x4f& m, const Vector3f& v) { return Vector3f(m * glm::vec4(v, 0.0f)); },
+
+
         sol::meta_function::index, [](sol::this_state s, Matrix4x4f& lhs, sol::object index_obj) -> sol::object {
             if (!index_obj.is<int>()) {
                 return sol::make_object(s, sol::lua_nil);
@@ -68,7 +85,7 @@ void bind_matrix_struct(sol::state_view& lua) {
         >(),
         "clone", [](Matrix4x4d& m) -> Matrix4x4d { return m; },
         "identity", []() { return glm::identity<Matrix4x4d>(); },
-        "to_quat", [] (Matrix4x4d& m) -> Quaterniond{ return glm::quat(m); },
+        "to_quat", [] (Matrix4x4d& m) -> Quaterniond{ return glm::dquat(m); },
         "inverse", [] (Matrix4x4d& m) { return glm::inverse(m); },
         "invert", [] (Matrix4x4d& m) { m = glm::inverse(m); },
 //        "interpolate", [](Matrix4x4f& m1, Matrix4x4f& m2, float t) { return glm::interpolate(m1, m2, t); },
@@ -82,6 +99,25 @@ void bind_matrix_struct(sol::state_view& lua) {
                 return lhs * rhs;
             }
         ),
+        "decompose",
+        [](const Matrix4x4d& m) -> Transformd {
+            auto t = Transformd();
+            glm::dvec3 scale, translation, skew;
+            glm::dquat rotation;
+            glm::dvec4 perspective;
+            glm::decompose(m, scale, rotation, translation, skew, perspective);
+            t.translation = translation;
+            t.rotation = rotation;
+            t.scale3d = scale;
+            return t;
+        },
+        "transform_point", 
+                [](const Matrix4x4d& m, const Vector3d& p) { return Vector3d(m * glm::dvec4(p, 1.0f)); }, 
+        "transform_vector",
+                [](const Matrix4x4d& m, const Vector3d& v) { return Vector3d(m * glm::dvec4(v, 0.0f)); },
+
+
+
         sol::meta_function::index, [](sol::this_state s, Matrix4x4d& lhs, sol::object index_obj) -> sol::object {
             if (!index_obj.is<int>()) {
                 return sol::make_object(s, sol::lua_nil);

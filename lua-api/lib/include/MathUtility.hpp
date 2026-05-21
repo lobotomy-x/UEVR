@@ -1,14 +1,29 @@
-/*  
+  
 #pragma once
 
 #include <algorithm>
-#pragma once
+  #include "ScriptPrerequisites.hpp"
 #include <uevr/API.hpp>
-#include "ScriptPrerequisites.hpp"
+#include <glm/vec4.hpp> 
+#include <vector>
+#include <datatypes/Vector.hpp>
+#include <datatypes/StructObject.hpp>
+#include <datatypes/Quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+
+#include <glm/ext/quaternion_float.hpp>
+#include <glm/ext/quaternion_double.hpp>
+
+
+#include <glm/gtx/vector_angle.hpp>
+#include <glm/vec3.hpp>
+#include <datatypes/Transform.hpp>
 #include "datatypes/Matrix.hpp"
-#include "datatypes/Vector.hpp"
-#include "datatypes/Transform.hpp"
-#include "datatypes/Quaternion.hpp"
+#include <glm/gtx/matrix_major_storage.hpp>
 
 
 using Vector2f = lua::datatypes::Vector2f;
@@ -18,11 +33,12 @@ using Vector3d = lua::datatypes::Vector3d;
 using Vector4d = lua::datatypes::Vector4d;
 using Matrix3x3f = glm::mat3x3;
 using Matrix3x4f = glm::mat3x4;
-using Matrix4x4f =  lua::datatypes::Matrix4x4f
-using Matrix4x4d = lua::datatypes::Matrix4x4d
+using Matrix4x4f =  lua::datatypes::Matrix4x4f;
+using Matrix4x4d = lua::datatypes::Matrix4x4d ;
 
 namespace  {
 using namespace glm;
+
 
 static vec3 euler_angles(const glm::mat4& rot);
 static float fix_angle(float ang);
@@ -111,7 +127,7 @@ static quat to_quat(const vec3& v) {
 static quat flatten(const quat& q) {
     const auto forward = glm::normalize(glm::quat{q} * Vector3f{ 0.0f, 0.0f, 1.0f });
     const auto flattened_forward = glm::normalize(Vector3f{forward.x, 0.0f, forward.z});
-    return utility::math::to_quat(flattened_forward);
+    return to_quat(flattened_forward);
 }
 
 // Obtains the forward dir, and isolates the pitch component
@@ -213,4 +229,4 @@ Quaternionf to_orientation_quat(Vector3f &v)
     return RotationQuat;
 }
 
-}*/
+}

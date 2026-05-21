@@ -34,7 +34,9 @@ namespace sol {
 class state_view;
 }
 
-namespace bindings {
+namespace bindings {		 
+
+#include <uevr/API.hpp>
 void open_imgui(sol::state_view& s);
 }         
 //

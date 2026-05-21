@@ -2377,17 +2377,17 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
 
     if (selected_page == PAGE_RUNTIME) {
         if (m_has_hw_scheduling) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+  //          ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
             ImGui::TextWrapped("WARNING: Hardware-accelerated GPU scheduling is enabled. This may cause the game to run slower.");
             ImGui::TextWrapped("Go into your Windows Graphics settings and disable \"Hardware-accelerated GPU scheduling\"");
-            ImGui::PopStyleColor();
+    //        ImGui::PopStyleColor();
             ImGui::TextWrapped("Note: This is only necessary if you are experiencing performance issues.");
         }
 
         if (GetModuleHandleW(L"nvngx_dlssg.dll") != nullptr) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+     //       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
             ImGui::TextWrapped("WARNING: DLSS Frame Generation has been detected. Make sure it is disabled within in-game settings.");
-            ImGui::PopStyleColor();
+     //       ImGui::PopStyleColor();
         }
 
         ImGui::Text((std::string{"Runtime Information ("} + get_runtime()->name().data() + ")").c_str());
@@ -2691,7 +2691,7 @@ void VR::on_draw_ui() {
     ZoneScopedN(__FUNCTION__);
 
     // create VR tree entry in menu (imgui)
-    ImGui::PushID("VR");
+  //  ImGui::PushID("VR");
     ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
     if (!m_fake_stereo_hook->has_attempted_to_hook_engine() || !m_fake_stereo_hook->has_attempted_to_hook_slate()) {
         std::string adjusted_name = get_name().data();
@@ -2709,7 +2709,7 @@ void VR::on_draw_ui() {
             return;
         }*/
     }
-    ImGui::PopID();
+//    ImGui::PopID();
 
     auto display_error = [](auto& runtime, std::string dll_name) {
         if (runtime == nullptr || !runtime->error && runtime->loaded) {

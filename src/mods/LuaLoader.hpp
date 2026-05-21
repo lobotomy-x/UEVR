@@ -6,12 +6,11 @@
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
-
 #include "ScriptContext.hpp"
 #include "ScriptState.hpp"
 
 #include "Mod.hpp"
-
+  #include <any>  // don't hate me for this include
 using namespace uevr;
 
 class LuaLoader : public Mod {
@@ -25,14 +24,14 @@ public:
     std::vector<SidebarEntryInfo> get_sidebar_entries() override {
         if (m_script_panels.empty()) {
             return {
-                {"Main", true},
-                {"Script UI", true}
+                {"Main", true}, {"Script UI", true}, {"Editor", true}
             };
         }
 
         std::vector<SidebarEntryInfo> entries{
             {"Main", true},
-            {"Script UI", true}
+            {"Script UI", true},
+            {"Editor", true}
         };
 
         for (auto& entry : m_script_panels) {
@@ -99,7 +98,7 @@ public:
     void state_post_init(std::shared_ptr<ScriptState>& state);
     void add_additional_bindings(sol::state_view& lua);
     void dispatch_event(std::string_view event_name, std::string_view event_data);
-
+      
 private:
     ScriptState::GarbageCollectionData make_gc_data() const {
         ScriptState::GarbageCollectionData data{};
@@ -117,6 +116,36 @@ private:
     std::shared_ptr<ScriptState> m_main_state{};
     std::vector<std::shared_ptr<ScriptState>> m_states{};
     std::recursive_mutex m_access_mutex{};
+
+    // Thread safety for tasks
+    std::mutex m_task_mtx{};
+    std::vector<sol::protected_function> m_tasks{};
+    // Thread safety for data sharing
+    std::mutex m_data_mtx{};
+
+public:
+
+
+
+    void queue_task(sol::protected_function fn);
+    template <typename T> void set_shared(const std::string& key, T val) {
+        std::lock_guard<std::mutex> _{m_data_mtx};
+        m_shared_data[key] = val;
+    }
+
+    template <typename T> T get_shared(const std::string& key) {
+        std::lock_guard<std::mutex> _{m_data_mtx};
+        if (auto it = m_shared_data.find(key); it != m_shared_data.end()) {
+            try {
+                return std::any_cast<T>(it->second);
+            } catch (...) {
+            }
+        }
+        return T{};
+    }
+
+private:
+    std::unordered_map<std::string, std::any> m_shared_data{};
     std::atomic<uint32_t> m_lock_depth{0};
     // A list of Lua files that have been explicitly loaded either through the user manually loading the script, or
     // because the script was in the autorun directory.

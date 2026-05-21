@@ -22,6 +22,7 @@ public:
             *m_log_level,
             *m_always_show_cursor,
             *m_font_size,
+            *m_input_passthrough_key,
         };
     }
 
@@ -89,6 +90,9 @@ public:
         return m_imgui_theme;
     }
 
+    auto& get_input_passthrough_key() const {
+        return m_input_passthrough_key -> value();
+    }
     int32_t get_font_size() const {
         return m_font_size->value();
     }
@@ -127,4 +131,6 @@ private:
     
     ModKey::Ptr m_show_cursor_key{ ModKey::create(generate_name("ShowCursorKey")) };
     ModInt32::Ptr m_font_size{ModInt32::create(generate_name("FontSize"), 16)};
+    ModKey::Ptr m_input_passthrough_key { ModKey::create(generate_name("InputPassthroughKey"), VK_LCONTROL, false) };
+
 };

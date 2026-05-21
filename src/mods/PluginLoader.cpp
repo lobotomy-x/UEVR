@@ -28,7 +28,7 @@
 #include <sdk/FEnumProperty.hpp>
 #include <sdk/AActor.hpp>
 #include <sdk/UGameViewportClient.hpp>
-
+ #include <imgui_internal.h>
 #include "pluginloader/FFakeStereoRenderingFunctions.hpp"
 #include "pluginloader/FRenderTargetPoolHook.hpp"
 #include "pluginloader/FRHITexture2DFunctions.hpp"
@@ -44,11 +44,126 @@
 
 UEVR_PluginVersion g_plugin_version{
     UEVR_PLUGIN_VERSION_MAJOR, UEVR_PLUGIN_VERSION_MINOR, UEVR_PLUGIN_VERSION_PATCH};
+static ImGuiContext* m_ctx;
 
-namespace uevr {
+ namespace uevr {
 UEVR_RendererData g_renderer_data{
     UEVR_RENDERER_D3D12, nullptr, nullptr, nullptr
 };
+}
+
+void PluginLoader::MergeImGuiContext(ImGuiContext* ctx) {
+            ctx = ImGui::GetCurrentContext();
+           
+}
+
+
+extern "C" __declspec(dllexport) ImGuiContext* get_imgui_context() {
+    if (m_ctx) return m_ctx;
+    return nullptr;
+}
+
+void PluginLoader::get_sol_state_view(void** out_state_view) {
+    if (out_state_view == nullptr) return;
+
+    auto ll = LuaLoader::get();
+    if (!ll) { *out_state_view = nullptr; return; }
+
+    auto state = ll->get_state();
+    if (!state) { *out_state_view = nullptr; return; }
+
+    // allocate a copy of sol::state_view on the heap and return pointer
+    sol::state_view* sv = new sol::state_view(state->context()->lua());
+    *out_state_view = sv;
+}
+
+void PluginLoader::free_sol_object(void* obj) {
+    if (obj == nullptr) return;
+    delete reinterpret_cast<sol::object*>(obj);
+}
+
+void PluginLoader::free_sol_state_view(void* state_view) {
+    if (state_view == nullptr) return;
+    delete reinterpret_cast<sol::state_view*>(state_view);
+}
+
+bool PluginLoader::exec_lua_chunk(const char* chunk, const char* label, char* out_result, unsigned int out_size) {
+    if (chunk == nullptr) return false;
+
+    auto ll = LuaLoader::get();
+    if (!ll) return false;
+
+    auto state = ll->get_state();
+    if (!state) return false;
+
+    auto& lua = state->context()->lua();
+    try {
+        auto res = lua.load(chunk, label, sol::load_mode::any)();
+        if (!res.valid()) {
+            return false;
+        }
+
+        if (out_result && out_size > 0) {
+            std::string s = "";
+            if (res.get_type() == sol::type::string) {
+                s = res.get<std::string>();
+            }
+            const auto n = std::min<size_t>(s.size(), out_size - 1);
+            memcpy(out_result, s.c_str(), n);
+            out_result[n] = '\0';
+        }
+
+        return true;
+    } catch(...) {
+        return false;
+    }
+}
+
+bool PluginLoader::get_global_string(const char* name, char* out, unsigned int out_size) {
+    if (name == nullptr || out == nullptr || out_size == 0) return false;
+
+    auto ll = LuaLoader::get();
+    if (!ll) return false;
+
+    auto state = ll->get_state();
+    if (!state) return false;
+
+    auto& lua = state->context()->lua();
+    sol::object obj = lua.globals()[name];
+    if (!obj.valid() || !obj.is<const char*>()) return false;
+
+    auto s = std::string(obj.as<const char*>());
+    const auto n = std::min<size_t>(s.size(), out_size - 1);
+    memcpy(out, s.c_str(), n);
+    out[n] = '\0';
+    return true;
+}
+void PluginLoader::do_lua_string(const char* lua_chunk, const char* chunk_name) {
+    auto ll = LuaLoader::get();
+    if (!ll)
+        return;
+
+    auto state = ll->get_state();
+    if (!state)
+        return;
+
+    auto& lua = state->context()->lua();
+    // sizeof(lua_chunk) would give the size of the pointer; use strlen instead
+    lua.do_string(lua_chunk, chunk_name);
+};
+
+void PluginLoader::set_global_string(const char* name, const char* value) {
+    if (name == nullptr) return;
+
+    auto ll = LuaLoader::get();
+    if (!ll) return;
+
+    auto state = ll->get_state();
+    if (!state) return;
+
+    auto& lua = state->context()->lua();
+    if (value == nullptr) lua[name] = sol::nil;
+    else lua[name] = std::string(value);
 }
 
 namespace uevr {
@@ -124,6 +239,8 @@ void dispatch_lua_event(const char* event_name, const char* event_data) {
     LuaLoader::get()->dispatch_event(event_name, event_data);
 }
 
+
+
 void dispatch_custom_event(const char* event_name, const char* event_data) {
     PluginLoader::get()->dispatch_custom_event(event_name, event_data);
 }
@@ -137,6 +254,7 @@ void load_lua_file(const char* file_path) {
 
     auto& lua = state->context()->lua();
     lua.load_file(file_path, sol::load_mode::any);
+
 };
 
 void load_lua_string(const char* lua_chunk, const char* chunk_name) { 
@@ -150,7 +268,7 @@ void load_lua_string(const char* lua_chunk, const char* chunk_name) {
     // sizeof(lua_chunk) would give the size of the pointer; use strlen instead
     lua.load_buffer(lua_chunk, (int)strlen(lua_chunk), chunk_name, sol::load_mode::any);
 };
-
+ 
 void get_lua_globals(void** out_globals) {
     if (out_globals == nullptr) return;
 
@@ -256,6 +374,12 @@ UEVR_PluginFunctions g_plugin_functions {
     .load_lua_file = ::load_lua_file,
     .load_lua_string = ::load_lua_string,
     .get_lua_globals = ::get_lua_globals,
+/*    .get_sol_state_view = ::get_sol_state_view,
+    .free_sol_object = ::free_sol_object,
+    .free_sol_state_view = ::free_sol_state_view,
+    .exec_lua_chunk = ::exec_lua_chunk,
+    .get_global_string = ::get_global_string,
+    .set_global_string = ::set_global_string,*/
 
     .get_commit_hash = []() -> const char* {
         return UEVR_COMMIT_HASH;
@@ -587,7 +711,10 @@ UEVR_UObjectFunctions g_uobject_functions {
     [](UEVR_UObjectHandle obj, const wchar_t* name, bool value) {
         UOBJECT(obj)->set_bool_property(name, value);
     },
-};
+};            
+
+#define AACTOR(x) ((sdk::AActor*)x)
+
 
 #define FFIELD(x) ((sdk::FField*)x)
 
@@ -614,7 +741,7 @@ UEVR_FPropertyFunctions g_fproperty_functions {
         return FPROPERTY(prop)->get_offset();
     },
     .get_property_flags = [](UEVR_FPropertyHandle prop) -> uint64_t {
-        return FPROPERTY(prop)->get_property_flags();
+        return ((sdk::FProperty*)prop)->get_property_flags();
     },
     .set_property_flags = [](UEVR_FPropertyHandle prop, uint64_t flags) {
         ((sdk::FProperty*)prop)->get_property_flags() = flags; 
@@ -1948,7 +2075,7 @@ std::optional<std::string> PluginLoader::on_initialize_d3d_thread() {
 
         if (required_version.minor > g_plugin_version.minor) {
             spdlog::error("[PluginLoader] Plugin {} requires a newer minor version", name);
-            m_plugin_load_errors.emplace(name, "Requires a newer minor version");
+            m_plugin_load_errors.emplace(name, "Requires a                                                newer minor version");
             FreeLibrary(mod);
             it = m_plugins.erase(it);
             continue;
@@ -2052,6 +2179,10 @@ void PluginLoader::on_draw_ui() {
 
 void PluginLoader::on_draw_ui() {
     std::scoped_lock _{m_mux};
+    if (!m_ctx) {
+        m_ctx = ImGui::GetCurrentContext();
+    }
+
 
     if (ImGui::Button("Attempt Unload Plugins")) {
         attempt_unload_plugins();
@@ -2138,6 +2269,7 @@ void PluginLoader::on_present() {
             spdlog::error("[PluginLoader] Exception occurred in on_present callback; one of the plugins has an error.");
         }
     }
+
 }
 // For cimgui redirection when on_imgui_frame is called.
 namespace cimgui {
@@ -2172,8 +2304,24 @@ void setup_hook() {
 // imgui frame.
 void PluginLoader::on_frame() {
     std::shared_lock _{m_api_cb_mtx};
-
-    if (!m_on_imgui_frame_cbs.empty()) {
+    //const ImGuiID root_space_id = ImGui::GetID("ViewportDockspace");
+    //const ImGuiID main_space_id = ImGui::GetID("UEVR_Dockspace");
+    //
+    //       // Create an invisible background overlay so lua scripts can use draw api functions without a window
+    //// although they may still need to make their own invisible window if they want to draw text or add a main menu bar
+    //// This will also be used to allow panels to dock outside the UEVR window
+    //const ImGuiViewport* const viewport = ImGui::GetMainViewport();
+    //const auto viewport_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove |
+    //                            ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoFocusOnAppearing |
+    //                            ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoBackground;
+    //// const bool init_window_layout = !ImGui::DockBuilderGetNode(root_space_id);
+    //ImGui::SetNextWindowPos(ImVec2(0, 0));
+    //ImGui::SetNextWindowSize(ImGui::GetContentRegionAvail());
+    //if (ImGui::Begin("Viewport", nullptr, viewport_flags)) {
+    //    ImGui::DockSpaceOverViewport(root_space_id, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+    //    ImGui::End();
+    //}
+ if (!m_on_imgui_frame_cbs.empty()) {
         cimgui::setup_hook();
 
         ::UEVR_ImGuiFrameCbData data{};
@@ -2200,6 +2348,7 @@ void PluginLoader::on_frame() {
             }
         }
     }
+
 }
 
 
@@ -2564,11 +2713,11 @@ lua_State* create_script_state() {
 /// <summary>
 /// Request the destruction of the script_state belonging to the lua state in question
 /// </summary>
-void reframework_destroy_script_state(lua_State* lua_state) {
+/*void destroy_script_state(lua_State* lua_state) {
     LuaLoader::get()->delete_state(lua_state);
 }
 
-bool reframework_on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
+bool on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
     if (cb == nullptr) {
         return false;
     }
@@ -2576,13 +2725,13 @@ bool reframework_on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
     return  PluginLoader::get()->add_on_lua_state_created(cb);
 }
 
-bool reframework_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
+bool on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
     if (cb == nullptr) {
         return false;
     }
 
     return PluginLoader::get()->add_on_lua_state_destroyed(cb);
-}
+}*/
 
 void PluginLoader::lock_lua() {
     LuaLoader::get()->lock();

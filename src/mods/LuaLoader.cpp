@@ -84,9 +84,25 @@ void LuaLoader::on_frame() {
     for (auto &state : m_states) {
         state->on_frame();
     }
+
+    std::vector<sol::protected_function> tasks_to_run{};
+    {
+        std::lock_guard<std::mutex> _{m_task_mtx};
+        if (!m_tasks.empty()) {
+            tasks_to_run.swap(m_tasks);
+        }
+    }
+
+    for (auto& fn : tasks_to_run) {
+        fn();
+    }
 }
 
 void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
+
+    const auto autorun_path = Framework::get_persistent_dir() / "scripts";
+    const auto global_autorun_path = Framework::get_persistent_dir() / ".." / "UEVR" / "scripts";
+
     if (in_entry == "Main") {
         if (ImGui::Button("Run script")) {
             OPENFILENAME ofn{};
@@ -100,17 +116,26 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
             ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
             if (GetOpenFileName(&ofn) != FALSE) {
-                std::scoped_lock _{ m_access_mutex };
+                std::scoped_lock _{ m_access_mutex };       
+
+                 auto script_str = std::filesystem::path{file}.filename().string();
+                // allow for easier reload testing
+                if (m_loaded_scripts_map[script_str]) {
+                    reset_scripts();
+                } 
                 m_main_state->run_script(file);
-                m_loaded_scripts.emplace_back(std::filesystem::path{file}.filename().string());
+               
+                m_loaded_scripts.emplace_back(script_str);
             }
         }
+        
 
         ImGui::SameLine();
 
         if (ImGui::Button("Reset scripts")) {
             reset_scripts();
         }
+
 
         ImGui::SameLine();
 
@@ -124,7 +149,44 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
                 m_console_spawned = true;
             }
         }
+        static bool all_enabled = true;
+        static bool global_enabled = true;
+        static bool game_enabled = true;
 
+
+        if (ImGui::Button("Toggle all scripts")) {
+            all_enabled = !all_enabled;
+            if (!m_known_scripts.empty()) {     
+
+                for (auto& name : m_known_scripts) {
+                    m_loaded_scripts_map[name] = all_enabled;
+                }
+                reset_scripts();
+            }
+        }
+        if (ImGui::Button("Toggle global scripts")) {  
+            if (!m_known_scripts.empty()) {
+                global_enabled = !global_enabled;
+                for (auto&& name : m_known_scripts) {
+                    if (name.contains(std::string_view(global_autorun_path.string()))) {
+                     m_loaded_scripts_map[name] = global_enabled;
+                    }                 
+                }
+                reset_scripts();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Toggle game-specific scripts")) {
+            if (!m_known_scripts.empty()) {
+                game_enabled = !game_enabled;
+                for (auto&& name : m_loaded_scripts) {
+                    if (name.contains(std::string_view(autorun_path.string()))) {
+                        m_loaded_scripts_map[name] = game_enabled;
+                    }
+                }
+                reset_scripts();
+            }
+        }
         //Garbage collection currently only showing from main lua state, might rework to show total later?
         if (ImGui::TreeNode("Garbage Collection Stats")) {
             std::scoped_lock _{ m_access_mutex };
@@ -190,12 +252,204 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
         } else {
             ImGui::TextWrapped("No Script Errors... yet!");
         }
+/*        static bool open = false;
+        if (ImGui::Button("Browse for Script")) {
+            open = !open;
+        }
+        if (open) {
+            auto get_sorted_entries = [](const std::string& path, bool dirs_first) {
+                std::vector<std::pair<std::string, bool>> entries;
+                for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                    std::string name = entry.path().filename().string();
+                    if (entry.path().has_extension() && entry.path().extension() != ".lua")
+                        continue;
+                    entries.emplace_back(name, entry.is_directory());
+                }
+                std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
+                    if (a.second != b.second)
+                        return dirs_first ? a.second > b.second : a.second < b.second;
+                    return a.first < b.first;
+                });
+                return entries;
+            };
 
+            const auto activated_key = [](bool is_selected = false) -> bool {
+                return ImGui::IsMouseDoubleClicked(0) ||
+                       is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
+                                          ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown));
+            };
+
+            static const std::filesystem::path scripts_path = API::get()->get_persistent_dir(L"scripts");
+            static const std::filesystem::path global_path = API::get()->get_persistent_dir(L"..\\UEVR\\scripts");
+            static const std::filesystem::path unrealvrmod = API::get()->get_persistent_dir(L"..");
+
+            static const std::filesystem::path downloads = std::filesystem::path(getenv("USERPROFILE")) / "Downloads";
+            static std::string current_path = scripts_path.string();
+            static std::string filter = "";
+            static char filter_buffer[256] = "";
+            bool dirs_first = true;
+            static bool only_lua = true;
+            static int selected_entry = -1;
+            static std::string script_path{};
+            ImGui::BeginChild("###filebrowser", ImVec2(700, 400), true,
+                ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            // Set focus when opened
+            if (ImGui::IsWindowAppearing()) {
+                ImGui::SetWindowFocus();
+                selected_entry = -1;
+            }
+
+            ImGui::Text("Current Path: %s", current_path.c_str());
+
+            // Filter input
+            ImGui::InputText("Filter", filter_buffer, sizeof(filter_buffer), ImGuiInputTextFlags_EscapeClearsAll);
+            filter = filter_buffer;
+            static std::string copy_buffer{};
+            // Navigation buttons
+            bool can_go_up = std::filesystem::path(current_path).has_parent_path() &&
+                             std::filesystem::path(current_path).parent_path().string().find("UnrealVRMod") != std::string::npos;
+            if ((can_go_up &&
+                    (ImGui::Button("Up") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow))) ||
+                ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+                current_path = std::filesystem::path(current_path).parent_path().string();
+                selected_entry = -1;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Home") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
+                current_path = scripts_path.string();
+                selected_entry = -1;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Global") || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp)) {
+                current_path = global_path.string();
+                selected_entry = -1;
+            }
+
+            ImGui::BeginChild("FileList", ImVec2(0, 0), true);
+            try {
+                // Allow navigating to absolute path if entered in filter (for testing)
+                if (std::filesystem::path(filter).is_absolute() && std::filesystem::path(filter).has_stem() &&
+                    std::filesystem::exists(std::filesystem::path(filter))) {
+                    current_path = std::filesystem::path(filter).string();
+                    filter.clear();
+                    strncpy_s(filter_buffer, filter.c_str(), sizeof(filter_buffer));
+                    selected_entry = -1;
+                }
+
+                if (ImGui::ArrowButton("##dirs_first", dirs_first ? ImGuiDir_Down : ImGuiDir_Up)) {
+                    dirs_first = !dirs_first;
+                }
+                ImGui::SameLine();
+                ImGui::Text(dirs_first ? "Sort Files First" : "Sort Directories First");
+                ImGui::Separator();
+
+                std::vector<std::pair<std::string, bool>> entries;
+                for (const auto& entry : std::filesystem::directory_iterator(current_path)) {
+                    std::string name = entry.path().filename().string();
+                    if (only_lua && entry.is_regular_file() && entry.path().extension() != ".lua") {
+                        continue;
+                    }
+                    if (filter.empty() || name.find(filter) != std::string::npos) {
+                        entries.emplace_back(name, entry.is_directory());
+                    }
+                }
+
+                std::sort(entries.begin(), entries.end(), [dirs_first](const auto& a, const auto& b) {
+                    if (a.second != b.second)
+                        return dirs_first ? a.second > b.second : a.second < b.second;
+                    return a.first < b.first;
+                });
+
+                // Custom nav inputs - Vr compatible gamepad controls, arrow key movements, or mouse only
+                ImGuiIO& io = ImGui::GetIO();
+                float scroll_y = ImGui::GetScrollY();
+                float scroll_max_y = ImGui::GetScrollMaxY();
+
+                bool no_mouse_input = io.MouseDelta.x == 0.0f && io.MouseDelta.y == 0.0f && !ImGui::IsMouseClicked(0);
+                int entry_count = entries.size();
+                if (no_mouse_input && entry_count > 0) {
+                    static int prev_selected = selected_entry;
+                    if (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickUp)) {
+                        selected_entry = (selected_entry <= 0) ? entry_count - 1 : selected_entry - 1;
+                    }
+                    if (ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_GamepadLStickDown)) {
+                        selected_entry = (selected_entry >= entry_count - 1) ? 0 : selected_entry + 1;
+                    }
+
+                    selected_entry = std::clamp(selected_entry, -1, entry_count - 1);
+                }
+
+                for (int i = 0; i < entries.size(); ++i) {
+                    const auto& [name, is_directory] = entries[i];
+                    std::string display_name = is_directory ? name + "/" : name;
+                    bool is_lua = !is_directory && std::filesystem::path(name).extension() == ".lua";
+
+                    bool is_selected = (i == selected_entry);
+
+                    ImGui::PushID(i);
+
+                    if (is_selected) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f)); // Yellow
+                    }
+
+                    if (ImGui::Selectable(display_name.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+                        selected_entry = i;
+                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
+                        if (is_lua)
+                            script_path = entry_path.string();
+                        ImGui::SetScrollHereY(i / (entries.size() - 1));
+
+                        if (ImGui::IsMouseDoubleClicked(0)) {
+
+                            if (is_directory) {
+                                current_path = entry_path.string();
+                                selected_entry = -1;
+                                script_path.clear();
+                            } else if (is_lua) {
+                                lua_text = read_file(script_path);
+
+                                text_editor.SetText(lua_text.data());
+                                open = false;
+                                ImGui::CloseCurrentPopup();
+                            }
+                        }
+                    }
+
+                    if (is_selected && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_RightArrow) ||
+                                           ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown))) {
+
+                        std::filesystem::path entry_path = std::filesystem::path(current_path) / name;
+                        if (is_directory) {
+                            current_path = entry_path.string();
+                            ImGui::SetScrollHereY();
+                            selected_entry = -1;
+                            script_path.clear();
+                        } else if (is_lua) {
+                            lua_text = read_file(script_path);
+
+                            text_editor.SetText(lua_text.data());
+                            open = false;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+
+                    ImGui::PopStyleColor(is_selected ? 1 : 0);
+                    ImGui::PopID();
+                }
+
+            } catch (const std::filesystem::filesystem_error& e) {
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", e.what());
+            }
+            ImGui::EndChild();
+            ImGui::EndChild();
+            ImGui::EndPopup();
+        }*/
         if (!m_known_scripts.empty()) {
             ImGui::Text("Known scripts:");
 
             for (auto&& name : m_known_scripts) {
-                if (ImGui::Checkbox(name.data(), &m_loaded_scripts_map[name])) {
+                auto path = std::filesystem::path(name.data()).filename().string();
+                if (ImGui::Checkbox(path.c_str(), &m_loaded_scripts_map[name])) {
                     reset_scripts();
                     break;
                 }
@@ -253,6 +507,8 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
 }
 
 void LuaLoader::reset_scripts() {
+    const static auto autorun_path = Framework::get_persistent_dir() / "scripts";
+    const static auto global_autorun_path = Framework::get_persistent_dir() / ".." / "UEVR" / "scripts";
     spdlog::info("[LuaLoader] Resetting scripts...");
 
     std::scoped_lock _{ m_access_mutex };
@@ -265,6 +521,11 @@ void LuaLoader::reset_scripts() {
         }*/
 
         m_main_state->on_script_reset();
+    }
+    if (!m_states.empty()) {
+        for (auto&& state : m_states) {
+            state->on_script_reset();
+        }
     }
 
     m_main_state.reset();
@@ -289,9 +550,6 @@ void LuaLoader::reset_scripts() {
     m_loaded_scripts.clear();
     m_known_scripts.clear();
 
-    const auto autorun_path = Framework::get_persistent_dir() / "scripts";
-    const auto global_autorun_path = Framework::get_persistent_dir()  / ".." / "UEVR" / "scripts";
-
     spdlog::info("[LuaLoader] Creating directories {}", autorun_path.string());
     std::filesystem::create_directories(autorun_path);
     spdlog::info("[LuaLoader] Loading scripts...");
@@ -306,16 +564,16 @@ void LuaLoader::reset_scripts() {
 			auto&& path = entry.path();
 
 			if (path.has_extension() && path.extension() == ".lua") {
-				if (!m_loaded_scripts_map.contains(path.filename().string())) {
-					m_loaded_scripts_map.emplace(path.filename().string(), true);
+				if (!m_loaded_scripts_map.contains(path.string())) {
+					m_loaded_scripts_map.emplace(path.string(), true);
 				}
 
-				if (m_loaded_scripts_map[path.filename().string()] == true) {
+				if (m_loaded_scripts_map[path.string()] == true) {
 					m_main_state->run_script(path.string());
-					m_loaded_scripts.emplace_back(path.filename().string());
+					m_loaded_scripts.emplace_back(path.string());
 				}
 
-				m_known_scripts.emplace_back(path.filename().string());
+				m_known_scripts.emplace_back(path.string());
 			}
 		}
 	};
@@ -343,314 +601,31 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
         auto it = std::unique(m_script_panels.begin(), m_script_panels.end(), comp);
         m_script_panels.erase(it, m_script_panels.end());                                                                          
     };
+    //
+    lua["uevr"]["set_shared"] =
+                    [this](std::string k, sol::object v) {
+                        if (v.is<int>())
+                            set_shared(k, v.as<int>());
+                        else if (v.is<double>())
+                            set_shared(k, v.as<double>());
+                        else if (v.is<float>())
+                            set_shared(k, v.as<float>());
+                        else if (v.is<std::string>())
+                            set_shared(k, v.as<std::string>());
+                        else if (v.is<bool>())
+                            set_shared(k, v.as<bool>());
+                    };
+    lua["uevr"]["run_on_game_thread"] = [this](sol::protected_function fn) {
+        queue_task(fn); };
     
-
-    lua.do_string(R"(
-     local short_names
-    local function UniqueShortNames()
-
-        local s,r = pcall(function()
-            local t = json.load_file("class_short_names.json")
-            if #t > 0 then return t end
-        end)
-        if s then return r end
-        base_class = base_class or base_types("Class")
-        all_classes = base_class:get_objects_matching(false)
-        local short_names = {}
-        for i, v in ipairs(all_classes) do
-            if v.get_class and v:get_class() == base_class then
-                local short_name = v:get_fname():to_string()
-                local full_name = v:get_full_name()
-                if short_names[short_name] ~= nil
-                    then
-
-                   log("Duplicate short name "..short_name.." will be "..v:get_outer():get_short_name().."."..short_name)
-                        short_name = v:get_outer():get_short_name().."."..short_name
-                end
-                short_names[short_name] = full_name
-            end
-        end
-        json.dump_file("class_short_names.json", short_names, 4)
-        return short_names
-    end
-    local _cache = {}
-    setmetatable(_cache, {__mode = "v"})
-    function uevr.find_class(input)
-        assert(type(input) == "string")
-        if input:sub(1, 5) ~= "Class" and input:sub(1, 12) ~= "ScriptStruct" then                
-            local engine_input =  "Class /Script/Engine.".. input
-            if  _cache[engine_input] ~= nil and UEVR_UObjectHook.exists( _cache[engine_input]) then
-                return  _cache[engine_input]
-            else 
-                local temp = uevr.api:find_uobject(engine_input)
-                if temp ~= nil and UEVR_UObjectHook.exists(temp) then
-                    _cache[engine_input] = temp
-                    return _cache[engine_input] 
-                end
-            end
-        end
-        if _cache[input] ~= nil and UEVR_UObjectHook.exists( _cache[input])  then
-           return _cache[input] 
-        else
-            local temp = uevr.api:find_uobject(input)                              
-              _cache[input] = UEVR_UObjectHook.exists(temp) and temp or nil
-       end
-       return _cache[input]
-    end
-
-
-    local kismet_libs = {
-        Animation =    "Class /Script/AnimGraphRuntime.KismetAnimationLibrary",
-        Material =      "Class /Script/Engine.KismetMaterialLibrary",
-        Math =           "Class /Script/Engine.KismetMathLibrary",
-        Rendering =    "Class /Script/Engine.KismetRenderingLibrary",
-        System =        "Class /Script/Engine.KismetSystemLibrary",
-        String =          "Class /Script/Engine.KismetStringLibrary",
-        Text =            "Class /Script/Engine.KismetTextLibrary",
-        StringTable = "Class /Script/Engine.KismetStringTableLibrary",
-        Guid =             "Class /Script/Engine.KismetGuidLibrary",
-        NodeHelper = "Class /Script/Engine.KismetNodeHelperLibrary",
-        }
-        Kismet = setmetatable({kismet_cache = {}}, {
-                    __call = function(self, lib)
-                        self.kismet_cache[lib] = self.kismet_cache[lib] or
-                            (kismet_libs[lib] and
-                                (UEVR_UObjectHook.get_first_object_by_class(uevr.api:find_uobject(kismet_libs[lib]), true)
-                                or uevr.api:find_uobject(kismet_libs[lib]):get_class_default_object()))
-                        return self.kismet_cache[lib]
-                    end,
-                    __index = function(self, lib)
-                        return self.kismet_cache[lib] or self(lib)
-                })
-        uevr.Kismet = Kismet 
-
-        function Statics()
-            statics = statics or uevr.api:find_uobject("Class /Script/Engine.GameplayStatics"):get_class_default_object()
-            return statics
-        end
-        uevr.Statics = Statics()
-
-         local function Version()
-            local text = Kismet("System"):GetEngineVersion()
-            if text:contains("-") then
-                text = text:split("-")[1]
-            end
-            local nums = text:split(".")
-            local version = {
-                major = tonumber(nums[1]),
-                minor = tonumber(nums[2]),
-                patch = tonumber(nums[3]),
-            }
-            return version
-        end
-        local UE_Version = Version()
-        UE5 = UE_Version.major == 5 or false
-        UE4 = UE_Version.major == 4 or false
-        UE_Version_Minor = tonumber(tostring(UE_Version.minor)..tostring(UE_Version.patch))
-  
-        Vector3 = UE5 and Vector3d or Vector3f
-        Vector4 = UE5 and Vector4d or Vector4f
-        Vector2 = UE5 and Vector2d or Vector2f
-
-        Quat = UE5 and Quaterniond or Quaternionf
-
-        function is_array(_table)
-	        if _table[1] ~= nil then return true end
-        end
-        
-    function __genOrderedIndex(t)
-	    local orderedIndex = {}
-	    for key in pairs(t) do
-		    -- ensure correct sorting for rotator to Vector3 handling
-		    -- idk why its like this but it is
-		    if #t == 3 and (type(key) == "string") and (key:lower() == "pitch" or key:lower() == "yaw") then
-			    return {"pitch", "yaw", "roll"}
-		    end
-		    table.insert(t, key)
-	    end
-	    table.sort(orderedIndex)
-	    return orderedIndex
-    end
-
-
-
--- pairs does not maintain order. maybe you heard this and thought it was no big deal
--- but its actually borderline unusable. we are fixing that
--- normally this will generate a hidden table with the ordered index based on alphabetical/numeric order
--- but you can instead provide a table with the correct order in the orderedPairs function or directly set __orderedIndex
--- this is crucial for dynamic param-building functions like BreakHitResult which requires empty table values with string keys
-function orderedNext(t, state)
-	if not t then return end
-	local key = (t.__orderedIndex ~= nil and state == nil) and t.__orderedIndex[1] or nil
-	if state == nil and t.__orderedIndex == nil then
-		-- generate the index the first time
-		t.__orderedIndex = __genOrderedIndex(t)
-		key = t.__orderedIndex[1]
-	else
-		-- fetch the next value
-		for i = 1, #t.__orderedIndex do
-			if t.__orderedIndex[i] == state then
-				key = t.__orderedIndex[i + 1]
-			end
-		end
-	end
-	if key then
-		return key, t[key]
-	end
-	return
-end
-
--- this is how you actually iterate an ordered table
--- if no orderedIndex exists yet we construct it on the first try
--- you can prebuild your orderedIndex, directly assign it, or pass it here
--- if you want to you can override pairs with orderedPairs in a local variable in your own script
-function orderedPairs(t, orderedIndex)
-    if keys ~= nil then
-		t.__orderedIndex = orderedIndex
-    end
-	return orderedNext, t, nil
-end
-
--- basically python zip
--- takes two arrays already in correct order and splices them into an orderedTable
-function build_ordered_table(keys, values)
-	local t = {}
-	assert(is_array(keys) and is_array(values))
-	for i = 1, #keys do
-		t[keys[i]] = values[i]
-	end
-	t.__orderedIndex = keys
-	return t
-end
-
--- this is what I use most of the time
--- very straight forward and simple to use
-function ordered_insert(tbl, new_key, new_value)
-	tbl.__orderedIndex = tbl.__orderedIndex or {}
-	local t = tbl.__orderedIndex
-	-- only update insertion order if its new
-	if tbl[new_key] == nil then
-		table.insert(t, new_key)
-	end
-	tbl[new_key] = new_value
-	return tbl
-end
-
-
-function extend_table(tbl1, tbl2)
-  if is_array(tbl1) and is_array(tbl2) then
-    for idx, val in ipairs(tbl2) do
-        local skip = false
-        for _idx, _val in ipairs(tbl1) do
-          if _val == val then skip = true end
-        end
-        if not skip and val ~= nil then
-          table.insert(tbl1, val)
-        end
-      table.insert(tbl1, val)
-    end
-  else
-    for k, v in orderedPairs(tbl2) do
-      if not tbl1[k] and v ~= nil then
-        tbl1[k] = v
-      end
-      if tbl1[k] then
-        tbl1[k] = v
-      end
-    end
-  end
-end
-
-function wipe_table(t)
-	while true do
-		local k = next(t)
-		if not k then break end
-		t[k] = nil
-	end
-end
-
-
--- split table into keys and values so you can iterate key names as an array
-function break_table(_table)
-	local keys, values = {}, {}
-	for k, v in orderedPairs(_table) do
-		table.insert(keys, k)
-		table.insert(values, v)
-	end
-	return keys, values
-end
-
--- split table into keys and values so you can iterate key names as an array
-function take_values(_table)
-	if is_array(_table) then return _table end
-	local values = {}
-	for k, v in orderedPairs(_table) do
-		table.insert(values, v)
-	end
-	return values
-end
-
-function can_index(lua_object)
-	local mt = getmetatable(lua_object)
-	return (not mt and type(lua_object) == "table") or (mt and not not mt.__index)
-end
- 
-
-
-
-function print_to_ue_console(message)
-    pc = pc or uevr.api:get_player_controller(0)
-    pc:ClientSendMessage(message)
-end   
-
-local aactor = uevr.api:find_uobject("Class /Script/Engine.Actor")
-
-function UEVR_UObject:exists()
-    return (UEVR_UObjectHook.exists(self) and self) or false
-end
-
- function UEVR_UClass:is_child_of(uclass)
-    return Kismet("Math"):ClassIsChildOf(self, uclass)
-end
-
-function UEVR_UObject:class_is_child_of(uclass)
-     local self_class = self.as_class and self:as_class() or self.get_class and self:get_class()
-     return self_class ~=nil and self_class:is_child_of(uclass) or nil
-end
-  
-function UEVR_UObject:add_component(uclass)
-    local t = uevr.api:add_component_by_class(
-        (self:is_child_class_of(aactor)) or self:get_outer(),
-        type(uclass) == "string" and uevr.find_class((uclass:sub(#uclass - 9, #uclass) == "Component") 
-        and uclass or uclass.."Component")) 
-        or uclass,
-        false)
-    )
-    if not t then print(inspect({uclass, self})) end
-    t:K2_SetRelativeTransform(self:as_component():GetRelativeTransform(), false, get_hitresult(), false)
-    return t
-end
-
-    )");
-    
-
-
     lua["uevr"]["lua"] = lua_table;
 }
-/// <summary>
-/// Request the creation of a separate script state from the main script state
-/// </summary>
-/// <returns>the lua state of the new script state</returns>
-
-/// <summary>
-/// Request the destruction of the script_state belonging to the lua state in question
-/// </summary>
-
 
 void LuaLoader::add_additional_bindings(sol::state_view& lua) {
     bindings::open_imgui(lua);
     bindings::open_json(lua);
     bindings::open_fs(lua);
+
 }
 
 void LuaLoader::dispatch_event(std::string_view event_name, std::string_view event_data) {
@@ -662,3 +637,10 @@ void LuaLoader::dispatch_event(std::string_view event_name, std::string_view eve
 
     m_main_state->dispatch_event(event_name, event_data);
 }
+
+void LuaLoader::queue_task(sol::protected_function fn) {
+    std::lock_guard<std::mutex> _{m_task_mtx};
+    m_tasks.push_back(fn);
+}
+
+

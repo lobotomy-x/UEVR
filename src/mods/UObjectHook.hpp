@@ -464,11 +464,12 @@ private:
     };
 
     glm::vec3 m_last_camera_location{};
+    bool object_from_path_or_address(std::string_view object, sdk::UObject* out);
 
     std::shared_ptr<PersistentCameraState> m_persistent_camera_state{};
     std::vector<std::shared_ptr<PersistentState>> m_persistent_states{};
     std::vector<std::shared_ptr<PersistentProperties>> m_persistent_properties{};
-
+    std::unordered_map<std::string_view, std::string_view> m_inline_uobjecthooks{}; 
     void reload_persistent_states() {
         m_persistent_states = deserialize_all_mc_states();
         m_persistent_camera_state = deserialize_camera_state();
@@ -493,11 +494,11 @@ private:
     bool m_fixed_visibilities{false};
     bool m_hide_default_classes{false};
 
-
     safetyhook::InlineHook m_process_event_hook{};
     bool m_process_event_listening{true};
     bool m_attempted_hook_process_event{false};
     bool m_hooked_process_event{false};
+
 
 public:
     void hook_process_event();

@@ -140,7 +140,9 @@ public:
             *m_framework_size,
             *m_framework_ui_follows_view,
             *m_framework_wrist_ui,
-            *m_framework_mouse_emulation
+            *m_framework_mouse_emulation,
+
+
         };
     }
 
@@ -174,6 +176,7 @@ private:
         XrCompositionLayerCylinderKHR m_slate_layer_cylinder{};
         XrCompositionLayerCylinderKHR m_slate_layer_cylinder_right{};
         XrCompositionLayerQuad m_framework_ui_layer{};
+        XrCompositionLayerQuad m_framework_imgui_layer{};
         OverlayComponent* m_parent{ nullptr };
         
         friend class OverlayComponent;
@@ -185,4 +188,5 @@ private:
     void update_overlay_openvr();
     bool update_wrist_overlay_openvr();
     void update_slate_openvr();
+    
 };}

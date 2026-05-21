@@ -105,6 +105,17 @@ public:
     bool add_on_post_viewport_client_draw(UEVR_ViewportClient_DrawCb cb);
 
     void lock_lua();
+    void do_lua_string(const char* lua_chunk, const char* chunk_name); 
+    bool exec_lua_chunk(const char* chunk, const char* label, char* out_result, unsigned int out_size);
+    void MergeImGuiContext(ImGuiContext* ctx);
+    void get_sol_state_view(void** out_state_view);
+    void free_sol_object(void* obj);
+    void free_sol_state_view(void* state_view); 
+    bool get_global_string(const char* name, char* out, unsigned int out_size);
+    void set_global_string(const char* name, const char* value);
+
+  
+
 
     void unlock_lua();
 
@@ -261,3 +272,5 @@ private:
     std::unordered_map<sdk::UFunction*, std::unique_ptr<UFunctionHookState>> m_ufunction_hooks{};
     static void ufunction_hook_intermediary(UEVR_UObjectHandle obj, void* frame, void* result, sdk::UFunction* func);
 };
+
+

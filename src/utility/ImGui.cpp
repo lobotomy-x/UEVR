@@ -6,10 +6,12 @@
 #include <Framework.hpp>
 #include <mods/UObjectHook.hpp>
 #include <mods/VR.hpp>
-
 #include "ImGui.hpp"
 
 namespace imgui {
+
+
+
 bool is_point_intersecting_any(float x, float y) {
     const auto ctx = ImGui::GetCurrentContext();
 

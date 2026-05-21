@@ -1,5 +1,5 @@
 #include <fstream>
-
+#include <algorithm>
 #include <utility/Logging.hpp>
 #include <utility/String.hpp>
 #include <utility/ScopeGuard.hpp>
@@ -25,9 +25,11 @@
 #include <sdk/FObjectProperty.hpp>
 #include <sdk/FArrayProperty.hpp>
 #include <sdk/UMotionControllerComponent.hpp>
-
+   
+#include <imgui_internal.h>
 #include "uobjecthook/SDKDumper.hpp"
 #include "VR.hpp"
+#include "PluginLoader.hpp"
 
 #include "UObjectHook.hpp"
 
@@ -60,7 +62,7 @@ nlohmann::json UObjectHook::MotionControllerStateBase::to_json() const {
         {"location_offset", utility::math::to_json(location_offset)},
         {"hand", hand},
         {"permanent", permanent}
-    };
+    };                                                                                                                                                                          
 }
 
 void UObjectHook::MotionControllerStateBase::from_json(const nlohmann::json& data) {
@@ -2111,31 +2113,17 @@ void UObjectHook::draw_config() {
     m_enabled_at_startup->draw("Enabled at Startup");
     m_attach_lerp_enabled->draw("Enable Attach Lerp");
     m_attach_lerp_speed->draw("Attach Lerp Speed");
-
-    ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
-    if (ImGui::TreeNode("UObjectHook Keybinds")) {
-        m_keybind_toggle_uobject_hook->draw("Disable UObjectHook Key");
-
-        ImGui::TreePop();
-    }
+    m_keybind_toggle_uobject_hook->draw("Disable UObjectHook Key");
 }
 
 void UObjectHook::draw_developer() {
     if (ImGui::Button("Dump SDK")) {
         SDKDumper::dump();
     }
-
-    ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
-    if (ImGui::TreeNode("Debug Stats")) {
-        // uint64_t
-        ImGui::Text("Constructor calls: %llu", m_debug.constructor_calls);
-        ImGui::Text("Destructor calls: %llu", m_debug.destructor_calls);
-
-        ImGui::TreePop();
-    }
+    ImGui::Text("Constructor calls: %llu", m_debug.constructor_calls);
+    ImGui::Text("Destructor calls: %llu", m_debug.destructor_calls);
 
     ImGui::Separator();
-
     if (!m_attempted_hook_process_event) {
         if (ImGui::Button("Create ProcessEvent hook")) {
             GameThreadWorker::get().enqueue([this]() {
@@ -2144,8 +2132,10 @@ void UObjectHook::draw_developer() {
         }
     } else if (m_hooked_process_event) {
         ImGui::Checkbox("ProcessEvent Listener", &m_process_event_listening);
+        
 
         if (m_process_event_listening) {
+          
             if (ImGui::Button("Clear Ignored Functions")) {
                 m_ignored_recent_functions.clear();
             }
@@ -2171,7 +2161,7 @@ void UObjectHook::draw_developer() {
 
             std::vector<sdk::UFunction*> functions_to_cleanup{};
 
-            if (ImGui::TreeNode("Recent Functions")) {
+            if (ImGui::TreeNodeEx("Recent Functions",ImGuiTreeNodeFlags_DrawLinesToNodes)) {
                 for (auto ufunc : m_most_recent_functions) {
                     if (ufunc == nullptr) {
                         continue;
@@ -2322,9 +2312,8 @@ void UObjectHook::draw_developer() {
 
 void UObjectHook::draw_main() {
     if (!m_motion_controller_attached_components.empty()) {
-        const auto made = ImGui::TreeNode("Attached Components");
 
-        if (made) {
+        if (ImGui::TreeNode("Attached Components")) {
             if (ImGui::Button("Detach all")) {
                 m_motion_controller_attached_components.clear();
 
@@ -2361,23 +2350,23 @@ void UObjectHook::draw_main() {
         }
     }
 
-    const auto made2 = m_camera_attach.object != nullptr && ImGui::TreeNode("Attached Camera Object");
+    if (m_camera_attach.object != nullptr) {
+       if(ImGui::TreeNode("Attached Camera Object")) {
+            if (ImGui::Button("Detach Camera")) {
+                m_camera_attach.object = nullptr;
+                m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
 
-    if (made2) {
-        if (ImGui::Button("Detach Camera")) {
-            m_camera_attach.object = nullptr;
-            m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
+                if (m_persistent_camera_state != nullptr) {
+                    m_persistent_camera_state->erase_json_file();
+                }
 
-            if (m_persistent_camera_state != nullptr) {
-                m_persistent_camera_state->erase_json_file();
+                m_persistent_camera_state.reset();
             }
 
-            m_persistent_camera_state.reset();
+            ui_handle_object(m_camera_attach.object);
+
+            ImGui::TreePop();
         }
-
-        ui_handle_object(m_camera_attach.object);
-
-        ImGui::TreePop();
     }
 
     if (m_overlap_detection_actor == nullptr) {
@@ -2389,9 +2378,8 @@ void UObjectHook::draw_main() {
         m_overlap_detection_actor = nullptr;
     } else {
         ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-        const auto made = ImGui::TreeNode("Overlapped Objects");
 
-        if (made) {
+        if (ImGui::TreeNode("Overlapped Objects")) {
             if (ImGui::Button("Destroy Overlapper")) {
                 destroy_overlapper();
             }
@@ -2433,6 +2421,7 @@ void UObjectHook::draw_main() {
     }
 
     ImGui::Text("Objects: %zu (%zu actual)", m_objects.size(), sdk::FUObjectArray::get()->get_object_count());
+    static auto m_ObjectsByClass = false;
 
     if (ImGui::TreeNode("Recent Objects")) {
         for (auto& object : m_most_recent_objects) {
@@ -2448,14 +2437,18 @@ void UObjectHook::draw_main() {
 
         ImGui::TreePop();
     }
-
+    ImGuiID CommonID = ImGui::GetID("Common Objects");
     // Display common objects like things related to the player
     if (ImGui::TreeNode("Common Objects")) {
+        ImGui::TreeNodeSetOpen(ImGui::GetID("Objects By class"), false);
         auto engine = sdk::UGameEngine::get();
         auto world = engine != nullptr ? engine->get_world() : nullptr;
-
+        static sdk::UObject* mesh;
         if (world != nullptr) {
             if (ImGui::TreeNode("PlayerController")) {
+                ImGui::TreeNodeSetOpen(ImGui::GetID("World"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Acknowledged Pawn"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Camera Manager"), false);
                 auto scope = m_path.enter_clean("Player Controller");
                 auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
 
@@ -2469,6 +2462,9 @@ void UObjectHook::draw_main() {
             }
 
             if (ImGui::TreeNode("Acknowledged Pawn")) {
+                ImGui::TreeNodeSetOpen(ImGui::GetID("World"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("PlayerController"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Camera Manager"), false);
                 auto scope = m_path.enter_clean("Acknowledged Pawn");
                 auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
 
@@ -2477,6 +2473,7 @@ void UObjectHook::draw_main() {
 
                     if (pawn != nullptr) {
                         ui_handle_object(pawn);
+                  
                     } else {
                         ImGui::Text("No pawn");
                     }
@@ -2486,8 +2483,11 @@ void UObjectHook::draw_main() {
 
                 ImGui::TreePop();
             }
-
+        
             if (ImGui::TreeNode("Camera Manager")) {
+                ImGui::TreeNodeSetOpen(ImGui::GetID("World"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Acknowledged Pawn"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("PlayerController"), false);
                 auto scope = m_path.enter_clean("Camera Manager");
                 auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
 
@@ -2507,6 +2507,9 @@ void UObjectHook::draw_main() {
             }
 
             if (ImGui::TreeNode("World")) {
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Camera Manager"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("Acknowledged Pawn"), false);
+                ImGui::TreeNodeSetOpen(ImGui::GetID("PlayerController"), false);
                 auto scope = m_path.enter_clean("World");
                 ui_handle_object(world);
                 ImGui::TreePop();
@@ -2518,9 +2521,10 @@ void UObjectHook::draw_main() {
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Objects by class")) {
+    m_ObjectsByClass = ImGui::TreeNode("Objects by class");
+    if (m_ObjectsByClass) {
+        ImGui::TreeNodeSetOpen(CommonID, false);
         ImGui::Checkbox("Hide Default Classes", &m_hide_default_classes);
-
         static char filter[256]{};
         ImGui::InputText("Filter", filter, sizeof(filter));
 
@@ -2568,7 +2572,7 @@ void UObjectHook::draw_main() {
         }
 
         const auto wide_filter = utility::widen(filter);
-        const bool made_child = ImGui::BeginChild("Objects by class entries", ImVec2(0, 0), true, ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar);
+        const bool made_child = ImGui::BeginChild("Objects by class entries", ImVec2(0, 0),  ImGuiChildFlags_Borders);
 
         utility::ScopeGuard sg{[made_child]() {
             //if (made_child) {
@@ -2704,9 +2708,8 @@ void UObjectHook::draw_main() {
                 }
 
                 for (const auto& object : objects) {
-                    const auto made = ImGui::TreeNode(utility::narrow(m_meta_objects[object]->full_name).data());
 
-                    if (made) {
+                    if (ImGui::TreeNode(utility::narrow(m_meta_objects[object]->full_name).data())) {
                         ui_handle_object((sdk::UObject*)object);
                         
                         ImGui::TreePop();
@@ -2743,11 +2746,41 @@ void UObjectHook::ui_standard_object_context_menu(sdk::UObjectBase* object) {
             sc(utility::narrow(m_meta_objects[object]->full_name));
         }
 
+
+
         if (ImGui::Button("Copy Address")) {
             const auto hex = (std::stringstream{} << std::hex << (uintptr_t)object).str();
             sc(hex);
         }
+        if (ImGui::Button("Test lua")) {
 
+                      const auto hex = (std::stringstream{} << std::hex << (uintptr_t)object).str();
+       
+
+
+                std::string_view lua_text = "local obj =  uevr.api:to_uobject(tonumber(" + hex + "), 16)); print(tostring(obj))";
+                         //"local obj =  uevr.api:to_uobject(" + hex + ")"+
+                         //   R"(
+                         //       local root = obj.GetRootComponent and obj:GetRootComponent()
+                         //       if root then 
+                         //           for i = 1, root:GetNumChildrenComponents() do
+                         //                  local comp = root:GetChildComponent(i)
+                         //                  if comp then comp:K2_DetachFromComponent(1,1,1, true)
+                         //                   comp:K2_DestroyComponent()
+                         //                   end
+                         //            end
+                         //            root:K2_DestroyComponent()
+                         //            obj:K2_DestroyActor()
+                         //       elseif obj.K2_DestroyComponent then
+                         //           obj:K2_DestroyComponent()
+                         //        end                                 
+
+                         //       )";
+                         //  
+                PluginLoader::get()->do_lua_string(lua_text.data(), "destroy");
+                    
+               
+        }
 
         ImGui::EndPopup();
     }
@@ -2824,11 +2857,11 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
     }
 
     if (uclass->is_a(sdk::UActorComponent::static_class())) {
-        /*if (ImGui::Button("Destroy Component")) {
+        if (ImGui::Button("Destroy Component")) {
             auto comp = (sdk::UActorComponent*)object;
 
             comp->destroy_component();
-        }*/
+        }
     }
 
     if (uclass->is_a(sdk::USceneComponent::static_class())) {
@@ -2841,6 +2874,33 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
 
     ui_handle_struct(object, uclass);
 }
+
+bool UObjectHook::object_from_path_or_address(std::string_view object, sdk::UObject* out) {
+    *out = sdk::UObject();
+    if (object.contains(' ')) {
+        auto _type = object.substr(0, object.find_first_of(' '));
+        if (_type.ends_with("Class")) {
+            out = sdk::find_uobject<sdk::UClass>(utility::widen(object));
+            return out != nullptr;
+        } else if (_type.ends_with("ScriptStruct")) {
+            out = sdk::find_uobject<sdk::UScriptStruct>(utility::widen(object));
+            return out != nullptr;
+        } else if (_type.ends_with("Function")) {
+            out = sdk::find_uobject<sdk::UFunction>(utility::widen(object));
+            return out != nullptr;
+        }
+      else{
+        out = sdk::find_uobject<sdk::UObject>(utility::widen(object));
+        return out != nullptr;
+        }
+    } else {
+
+        out = (sdk::UObject*)std::stoull(object.data(), nullptr, 16);
+        return out != nullptr;
+        }
+     return false;
+}
+
 
 void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
     if (comp == nullptr) {
@@ -2890,7 +2950,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             auto existing = std::find_if(m_persistent_states.begin(), m_persistent_states.end(), [&](const auto& state2) {
                 return state2 != nullptr && state2->path.resolve() == comp;
             });
-
+             
             // Finetuning of the controller rotation offset
             // Convert to pitch/yaw/roll first.
             auto euler = utility::math::euler_angles_from_steamvr(state->rotation_offset);
@@ -2909,7 +2969,51 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                     (*existing)->state.location_offset = state->location_offset;
                 }
             }
+             
+            //for (auto uobject : m_inline_uobjecthooks) {
+            //    sdk::UObject* out;
+            //    if (UObjectHook::object_from_path_or_address(uobject.first, out)){
+            //        if (out == comp) {
+            //                        
+            //                }
+            //        }
+            //     
+            //}                
+          
+            void* addr = (void*)((uintptr_t)comp);
+            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();               
+            static std::string_view text = "local comp = uevr.api:to_uobject(" + hex + ")\n";
+            if (ImGui::TreeNode("Lua")) {
 
+                auto size = ImGui::GetContentRegionAvail();
+                ImGui::BeginChild("Console", ImVec2(250, 250), ImGuiChildFlags_AlwaysAutoResize);
+
+           
+       
+                    auto width = size.x * 0.75f;
+                    if (width < 250) width = 250; 
+                    auto linect = 3;
+                    for (auto& c : text) {
+                        if (c == '\n') {
+                            ++linect;
+                        }
+                    }
+                    char* input{};
+                    strcpy_s(input, sizeof(text.data()), text.data());                                        
+                    auto height = linect * ImGui::CalcTextSize("T").y;
+                    if (ImGui::InputTextMultiline("##luainput", input, sizeof(input),
+                            size,
+                            ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackHistory)) {
+                       text = input;
+                    }
+                
+                ImGui::EndChild();
+                if (ImGui::Button("Execute")) {
+                    PluginLoader::get()->do_lua_string(text.data(), utility::narrow(comp->get_full_name()).data());
+                }
+                ImGui::TreePop();
+            }
+  
             auto save_state_logic = [&](const std::vector<std::string>& path) {
                 auto json = serialize_mc_state(path, state);
 
@@ -2993,6 +3097,67 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             }
 
             ImGui::SameLine();
+            //static sdk::FName* attach_socket{};
+            //static std::vector<std::wstring> socket_combo={L"None"};
+            //if (socket_combo.size() == 1) {
+            //
+
+            if (ImGui::Button("Attach Camera to head")) {
+                
+            auto head_socket = L"None";
+            auto neck_socket = L"None";
+            for (auto& n : comp->get_all_socket_names()) {
+                const auto& name = n;
+                if (name.to_string().contains(L"head")) {
+                    head_socket = name.to_string().c_str();
+                } else if (name.to_string().contains(L"neck")) {
+                    neck_socket = name.to_string().c_str();
+                }
+            }
+
+            void* addr = (void*)((uintptr_t)comp);
+            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
+            static std::string_view text = "_G.uobjecthook_cache = _G.uobjecthook_cache or {}\n local function attach_to_head()\nlocal comp = uevr.api:to_uobject(" + hex + ")" +
+                     "\nlocal head_socket_name = \"" +
+                                           utility::narrow(head_socket) +
+                                           "\"" + 
+                "\nlocal neck_socket_name = \"" +
+                                           utility::narrow(neck_socket) + "\"" +
+                     R"(
+                            local ukismetmath = uevr.api:find_uobject("Class /Script/Engine.KismetMathLibrary"):get_class_default_object()
+                            local pc = uevr.api:get_player_controller(0)
+                            local spring = uevr.api:add_component_by_class(pc, uevr.api:find_uobject("Class /Script/Engine.SpringArmComponent"), false)
+                            local cam_actor = uevr.api:spawn_object(uevr.api:find_uobject("Class /Script/Engine.CameraActor"), pc)
+                            spring:K2_AttachToComponent(comp, neck_socket_name, 2, 2, 2, true)
+                            spring.TargetArmLength = 12
+                            spring.SocketOffset = Vector3f.new(0, 0, 0)
+                            spring.TargetOffset = comp:GetSocketTransform(head_socket_name, 1).Translation -  comp:GetSocketTransform(neck_socket_name, 1).Translation
+                            spring.bDoCollisionTest = true
+                            spring.ProbeSize = 12.001
+                            spring.bUsePawnControlRotation = true
+                            spring.bEnableCameraLag = false
+                            spring.bEnableCameraRotationLag = true
+                            spring.CameraRotationLagSpeed = 55.0
+                            local new_cam_comp = cam_actor.CameraComponent
+                            new_cam_comp:K2_AttachToComponent(spring,
+                                ("SpringEndpoint"), 2, 0, 2, true)
+                            new_cam_comp.bUsePawnControlRotation = true
+                            new_cam_comp.bShouldSnapRotationWhenAttached = true
+                            new_cam_comp.bShouldBeAttached = true
+                            new_cam_comp.RelativeLocation.Z = 10.5
+                        pc:ClientSetViewTarget(cam_actor, {})
+                        end
+                        print("from c++")
+                        attach_to_head()
+                    )";
+
+                //m_camera_attach.object = comp;
+                //m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
+                PluginLoader::get()->do_lua_string(text.data(), "attach_vt");
+
+            }
+
+            ImGui::SameLine();
 
             if (ImGui::Button("Attach Camera to (Relative)")) {
                 m_camera_attach.object = comp;
@@ -3035,6 +3200,35 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             }
         }
     }
+    
+    void* addr = (void*)((uintptr_t)comp);
+    const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
+
+    glm::vec3  loc = comp->get_world_location();
+    glm::vec3 rot = comp->get_world_rotation();
+
+    // Finetuning of the controller rotation offset
+    // Convert to pitch/yaw/roll first.
+    std::string_view rotid = "World Rotation##" + hex;
+    std::string_view locid = "World Location##" + hex;
+
+    ImGui::PushID(rotid.data());
+    if (ImGui::DragFloat3(rotid.data(), &rot.x, 0.1f)) {
+        comp->set_world_rotation(rot, true, false);
+    }
+    ImGui::PopID();
+    ImGui::PushID(locid.data());
+    if (ImGui::DragFloat3(locid.data(), &loc.x, 0.1f)) {
+        comp->set_world_location(rot, true, false);
+    }
+    ImGui::PopID();
+    ImGui::PushID("CamOffset");
+ if (ImGui::DragFloat3("Camera Offset", &m_camera_attach.offset.x, 0.1f)) {
+        if (m_persistent_camera_state != nullptr) {
+            m_persistent_camera_state->offset = m_camera_attach.offset;
+        }
+    }
+    ImGui::PopID();
 
     const auto prim_comp_t = sdk::UPrimitiveComponent::static_class();
     auto prim_comp = (sdk::UPrimitiveComponent*)comp;
@@ -3148,10 +3342,51 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
                     //comp->set_socket_rotation(name, rotation);
                 }
+                
+/*                if (ImGui::Button("Attach Camera")) {
+                    std::string_view luadata = "local comp = uevr.api:to_uobject(" +
+                     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" + 
+                        (utility::narrow(name.to_string())) + R"('
+local spring = uevr.api:add_component_by_class(comp:get_outer(), uevr.api:find_uobject("Class /Script/Engine.SpringArmComponent"), false)
+                    
 
+                        
+
+                                    )";
+                             PluginLoader::get()->do_lua_string(luadata, "attach");
+                }*/
+                if (comp->get_class()->get_fname().to_string().ends_with(L"MeshComponent")) {
+                
+
+                  if (ImGui::Button("Toggle Visibility")){
+                        static auto isbonehidden = comp->get_class()->find_function(L"IsBoneHiddenByName");
+                        static auto hidebone = comp->get_class()->find_function(L"HideBoneByName");
+                        static auto unhidebone = comp->get_class()->find_function(L"UnHideBoneByName");
+                        struct {
+                            sdk::FName name;
+                            bool ReturnValue;
+                        } parms;
+                        parms.name = name;
+                        comp->process_event(isbonehidden, &parms);
+                        
+                        comp->process_event(parms.ReturnValue ? unhidebone : hidebone, &parms);
+
+                        
+
+                //std::string_view luadata = "local comp = uevr.api:to_uobject(" +
+                //     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" + 
+                //        (utility::narrow(name.to_string())) + R"('
+                //                    if comp:IsBoneHiddenByName(socket) then
+                //                    comp:UnHideBoneByName(socket)      
+                //                    else comp:HideBoneByName(socket)
+                //                end)";
+                //    PluginLoader::get()->do_lua_string(luadata.data(), "togglevis");
+                    }                                                                             
+                }
                 ImGui::TreePop();
             }
-        }
+        
+            }
 
         ImGui::TreePop();
     }
@@ -3348,7 +3583,7 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
     if (uclass == nullptr) {
         return;
     }
-
+    static auto pc = sdk::UGameplayStatics::get()->get_player_controller(sdk::UGameEngine::get()->get_world(), 0);
     auto actor = (sdk::AActor*)object;
 
     if (m_camera_attach.object != object ){
@@ -3504,18 +3739,14 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
         }
     }
 
-    std::sort(sorted_functions.begin(), sorted_functions.end(), [](sdk::UFunction* a, sdk::UFunction* b) {
-        return a->get_fname().to_string() < b->get_fname().to_string();
-    });
+    std::sort(sorted_functions.begin(), sorted_functions.end(),
+        [](sdk::UFunction* a, sdk::UFunction* b) { return a->get_fname().to_string() < b->get_fname().to_string(); });
 
     for (auto func : sorted_functions) {
         ImGui::PushID((void*)func);
 
-        utility::ScopeGuard pop_guard{[]() {
-            ImGui::PopID();
-        }};
+        utility::ScopeGuard pop_guard{[]() { ImGui::PopID(); }};
 
-        const auto made = ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data());
 
         ui_standard_object_context_menu(func);
 
@@ -3524,21 +3755,22 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
             ImGui::TextColored(ImVec4{0.0f, 1.0f, 0.0f, 1.0f}, "[Called]");
         }
 
-        if (is_real_object && made) {
-            auto parameters = func->get_child_properties();
+        if (ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data())) {
+            if (is_real_object) {
+                auto parameters = func->get_child_properties();
 
-            if (parameters == nullptr || (parameters->get_next() == nullptr && parameters->get_field_name().to_string() == L"ReturnValue")) {
-                if (ImGui::Button("Call")) {
-                    struct {
-                        char poop[1024]{};
-                    } params{};
+                if (parameters == nullptr ||
+                    (parameters->get_next() == nullptr && parameters->get_field_name().to_string() == L"ReturnValue")) {
+                    if (ImGui::Button("Call")) {
+                        struct {
+                            char poop[1024]{};
+                        } params{};
 
-                    object_real->process_event(func, &params);
-                }
-            } else if (parameters->get_next() == nullptr) {
-                switch (utility::hash(utility::narrow(parameters->get_class()->get_name().to_string()))) {
-                case "BoolProperty"_fnv:
-                    {
+                        object_real->process_event(func, &params);
+                    }
+                } else if (parameters->get_next() == nullptr) {
+                    switch (utility::hash(utility::narrow(parameters->get_class()->get_name().to_string()))) {
+                    case "BoolProperty"_fnv: {
                         if (ImGui::Button("Enable")) {
                             struct {
                                 bool enabled{true};
@@ -3558,28 +3790,24 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
 
                             object_real->process_event(func, &params);
                         }
-                    }
-                    break;
-                case "StrProperty"_fnv:
-                {
-                    if (ImGui::Button("Call")) {
-                        struct {
-                            sdk::TArrayLite<wchar_t> str{};
-                            char padding[0x10];
-                        } params{};
+                    } break;
+                    case "StrProperty"_fnv: {
+                        if (ImGui::Button("Call")) {
+                            struct {
+                                sdk::TArrayLite<wchar_t> str{};
+                                char padding[0x10];
+                            } params{};
 
-                        params.str.data = (wchar_t*)L"Hello world!";
-                        params.str.count = wcslen(params.str.data);
-                        params.str.capacity = params.str.count + 1;
+                            params.str.data = (wchar_t*)L"Hello world!";
+                            params.str.count = wcslen(params.str.data);
+                            params.str.capacity = params.str.count + 1;
 
-                        object_real->process_event(func, &params);
-                    }
-                }
-                    break;
-                case "UInt32Property"_fnv:
-                case "IntProperty"_fnv:
-                case "EnumProperty"_fnv:
-                    {
+                            object_real->process_event(func, &params);
+                        }
+                    } break;
+                    case "UInt32Property"_fnv:
+                    case "IntProperty"_fnv:
+                    case "EnumProperty"_fnv: {
                         static int value = 0;
                         ImGui::InputInt("Value", &value);
 
@@ -3593,39 +3821,39 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
 
                             object_real->process_event(func, &params);
                         }
-                    }
-                    break;
+                    } break;
 
-                default:
-                    break;
-                };
-            }
+                    default:
+                        break;
+                    };
+                }
 
-            for (auto param = parameters; param != nullptr; param = param->get_next()) {
-                const auto cname = utility::narrow(param->get_class()->get_name().to_string());
-                ImGui::Text("%s %s", cname.data(), utility::narrow(param->get_field_name().to_string()).data());
+                for (auto param = parameters; param != nullptr; param = param->get_next()) {
+                    const auto cname = utility::narrow(param->get_class()->get_name().to_string());
+                    ImGui::Text("%s %s", cname.data(), utility::narrow(param->get_field_name().to_string()).data());
 
-                if (cname.contains("Property")) {
-                    const auto prop = (sdk::FProperty*)param;
+                    if (cname.contains("Property")) {
+                        const auto prop = (sdk::FProperty*)param;
 
-                    if (prop->is_out_param()) {
-                        ImGui::SameLine();
-                        ImGui::TextColored(ImVec4{0.0f, 1.0f, 0.0f, 1.0f}, "[Out]");
-                    }
-
-                    // Display full name of StructProperty
-                    if (cname == "StructProperty") {
-                        const auto prop = (sdk::FStructProperty*)param;
-                        const auto s = prop->get_struct();
-
-                        if (s != nullptr) {
-                            const auto struct_name = utility::narrow(s->get_full_name());
-                            constexpr auto r = (float)78.0f / 255.0f;
-                            constexpr auto g = (float)201.0f / 255.0f;
-                            constexpr auto b = (float)176.0f / 255.0f;
-
+                        if (prop->is_out_param()) {
                             ImGui::SameLine();
-                            ImGui::TextColored(ImVec4{r, g, b, 1.0f}, "[%s]", struct_name.data());
+                            ImGui::TextColored(ImVec4{0.0f, 1.0f, 0.0f, 1.0f}, "[Out]");
+                        }
+
+                        // Display full name of StructProperty
+                        if (cname == "StructProperty") {
+                            const auto prop = (sdk::FStructProperty*)param;
+                            const auto s = prop->get_struct();
+
+                            if (s != nullptr) {
+                                const auto struct_name = utility::narrow(s->get_full_name());
+                                constexpr auto r = (float)78.0f / 255.0f;
+                                constexpr auto g = (float)201.0f / 255.0f;
+                                constexpr auto b = (float)176.0f / 255.0f;
+
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4{r, g, b, 1.0f}, "[%s]", struct_name.data());
+                            }
                         }
                     }
                 }
@@ -3637,6 +3865,7 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
 }
 
 void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
+
     auto previous_path = m_path;
 
     auto scope = m_path.enter("Properties");
@@ -3644,6 +3873,70 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
     if (uclass == nullptr) {
         return;
     }
+
+        
+static const std::map<std::string_view, uint64_t> EPropertyFlags = {
+    {"CPF_None",  0x0000000000000000},
+    {"CPF_Edit",                                0x0000000000000001},
+    {"CPF_ConstParm",                           0x0000000000000002},
+    {"CPF_BlueprintVisible",                    0x0000000000000004},
+    {"CPF_ExportObject",                        0x0000000000000008},
+    {"CPF_BlueprintReadOnly",                   0x0000000000000010},
+    {"CPF_Net",                                 0x0000000000000020},
+    {"CPF_EditFixedSize",                       0x0000000000000040},
+    {"CPF_Parm",                                0x0000000000000080},
+    {"CPF_OutParm",                             0x0000000000000100},
+    {"CPF_ZeroConstructor",                     0x0000000000000200},
+    {"CPF_ReturnParm",                          0x0000000000000400},
+    {"CPF_DisableEditOnTemplate",               0x0000000000000800},
+    {"CPF_Transient",                           0x0000000000002000},
+    {"CPF_Config",                              0x0000000000004000},
+    {"CPF_DisableEditOnInstance",               0x0000000000010000},
+    {"CPF_EditConst",                           0x0000000000020000},
+    {"CPF_GlobalConfig",                        0x0000000000040000},
+    {"CPF_InstancedReference",                  0x0000000000080000},
+    {"CPF_DuplicateTransient",                  0x0000000000200000},
+    {"CPF_SubobjectReference",                  0x0000000000400000},
+    {"CPF_SaveGame",                            0x0000000001000000},
+    {"CPF_NoClear",                             0x0000000002000000},
+    {"PF_ReferenceParm",                        0x0000000008000000},
+    {"PF_BlueprintAssignable",                  0x0000000010000000},
+    {"PF_Deprecated",                           0x0000000020000000},
+    {"PF_IsPlainOldData",                       0x0000000040000000},
+    {"PF_RepSkip",                              0x0000000080000000},
+    {"PF_RepNotify",                            0x0000000100000000},
+    {"PF_Interp",                               0x0000000200000000},
+    {"PF_NonTransactional",                     0x0000000400000000},
+    {"PF_EditorOnly",                           0x0000000800000000},
+    {"PF_NoDestructor",                         0x0000001000000000},
+    {"CPF_AutoWeak",                            0x0000004000000000},
+    {"CPF_ContainsInstancedReference",          0x0000008000000000},
+    {"CPF_AssetRegistrySearchable",             0x0000010000000000},
+    {"CPF_SimpleDisplay",                       0x0000020000000000},
+    {"CPF_AdvancedDisplay",                     0x0000040000000000},
+    {"CPF_Protected",                           0x0000080000000000},
+    {"CPF_BlueprintCallable",                   0x0000100000000000},
+    {"CPF_BlueprintAuthorityOnly",              0x0000200000000000},
+    {"CPF_TextExportTransient",                 0x0000400000000000},
+    {"CPF_NonPIEDuplicateTransient",            0x0000800000000000},
+    {"CPF_ExposeOnSpawn",                       0x0001000000000000},
+    {"CPF_PersistentInstance",                  0x0002000000000000},
+    {"CPF_UObjectWrapper",                      0x0004000000000000},
+    {"CPF_HasGetValueTypeHash",                 0x0008000000000000},
+    {"CPF_NativeAccessSpecifierPublic",         0x0010000000000000},
+    {"CPF_NativeAccessSpecifierProtected",      0x0020000000000000},
+    {"CPF_NativeAccessSpecifierPrivate",        0x0040000000000000},
+    {"CPF_SkipSerialization",                   0x0080000000000000}
+};
+
+const auto check_flags = [](uint64_t flags){
+    std::map<std::string_view, bool> all_flags{};
+    for (auto& flag : EPropertyFlags) {
+        all_flags[flag.first] = (flags & (flag.second)) != 0;        
+    }
+    return all_flags;
+};
+
 
     const bool is_real_object = object != nullptr && m_objects.contains((sdk::UObject*)object);
 
@@ -3669,7 +3962,6 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             const auto name = utility::narrow(propc->get_name().to_string());
             const auto field_name = utility::narrow(prop->get_field_name().to_string());
             ImGui::Text("%s %s", name.data(), field_name.data());
-
             continue;
         }
 
@@ -3691,6 +3983,32 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             }
         }
 
+        const auto edit_property_flags = [&](std::string _prop_name, sdk::FProperty* _fprop) {
+                ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+                    auto flags = _fprop->get_property_flags();
+                    for (auto& _prop : check_flags(flags)) {
+                        ImGui::BulletText(_prop.first.data());
+                        ImGui::SameLine();
+                        auto enabled = &_prop.second;
+                        if (ImGui::Checkbox(std::string("##").append(_prop_name).c_str(), enabled)) {
+                            auto new_flags = flags;
+
+                            for (auto&& f : EPropertyFlags) {
+                                if (f.first == _prop.first) {
+                                    if (enabled) {
+                                        flags |= (uint64_t)f.second;
+                                    } else {
+                                        flags &= ~(uint64_t)f.second;
+                                    }
+                                    break;
+                                }
+                            }
+                            _fprop->get_property_flags() = flags;
+                        }
+           
+
+                }
+            };
         // Right-click lambda for supported properties, usually for saving.
         auto display_context = [&](auto value) {
             if (!ImGui::BeginPopupContextItem()) {
@@ -3795,23 +4113,30 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             if (ImGui::Button("Unsave Property")) {
                 save_logic(true);
             }
+        
 
             ImGui::EndPopup();
         };
+      
+        const auto& prop_name =  utility::narrow(prop->get_field_name().to_string());
+        sdk::FProperty* fprop = ((sdk::FProperty*)prop);
 
+        
         switch (hash_type) {
+
+
         case L"FloatProperty"_fnv:
             {
-                auto& value = *(float*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
-                ImGui::DragFloat(utility::narrow(prop->get_field_name().to_string()).data(), &value, 0.01f);
+                auto& value = *(float*)((uintptr_t)object + fprop->get_offset());
+                ImGui::DragFloat(prop_name.data(), &value, 0.01f);
                 display_context(value);
             }
             break;
         case L"DoubleProperty"_fnv:
             {
-                auto& value = *(double*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
+                auto& value = *(double*)((uintptr_t)object + fprop->get_offset());
                 float casted_value = (float)value;
-                if (ImGui::DragFloat(utility::narrow(prop->get_field_name().to_string()).data(), (float*)&casted_value, 0.01f)) {
+                if (ImGui::DragFloat(prop_name.data(), (float*)&casted_value, 0.01f)) {
                     value = (double)casted_value;
                 }
                 display_context(value);
@@ -3819,9 +4144,9 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             break;
         case L"UInt16Property"_fnv:
             {
-                auto& value = *(uint16_t*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
+                auto& value = *(uint16_t*)((uintptr_t)object + fprop->get_offset());
                 int converted = (int)value;
-                if (ImGui::SliderInt(utility::narrow(prop->get_field_name().to_string()).data(), (int*)&converted, 0, 65535)) {
+                if (ImGui::SliderInt(prop_name.data(), (int*)&converted, 0, 65535)) {
                     value = (uint16_t)converted;
                 }
                 display_context(value);
@@ -3830,15 +4155,15 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
         case L"UInt32Property"_fnv:
         case L"IntProperty"_fnv:
             {
-                auto& value = *(int32_t*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
-                ImGui::DragInt(utility::narrow(prop->get_field_name().to_string()).data(), &value, 1);
+                auto& value = *(int32_t*)((uintptr_t)object + fprop->get_offset());
+            ImGui::DragInt(prop_name.data(), &value, 1);
                 display_context(value);
             }
             break;
         case L"UInt64Property"_fnv:
             {
-                auto& value = *(uint64_t*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
-                ImGui::DragScalar(utility::narrow(prop->get_field_name().to_string()).data(), ImGuiDataType_U64, &value, 1);
+                auto& value = *(uint64_t*)((uintptr_t)object + fprop->get_offset());
+            ImGui::DragScalar(prop_name.data(), ImGuiDataType_U64, &value, 1);
                 display_context(value);
             }
             break;
@@ -3846,7 +4171,7 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             {
                 auto boolprop = (sdk::FBoolProperty*)prop;
                 auto value = boolprop->get_value_from_object(object);
-                if (ImGui::Checkbox(utility::narrow(prop->get_field_name().to_string()).data(), &value)) {
+                if (ImGui::Checkbox(prop_name.data(), &value)) {
                     boolprop->set_value_in_object(object, value);
                 }
                 display_context(value);
@@ -3854,9 +4179,9 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             break;
         case L"ByteProperty"_fnv:
             {
-                auto& value = *(uint8_t*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
+                auto& value = *(uint8_t*)((uintptr_t)object + fprop->get_offset());
                 int converted = (int)value;
-                if (ImGui::SliderInt(utility::narrow(prop->get_field_name().to_string()).data(), &converted, 0, 255)) {
+                if (ImGui::SliderInt(prop_name.data(), &converted, 0, 255)) {
                     value = (uint8_t)converted;
                 }
                 display_context(value);
@@ -3866,20 +4191,22 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
         case L"ObjectProperty"_fnv:
         case L"ClassProperty"_fnv:
             {
-                auto& value = *(sdk::UObject**)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
-                
-                if (ImGui::TreeNode(utility::narrow(prop->get_field_name().to_string()).data())) {
-                    auto scope2 = m_path.enter(utility::narrow(prop->get_field_name().to_string()));
+                auto& value = *(sdk::UObject**)((uintptr_t)object + fprop->get_offset());
+           
+                if (ImGui::TreeNode(prop_name.data())) {
+                    auto scope2 = m_path.enter(prop_name);
                     ui_handle_object(value);
+                    if (ImGui::BeginPopupContextItem()) {
+                        edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                        ImGui::EndPopup();
+                    }
                     ImGui::TreePop();
                 }
             }
             break;
         case L"StructProperty"_fnv:
             {
-                void* addr = (void*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
-
-                const auto made = ImGui::TreeNode(utility::narrow(prop->get_field_name().to_string()).data());
+                void* addr = (void*)((uintptr_t)object + fprop->get_offset());
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::Button("Copy Address")) {
@@ -3895,11 +4222,11 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
                             CloseClipboard();
                         }
                     }
-
+                    edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
                     ImGui::EndPopup();
                 }
 
-                if (made) {
+                if (ImGui::TreeNode(prop_name.data())) {
                     auto scope2 = m_path.enter(utility::narrow(prop->get_field_name().to_string()));
                     ui_handle_struct(addr, ((sdk::FStructProperty*)prop)->get_struct());
                     ImGui::TreePop();
@@ -3909,8 +4236,8 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
         case L"Function"_fnv:
             break;
         case L"ArrayProperty"_fnv:
-            if (ImGui::TreeNode(utility::narrow(prop->get_field_name().to_string()).data())) {
-                auto scope2 = m_path.enter(utility::narrow(prop->get_field_name().to_string()));
+            if (ImGui::TreeNode(prop_name.data())) {
+                auto scope2 = m_path.enter(prop_name);
                 ui_handle_array_property(object, (sdk::FArrayProperty*)prop);
                 ImGui::TreePop();
             }
@@ -3918,11 +4245,11 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             break;
         case L"NameProperty"_fnv:
             {
-                const auto& value = *(sdk::FName*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
+                const auto& value = *(sdk::FName*)((uintptr_t)object + fprop->get_offset());
                 const auto wstr = value.to_string();
                 const auto str = utility::narrow(wstr);
 
-                ImGui::Text("%s: ", utility::narrow(prop->get_field_name().to_string()).data());
+                ImGui::Text("%s: ", prop_name.data());
                 ImGui::SameLine(0.0f, 0.0f);
                 ImGui::TextColored(ImVec4{3.0f / 255.0f, 232.0f / 255.0f, 252.0f / 255.0f, 1.0f}, "%s", str.data());
             }
@@ -3930,17 +4257,17 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
         case L"StrProperty"_fnv:
         {
             using FString = sdk::TArray<wchar_t>;
-            const auto& value = *(FString*)((uintptr_t)object + ((sdk::FProperty*)prop)->get_offset());
+            const auto& value = *(FString*)((uintptr_t)object + fprop->get_offset());
 
             if (value.data != nullptr && value.count > 0) {
                 const auto str = std::wstring_view{value.data, (size_t)value.count};
                 const auto narrow_str = utility::narrow(str);
 
-                ImGui::Text("%s: ", utility::narrow(prop->get_field_name().to_string()).data());
+                ImGui::Text("%s: ", prop_name.data());
                 ImGui::SameLine(0.0f, 0.0f);
                 ImGui::TextColored(ImVec4{3.0f / 255.0f, 232.0f / 255.0f, 252.0f / 255.0f, 1.0f}, "%s", narrow_str.data());
             } else {
-                ImGui::Text("%s: ", utility::narrow(prop->get_field_name().to_string()).data());
+                ImGui::Text("%s: ", prop_name.data());
                 ImGui::SameLine(0.0f, 0.0f);
                 ImGui::TextColored(ImVec4{3.0f / 255.0f, 232.0f / 255.0f, 252.0f / 255.0f, 1.0f}, "[empty string]");
             }
@@ -3954,6 +4281,11 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
             }
             break;
         };
+        std::string prop_name_edit = prop_name + "EditFlags";                                            
+        if (ImGui::TreeNode(prop_name_edit.c_str())){
+                edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                ImGui::TreePop();    
+        }
     }
 }
 

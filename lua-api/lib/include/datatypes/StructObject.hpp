@@ -4,8 +4,7 @@
 #include "ScriptPrerequisites.hpp"
 
 namespace lua::datatypes {
-
-
+ 
     struct StructObject {
         StructObject(void* obj, uevr::API::UStruct* def) : object{ obj }, desc{ def } {}
         StructObject(uevr::API::UStruct* def); // Allocates a new structure given a definition

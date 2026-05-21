@@ -15,7 +15,7 @@ uevr::API::UScriptStruct* get_quat_struct();
 uevr::API::UScriptStruct* get_transform_struct();
 uevr::API::UScriptStruct* get_transform3f_struct();
 uevr::API::UScriptStruct* get_transform3d_struct();
-uevr::API::UScriptStruct* get_hitresult_struct();
+
 uevr::API::UScriptStruct* get_linearcolor_struct();
 uevr::API::UScriptStruct* get_color_struct();
     bool is_ue5();
@@ -76,10 +76,24 @@ uevr::API::UScriptStruct* get_color_struct();
     template<typename T>
     T read_t(uevr::API::UObject* self, size_t offset) {
         return read_t_struct<T>(self, self->get_class(), offset);
-    }
+    }                                      
 
+    // Convert a UEVR TArray<T> to a Lua table. Returns lua_nil if array is empty or null.
+    template <typename Elem> 
+inline sol::object tarray_to_table(sol::this_state s, const uevr::API::TArray<Elem>& arr) {
+        if (arr.data == nullptr || arr.count == 0) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+
+        auto lua_arr = sol::state_view{s}.create_table();
+        for (int32_t i = 0; i < arr.count; ++i) {
+            lua_arr[i + 1] = sol::make_object(s, arr.data[i]);
+        }
+
+        return sol::make_object(s, lua_arr);
+    }
     template<typename T>
-    inline sol::object tarray_to_table(
+    inline sol::object tarray_to_table_ex(
             sol::this_state s, const uevr::API::TArray<T>& arr, const int32_t offset, const size_t name_hash) {
         if (arr.data == nullptr) {
             return sol::make_object(s, sol::lua_nil);
@@ -94,6 +108,20 @@ uevr::API::UScriptStruct* get_color_struct();
 
         return sol::make_object(s, lua_arr);
     }
+
+      template <typename T>
+    inline void create_tarray_from_table(sol::this_state s, uintptr_t address, sol::table tbl) {
+    
+        using TARRAY = uevr::API::TArray<T>;
+
+        auto& tarr = *(TARRAY*)&*(uevr::API::TArray<T>*)(address);
+
+        for (int32_t i = 0; i < tbl.size(); ++i) {
+            tarr[i] = sol::object(tbl[i+1]).as<T>();
+        }
+
+    }
+
 
     //template<typename T>
     //inline uevr::API::TArray<T>* table_to_tarray(sol::this_state s, sol::table value, int32_t capacity, const std::wstring name_hash) {

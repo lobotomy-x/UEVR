@@ -614,6 +614,7 @@ public:
     virtual void on_post_frame() {}; // after imgui rendering is done
     virtual void on_post_present() {}; // actually after present gets called
     virtual void on_draw_ui() {};
+    virtual void on_draw_ui(std::string_view id) {}; // add hooks to certain ui regions
     virtual void on_draw_sidebar_entry(std::string_view in_entry) {};
     virtual void on_device_reset() {};
     virtual bool on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_param) { return true; };

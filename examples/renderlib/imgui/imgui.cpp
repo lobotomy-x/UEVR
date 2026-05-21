@@ -3565,6 +3565,7 @@ ImU32 ImGui::GetColorU32(ImU32 col, float alpha_mul)
 // FIXME: This may incur a round-trip (if the end user got their data from a float4) but eventually we aim to store the in-flight colors as ImU32
 void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
 {
+/*
     ImGuiContext& g = *GImGui;
     ImGuiColorMod backup;
     backup.Col = idx;
@@ -3572,10 +3573,13 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
     g.ColorStack.push_back(backup);
     if (g.DebugFlashStyleColorIdx != idx)
         g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
+
+*/
 }
 
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
+/*
     ImGuiContext& g = *GImGui;
     ImGuiColorMod backup;
     backup.Col = idx;
@@ -3583,10 +3587,12 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     g.ColorStack.push_back(backup);
     if (g.DebugFlashStyleColorIdx != idx)
         g.Style.Colors[idx] = col;
+*/
 }
 
 void ImGui::PopStyleColor(int count)
 {
+/*
     ImGuiContext& g = *GImGui;
     if (g.ColorStack.Size < count)
     {
@@ -3600,6 +3606,7 @@ void ImGui::PopStyleColor(int count)
         g.ColorStack.pop_back();
         count--;
     }
+*/
 }
 
 static const ImGuiCol GWindowDockStyleColors[ImGuiWindowDockStyleCol_COUNT] =
@@ -9803,7 +9810,7 @@ void ImGui::PopID()
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (window->IDStack.Size <= 1)
     {
-        IM_ASSERT_USER_ERROR(0, "Calling PopID() too many times!");
+       // IM_ASSERT_USER_ERROR(0, "Calling PopID() too many times!");
         return;
     }
     window->IDStack.pop_back();

@@ -19,7 +19,7 @@ void FrameworkConfig::draw_main() {
     ImGui::SameLine();
     m_l3_r3_long_press->draw("L3 + R3 Long Press Menu Toggle");
     m_always_show_cursor->draw("Always Show Cursor");
-
+    
     ImGui::Separator();
     if (m_log_level->draw("Log Level")) {
         if (m_log_level->value() >= 0 && m_log_level->value() <= spdlog::level::level_enum::n_levels) {

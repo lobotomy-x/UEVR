@@ -22,6 +22,8 @@ namespace lua::datatypes {
     using Vector4d = glm::dvec4;
     using Quaternionf = glm::quat;
     using Quaterniond = glm::dquat;
+     using Matrix4x4f = glm::mat4;
+    using Matrix4x4d = glm::dmat4;
     
     void bind_vectors(sol::state_view& lua);
 }

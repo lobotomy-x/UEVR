@@ -15,7 +15,6 @@
 
 #include <sdk/threading/ThreadWorker.hpp>
 #include <mods/vr/d3d12/CommandContext.hpp>
-
 class Mods;
 class VR;
 
@@ -33,6 +32,8 @@ public:
         RELOAD_CONFIG = 0,
         CONFIG_SETUP_ACKNOWLEDGED = 1,
         QUIT = 2,
+        RELOAD_PLUGINS = 3,
+        RESET_SCRIPTS = 4,
     };
 
 public:
@@ -175,7 +176,6 @@ public:
 
     auto get_font_size() const { return m_font_size; }
 
-    int add_font(const std::filesystem::path& filepath, int size/*, const std::vector<ImWchar>& ranges = {}*/);
 
     void set_font(std::string path) {
         m_default_font_file = path;
@@ -397,6 +397,7 @@ private: // D3D11 members
         uint32_t rt_width{};
         uint32_t rt_height{};
 		ComPtr<ID3D11RenderTargetView> bb_rtv{};
+        void* imgui_backend_data{};
     } m_d3d11{};
 
 public:

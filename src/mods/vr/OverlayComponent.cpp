@@ -1042,10 +1042,10 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 
     auto& vr = VR::get();
 
-    auto& layer = this->m_framework_ui_layer;
+    auto& layer = this->m_framework_imgui_layer;
 
     layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
-    const auto& ui_swapchain = vr->m_openxr->swapchains[(uint32_t)runtimes::OpenXR::SwapchainIndex::FRAMEWORK_UI];
+    const auto& ui_swapchain = vr->m_openxr->swapchains[(uint32_t)runtimes::OpenXR::SwapchainIndex::UI];
     layer.subImage.swapchain = ui_swapchain.handle;
     layer.subImage.imageRect.offset.x = 0;
     layer.subImage.imageRect.offset.y = 0;

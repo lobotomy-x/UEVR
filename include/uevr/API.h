@@ -83,6 +83,9 @@ DECLARE_UEVR_HANDLE(UEVR_FStructPropertyHandle);
 DECLARE_UEVR_HANDLE(UEVR_FEnumPropertyHandle);
 DECLARE_UEVR_HANDLE(UEVR_UEnumHandle);
 DECLARE_UEVR_HANDLE(UEVR_FNumericPropertyHandle);
+DECLARE_UEVR_HANDLE(UEVR_AActorHandle);
+DECLARE_UEVR_HANDLE(UEVR_USceneComponentHandle);
+DECLARE_UEVR_HANDLE(UEVR_UPrimitiveComponentHandle);
 
 /* OpenXR stuff */
 DECLARE_UEVR_HANDLE(UEVR_XrInstance);
@@ -260,6 +263,15 @@ typedef struct {
     void (*load_lua_file)(const char* file_path);
     void (*load_lua_string)(const char* lua_chunk, const char* chunk_name);
     void (*get_lua_globals)(void** out_globals);
+    /* Return a pointer to a heap-allocated sol::state_view (caller must delete via free_sol_state_view) */
+    void (*get_sol_state_view)(void** out_state_view);
+    /* Free helpers for sol objects/state_views returned by the above APIs */
+    void (*free_sol_object)(void* obj);
+    void (*free_sol_state_view)(void* state_view);
+    /* Execute a lua chunk in the main lua state. Returns true on success. If out_result != nullptr, a short string result may be written. */
+    bool (*exec_lua_chunk)(const char* chunk, const char* label, char* out_result, unsigned int out_size);
+    bool (*get_global_string)(const char* name, char* out, unsigned int out_size);
+    void (*set_global_string)(const char* name, const char* value);
     void (*synchronize_lua_event)(void* lua_state_view, const char* event_name, const char* event_data);
 
     const char* (*get_commit_hash)();
@@ -310,16 +322,6 @@ typedef struct {
     UEVR_UObjectHandle (*get_local_pawn)(int index);
     UEVR_UObjectHandle (*spawn_object)(UEVR_UClassHandle klass, UEVR_UObjectHandle outer);
 
-   //UEVR_UObjectHandle (*as_actor)(UEVR_UObjectHandle object);
-   // bool (*is_actor)(UEVR_UObjectHandle object);
-
-   // UEVR_UObjectHandle (*as_component)(UEVR_UObjectHandle object);
-   // bool (*is_component)(UEVR_UObjectHandle object);   
-   // 
-   // UEVR_UObjectHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
-   // UEVR_UObjectHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, const wchar_t* socket, uint8_t attach_rules);
-   // UEVR_UObjectHandle (*detach)(bool keep_world, bool propagate);
-
     /* Handles exec commands, find_console_command does not */
     void (*execute_command)(const wchar_t* command);
     void (*execute_command_ex)(UEVR_UObjectHandle world, const wchar_t* command, void* output_device);
@@ -327,6 +329,9 @@ typedef struct {
     UEVR_FConsoleManagerHandle (*get_console_manager)();
 
     UEVR_UObjectHandle (*add_component_by_class)(UEVR_UObjectHandle actor, UEVR_UClassHandle klass, bool deferred);
+    UEVR_UObjectHandle (*get_or_add_component)(UEVR_UObjectHandle actor, UEVR_UClassHandle klass);
+    UEVR_UObjectHandle (*attach_to)(UEVR_UObjectHandle child, UEVR_UObjectHandle parent);
+
 } UEVR_SDKFunctions;
 
 typedef struct {
@@ -422,6 +427,24 @@ typedef struct {
     bool (*get_bool_property)(UEVR_UObjectHandle object, const wchar_t* name);
     void (*set_bool_property)(UEVR_UObjectHandle object, const wchar_t* name, bool value);
 } UEVR_UObjectFunctions;
+
+
+//typedef struct {
+//
+//     bool (*is_actor)(UEVR_UObjectHandle object);
+//     UEVR_AActorHandle (*as_actor)(UEVR_UObjectHandle object);
+//        UEVR_USceneComponentHandle (*get_root_component)(UEVR_AActorHandle object);
+//
+//
+//    UEVR_USceneComponentHandle (*add_component)(UEVR_AActorHandle object, UEVR_UClassHandle uclass);
+//    UEVR_USceneComponentHandle (*as_scene_component)(UEVR_UObjectHandle object);
+//
+// 
+//    UEVR_USceneComponentHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
+//    UEVR_USceneComponentHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, const wchar_t* socket, uint8_t attach_rules);
+//    UEVR_USceneComponentHandle (*detach)(bool keep_world, bool propagate);
+//
+//} UEVR_AActorFunctions;
 
 DECLARE_UEVR_HANDLE(UEVR_UObjectHookMotionControllerStateHandle);
 
@@ -525,11 +548,15 @@ typedef struct {
     void (*exec_ex)(UEVR_UGameViewportClientHandle vp, UEVR_UObjectHandle world, const wchar_t* command, void* output_device);
 } UEVR_UGameViewportClientFunctions;
 
+
+
 typedef struct {
     const UEVR_SDKFunctions* functions;
     const UEVR_SDKCallbacks* callbacks;
     const UEVR_UObjectFunctions* uobject;
     const UEVR_UObjectArrayFunctions* uobject_array;
+    //const UEVR_AActorFunctions* aactor;
+    //const UEVR_USceneComponentFunctions* uscenecomponent;
     const UEVR_FFieldFunctions* ffield;
     const UEVR_FPropertyFunctions* fproperty;
     const UEVR_UStructFunctions* ustruct;

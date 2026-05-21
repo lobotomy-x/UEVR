@@ -65,11 +65,18 @@ namespace lua::datatypes {
         return glm::dot(v1, v2); }, "slerp", [](const Quaternionf& v1, const Quaternionf& v2, float t) {
         return glm::slerp(v1, v2, t); }, sol::meta_function::addition, [](const Quaternionf& lhs, const Quaternionf& rhs) {
         return lhs + rhs; }, sol::meta_function::subtraction, [](const Quaternionf& lhs, const Quaternionf& rhs) {
-        return lhs - rhs; }, sol::meta_function::multiplication, sol::overload([](const Quaternionf& lhs, float scalar) ->Quaternionf {
+        return lhs - rhs; }, sol::meta_function::multiplication, sol::overload(
+[](const Quaternionf& lhs, float scalar) ->Quaternionf {
         return lhs * scalar;}, [](const Quaternionf& lhs, const Quaternionf& rhs) -> Quaternionf {
         return lhs * rhs;}, [](const Quaternionf& lhs, const Vector3f& rhs) -> Vector3f {
         return lhs * rhs;}, [](const Quaternionf& lhs, const Vector4f& rhs) -> Vector4f {
-        return lhs * rhs; }), sol::meta_function::index, [](sol::this_state s, const Quaternionf& lhs, sol::object index_obj) -> sol::object {
+        return lhs * rhs; }), 
+        sol::meta_function::to_string,
+            [](sol::this_state s, const Quaterniond& v) {
+                return "(" + std::to_string(v.x) + "," + std::to_string(v.y) + "," + std::to_string(v.z) + "," + std::to_string(v.w) + ")";
+            }, /*sol::meta_function::index, [](sol::this_state s, const Quaternionf& lhs, sol::object index_obj) -> sol::object {
+        
+
         if (!index_obj.is<int>()) {
             return sol::make_object(s, sol::lua_nil);
         }
@@ -80,8 +87,15 @@ namespace lua::datatypes {
         return sol::make_object(s, lhs[index]); }, sol::meta_function::new_index, [](Quaternionf& lhs, int index, float rhs) {
         if (index < 4) {
             lhs[index] = rhs;
-        } },
-            sol::meta_function::construct, sol::constructors<Quaternionf(float, float, float, float)>());
+        } }, */
+                "rotator", [](const Quaternionf& q) -> Vector3f { return glm::degrees(glm::eulerAngles(q)); }, 
+                "quaternion", [](const Vector3f& r) -> Quaternionf { return glm::quat(glm::radians(glm::vec3(-r.z, -r.y, -r.x))); }, 
+                "rotate", [](const Quaternionf& q, const Vector3f& v) -> Vector3f { return q * v; }, 
+                "unrotate", [](const Quaternionf& q, const Vector3f& v) -> Vector3f { return glm::inverse(q) * v; }, 
+                "x_axis", [](const Quaternionf& q) -> Vector3f { return q * Vector3f(1, 0, 0); }, 
+                "y_axis",  [](const Quaternionf& q) -> Vector3f { return q * Vector3f(0, 1, 0); }, 
+                "z_axis", [](const Quaternionf& q) -> Vector3f { return q * Vector3f(0, 0, 1); },
+                sol::meta_function::construct, sol::constructors<Quaternionf(float, float, float, float)>());
         
         lua.new_usertype<Quaterniond>("Quaterniond", "set", [](Quaterniond& v, double x, double y, double z, double w) {
         v.x = x;
@@ -101,7 +115,11 @@ namespace lua::datatypes {
         return lhs - rhs; }, sol::meta_function::multiplication, sol::overload([](const Quaterniond& lhs, double scalar) ->Quaterniond {
         return lhs * scalar;}, [](const Quaterniond& lhs, const Quaterniond& rhs) -> Quaterniond {
         return lhs * rhs;}, [](const Quaterniond& lhs, const Vector4d& rhs) -> Vector4d {
-        return lhs * rhs; }), sol::meta_function::index, [](sol::this_state s, const Quaterniond& lhs, sol::object index_obj) -> sol::object {
+        return lhs * rhs; }), 
+        sol::meta_function::to_string,
+            [](sol::this_state s, const Quaterniond& v) {
+        return "(" + std::to_string(v.x) + "," + std::to_string(v.y) + "," + std::to_string(v.z) + "," + std::to_string(v.w)+ ")";},
+    /*sol::meta_function::index, [](sol::this_state s, const Quaterniond& lhs, sol::object index_obj) -> sol::object {
         if (!index_obj.is<int>()) {
             return sol::make_object(s, sol::lua_nil);
         }
@@ -112,8 +130,22 @@ namespace lua::datatypes {
         return sol::make_object(s, lhs[index]); }, sol::meta_function::new_index, [](Quaterniond& lhs, int index, double rhs) {
         if (index < 4) {
             lhs[index] = rhs;
-        } },
-            sol::meta_function::construct, sol::constructors<Quaterniond(double, double, double, double)>());
+        } },*/
+            "rotator",  
+                [](const Quaterniond& q) -> Vector3d{ return glm::degrees(glm::eulerAngles(q)); }, 
+            "quaternion",
+                [](const Vector3d& r) -> Quaterniond { return glm::dquat(glm::radians(glm::dvec3(-r.z, -r.y, -r.x))); },
+            "rotate",
+            [](const Quaterniond& q, const Vector3d& v) -> Vector3d { return q * v; }, 
+            "unrotate",
+            [](const Quaterniond& q, const Vector3d& v) -> Vector3d { return glm::inverse(q) * v; }, 
+            "x_axis",
+            [](const Quaterniond& q) -> Vector3d { return q * Vector3d(1, 0, 0); }, 
+            "y_axis",
+            [](const Quaterniond& q) -> Vector3d { return q * Vector3d(0, 1, 0); }, 
+            "z_axis",
+            [](const Quaterniond& q) -> Vector3d { return q * Vector3d(0, 0, 1); },
+        sol::meta_function::construct, sol::constructors<Quaterniond(double, double, double, double)>());
 
                //"to_euler", [](const name& q) ->name2 { return utility::math::euler_angles(name4{q}); }, 
     }

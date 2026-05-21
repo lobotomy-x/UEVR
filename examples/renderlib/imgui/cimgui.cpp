@@ -11,7 +11,6 @@
 
         extern "C" {
 
-
 static inline ImColor ConvertToCPP_ImColor(const ImColor_c& src)
 {
     ImColor dest;

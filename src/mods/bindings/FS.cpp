@@ -90,6 +90,12 @@ end)
             ::fs::create_directories(datadir);
 
             return datadir;
+        } else if(wanted_subdir.find("$globalscripts") != std::string::npos) {
+            auto datadir = Framework::get_persistent_dir() / "..\\UEVR\\scripts";
+
+            ::fs::create_directories(datadir);
+
+            return datadir;
         }
         
         // todo, other subdirs?
