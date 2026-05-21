@@ -1,11 +1,14 @@
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
 #include <deque>
-#include <vector>
-#include <unordered_map>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 #include "ScriptContext.hpp"
 #include "ScriptState.hpp"
 
@@ -16,6 +19,7 @@ using namespace uevr;
 class LuaLoader : public Mod {
 public:
     static std::shared_ptr<LuaLoader>& get();
+    ~LuaLoader();
 
     std::string_view get_name() const override { return "LuaLoader"; }
     bool is_advanced_mod() const override { return true; }
@@ -144,8 +148,32 @@ public:
         return T{};
     }
 
+    // Multistate worker threads. spawn_worker creates a named background thread with its own
+    // ScriptState; send_to_worker queues a Lua source chunk for that worker to run on its thread;
+    // stop_worker signals the worker to drain its queue and exit. Workers communicate back to other
+    // states through set_shared/get_shared (the LuaLoader's shared, type-erased data map).
+    // Note: workers are intentionally NOT registered in m_states - they're standalone and don't
+    // hold the main m_access_mutex, so they can execute in parallel with the main state's frame
+    // callbacks. They do NOT expose the full uevr.api binding since most of that surface is not
+    // thread-safe.
+    bool spawn_worker(const std::string& name, const std::string& bootstrap_source);
+    bool send_to_worker(const std::string& name, const std::string& source);
+    bool stop_worker(const std::string& name);
+
 private:
     std::unordered_map<std::string, std::any> m_shared_data{};
+
+    struct WorkerState {
+        std::thread thread;
+        std::mutex queue_mtx;
+        std::condition_variable queue_cv;
+        std::deque<std::string> queue;
+        std::atomic<bool> stop_requested{false};
+    };
+
+    std::mutex m_workers_mtx{};
+    std::unordered_map<std::string, std::unique_ptr<WorkerState>> m_workers{};
+    void worker_thread_main(const std::string& name, const std::string& bootstrap_source);
     std::atomic<uint32_t> m_lock_depth{0};
     // A list of Lua files that have been explicitly loaded either through the user manually loading the script, or
     // because the script was in the autorun directory.

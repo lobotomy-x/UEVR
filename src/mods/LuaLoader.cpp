@@ -19,6 +19,27 @@ std::shared_ptr<LuaLoader>& LuaLoader::get() {
     return instance;
 }
 
+LuaLoader::~LuaLoader() {
+    // Tear down worker threads cleanly - std::thread's destructor calls std::terminate if joinable,
+    // so we must signal+join each one before m_workers (and the underlying thread objects) destruct.
+    std::vector<std::unique_ptr<WorkerState>> to_stop;
+    {
+        std::scoped_lock _{m_workers_mtx};
+        to_stop.reserve(m_workers.size());
+        for (auto& [_, w] : m_workers) {
+            to_stop.push_back(std::move(w));
+        }
+        m_workers.clear();
+    }
+    for (auto& w : to_stop) {
+        w->stop_requested.store(true, std::memory_order_release);
+        w->queue_cv.notify_all();
+        if (w->thread.joinable()) {
+            w->thread.join();
+        }
+    }
+}
+
 std::optional<std::string> LuaLoader::on_initialize_d3d_thread() {
     // TODO?
     return Mod::on_initialize_d3d_thread();
@@ -611,9 +632,41 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
                         else if (v.is<bool>())
                             set_shared(k, v.as<bool>());
                     };
+    lua["uevr"]["get_shared"] = [this](sol::this_state s, std::string k) -> sol::object {
+        std::lock_guard<std::mutex> _{m_data_mtx};
+        auto it = m_shared_data.find(k);
+        if (it == m_shared_data.end()) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        const auto& val = it->second;
+        if (val.type() == typeid(int)) return sol::make_object(s, std::any_cast<int>(val));
+        if (val.type() == typeid(double)) return sol::make_object(s, std::any_cast<double>(val));
+        if (val.type() == typeid(float)) return sol::make_object(s, std::any_cast<float>(val));
+        if (val.type() == typeid(std::string)) return sol::make_object(s, std::any_cast<std::string>(val));
+        if (val.type() == typeid(bool)) return sol::make_object(s, std::any_cast<bool>(val));
+        return sol::make_object(s, sol::lua_nil);
+    };
     lua["uevr"]["run_on_game_thread"] = [this](sol::protected_function fn) {
         queue_task(fn); };
-    
+
+    // Multistate worker thread API.
+    // Workers are background threads that own a private ScriptState; scripts can dispatch chunks of
+    // Lua source to them via send_to_worker. Communication back happens through set_shared/get_shared
+    // (which use the LuaLoader's shared, type-erased map, guarded by m_data_mtx).
+    lua["uevr"]["spawn_worker"] = [this](const std::string& name, sol::optional<std::string> bootstrap_source) -> bool {
+        return spawn_worker(name, bootstrap_source.value_or(""));
+    };
+    lua["uevr"]["send_to_worker"] = [this](const std::string& name, const std::string& source) -> bool {
+        return send_to_worker(name, source);
+    };
+    lua["uevr"]["stop_worker"] = [this](const std::string& name) -> bool {
+        return stop_worker(name);
+    };
+    lua["uevr"]["has_worker"] = [this](const std::string& name) -> bool {
+        std::scoped_lock _{m_workers_mtx};
+        return m_workers.contains(name);
+    };
+
     lua["uevr"]["lua"] = lua_table;
 }
 
@@ -639,4 +692,138 @@ void LuaLoader::queue_task(sol::protected_function fn) {
     m_tasks.push_back(fn);
 }
 
+bool LuaLoader::spawn_worker(const std::string& name, const std::string& bootstrap_source) {
+    std::scoped_lock _{m_workers_mtx};
+    if (m_workers.contains(name)) {
+        return false;
+    }
+    auto worker = std::make_unique<WorkerState>();
+    auto* raw = worker.get();
+    m_workers.emplace(name, std::move(worker));
+    // Start the thread last so the map entry exists before the thread tries to find itself.
+    raw->thread = std::thread{[this, name, bootstrap_source]() {
+        worker_thread_main(name, bootstrap_source);
+    }};
+    return true;
+}
 
+bool LuaLoader::send_to_worker(const std::string& name, const std::string& source) {
+    std::scoped_lock _{m_workers_mtx};
+    auto it = m_workers.find(name);
+    if (it == m_workers.end()) {
+        return false;
+    }
+    auto& worker = *it->second;
+    {
+        std::lock_guard<std::mutex> _q{worker.queue_mtx};
+        worker.queue.push_back(source);
+    }
+    worker.queue_cv.notify_one();
+    return true;
+}
+
+bool LuaLoader::stop_worker(const std::string& name) {
+    std::unique_ptr<WorkerState> worker;
+    {
+        std::scoped_lock _{m_workers_mtx};
+        auto it = m_workers.find(name);
+        if (it == m_workers.end()) {
+            return false;
+        }
+        worker = std::move(it->second);
+        m_workers.erase(it);
+    }
+    worker->stop_requested.store(true, std::memory_order_release);
+    worker->queue_cv.notify_all();
+    if (worker->thread.joinable()) {
+        worker->thread.join();
+    }
+    return true;
+}
+
+void LuaLoader::worker_thread_main(const std::string& name, const std::string& bootstrap_source) {
+    // Each worker owns its own ScriptState (and therefore its own sol::state) so it can execute Lua
+    // without contending with the main script states' execution mutexes. Worker states do NOT see
+    // the full uevr.api binding (passing a null PluginInitializeParam keeps ScriptContext from
+    // wiring up the unreal/VR API surface, most of which is not thread-safe). Cross-state data goes
+    // through uevr.set_shared / uevr.get_shared, which the worker can still call because those bind
+    // to LuaLoader's shared map (mutex-protected).
+    UEVR_PluginInitializeParam* param = nullptr;
+    auto state = std::make_shared<ScriptState>(make_gc_data(), param, false);
+
+    // Re-bind shared-data accessors on the worker's lua state so workers can talk to other states.
+    {
+        std::scoped_lock _ctx{state->context()->get_mutex()};
+        auto& lua = state->lua();
+        sol::table uevr_tbl = lua["uevr"].valid() ? lua["uevr"] : lua.create_named_table("uevr");
+        uevr_tbl["worker_name"] = name;
+        uevr_tbl["set_shared"] = [this](std::string k, sol::object v) {
+            if (v.is<int>()) set_shared(k, v.as<int>());
+            else if (v.is<double>()) set_shared(k, v.as<double>());
+            else if (v.is<float>()) set_shared(k, v.as<float>());
+            else if (v.is<std::string>()) set_shared(k, v.as<std::string>());
+            else if (v.is<bool>()) set_shared(k, v.as<bool>());
+        };
+        uevr_tbl["get_shared"] = [this](sol::this_state s, std::string k) -> sol::object {
+            std::lock_guard<std::mutex> _{m_data_mtx};
+            auto it = m_shared_data.find(k);
+            if (it == m_shared_data.end()) return sol::make_object(s, sol::lua_nil);
+            const auto& val = it->second;
+            if (val.type() == typeid(int)) return sol::make_object(s, std::any_cast<int>(val));
+            if (val.type() == typeid(double)) return sol::make_object(s, std::any_cast<double>(val));
+            if (val.type() == typeid(float)) return sol::make_object(s, std::any_cast<float>(val));
+            if (val.type() == typeid(std::string)) return sol::make_object(s, std::any_cast<std::string>(val));
+            if (val.type() == typeid(bool)) return sol::make_object(s, std::any_cast<bool>(val));
+            return sol::make_object(s, sol::lua_nil);
+        };
+    }
+
+    if (!bootstrap_source.empty()) {
+        std::scoped_lock _ctx{state->context()->get_mutex()};
+        try {
+            state->lua().safe_script(bootstrap_source, sol::script_pass_on_error);
+        } catch (const std::exception& e) {
+            spdlog::error("[LuaLoader] Worker '{}' bootstrap error: {}", name, e.what());
+        } catch (...) {
+            spdlog::error("[LuaLoader] Worker '{}' bootstrap error: unknown", name);
+        }
+    }
+
+    // Find our own WorkerState entry by name. It must exist (spawn_worker inserts before starting
+    // the thread) - but guard anyway in case stop_worker raced ahead.
+    WorkerState* self = nullptr;
+    {
+        std::scoped_lock _{m_workers_mtx};
+        auto it = m_workers.find(name);
+        if (it != m_workers.end()) {
+            self = it->second.get();
+        }
+    }
+    if (self == nullptr) {
+        return;
+    }
+
+    while (!self->stop_requested.load(std::memory_order_acquire)) {
+        std::string job;
+        {
+            std::unique_lock<std::mutex> _q{self->queue_mtx};
+            self->queue_cv.wait(_q, [self]() {
+                return self->stop_requested.load(std::memory_order_acquire) || !self->queue.empty();
+            });
+            if (self->queue.empty()) {
+                continue;
+            }
+            job = std::move(self->queue.front());
+            self->queue.pop_front();
+        }
+
+        std::scoped_lock _ctx{state->context()->get_mutex()};
+        try {
+            state->lua().safe_script(job, sol::script_pass_on_error);
+        } catch (const std::exception& e) {
+            spdlog::error("[LuaLoader] Worker '{}' error: {}", name, e.what());
+        } catch (...) {
+            spdlog::error("[LuaLoader] Worker '{}' error: unknown", name);
+        }
+    }
+}
