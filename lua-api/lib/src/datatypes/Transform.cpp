@@ -111,9 +111,9 @@ void bind_transform_struct(sol::state_view& lua) {
         "rotation", &Transformd::rotation,
         "Rotation", &Transformd::rotation,
         "scale3d", &Transformd::scale3d,
-        "Scale3D", &Transformf::scale3d,
+        "Scale3D", &Transformd::scale3d,
         "scale", &Transformd::scale3d,
-        "Scale", &Transformd::scale3d, 
+        "Scale", &Transformd::scale3d,
         "compose",
         [](const Transformd& A, const Transformd& B) -> Transformd {
             Transformd out = A;
