@@ -2598,355 +2598,13 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 void bindings::open_imgui(sol::state_view& lua) {
     auto imgui = lua.create_table();
 
-    // Basic widgets
-    imgui["button"] = api::imgui::button;
-    imgui["small_button"] = api::imgui::small_button;
-    imgui["invisible_button"] = api::imgui::invisible_button;
-    imgui["arrow_button"] = api::imgui::arrow_button;
-    imgui["combo"] = api::imgui::combo;
-    imgui["drag_float"] = api::imgui::drag_float;
-    imgui["drag_float2"] = api::imgui::drag_float2;
-    imgui["drag_float3"] = api::imgui::drag_float3;
-    imgui["drag_float4"] = api::imgui::drag_float4;
-    imgui["drag_int"] = api::imgui::drag_int;
-    imgui["slider_float"] = api::imgui::slider_float;
-    imgui["slider_int"] = api::imgui::slider_int;
-    imgui["vslider_float"] = api::imgui::vslider_float;
-    imgui["vslider_int"] = api::imgui::vslider_int;
-    imgui["input_text"] = api::imgui::input_text;
-    imgui["input_text_multiline"] = api::imgui::input_text_multiline;
-    imgui["text"] = api::imgui::text;
-    imgui["text_colored"] = api::imgui::text_colored;
-    imgui["checkbox"] = api::imgui::checkbox;
-    imgui["tree_node"] = api::imgui::tree_node;
-    imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
-    imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
-    imgui["tree_pop"] = api::imgui::tree_pop;
-    imgui["same_line"] = api::imgui::same_line;
-    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
-    imgui["is_item_active"] = api::imgui::is_item_active;
-    imgui["is_item_focused"] = api::imgui::is_item_focused;
-    imgui["begin_window"] = api::imgui::begin_window;
-    imgui["end_window"] = api::imgui::end_window;
-    imgui["begin_child_window"] = api::imgui::begin_child_window;
-    imgui["end_child_window"] = api::imgui::end_child_window;
-    imgui["begin_group"] = api::imgui::begin_group;
-    imgui["end_group"] = api::imgui::end_group;
-    imgui["begin_rect"] = api::imgui::begin_rect;
-    imgui["end_rect"] = api::imgui::end_rect;
-    imgui["begin_disabled"] = api::imgui::begin_disabled;
-    imgui["end_disabled"] = api::imgui::end_disabled;
-    imgui["separator"] = api::imgui::separator;
-    imgui["spacing"] = api::imgui::spacing;
-    imgui["new_line"] = api::imgui::new_line;
-    imgui["collapsing_header"] = api::imgui::collapsing_header;
-    imgui["load_font"] = api::imgui::load_font;
-    imgui["push_font"] = api::imgui::push_font;
-    imgui["pop_font"] = api::imgui::pop_font;
-    imgui["get_default_font_size"] = api::imgui::get_default_font_size;
-    imgui["color_picker"] = api::imgui::color_picker;
-    imgui["color_picker_argb"] = api::imgui::color_picker_argb;
-    imgui["color_picker3"] = api::imgui::color_picker3;
-    imgui["color_picker4"] = api::imgui::color_picker4;
-    imgui["color_edit"] = api::imgui::color_edit;
-    imgui["color_edit_argb"] = api::imgui::color_edit_argb;
-    imgui["color_edit3"] = api::imgui::color_edit3;
-    imgui["color_edit4"] = api::imgui::color_edit4;
-    imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
-    imgui["set_next_window_size"] = api::imgui::set_next_window_size;
-    imgui["push_id"] = api::imgui::push_id;
-    imgui["pop_id"] = api::imgui::pop_id;
-    imgui["get_id"] = api::imgui::get_id;
-    imgui["get_mouse"] = api::imgui::get_mouse;
-    imgui["get_key_index"] = api::imgui::get_key_index;
-    imgui["is_key_down"] = api::imgui::is_key_down;
-    imgui["is_key_pressed"] = api::imgui::is_key_pressed;
-    imgui["is_key_released"] = api::imgui::is_key_released;
-    imgui["is_mouse_down"] = api::imgui::is_mouse_down;
-    imgui["is_mouse_clicked"] = api::imgui::is_mouse_clicked;
-    imgui["is_mouse_released"] = api::imgui::is_mouse_released;
-    imgui["is_mouse_double_clicked"] = api::imgui::is_mouse_double_clicked;
-    imgui["indent"] = api::imgui::indent;
-    imgui["unindent"] = api::imgui::unindent;
-    imgui["begin_tooltip"] = api::imgui::begin_tooltip;
-    imgui["end_tooltip"] = api::imgui::end_tooltip;
-    imgui["set_tooltip"] = api::imgui::set_tooltip;
-    imgui["open_popup"] = api::imgui::open_popup;
-    imgui["begin_popup"] = api::imgui::begin_popup;
-    imgui["begin_popup_context_item"] = api::imgui::begin_popup_context_item;
-    imgui["end_popup"] = api::imgui::end_popup;
-    imgui["close_current_popup"] = api::imgui::close_current_popup;
-    imgui["is_popup_open"] = api::imgui::is_popup_open;
-    imgui["calc_text_size"] = api::imgui::calc_text_size;
-    imgui["get_window_size"] = api::imgui::get_window_size;
-    imgui["get_window_pos"] = api::imgui::get_window_pos;
-    imgui["set_next_item_open"] = api::imgui::set_next_item_open;
-    imgui["begin_list_box"] = api::imgui::begin_list_box;
-    imgui["end_list_box"] = api::imgui::end_list_box;
-    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
-    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
-    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
-    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
-    imgui["begin_main_menu_bar"] = api::imgui::begin_main_menu_bar;
-    imgui["end_main_menu_bar"] = api::imgui::end_main_menu_bar;
-    imgui["begin_menu"] = api::imgui::begin_menu;
-    imgui["end_menu"] = api::imgui::end_menu;
-    imgui["menu_item"] = api::imgui::menu_item;
-    imgui["get_display_size"] = api::imgui::get_display_size;
-  ///  imgui["set_shortcut_routing"] = api::imgui::set_shortcut_routing;
-    imgui["create_platform_window"] = api::imgui::platform_create_window;
-    imgui["draw_scene_texture"] = api::imgui::draw_scene_texture;
-
-
-    imgui["focus_item"] = api::imgui::focus_item;
-    imgui["focus_window"] = api::imgui::focus_window;
-    imgui["get_active_id"] = api::imgui::get_active_id;
-    imgui["get_content_region_available"] = api::imgui::get_content_region_available;
-    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
-    imgui["get_hovered_id"] = api::imgui::get_hovered_id;
-    imgui["get_item_id"] = api::imgui::get_item_id;
-    imgui["get_key_index"] = api::imgui::get_key_index;
-    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
-    imgui["is_item_active"] = api::imgui::is_item_active;
-    imgui["is_item_clicked"] = api::imgui::is_item_clicked;
-    imgui["is_item_edited"] = api::imgui::is_item_edited;
-    imgui["is_item_focused"] = api::imgui::is_item_focused;
-    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
-    imgui["is_item_toggled_open"] = api::imgui::is_item_toggled_open;
-    imgui["label_text"] = api::imgui::label_text;
-    imgui["push_button_repeat"] = api::imgui::push_button_repeat;
-    imgui["push_clip_rect"] = api::imgui::push_clip_rect;
-    imgui["pop_button_repeat"] = api::imgui::pop_button_repeat;
-    imgui["pop_clip_rect"] = api::imgui::pop_clip_rect;
-    imgui["create_imu32_color"] = api::imgui::create_imu32_color;
-    imgui["render_drag_drop"] = api::imgui::render_drag_drop;
-    imgui["selectable"] = api::imgui::selectable;
-    imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
-    imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
-    imgui["radio_button"] = api::imgui::radio_button;
-    imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
-    imgui["get_frame_height"] = api::imgui::get_frame_height;
-
-    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
-
-    imgui["show_metrics_window"] = api::imgui::show_metrics_window;
-    imgui["show_font_atlas"] = api::imgui::show_font_atlas;
-    imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
-    imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
-    imgui["show_font_selector"] = api::imgui::show_font_selector;
-    imgui["show_demo_window"] = api::imgui::show_demo_window;
-
-    // Item
-    imgui["push_item_width"] = api::imgui::push_item_width;
-    imgui["pop_item_width"] = api::imgui::pop_item_width;
-    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
-    imgui["calc_item_width"] = api::imgui::calc_item_width;
-    imgui["calc_text_size"] = api::imgui::calc_text_size;
-    imgui["item_add"] = api::imgui::item_add;
-    imgui["item_size"] = api::imgui::item_size;
-    imgui["push_item_flag"] = api::imgui::push_item_flag;
-    imgui["pop_item_flag"] = api::imgui::pop_item_flag;
-    imgui["push_font_size"] = api::imgui::push_font_size;
-    imgui["pop_font_size"] = api::imgui::pop_font_size;
-    imgui["push_style_color"] = api::imgui::push_style_color;
-    imgui["pop_style_color"] = api::imgui::pop_style_color;
-    imgui["push_style_var"] = api::imgui::push_style_var;
-    imgui["pop_style_var"] = api::imgui::pop_style_var;
-    imgui["get_cursor_pos"] = api::imgui::get_cursor_pos;
-    imgui["set_cursor_pos"] = api::imgui::set_cursor_pos;
-    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
-    imgui["get_cursor_screen_pos"] = api::imgui::get_cursor_screen_pos;
-    imgui["set_cursor_screen_pos"] = api::imgui::set_cursor_screen_pos;
-    imgui["set_item_default_focus"] = api::imgui::set_item_default_focus;
-    imgui["set_clipboard"] = api::imgui::set_clipboard;
-    imgui["get_clipboard"] = api::imgui::get_clipboard;
-    imgui["progress_bar"] = api::imgui::progress_bar;
-    imgui["get_display_size"] = api::imgui::get_display_size;
-    // Draw list
-    imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
-    imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
-    imgui["draw_list_path_stroke"] = api::imgui::draw_list_path_stroke;
-
-    // SCROLL APIs
-    imgui["get_scroll_x"] = api::imgui::get_scroll_x;
-    imgui["get_scroll_y"] = api::imgui::get_scroll_y;
-    imgui["set_scroll_x"] = api::imgui::set_scroll_x;
-    imgui["set_scroll_y"] = api::imgui::set_scroll_y;
-    imgui["get_scroll_max_x"] = api::imgui::get_scroll_max_x;
-    imgui["get_scroll_max_y"] = api::imgui::get_scroll_max_y;
-    imgui["set_scroll_here_x"] = api::imgui::set_scroll_here_x;
-    imgui["set_scroll_here_y"] = api::imgui::set_scroll_here_y;
-    imgui["set_scroll_from_pos_x"] = api::imgui::set_scroll_from_pos_x;
-    imgui["set_scroll_from_pos_y"] = api::imgui::set_scroll_from_pos_y;
-
-    // TABLE APIS
-    imgui["begin_table"] = api::imgui::begin_table;
-    imgui["end_table"] = api::imgui::end_table;
-    imgui["table_next_row"] = api::imgui::table_next_row;
-    imgui["table_next_column"] = api::imgui::table_next_column;
-    imgui["table_set_column_index"] = api::imgui::table_set_column_index;
-    imgui["table_setup_column"] = api::imgui::table_setup_column;
-    imgui["table_setup_scroll_freeze"] = api::imgui::table_setup_scroll_freeze;
-    imgui["table_headers_row"] = api::imgui::table_headers_row;
-    imgui["table_header"] = api::imgui::table_header;
-    imgui["table_get_sort_specs"] = api::imgui::table_get_sort_specs;
-    imgui["table_get_column_count"] = api::imgui::table_get_column_count;
-    imgui["table_get_column_index"] = api::imgui::table_get_column_index;
-    imgui["table_get_row_index"] = api::imgui::table_get_row_index;
-    imgui["table_get_column_name"] = api::imgui::table_get_column_name;
-    imgui["table_get_column_flags"] = api::imgui::table_get_column_flags;
-    imgui["table_set_bg_color"] = api::imgui::table_set_bg_color;
-
-
-     imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
-    imgui["arrow_button"] = api::imgui::arrow_button;
-    imgui["begin_child_window"] = api::imgui::begin_child_window;
-    imgui["begin_disabled"] = api::imgui::begin_disabled;
-    imgui["begin_group"] = api::imgui::begin_group;
-    imgui["begin_menu_bar"] = api::imgui::begin_menu_bar;
-    imgui["begin_popup"] = api::imgui::begin_popup;
-    imgui["begin_popup_context_item"] = api::imgui::begin_popup_context_item;
-    imgui["begin_rect"] = api::imgui::begin_rect;
-    imgui["begin_tooltip"] = api::imgui::begin_tooltip;
-    imgui["begin_window"] = api::imgui::begin_window;
-    imgui["button"] = api::imgui::button;
-    imgui["calc_item_width"] = api::imgui::calc_item_width;
-    imgui["calc_text_size"] = api::imgui::calc_text_size;
-    imgui["checkbox"] = api::imgui::checkbox;
-    imgui["close_current_popup"] = api::imgui::close_current_popup;
-    imgui["close_non_modal_popups"] = api::imgui::close_non_modal_popups;
-    imgui["collapsing_header"] = api::imgui::collapsing_header;
-    imgui["color_edit"] = api::imgui::color_edit;
-    imgui["color_edit3"] = api::imgui::color_edit3;
-    imgui["color_edit4"] = api::imgui::color_edit4;
-    imgui["color_edit_argb"] = api::imgui::color_edit_argb;
-    imgui["color_picker"] = api::imgui::color_picker;
-    imgui["color_picker3"] = api::imgui::color_picker3;
-    imgui["color_picker4"] = api::imgui::color_picker4;
-    imgui["color_picker_argb"] = api::imgui::color_picker_argb;
-    imgui["combo"] = api::imgui::combo;
-    imgui["create_imu32_color"] = api::imgui::create_imu32_color;
-    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
-    imgui["drag_float"] = api::imgui::drag_float;
-    imgui["drag_float2"] = api::imgui::drag_float2;
-    imgui["drag_float3"] = api::imgui::drag_float3;
-    imgui["drag_float4"] = api::imgui::drag_float4;
-    imgui["drag_int"] = api::imgui::drag_int;
-    imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
-    imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
-    imgui["draw_list_path_stroke"] = api::imgui::draw_list_path_stroke;
-    imgui["end_child_window"] = api::imgui::end_child_window;
-    imgui["end_disabled"] = api::imgui::end_disabled;
-    imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
-    imgui["end_drag_drop_target"] = api::imgui::end_drag_drop_target;
-    imgui["end_group"] = api::imgui::end_group;
-    imgui["end_menu_bar"] = api::imgui::end_menu_bar;
-    imgui["end_popup"] = api::imgui::end_popup;
-    imgui["end_rect"] = api::imgui::end_rect;
-    imgui["end_tooltip"] = api::imgui::end_tooltip;
-    imgui["end_window"] = api::imgui::end_window;
-    imgui["focus_item"] = api::imgui::focus_item;
-    imgui["focus_window"] = api::imgui::focus_window;
-    imgui["get_active_id"] = api::imgui::get_active_id;
-    imgui["get_clipboard"] = api::imgui::get_clipboard;
-    imgui["get_content_region_available"] = api::imgui::get_content_region_available;
-    imgui["get_cursor_pos"] = api::imgui::get_cursor_pos;
-    imgui["get_cursor_screen_pos"] = api::imgui::get_cursor_screen_pos;
-    imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
-    imgui["get_default_font_size"] = api::imgui::get_default_font_size;
-    imgui["get_display_size"] = api::imgui::get_display_size;
-    imgui["get_frame_height"] = api::imgui::get_frame_height;
-    imgui["get_hovered_id"] = api::imgui::get_hovered_id;
-    imgui["get_id"] = api::imgui::get_id;
-    imgui["get_item_id"] = api::imgui::get_item_id;
-    imgui["get_key_index"] = api::imgui::get_key_index;
-    imgui["get_mouse"] = api::imgui::get_mouse;
-    imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
-    imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
-    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
-    imgui["indent"] = api::imgui::indent;
-    imgui["input_text"] = api::imgui::input_text;
-    imgui["input_text_multiline"] = api::imgui::input_text_multiline;
-    imgui["invisible_button"] = api::imgui::invisible_button;
-    imgui["is_item_active"] = api::imgui::is_item_active;
-    imgui["is_item_clicked"] = api::imgui::is_item_clicked;
-    imgui["is_item_edited"] = api::imgui::is_item_edited;
-    imgui["is_item_focused"] = api::imgui::is_item_focused;
-    imgui["is_item_hovered"] = api::imgui::is_item_hovered;
-    imgui["is_item_toggled_open"] = api::imgui::is_item_toggled_open;
-    imgui["is_key_down"] = api::imgui::is_key_down;
-    imgui["is_key_pressed"] = api::imgui::is_key_pressed;
-    imgui["is_key_released"] = api::imgui::is_key_released;
-    imgui["is_mouse_clicked"] = api::imgui::is_mouse_clicked;
-    imgui["is_mouse_double_clicked"] = api::imgui::is_mouse_double_clicked;
-    imgui["is_mouse_down"] = api::imgui::is_mouse_down;
-    imgui["is_mouse_released"] = api::imgui::is_mouse_released;
-    imgui["item_add"] = api::imgui::item_add;
-    imgui["item_size"] = api::imgui::item_size;
-    imgui["label_text"] = api::imgui::label_text;
-    imgui["load_font"] = api::imgui::load_font;
-    imgui["new_line"] = api::imgui::new_line;
-    imgui["open_popup"] = api::imgui::open_popup;
-    imgui["pop_button_repeat"] = api::imgui::pop_button_repeat;
-    imgui["pop_clip_rect"] = api::imgui::pop_clip_rect;
-    imgui["pop_font"] = api::imgui::pop_font;
-    imgui["pop_font_size"] = api::imgui::pop_font_size;
-    imgui["pop_id"] = api::imgui::pop_id;
-    imgui["pop_item_flag"] = api::imgui::pop_item_flag;
-    imgui["pop_item_width"] = api::imgui::pop_item_width;
-    imgui["pop_style_color"] = api::imgui::pop_style_color;
-    imgui["pop_style_var"] = api::imgui::pop_style_var;
-    imgui["progress_bar"] = api::imgui::progress_bar;
-    imgui["push_button_repeat"] = api::imgui::push_button_repeat;
-    imgui["push_clip_rect"] = api::imgui::push_clip_rect;
-    imgui["push_font"] = api::imgui::push_font;
-    imgui["push_font_size"] = api::imgui::push_font_size;
-    imgui["push_id"] = api::imgui::push_id;
-    imgui["push_item_flag"] = api::imgui::push_item_flag;
-    imgui["push_item_width"] = api::imgui::push_item_width;
-    imgui["push_style_color"] = api::imgui::push_style_color;
-    imgui["push_style_var"] = api::imgui::push_style_var;
-    imgui["radio_button"] = api::imgui::radio_button;
-    imgui["render_drag_drop"] = api::imgui::render_drag_drop;
-    imgui["same_line"] = api::imgui::same_line;
-    imgui["selectable"] = api::imgui::selectable;
-    imgui["separator"] = api::imgui::separator;
-    imgui["set_clipboard"] = api::imgui::set_clipboard;
-    imgui["set_cursor_pos"] = api::imgui::set_cursor_pos;
-    imgui["set_cursor_screen_pos"] = api::imgui::set_cursor_screen_pos;
-    imgui["set_drag_drop_payload"] = api::imgui::set_drag_drop_payload;
-    imgui["set_item_default_focus"] = api::imgui::set_item_default_focus;
-    imgui["set_next_item_width"] = api::imgui::set_next_item_width;
-    imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
-    imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
-    imgui["set_next_window_docked"] = api::imgui::set_next_window_docked;
-    imgui["set_next_window_dock_id"] = api::imgui::set_next_window_dock_id;
-    imgui["set_next_item_allow_overlap"] = api::imgui::set_next_item_allow_overlap;
-    imgui["set_next_item_open"] = api::imgui::set_next_item_open;
-    imgui["set_next_window_size"] = api::imgui::set_next_window_size;
-    imgui["set_tooltip"] = api::imgui::set_tooltip;
-    imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
-    imgui["show_demo_window"] = api::imgui::show_demo_window;
-    imgui["show_font_atlas"] = api::imgui::show_font_atlas;
-    imgui["show_font_selector"] = api::imgui::show_font_selector;
-    imgui["show_metrics_window"] = api::imgui::show_metrics_window;
-    imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
-    imgui["slider_float"] = api::imgui::slider_float;
-    imgui["slider_int"] = api::imgui::slider_int;
-    imgui["small_button"] = api::imgui::small_button;
-    imgui["spacing"] = api::imgui::spacing;
-    imgui["text"] = api::imgui::text;
-    imgui["text_colored"] = api::imgui::text_colored;
-    imgui["tree_node"] = api::imgui::tree_node;
-    imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
-    imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
-    imgui["tree_pop"] = api::imgui::tree_pop;
-    imgui["unindent"] = api::imgui::unindent;
+    // Function bindings (alphabetical, deduplicated)
     imgui["accept_drag_drop"] = api::imgui::accept_drag_drop;
     imgui["accept_payload"] = api::imgui::accept_payload;
     imgui["activate_item_by_id"] = api::imgui::activate_item_by_id;
     imgui["align_text_to_frame_padding"] = api::imgui::align_text_to_frame_padding;
     imgui["arrow_button"] = api::imgui::arrow_button;
+    imgui["begin_child_window"] = api::imgui::begin_child_window;
     imgui["begin_disabled"] = api::imgui::begin_disabled;
     imgui["begin_drag_drop_source"] = api::imgui::begin_drag_drop_source;
     imgui["begin_drag_drop_target"] = api::imgui::begin_drag_drop_target;
@@ -2963,6 +2621,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["begin_table"] = api::imgui::begin_table;
     imgui["begin_tooltip"] = api::imgui::begin_tooltip;
     imgui["begin_viewport_sidebar"] = api::imgui::begin_viewport_sidebar;
+    imgui["begin_window"] = api::imgui::begin_window;
     imgui["bullet"] = api::imgui::bullet;
     imgui["bullet_text"] = api::imgui::bullet_text;
     imgui["button"] = api::imgui::button;
@@ -2983,6 +2642,18 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["color_picker4"] = api::imgui::color_picker4;
     imgui["color_picker_argb"] = api::imgui::color_picker_argb;
     imgui["combo"] = api::imgui::combo;
+    imgui["create_imu32_color"] = api::imgui::create_imu32_color;
+    imgui["create_imvec4_color"] = api::imgui::create_imvec4_color;
+    imgui["create_platform_window"] = api::imgui::platform_create_window;
+    imgui["drag_float"] = api::imgui::drag_float;
+    imgui["drag_float2"] = api::imgui::drag_float2;
+    imgui["drag_float3"] = api::imgui::drag_float3;
+    imgui["drag_float4"] = api::imgui::drag_float4;
+    imgui["drag_int"] = api::imgui::drag_int;
+    imgui["draw_list_path_clear"] = api::imgui::draw_list_path_clear;
+    imgui["draw_list_path_line_to"] = api::imgui::draw_list_path_line_to;
+    imgui["draw_list_path_stroke"] = api::imgui::draw_list_path_stroke;
+    imgui["draw_scene_texture"] = api::imgui::draw_scene_texture;
     imgui["end_child_window"] = api::imgui::end_child_window;
     imgui["end_disabled"] = api::imgui::end_disabled;
     imgui["end_drag_drop_source"] = api::imgui::end_drag_drop_source;
@@ -3000,6 +2671,8 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["end_window"] = api::imgui::end_window;
     imgui["focus_item"] = api::imgui::focus_item;
     imgui["focus_window"] = api::imgui::focus_window;
+    imgui["get_active_id"] = api::imgui::get_active_id;
+    imgui["get_background_draw_list"] = api::imgui::get_background_draw_list;
     imgui["get_clipboard"] = api::imgui::get_clipboard;
     imgui["get_content_region_available"] = api::imgui::get_content_region_available;
     imgui["get_cursor_pos"] = api::imgui::get_cursor_pos;
@@ -3007,12 +2680,24 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["get_cursor_start_pos"] = api::imgui::get_cursor_start_pos;
     imgui["get_default_font_size"] = api::imgui::get_default_font_size;
     imgui["get_display_size"] = api::imgui::get_display_size;
+    imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
     imgui["get_frame_height"] = api::imgui::get_frame_height;
+    imgui["get_hovered_id"] = api::imgui::get_hovered_id;
+    imgui["get_id"] = api::imgui::get_id;
+    imgui["get_id_from_pos"] = api::imgui::get_id_from_pos;
+    imgui["get_item_id"] = api::imgui::get_item_id;
     imgui["get_key_index"] = api::imgui::get_key_index;
     imgui["get_mouse"] = api::imgui::get_mouse;
+    imgui["get_scroll_max_x"] = api::imgui::get_scroll_max_x;
+    imgui["get_scroll_max_y"] = api::imgui::get_scroll_max_y;
+    imgui["get_scroll_x"] = api::imgui::get_scroll_x;
+    imgui["get_scroll_y"] = api::imgui::get_scroll_y;
+    imgui["get_window_draw_list"] = api::imgui::get_window_draw_list;
     imgui["get_window_pos"] = api::imgui::get_window_pos;
     imgui["get_window_size"] = api::imgui::get_window_size;
     imgui["indent"] = api::imgui::indent;
+    imgui["input_text"] = api::imgui::input_text;
+    imgui["input_text_multiline"] = api::imgui::input_text_multiline;
     imgui["invisible_button"] = api::imgui::invisible_button;
     imgui["is_any_item_active"] = api::imgui::is_any_item_active;
     imgui["is_any_item_focused"] = api::imgui::is_any_item_focused;
@@ -3058,6 +2743,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["push_id"] = api::imgui::push_id;
     imgui["push_item_flag"] = api::imgui::push_item_flag;
     imgui["push_item_width"] = api::imgui::push_item_width;
+    imgui["push_override_id"] = api::imgui::push_override_id;
     imgui["push_style_color"] = api::imgui::push_style_color;
     imgui["push_style_var"] = api::imgui::push_style_var;
     imgui["radio_button"] = api::imgui::radio_button;
@@ -3079,6 +2765,12 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
     imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
     imgui["set_next_window_size"] = api::imgui::set_next_window_size;
+    imgui["set_scroll_from_pos_x"] = api::imgui::set_scroll_from_pos_x;
+    imgui["set_scroll_from_pos_y"] = api::imgui::set_scroll_from_pos_y;
+    imgui["set_scroll_here_x"] = api::imgui::set_scroll_here_x;
+    imgui["set_scroll_here_y"] = api::imgui::set_scroll_here_y;
+    imgui["set_scroll_x"] = api::imgui::set_scroll_x;
+    imgui["set_scroll_y"] = api::imgui::set_scroll_y;
     imgui["set_tooltip"] = api::imgui::set_tooltip;
     imgui["show_debug_log_window"] = api::imgui::show_debug_log_window;
     imgui["show_demo_window"] = api::imgui::show_demo_window;
@@ -3086,16 +2778,21 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["show_font_selector"] = api::imgui::show_font_selector;
     imgui["show_metrics_window"] = api::imgui::show_metrics_window;
     imgui["show_stack_tool_window"] = api::imgui::show_stack_tool_window;
-    imgui["small_button"] = api::imgui::small_button;                                                                
+    imgui["slider_float"] = api::imgui::slider_float;
+    imgui["slider_int"] = api::imgui::slider_int;
+    imgui["small_button"] = api::imgui::small_button;
     imgui["spacing"] = api::imgui::spacing;
     imgui["table_get_column_count"] = api::imgui::table_get_column_count;
+    imgui["table_get_column_flags"] = api::imgui::table_get_column_flags;
     imgui["table_get_column_index"] = api::imgui::table_get_column_index;
     imgui["table_get_column_name"] = api::imgui::table_get_column_name;
     imgui["table_get_row_index"] = api::imgui::table_get_row_index;
+    imgui["table_get_sort_specs"] = api::imgui::table_get_sort_specs;
     imgui["table_header"] = api::imgui::table_header;
     imgui["table_headers_row"] = api::imgui::table_headers_row;
     imgui["table_next_column"] = api::imgui::table_next_column;
     imgui["table_next_row"] = api::imgui::table_next_row;
+    imgui["table_set_bg_color"] = api::imgui::table_set_bg_color;
     imgui["table_set_column_index"] = api::imgui::table_set_column_index;
     imgui["table_setup_column"] = api::imgui::table_setup_column;
     imgui["table_setup_scroll_freeze"] = api::imgui::table_setup_scroll_freeze;
@@ -3106,11 +2803,10 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
     imgui["tree_pop"] = api::imgui::tree_pop;
-    imgui["push_override_id"] = api::imgui::push_override_id;
-    imgui["get_id_from_pos"] = api::imgui::get_id_from_pos;
+    imgui["unindent"] = api::imgui::unindent;
     imgui["vslider_float"] = api::imgui::vslider_float;
     imgui["vslider_int"] = api::imgui::vslider_int;
-    imgui["unindent"] = api::imgui::unindent;
+
     imgui.new_usertype<ImGuiTableSortSpecs>(
         "TableSortSpecs", "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty, "get_specs", [](ImGuiTableSortSpecs* specs) {
             std::vector<ImGuiTableColumnSortSpecs*> out{};
@@ -3124,20 +2820,6 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui.new_usertype<ImGuiTableColumnSortSpecs>("TableColumnSortSpecs", "user_id", &ImGuiTableColumnSortSpecs::ColumnUserID,
         "column_index", &ImGuiTableColumnSortSpecs::ColumnIndex, "sort_order", &ImGuiTableColumnSortSpecs::SortOrder, "sort_direction",
         sol::readonly_property([](ImGuiTableColumnSortSpecs* specs) { return specs->SortDirection; }));
-    imgui.new_enum("TableFlags", "None", ImGuiTableFlags_None, "Resizable", ImGuiTableFlags_Resizable, "Reorderable",
-        ImGuiTableFlags_Reorderable, "Hideable", ImGuiTableFlags_Hideable, "Sortable", ImGuiTableFlags_Sortable, "NoSavedSettings",
-        ImGuiTableFlags_NoSavedSettings, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody, "RowBg", ImGuiTableFlags_RowBg,
-        "BordersInnerH", ImGuiTableFlags_BordersInnerH, "BordersOuterH", ImGuiTableFlags_BordersOuterH, "BordersInnerV",
-        ImGuiTableFlags_BordersInnerV, "BordersOuterV", ImGuiTableFlags_BordersOuterV, "BordersH", ImGuiTableFlags_BordersH, "BordersV",
-        ImGuiTableFlags_BordersV, "BordersInner", ImGuiTableFlags_BordersInner, "BordersOuter", ImGuiTableFlags_BordersOuter, "Borders",
-        ImGuiTableFlags_Borders, "NoBordersInBody", ImGuiTableFlags_NoBordersInBody, "NoBordersInBodyUntilResize",
-        ImGuiTableFlags_NoBordersInBodyUntilResize, "SizingFixedFit", ImGuiTableFlags_SizingFixedFit, "SizingFixedSame",
-        ImGuiTableFlags_SizingFixedSame, "SizingStretchProp", ImGuiTableFlags_SizingStretchProp, "SizingStretchSame",
-        ImGuiTableFlags_SizingStretchSame, "NoHostExtendX", ImGuiTableFlags_NoHostExtendX, "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
-        "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible, "PreciseWidths", ImGuiTableFlags_PreciseWidths, "NoClip",
-        ImGuiTableFlags_NoClip, "PadOuterX", ImGuiTableFlags_PadOuterX, "NoPadOuterX", ImGuiTableFlags_NoPadOuterX, "NoPadInnerX",
-        ImGuiTableFlags_NoPadInnerX, "ScrollX", ImGuiTableFlags_ScrollX, "ScrollY", ImGuiTableFlags_ScrollY, "SortMulti",
-        ImGuiTableFlags_SortMulti, "SortTristate", ImGuiTableFlags_SortTristate);
     imgui.new_enum("ColumnFlags", "None", ImGuiTableColumnFlags_None, "DefaultHide", ImGuiTableColumnFlags_DefaultHide, "DefaultSort",
         ImGuiTableColumnFlags_DefaultSort, "WidthStretch", ImGuiTableColumnFlags_WidthStretch, "WidthFixed",
         ImGuiTableColumnFlags_WidthFixed, "NoResize", ImGuiTableColumnFlags_NoResize, "NoReorder", ImGuiTableColumnFlags_NoReorder,
@@ -3504,19 +3186,6 @@ void bindings::open_imgui(sol::state_view& lua) {
             draw_list->PathRect(::api::imgui::create_imvec2(min), ::api::imgui::create_imvec2(max), rounding, flags);
         });
 
-    //imgui.new_enum("ImGuizmoOperation", "TRANSLATE", ImGuizmo::OPERATION::TRANSLATE, "ROTATE", ImGuizmo::OPERATION::ROTATE, "SCALE",
-    //    ImGuizmo::OPERATION::SCALE, "SCALEU", ImGuizmo::OPERATION::SCALEU, "UNIVERSAL", ImGuizmo::OPERATION::UNIVERSAL);
-    //imgui.new_enum("ImGuizmoMode", "WORLD", ImGuizmo::MODE::WORLD, "LOCAL", ImGuizmo::MODE::LOCAL);
-    imgui.new_usertype<ImGuiTableSortSpecs>(
-        "TableSortSpecs", "specs_dirty", &ImGuiTableSortSpecs::SpecsDirty, "get_specs", [](ImGuiTableSortSpecs* specs) {
-            std::vector<ImGuiTableColumnSortSpecs*> out{};
-
-            for (int i = 0; i < specs->SpecsCount; ++i) {
-                out.push_back(const_cast<ImGuiTableColumnSortSpecs*>(specs->Specs + i));
-            }
-
-            return out;
-        });
     lua["imgui"] = imgui;
     //auto imguizmo = lua.create_table();
 
