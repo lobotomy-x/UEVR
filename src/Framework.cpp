@@ -523,24 +523,30 @@ void Framework::on_frame_d3d11() {
         run_imgui_frame(false);
     }
 
-        ComPtr<ID3D11DeviceContext> context{};
-        float clear_color[]{1.0f, 0.0f, 0.0f, 1.0f};
-        // Only render this if VR is running.
-        // TODO: Instead use this as an SRV to render to the back buffer so we don't render twice.
-        if (true/*VR::get()->is_hmd_active()*/) {
-                        
-            context->ClearRenderTargetView(m_d3d11.rt_rtv.Get(), clear_color);
-            context->OMSetRenderTargets(1, m_d3d11.rt_rtv.GetAddressOf(), NULL);
-            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-        }
+    // The render path here used to declare `context` without initializing it, then immediately
+    // dereference it - guaranteed nullptr crash on every D3D11 frame. Pull the immediate context
+    // from the device, mirroring the original (commented-out) code below.
+    ComPtr<ID3D11DeviceContext> context{};
+    device->GetImmediateContext(&context);
+    if (context == nullptr) {
+        spdlog::error("Failed to get immediate context from D3D11 device");
+        return;
+    }
 
-        // Set the back buffer to be the render target.
-        context->OMSetRenderTargets(1, m_d3d11.bb_rtv.GetAddressOf(), nullptr);
+    float clear_color[]{1.0f, 0.0f, 0.0f, 1.0f};
+    // Only render this if VR is running.
+    // TODO: Instead use this as an SRV to render to the back buffer so we don't render twice.
+    if (true/*VR::get()->is_hmd_active()*/) {
+        context->ClearRenderTargetView(m_d3d11.rt_rtv.Get(), clear_color);
+        context->OMSetRenderTargets(1, m_d3d11.rt_rtv.GetAddressOf(), NULL);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+    }
 
-        m_mods->on_post_frame();
- 
-    
+    // Set the back buffer to be the render target.
+    context->OMSetRenderTargets(1, m_d3d11.bb_rtv.GetAddressOf(), nullptr);
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+    m_mods->on_post_frame();
 }
         /*    
         m_d3d11_hook->get_device()->GetImmediateContext(&context);
