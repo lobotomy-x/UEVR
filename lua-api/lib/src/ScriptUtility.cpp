@@ -636,8 +636,62 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
             }
             return sol::make_object(s, lua_arr);
         }
-    
+        case L"BoolProperty"_fnv: {
+            const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+            if (arr.data == nullptr || arr.count == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+            auto lua_arr = sol::state_view{s}.create_table();
+            for (int32_t i = 0; i < arr.count; ++i) {
+                lua_arr[i + 1] = sol::make_object(s, arr.data[i] != 0);
+            }
+            return sol::make_object(s, lua_arr);
+        }
+        case L"EnumProperty"_fnv: {
+            const auto& arr = *(uevr::API::TArray<int32_t>*)((uintptr_t)self + offset);
+            if (arr.data == nullptr || arr.count == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+            auto lua_arr = sol::state_view{s}.create_table();
+            for (int32_t i = 0; i < arr.count; ++i) {
+                lua_arr[i + 1] = sol::make_object(s, arr.data[i]);
+            }
+            return sol::make_object(s, lua_arr);
+        }
+        case L"StructProperty"_fnv: {
+            const auto struct_prop = (uevr::API::FStructProperty*)inner_prop;
+            const auto strukt = struct_prop->get_struct();
+            if (strukt == nullptr) {
+                return sol::make_object(s, sol::lua_nil);
+            }
 
+            // TArray<Struct> layout: { Struct* data, int32 count, int32 capacity }
+            // Element stride is the struct size, not sizeof(void*) - use script-struct size
+            // when available, fall back to UStruct properties size.
+            const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+            if (arr.data == nullptr || arr.count == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+
+            int32_t elem_size = 0;
+            if (strukt->is_a(uevr::API::UScriptStruct::static_class())) {
+                elem_size = ((uevr::API::UScriptStruct*)strukt)->get_struct_size();
+            }
+            if (elem_size == 0) {
+                elem_size = strukt->get_properties_size();
+            }
+            if (elem_size == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+
+            auto lua_arr = sol::state_view{s}.create_table();
+            for (int32_t i = 0; i < arr.count; ++i) {
+                void* element = (void*)((uintptr_t)arr.data + ((uintptr_t)i * elem_size));
+                auto new_object = std::make_unique<lua::datatypes::StructObject>(element, strukt);
+                lua_arr[i + 1] = sol::make_object(s, std::move(new_object));
+            }
+            return sol::make_object(s, lua_arr);
+        }
             // TODO: Add support for other types
         };
 
@@ -808,57 +862,71 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     case L"ClassProperty"_fnv:
         *(uevr::API::UClass**)((uintptr_t)self + offset) = value.as<uevr::API::UClass*>();
         return;
-    case L"ArrayProperty"_fnv:
-        {
-                if (!value.is<sol::lua_table>()) {
-                    throw sol::error("Setting TArray from non-table is not implemented");
-                }
-
-                const auto inner_prop = ((uevr::API::FArrayProperty*)desc)->get_inner();
-                if (inner_prop == nullptr)
-                    throw sol::error("Array property has no inner property");
-                const auto inner_c = inner_prop->get_class();
-                if (inner_c == nullptr)
-                    throw sol::error("Array inner property has no class");
-                const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
-
-                auto tbl = value.as<sol::table>();
-                uintptr_t address = (uintptr_t)self + offset;                                                                                 
-                switch (inner_name_hash) {
-                case L"FloatProperty"_fnv:
-                    create_tarray_from_table<float>(s, address, tbl);
-                case L"DoubleProperty"_fnv:
-                    create_tarray_from_table<double>(s, address, tbl);
-                case L"ByteProperty"_fnv:
-                    create_tarray_from_table<uint8_t>(s, address, tbl);
-                case L"Int8Property"_fnv:
-                    create_tarray_from_table<int8_t>(s, address, tbl);
-                case L"Int16Property"_fnv:
-                    create_tarray_from_table<int16_t>(s, address, tbl);
-                case L"UInt16Property"_fnv:
-                    create_tarray_from_table<uint16_t>(s, address, tbl);
-                case L"IntProperty"_fnv:
-                    create_tarray_from_table<int32_t>(s, address, tbl);
-                case L"UIntProperty"_fnv:
-                case L"UInt32Property"_fnv:
-                    create_tarray_from_table<uint32_t>(s, address, tbl);
-                case L"UInt64Property"_fnv:
-                    create_tarray_from_table<uint64_t>(s, address, tbl);
-                case L"Int64Property"_fnv:
-                    create_tarray_from_table<int64_t>(s, address, tbl);
-                case L"NameProperty"_fnv:
-                    create_tarray_from_table<uevr::API::FName>(s, address, tbl);
-                case L"WeakObjectProperty"_fnv:
-                case L"InterfaceProperty"_fnv:
-                case L"ClassProperty"_fnv:
-                case L"ObjectProperty"_fnv:
-                    create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
-                case L"Property"_fnv:
-                    create_tarray_from_table<void*>(s, address, tbl);
-                default:
-                    throw sol::error("Setting TArray for this element type is not implemented");
-            }
+    case L"ArrayProperty"_fnv: {
+        if (!value.is<sol::lua_table>()) {
+            throw sol::error("Setting TArray from non-table is not implemented");
         }
+
+        const auto inner_prop = ((uevr::API::FArrayProperty*)desc)->get_inner();
+        if (inner_prop == nullptr)
+            throw sol::error("Array property has no inner property");
+        const auto inner_c = inner_prop->get_class();
+        if (inner_c == nullptr)
+            throw sol::error("Array inner property has no class");
+        const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
+
+        auto tbl = value.as<sol::table>();
+        uintptr_t address = (uintptr_t)self + offset;
+        switch (inner_name_hash) {
+        case L"FloatProperty"_fnv:
+            create_tarray_from_table<float>(s, address, tbl);
+            return;
+        case L"DoubleProperty"_fnv:
+            create_tarray_from_table<double>(s, address, tbl);
+            return;
+        case L"ByteProperty"_fnv:
+        case L"BoolProperty"_fnv:
+            create_tarray_from_table<uint8_t>(s, address, tbl);
+            return;
+        case L"Int8Property"_fnv:
+            create_tarray_from_table<int8_t>(s, address, tbl);
+            return;
+        case L"Int16Property"_fnv:
+            create_tarray_from_table<int16_t>(s, address, tbl);
+            return;
+        case L"UInt16Property"_fnv:
+            create_tarray_from_table<uint16_t>(s, address, tbl);
+            return;
+        case L"IntProperty"_fnv:
+        case L"EnumProperty"_fnv:
+            create_tarray_from_table<int32_t>(s, address, tbl);
+            return;
+        case L"UIntProperty"_fnv:
+        case L"UInt32Property"_fnv:
+            create_tarray_from_table<uint32_t>(s, address, tbl);
+            return;
+        case L"UInt64Property"_fnv:
+            create_tarray_from_table<uint64_t>(s, address, tbl);
+            return;
+        case L"Int64Property"_fnv:
+            create_tarray_from_table<int64_t>(s, address, tbl);
+            return;
+        case L"NameProperty"_fnv:
+            create_tarray_from_table<uevr::API::FName>(s, address, tbl);
+            return;
+        case L"WeakObjectProperty"_fnv:
+        case L"InterfaceProperty"_fnv:
+        case L"ClassProperty"_fnv:
+        case L"ObjectProperty"_fnv:
+            create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
+            return;
+        case L"Property"_fnv:
+            create_tarray_from_table<void*>(s, address, tbl);
+            return;
+        default:
+            throw sol::error("Setting TArray for this element type is not implemented");
+        }
+    }
     case L"StrProperty"_fnv: {
         const auto arg_obj = value;
         using FString = uevr::API::TArray<wchar_t>;
