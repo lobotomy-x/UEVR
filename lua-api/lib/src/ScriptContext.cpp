@@ -229,6 +229,156 @@ void ScriptContext::setup_callback_bindings() {
         });
 }
 
+// Shared asmjit-generated stub for x64 calls. The stub interprets (this_arg, target_fn, args_ptr)
+// where this_arg goes into rcx (first arg), target_fn is called, and args_ptr provides up to 31
+// remaining args (rdx, r8, r9, then stack). type_bits is two bits per slot (excluding rcx) for
+// integer vs float dispatch into GPR/XMM. Returns the generated stub fn pointer.
+namespace {
+using CallStub = void* (*)(void* self, void* target_fn, void* args_ptr);
+
+CallStub get_or_build_call_stub(size_t type_bits, size_t num_args) {
+    static asmjit::JitRuntime rt;
+    static std::mutex stubs_mtx;
+    static std::unordered_map<uint64_t, CallStub> stubs;
+
+    // Encode num_args into the cache key alongside type_bits so a 1-arg call and a 5-arg call
+    // with the same first-arg types don't share a stub (they have different stack frame layouts).
+    const uint64_t key = (uint64_t)type_bits | ((uint64_t)num_args << 32);
+    {
+        std::scoped_lock _{stubs_mtx};
+        if (auto it = stubs.find(key); it != stubs.end()) {
+            return it->second;
+        }
+    }
+
+    enum TypeBits { PRIMITIVE_INTEGER = 1 << 0, PRIMITIVE_FLOAT = 1 << 1 };
+
+    asmjit::CodeHolder code{};
+    code.init(rt.environment());
+    asmjit::x86::Assembler a{&code};
+    static constexpr std::array<asmjit::x86::Gpq, 3> gpr_map{asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9};
+    static constexpr std::array<asmjit::x86::Xmm, 3> xmm_map{asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3};
+    constexpr size_t SCRATCH_SPACE_SIZE = sizeof(void*) * 2;
+    constexpr size_t SHADOW_SPACE_SIZE = 32;
+
+    size_t stack_correction_total = SHADOW_SPACE_SIZE;
+    const auto num_stack_args = num_args > 3 ? num_args - 3 : 0;
+    const auto stack_arg_size = num_stack_args * sizeof(void*);
+    stack_correction_total += stack_arg_size + SCRATCH_SPACE_SIZE;
+    stack_correction_total = ((stack_correction_total + 15) & ~15) + 8;
+
+    a.mov(asmjit::x86::r9, asmjit::x86::r8); // r9 := args_ptr
+    a.sub(asmjit::x86::rsp, stack_correction_total);
+    a.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, stack_arg_size), asmjit::x86::rcx);
+    a.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, stack_arg_size + sizeof(void*)), asmjit::x86::rdx);
+
+    for (size_t i = 3; i < num_args; ++i) {
+        a.mov(asmjit::x86::rcx, asmjit::x86::qword_ptr(asmjit::x86::r9, i * sizeof(void*)));
+        a.mov(asmjit::x86::qword_ptr(asmjit::x86::rsp, ((i - 3) * sizeof(void*))), asmjit::x86::rcx);
+    }
+
+    for (size_t i = 0; i < 3; ++i) {
+        const auto type = (TypeBits)((type_bits >> (2 * i)) & 0b11);
+        if (type == PRIMITIVE_INTEGER) {
+            if (i < num_args) {
+                a.mov(gpr_map[i], asmjit::x86::qword_ptr(asmjit::x86::r9, i * sizeof(void*)));
+            } else {
+                a.xor_(gpr_map[i], gpr_map[i]);
+            }
+        } else if (type == PRIMITIVE_FLOAT) {
+            if (i < num_args) {
+                a.movss(xmm_map[i], asmjit::x86::dword_ptr(asmjit::x86::r9, i * sizeof(void*)));
+            }
+        }
+    }
+
+    a.mov(asmjit::x86::rcx, asmjit::x86::qword_ptr(asmjit::x86::rsp, stack_arg_size));
+    a.call(asmjit::x86::qword_ptr(asmjit::x86::rsp, stack_arg_size + sizeof(void*)));
+    a.add(asmjit::x86::rsp, stack_correction_total);
+    a.ret();
+
+    uintptr_t code_addr{};
+    rt.add(&code_addr, &code);
+    auto stub = (CallStub)code_addr;
+    {
+        std::scoped_lock _{stubs_mtx};
+        stubs[key] = stub;
+    }
+    return stub;
+}
+
+// Convert a Lua arg into a 64-bit slot plus an integer/float type bit. Returns false if the
+// type is unrecognised (caller may want to throw or fall back to integer 0).
+bool encode_lua_arg(const sol::object& arg, size_t& out_slot, int& out_type) {
+    enum { INT_BIT = 1, FLT_BIT = 2 };
+    if (arg.is<sol::nil_t>()) {
+        out_slot = 0;
+        out_type = INT_BIT;
+        return true;
+    }
+    if (arg.is<uevr::API::UObject*>()) {
+        out_slot = (size_t)arg.as<uevr::API::UObject*>();
+        out_type = INT_BIT;
+        return true;
+    }
+    if (arg.is<lua::datatypes::StructObject*>()) {
+        out_slot = (size_t)arg.as<lua::datatypes::StructObject*>()->object;
+        out_type = INT_BIT;
+        return true;
+    }
+    if (arg.is<float>()) {
+        float f = arg.as<float>();
+        out_slot = (size_t)*(uint32_t*)&f;
+        out_type = FLT_BIT;
+        return true;
+    }
+    if (arg.is<intptr_t>()) {
+        out_slot = (size_t)arg.as<intptr_t>();
+        out_type = INT_BIT;
+        return true;
+    }
+    return false;
+}
+} // namespace
+
+// uevr.call_function(target_addr, arg0, arg1, ...) - invoke a raw native function. arg0 goes into
+// rcx (the implicit "this" slot for x64 calls); for cdecl/stdcall functions that don't take a
+// `this`, just pass arg0 as the first real argument. Up to 32 total args supported.
+sol::object call_function_at_address(sol::this_state s, uintptr_t target, sol::variadic_args args) {
+    if (target == 0) {
+        throw sol::error("call_function: target address is null");
+    }
+    if (args.size() > 32) {
+        throw sol::error("call_function: too many arguments (max 32)");
+    }
+
+    // Slot layout consumed by the stub:
+    //   rcx <- `self` argument (passed separately to stub) - we use args[0] for this.
+    //   args_ptr[0..2] -> rdx, r8, r9 (with type_bits[0..2] dispatching int/float per slot)
+    //   args_ptr[3..]  -> stack args
+    // So args[0] is encoded as `self`, args[1..N] are encoded into args_ptr[0..N-1].
+    std::array<size_t, 32> args_converted{0};
+    size_t type_bits{0};
+    size_t self_slot = 0;
+    if (args.size() > 0) {
+        int t = 1;
+        encode_lua_arg(args[0], self_slot, t); // rcx is always integer-sized; type bit unused
+    }
+    const size_t rest = args.size() > 0 ? args.size() - 1 : 0;
+    for (size_t i = 0; i < rest; ++i) {
+        size_t slot = 0;
+        int t = 1;
+        encode_lua_arg(args[i + 1], slot, t);
+        args_converted[i] = slot;
+        type_bits |= (size_t)t << (2 * i);
+    }
+
+    auto stub = get_or_build_call_stub(type_bits, rest);
+    void* self = (void*)self_slot;
+    void* args_ptr = rest > 0 ? (void*)args_converted.data() : nullptr;
+    return sol::make_object(s, stub(self, (void*)target, args_ptr));
+}
+
 __declspec(noinline) sol::object call_member_virtual(sol::this_state s, uevr::API::UObject* self, size_t index, sol::variadic_args args) {
     if (index > 1000) { // Yeah right
         throw sol::error("DANGEROUS_call_member_virtual: Index too high");
@@ -1134,6 +1284,15 @@ int ScriptContext::setup_bindings() {
     };
     out["hook_remove_mid"] = [this](uintptr_t target) -> bool {
         return remove_mid_hook(target);
+    };
+
+    // uevr.call_function(target_addr, arg0, arg1, ...) - call a raw native function via the
+    // shared asmjit stub. Same supported arg types as DANGEROUS_call_member_virtual: nil,
+    // UObject*, StructObject* (passes its address), float (passed via XMM), intptr_t (everything
+    // else integer-sized). Up to 32 args. Pass arg0 as the implicit `this` for thiscall member
+    // functions; for cdecl/stdcall, arg0 is just the function's first parameter.
+    out["call_function"] = [](sol::this_state s, uintptr_t target, sol::variadic_args args) -> sol::object {
+        return call_function_at_address(s, target, args);
     };
 
     out["types"] = m_lua.create_table_with("UObject", m_lua["UEVR_UObject"], "UStruct", m_lua["UEVR_UStruct"], "UClass",
