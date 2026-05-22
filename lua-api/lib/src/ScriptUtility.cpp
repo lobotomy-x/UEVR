@@ -1075,7 +1075,19 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 }
             }
 
-            memcpy((void*)((uintptr_t)self + offset), arg.object, struct_desc->get_struct_size());
+            // get_struct_size is only safe on UScriptStruct; fall back to UStruct's properties size.
+            int32_t struct_size = 0;
+            if (struct_desc->is_a(uevr::API::UScriptStruct::static_class())) {
+                struct_size = ((uevr::API::UScriptStruct*)struct_desc)->get_struct_size();
+            }
+            if (struct_size == 0) {
+                struct_size = struct_desc->get_properties_size();
+            }
+            if (struct_size <= 0) {
+                throw sol::error(std::format(
+                    "Could not determine size of struct '{}'", ::utility::narrow(struct_desc->get_fname()->to_string())));
+            }
+            memcpy((void*)((uintptr_t)self + offset), arg.object, struct_size);
         } else if (struct_desc == get_vector_struct() || struct_desc == get_rotator_struct()) { // Same layout
             if (value.is<lua::datatypes::Vector3f>()) {
                 const auto arg = value.as<lua::datatypes::Vector3f>();
@@ -1100,7 +1112,9 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
         }
 
         else if (struct_desc == get_vector2d_struct()) { // Same layout
-            if (value.is<lua::datatypes::Vector2d>()) {
+            // First branch was: `if is<Vec2d>` then `as<Vec2f>` (mismatched check vs cast) - meant is<Vec2f>.
+            // Second branch was a duplicate is<Vec2d> check (always unreachable).
+            if (value.is<lua::datatypes::Vector2f>()) {
                 const auto arg = value.as<lua::datatypes::Vector2f>();
 
                 if (is_ue5()) {
@@ -1120,7 +1134,8 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
         }
 
         else if (struct_desc == get_vector4d_struct()) { // Same layout
-            if (value.is<lua::datatypes::Vector4d>()) {
+            // Same pattern as Vector2: first branch was is<Vec4d>/as<Vec4f>, second was duplicate is<Vec4d>.
+            if (value.is<lua::datatypes::Vector4f>()) {
                 const auto arg = value.as<lua::datatypes::Vector4f>();
 
                 if (is_ue5()) {
@@ -1196,7 +1211,10 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 if (is_ue5()) {
                     *(lua::datatypes::Quaterniond*)((uintptr_t)self + offset) = arg;
                 } else {
-                    *(lua::datatypes::Quaterniond*)((uintptr_t)self + offset) = arg;
+                    // Was writing Quaterniond here too - matched the UE5 branch and would have
+                    // corrupted 8 bytes of memory past the FQuat in UE4 (float quat is 16 bytes,
+                    // double quat is 32). Fixed to Quaternionf for the non-UE5 layout.
+                    *(lua::datatypes::Quaternionf*)((uintptr_t)self + offset) = arg;
                 }
             } else if (value.is<lua::datatypes::Quaterniond>()) {
                 const auto arg = value.as<lua::datatypes::Quaterniond>();
@@ -1391,43 +1409,63 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
             const auto arg_obj = args[args_index++];
 
             if (arg_obj.is<sol::lua_table>()) {
-            
                 const auto tbl = arg_obj.as<sol::lua_table>();
-                auto address = (uintptr_t)params[offset];
-            switch (inner_name_hash) {
-            case L"FloatProperty"_fnv:
-                create_tarray_from_table<float>(s, address, tbl);
-            case L"DoubleProperty"_fnv:
-                create_tarray_from_table<double>(s, address, tbl);
-            case L"ByteProperty"_fnv:
-                create_tarray_from_table<uint8_t>(s, address, tbl);
-            case L"Int8Property"_fnv:
-                create_tarray_from_table<int8_t>(s, address, tbl);
-            case L"Int16Property"_fnv:
-                create_tarray_from_table<int16_t>(s, address, tbl);
-            case L"UInt16Property"_fnv:
-                create_tarray_from_table<uint16_t>(s, address, tbl);
-            case L"IntProperty"_fnv:
-                create_tarray_from_table<int32_t>(s, address, tbl);
-            case L"UIntProperty"_fnv:
-            case L"UInt32Property"_fnv:
-                create_tarray_from_table<uint32_t>(s, address, tbl);
-            case L"UInt64Property"_fnv:
-                create_tarray_from_table<uint64_t>(s, address, tbl);
-            case L"Int64Property"_fnv:
-                create_tarray_from_table<int64_t>(s, address, tbl);
-            case L"NameProperty"_fnv:
-                create_tarray_from_table<uevr::API::FName>(s, address, tbl);
-            case L"WeakObjectProperty"_fnv:
-            case L"InterfaceProperty"_fnv:
-            case L"ClassProperty"_fnv:
-            case L"ObjectProperty"_fnv:
-                create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
-            case L"Property"_fnv:
-                create_tarray_from_table<void*>(s, address, tbl);
-            default:
-                throw sol::error("Setting TArray for this element type is not implemented");
-            }       
+                // `params` is std::vector<uint8_t>; the TArray lives at &params[offset], so its
+                // address is computed from .data(), not by indexing the byte value at [offset].
+                const auto address = (uintptr_t)(params.data() + offset);
+                // Same fallthrough bug as set_property's ArrayProperty case used to have - every
+                // create_tarray_from_table<T> falls into the next, ending in `default: throw`,
+                // so any TArray set actually threw "not implemented" after corrupting the array
+                // header through all the wrong types in sequence.
+                switch (inner_name_hash) {
+                case L"FloatProperty"_fnv:
+                    create_tarray_from_table<float>(s, address, tbl);
+                    break;
+                case L"DoubleProperty"_fnv:
+                    create_tarray_from_table<double>(s, address, tbl);
+                    break;
+                case L"ByteProperty"_fnv:
+                case L"BoolProperty"_fnv:
+                    create_tarray_from_table<uint8_t>(s, address, tbl);
+                    break;
+                case L"Int8Property"_fnv:
+                    create_tarray_from_table<int8_t>(s, address, tbl);
+                    break;
+                case L"Int16Property"_fnv:
+                    create_tarray_from_table<int16_t>(s, address, tbl);
+                    break;
+                case L"UInt16Property"_fnv:
+                    create_tarray_from_table<uint16_t>(s, address, tbl);
+                    break;
+                case L"IntProperty"_fnv:
+                case L"EnumProperty"_fnv:
+                    create_tarray_from_table<int32_t>(s, address, tbl);
+                    break;
+                case L"UIntProperty"_fnv:
+                case L"UInt32Property"_fnv:
+                    create_tarray_from_table<uint32_t>(s, address, tbl);
+                    break;
+                case L"UInt64Property"_fnv:
+                    create_tarray_from_table<uint64_t>(s, address, tbl);
+                    break;
+                case L"Int64Property"_fnv:
+                    create_tarray_from_table<int64_t>(s, address, tbl);
+                    break;
+                case L"NameProperty"_fnv:
+                    create_tarray_from_table<uevr::API::FName>(s, address, tbl);
+                    break;
+                case L"WeakObjectProperty"_fnv:
+                case L"InterfaceProperty"_fnv:
+                case L"ClassProperty"_fnv:
+                case L"ObjectProperty"_fnv:
+                    create_tarray_from_table<uevr::API::UObject*>(s, address, tbl);
+                    break;
+                case L"Property"_fnv:
+                    create_tarray_from_table<void*>(s, address, tbl);
+                    break;
+                default:
+                    throw sol::error("Setting TArray for this element type is not implemented");
+                }
             }
         } else {
             // Might need to check if this causes issues
@@ -1454,10 +1492,11 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
             }
 
             const auto structprop = (uevr::API::FStructProperty*)prop;
+            const auto out_struct_desc = structprop->get_struct();
 
             auto& arg = args[arg_index].as<lua::datatypes::StructObject>();
 
-            if (structprop->get_struct() != arg.desc) {
+            if (out_struct_desc != arg.desc) {
                 if (arg.desc != nullptr) {
                     throw sol::error(std::format("Invalid struct type for out parameter (expected {}, got {})",
                         ::utility::narrow(prop_c->get_fname()->to_string()), ::utility::narrow(arg.desc->get_fname()->to_string())));
@@ -1467,11 +1506,30 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
                 }
             }
 
-            memcpy(arg.object, (void*)((uintptr_t)params.data() + prop->get_offset()), structprop->get_struct()->get_struct_size());
+            // Same get_struct_size safety dance as set_property/prop_to_object: only valid on
+            // UScriptStruct, fall back to UStruct properties_size otherwise. The previous code
+            // unconditionally called get_struct_size on the get_struct() result, which goes through
+            // the wrong vtable slot if the underlying type is e.g. a UClass and could memcpy a
+            // garbage size into the caller's StructObject.
+            int32_t out_size = 0;
+            if (out_struct_desc != nullptr && out_struct_desc->is_a(uevr::API::UScriptStruct::static_class())) {
+                out_size = ((uevr::API::UScriptStruct*)out_struct_desc)->get_struct_size();
+            }
+            if (out_size == 0 && out_struct_desc != nullptr) {
+                out_size = out_struct_desc->get_properties_size();
+            }
+            if (out_size <= 0) {
+                throw sol::error(std::format(
+                    "Could not determine size of out-parameter struct '{}'", ::utility::narrow(prop_c->get_fname()->to_string())));
+            }
+            memcpy(arg.object, (void*)((uintptr_t)params.data() + prop->get_offset()), out_size);
         } else if (args[arg_index].is<sol::lua_table>()) {
             auto tbl = args[arg_index].as<sol::lua_table>();
             const auto tbl_was_empty = tbl.empty();
-            auto result = prop_to_object(s, params.data(), return_prop, true);
+            // Was using return_prop here, but that's the function's *return value* property, not
+            // the current out parameter - we'd read from the wrong offset and produce the wrong
+            // type for the table. Use `prop` (the out parameter currently being processed).
+            auto result = prop_to_object(s, params.data(), prop, true);
 
             if (prop_name_hash == L"ArrayProperty"_fnv) {
                 auto& arr = *(uevr::API::TArray<void*>*)((uintptr_t)params.data() + prop->get_offset());
@@ -1490,8 +1548,10 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
             } else {
                 tbl["result"] = result;
             }
-        } else if (args[args_index].is<sol::nil_t>()) {
-            // Do nothing
+        } else if (args[arg_index].is<sol::nil_t>()) {
+            // Do nothing. (Was reading args[args_index] - the loop variable from the in-param loop
+            // that's no longer relevant here; if args_index walked past args.size() this would
+            // index out of bounds.)
         } else {
             throw sol::error(
                 std::format("Invalid argument type for argument {} ({})", arg_index, ::utility::narrow(prop_c->get_fname()->to_string())));

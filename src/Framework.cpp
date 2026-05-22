@@ -465,15 +465,18 @@ void Framework::run_imgui_frame(bool from_present) {
 
     ImGui::EndFrame();
     ImGui::Render();
-    if (from_present && (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)) {
+
+    // Drive secondary viewports regardless of from_present. The previous gate (`from_present &&`)
+    // meant that on D3D11 and D3D12, where on_frame_d3d11/d3d12 invoke run_imgui_frame(false) from
+    // the engine tick, UpdatePlatformWindows + RenderPlatformWindowsDefault never ran. Each
+    // secondary viewport got a Platform_CreateWindow (so its OS window appeared) but its
+    // Renderer_RenderWindow / Renderer_SwapBuffers were never called - leaving the popup with the
+    // initial clear color and no ImGui content drawn into it.
+    // Mod/script callbacks are still gated on !from_present above; this section is pure ImGui
+    // platform/renderer plumbing and is safe to run from either thread.
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
-        if (m_is_d3d12) {
-
-      //     d3d12_command_list->RSSetScissorRects(1, &massive_rect);
-        }
-
         ImGui::RenderPlatformWindowsDefault();
-        
     }
 
     m_has_frame = true;
