@@ -674,6 +674,7 @@ target_link_libraries(luavrlib PUBLIC
 	kananlib
 	glm
 	asmjit
+	safetyhook
 )
 
 unset(CMKR_TARGET)

@@ -38,8 +38,7 @@ using namespace std::literals;
 #define IMGUICONFIGFLAGS                                                                                                \
     ImGuiConfigFlags_DockingEnable |\
         ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | \
-        ImGuiConfigFlags_NavEnableSetMousePos  
-
+        ImGuiConfigFlags_NavEnableSetMousePos |  ImGuiConfigFlags_ViewportsEnable
 
 std::unique_ptr<Framework> g_framework{};
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -98,9 +97,9 @@ void Framework::hook_monitor() {
 
     const auto renderer_type = get_renderer_type();
 
-    if (d3d11 == nullptr || d3d12 == nullptr 
-        || (renderer_type == Framework::RendererType::D3D11 && d3d11 != nullptr && !d3d11->is_inside_present()) 
-        || (renderer_type == Framework::RendererType::D3D12 && d3d12 != nullptr && !d3d12->is_inside_present())) 
+    if (d3d11 == nullptr || d3d12 == nullptr
+        || (renderer_type == Framework::RendererType::D3D11 && d3d11 != nullptr && !d3d11->is_inside_present())
+        || (renderer_type == Framework::RendererType::D3D12 && d3d12 != nullptr && !d3d12->is_inside_present()))
     {
         // check if present time is more than 5 seconds ago
         if (now - m_last_present_time >= std::chrono::seconds(5)) {
@@ -444,7 +443,7 @@ void Framework::run_imgui_frame(bool from_present) {
     // Force the platform to acknowledge the window is valid
     if (main_viewport->PlatformUserData) {
 
-    } 
+    }
     ImGui_ImplWin32_NewFrame();
 
     // from_present is so we don't accidentally
@@ -508,7 +507,7 @@ void Framework::on_frame_d3d11() {
     }
 
     auto device = m_d3d11_hook->get_device();
-    
+
     if (device == nullptr) {
         spdlog::error("D3D11 device was null when it shouldn't be, returning...");
         m_initialized = false;
@@ -519,7 +518,7 @@ void Framework::on_frame_d3d11() {
         deinit_d3d11();
         init_d3d11();
     }
-    
+
     ImGui_ImplDX11_NewFrame();
     // hooks don't run until after initialization, so we just render the imgui window while initalizing.
     if (!m_has_engine_thread) {
@@ -551,17 +550,17 @@ void Framework::on_frame_d3d11() {
 
     m_mods->on_post_frame();
 }
-        /*    
+        /*
         m_d3d11_hook->get_device()->GetImmediateContext(&context);
         context->ClearRenderTargetView(m_d3d11.blank_rt_rtv.Get(), clear_color);
         context->ClearRenderTargetView(m_d3d11.rt_rtv.Get(), clear_color);
         context->OMSetRenderTargets(1, m_d3d11.rt_rtv.GetAddressOf(), NULL);
         ImGui_ImplDX11_RenderDrawData(draw_data);
-    
+
         for (auto& mod : m_mods->get_mods()) {
             mod->on_post_render_vr_framework_dx11(context.Get(), m_d3d11.rt.Get(), m_d3d11.rt_rtv.Get());
         }
-    
+
         // Set the back buffer to be the render target.
         context->OMSetRenderTargets(1, m_d3d11.bb_rtv.GetAddressOf(), nullptr);
         ImGui_ImplDX11_RenderDrawData(draw_data);
@@ -598,7 +597,7 @@ void Framework::on_frame_d3d12() {
 
     auto command_queue = m_d3d12_hook->get_command_queue();
     //spdlog::debug("on_frame (D3D12)");
-    
+
     if (!m_initialized) {
         if (!initialize()) {
             spdlog::error("Failed to initialize Framework on DirectX 12");
@@ -648,7 +647,7 @@ void Framework::on_frame_d3d12() {
             if (!m_has_engine_thread) {
                 run_imgui_frame(false);
             }
-    /*    } else {   
+    /*    } else {
             return;
         }
     } else {
@@ -700,7 +699,7 @@ void Framework::on_frame_d3d12() {
             rts[0] = m_d3d12.get_cpu_rtv(device, D3D12::RTV::IMGUI);
             mod->on_post_render_vr_framework_dx12(cmd_ctx->cmd_list.Get(), m_d3d12.get_rt(D3D12::RTV::IMGUI).Get(), &rts[0]);
         }
-        
+
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         cmd_ctx->cmd_list->ResourceBarrier(1, &barrier);
@@ -739,7 +738,7 @@ void Framework::on_post_present_d3d12() {
 
         return;
     }
-    
+
     for (auto& mod : m_mods->get_mods()) {
         mod->on_post_present();
     }
@@ -868,7 +867,7 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         }
 
         if (w_param == VK_INSERT ||
-            w_param == FrameworkConfig::get()->get_menu_key()->value()) 
+            w_param == FrameworkConfig::get()->get_menu_key()->value())
         {
             set_draw_ui(!m_draw_ui, true);
             return false;
@@ -896,7 +895,7 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         /*if (GET_RAWINPUT_CODE_WPARAM(w_param) == RIM_INPUT) {
             uint32_t size = sizeof(RAWINPUT);
             RAWINPUT raw{};
-            
+
             // obtain size
             GetRawInputData((HRAWINPUT)l_param, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
 
@@ -941,7 +940,7 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
                 WM_MOUSEACTIVATE
             };
 
-            if (!forcefully_allowed_messages.contains(message)) {      
+            if (!forcefully_allowed_messages.contains(message)) {
                 if (m_is_ui_focused) {
                     if (io.WantCaptureMouse || io.WantCaptureKeyboard || io.WantTextInput)
                         return false;
@@ -990,7 +989,7 @@ void Framework::on_frontend_command(UEVRSharedMemory::Command command) {
             PostMessageA(m_wnd, WM_QUIT, 0, 0);
             m_terminating = true;
         }
-        
+
         break;
     default:
         spdlog::error("Unknown frontend command received: {}", (int)command);
@@ -1091,7 +1090,7 @@ void Framework::set_draw_ui(bool state, bool should_save) {
     if (m_game_data_initialized) {
         FrameworkConfig::get()->get_menu_open()->value() = state;
     }
-    
+
     if (state != prev_state && should_save && m_game_data_initialized) {
         VR::get()->set_aim_allowed(false);
         save_config();
@@ -1145,23 +1144,23 @@ void Framework::update_fonts() {
     const ImFontConfig* cfg{};
     wchar_t windir[260]{};
     GetWindowsDirectoryW(windir, 260);
-    
-  
+
+
     m_default_font =
         atlas->AddFontFromFileTTF((std::filesystem::path(windir) / "Fonts" / "Roboto-Medium.ttf").string().c_str(), m_font_size, cfg);
- 
+
     for (auto& font : m_additional_fonts) {
 
         if (fs::exists(font.filepath)) {
             font.font = atlas->AddFontFromFileTTF(font.filepath.string().c_str(), (float)font.size);
-        } 
+        }
         else {
             font.font = atlas->AddFontFromMemoryCompressedTTF(
                 RobotoMedium_compressed_data, RobotoMedium_compressed_size, (float)font.size);
         }
-    
+
     }
-        
+
  /*  auto& fonts = ImGui::GetIO().Fonts;
 
     fonts->Clear();
@@ -1183,7 +1182,7 @@ void Framework::update_fonts() {
 
     fonts->Build();       */
     atlas->Build();
-    m_wants_device_object_cleanup = true;           
+    m_wants_device_object_cleanup = true;
 }
 
 void Framework::invalidate_device_objects() {
@@ -1191,13 +1190,13 @@ void Framework::invalidate_device_objects() {
         return;
     }
     try {
-    
+
     if (m_renderer_type == RendererType::D3D11) {
 
         //ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
         //ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_DockingEnable;
         ImGui_ImplDX11_InvalidateDeviceObjects();
-        
+
     } else if (m_renderer_type == RendererType::D3D12) {
         ImGui_ImplDX12_InvalidateDeviceObjects();
     }
@@ -1213,7 +1212,7 @@ void Framework::draw_ui() {
         set_imgui_style();
         m_current_theme = get_imgui_theme_value();
     }
- 
+
     ImGui::GetIO().MouseDrawCursor = m_draw_ui || FrameworkConfig::get()->is_always_show_cursor();
     ImGui::GetIO().ConfigFlags = IMGUICONFIGFLAGS | ImGuiConfigFlags_NoMouseCursorChange; // causes bugs with the cursor
 
@@ -1233,7 +1232,7 @@ void Framework::draw_ui() {
         // ImGui::GetIO().MouseDrawCursor = false;
         return;
     }
-    
+
     // UI Specific code:
     m_is_ui_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow);
 
@@ -1255,7 +1254,7 @@ void Framework::draw_ui() {
 
     auto& io = ImGui::GetIO();
     io.ConfigViewportsNoAutoMerge = false;
-    
+
     if (io.WantCaptureKeyboard) {
         //m_dinput_hook->ignore_input();
     } else {
@@ -1288,14 +1287,14 @@ void Framework::draw_ui() {
     if (!m_last_draw_ui || m_cursor_state_changed) {
         m_cursor_state_changed = false;
     }
-    
+
     static const auto UEVR_NAME = std::format("UEVR [{}+{}-{:.8}]", UEVR_TAG, UEVR_COMMITS_PAST_TAG, UEVR_COMMIT_HASH);
-    
-       
+
+
 
     ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiCond_::ImGuiCond_Once);
     ImGui::Begin(UEVR_NAME.c_str(), &m_draw_ui);
-    static auto editstyle = false;                                   
+    static auto editstyle = false;
 
     ImGui::BeginGroup();
     ImGui::Columns(2);
@@ -1326,13 +1325,13 @@ void Framework::draw_ui() {
             reset_config();
         }
     }
-     
 
-    if (ImGui::Button("Style Editor")) {    
+
+    if (ImGui::Button("Style Editor")) {
 
          editstyle = !editstyle;
     }
-  
+
     //static auto selectstyle = false;
 
     //if (ImGui::Button("Style Selector")) {
@@ -1375,14 +1374,14 @@ void Framework::draw_ui() {
         ImGui::TableSetColumnIndex(0); // Set to the first column
 
         ImGui::BeginChild("UEVRLeftPane", ImVec2(0, 0), ImGuiChildFlags_Borders);
-        auto dcs = [&](const char* label, int32_t page_value) -> bool {         
+        auto dcs = [&](const char* label, int32_t page_value) -> bool {
              ImGui::PushID(page_value);
              ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
              auto res = ImGui::Selectable(label, m_sidebar_state.selected_entry == page_value);
              if (res) {
                     m_sidebar_state.selected_entry = page_value;
              }
-             ImGui::PopID(); 
+             ImGui::PopID();
              ImGui::PopStyleVar(1);
             return res;
         };
@@ -1484,7 +1483,7 @@ void Framework::draw_ui() {
                             if (wants_focus_right) {
                                 ImGui::SetKeyboardFocusHere();
                             }
-                            
+
                             if (range.has_sidebar_entries) {
                                 range.mod->on_draw_sidebar_entry(sidebar_entries[m_sidebar_state.selected_entry].m_label);
                             } else {
@@ -1599,9 +1598,9 @@ void Framework::draw_about() {
 }
 
 void Framework::set_imgui_style() noexcept {
-    
+
     auto current_theme = get_imgui_theme_value();
-    
+
     switch (current_theme) {
         case ImGuiThemes::DEFAULT_DARK:
             ImGuiThemeHelper::StyleColorsDefaultDark();
@@ -1619,7 +1618,7 @@ void Framework::set_imgui_style() noexcept {
             ImGuiThemeHelper::StyleColorsDefaultDark();
             break;
     }
-    
+
     // Font
     set_font_size(m_font_size);
 
@@ -1754,12 +1753,12 @@ bool Framework::initialize() {
         ImGui::CreateContext();
         ImGui::GetIO().ConfigFlags &= ImGuiConfigFlags_DockingEnable;
         ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
-   
+
         set_imgui_style();
 
         static const auto imgui_ini = (get_persistent_dir() / "imgui.ini").string();
         ImGui::GetIO().IniFilename = imgui_ini.c_str();
-        
+
         if (!ImGui_ImplWin32_Init(m_wnd)) {
             spdlog::error("Failed to initialize ImGui ImplWin32.");
             return false;
@@ -1800,7 +1799,7 @@ bool Framework::initialize() {
 
                 spdlog::error("Initialization of mods failed. Reason: {}", m_error);
             }
-            
+
 
             m_game_data_initialized = true;
         } catch(...) {
@@ -2001,12 +2000,12 @@ bool Framework::init_d3d11() {
 
 void Framework::deinit_d3d11() {
     try {
-    
+
 ImGui_ImplDX11_InvalidateDeviceObjects();
-        ImGui_ImplDX11_Shutdown();     
+        ImGui_ImplDX11_Shutdown();
     } catch (...){
-        
-    } 
+
+    }
                  m_d3d11 = {};
 }
 
@@ -2014,7 +2013,7 @@ ImGui_ImplDX11_InvalidateDeviceObjects();
 
 bool Framework::init_d3d12() {
     deinit_d3d12();
-    
+
     auto device = m_d3d12_hook->get_device();
 
     spdlog::info("[D3D12] Creating command allocator...");
@@ -2036,7 +2035,7 @@ bool Framework::init_d3d12() {
         D3D12_DESCRIPTOR_HEAP_DESC desc{};
 
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        desc.NumDescriptors = (int)D3D12::RTV::COUNT; 
+        desc.NumDescriptors = (int)D3D12::RTV::COUNT;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         desc.NodeMask = 1;
 
@@ -2050,9 +2049,9 @@ bool Framework::init_d3d12() {
 
     spdlog::info("[D3D12] Creating SRV descriptor heap...");
 
-    { 
+    {
         D3D12_DESCRIPTOR_HEAP_DESC desc{};
-        
+
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         desc.NumDescriptors = (int)D3D12::SRV::COUNT;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;

@@ -423,16 +423,6 @@ void UObjectHook::add_new_object(sdk::UObjectBase* object) {
     std::unique_lock _{m_mutex};
     std::unique_ptr<MetaObject> meta_object{};
 
-    /*static const auto prim_comp_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.PrimitiveComponent");
-
-    if (prim_comp_t != nullptr && object->get_class()->is_a(prim_comp_t)) {
-        static const auto bGenerateOverlapEvents = (sdk::FBoolProperty*)prim_comp_t->find_property(L"bGenerateOverlapEvents");
-
-        if (bGenerateOverlapEvents != nullptr) {
-            bGenerateOverlapEvents->set_value_in_object(object, true);
-        }
-    }*/
-
     const auto c = object->get_class();
 
     if (c == nullptr) {
@@ -851,23 +841,10 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                     }
                 }
 
-
-
-/*                auto player_controller = sdk::UGameplayStatics::get()->get_player_controller(
-                    [&overlap]() -> sdk::UObject*{
-                    auto outer = overlap->get_outer();
-                    while (outer != nullptr) {
-                        if (outer->is_a(sdk::UWorld::static_class())) {
-                            return outer;
-                        }
-                    }
-                },  0);       */
-
                 const auto owner = overlap->get_owner();
                 bool owner_is_adjustment_vis = false;
 
-                if (owner == m_overlap_detection_actor || owner == m_overlap_detection_actor_left /*|| owner ==
-                        (sdk::AActor*)(player_controller->get_acknowledged_pawn())*/) {
+                if (owner == m_overlap_detection_actor || owner == m_overlap_detection_actor_left) {
                     continue;
                 }
 
@@ -985,18 +962,6 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                             new_comp->process_event(fn, &params);
                         }
                     });
-
-                    /*add_comp(sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.ArrowComponent"), [](sdk::UActorComponent* new_comp) {
-                        struct {
-                            float color[4]{1.0f, 0.0f, 0.0f, 1.0f};
-                        } params{};
-
-                        const auto fn = new_comp->get_class()->find_function(L"SetArrowColor");
-
-                        if (fn != nullptr) {
-                            new_comp->process_event(fn, &params);
-                        }
-                    });*/
 
                     // Ghetto way of making a "mesh" out of the box components
                     for (auto j = 0; j < 3; ++j) {
@@ -2980,36 +2945,35 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             //     
             //}                
           
-            void* addr = (void*)((uintptr_t)comp);
-            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();               
-            static std::string_view text = "local comp = uevr.api:to_uobject(" + hex + ")\n";
+            // Per-component lua console.
+            // The previous implementation had four serious bugs stacked on top of each other:
+            //   - `static std::string_view text = std::string + std::string` left a string_view
+            //     pointing at the temporary's destroyed buffer.
+            //   - `char* input{}` was an uninitialized null pointer.
+            //   - `strcpy_s(input, sizeof(text.data()), text.data())` copied into nullptr with a
+            //     size of sizeof(const char*) = 8.
+            //   - `ImGui::InputTextMultiline(..., input, sizeof(input), ...)` passed buf=nullptr
+            //     and size=8 to imgui.
+            // Replaced with a per-component buffer indexed by component address.
+            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)comp).str();
             if (ImGui::TreeNode("Lua")) {
+                constexpr size_t kBufSize = 4096;
+                static std::unordered_map<uintptr_t, std::array<char, kBufSize>> s_buffers;
+                auto [it, inserted] = s_buffers.try_emplace((uintptr_t)comp);
+                if (inserted) {
+                    const auto initial = std::string{"local comp = uevr.api:to_uobject(0x"} + hex + ")\n";
+                    const auto n = std::min(initial.size(), kBufSize - 1);
+                    std::memcpy(it->second.data(), initial.data(), n);
+                    it->second[n] = '\0';
+                }
+                auto& buf = it->second;
 
-                auto size = ImGui::GetContentRegionAvail();
-                ImGui::BeginChild("Console", ImVec2(250, 250), ImGuiChildFlags_AlwaysAutoResize);
-
-           
-       
-                    auto width = size.x * 0.75f;
-                    if (width < 250) width = 250; 
-                    auto linect = 3;
-                    for (auto& c : text) {
-                        if (c == '\n') {
-                            ++linect;
-                        }
-                    }
-                    char* input{};
-                    strcpy_s(input, sizeof(text.data()), text.data());                                        
-                    auto height = linect * ImGui::CalcTextSize("T").y;
-                    if (ImGui::InputTextMultiline("##luainput", input, sizeof(input),
-                            size,
-                            ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackHistory)) {
-                       text = input;
-                    }
-                
-                ImGui::EndChild();
+                const auto size = ImGui::GetContentRegionAvail();
+                ImGui::InputTextMultiline("##luainput", buf.data(), buf.size(),
+                    ImVec2(size.x, std::max(120.0f, size.y * 0.5f)),
+                    ImGuiInputTextFlags_AllowTabInput);
                 if (ImGui::Button("Execute")) {
-                    PluginLoader::get()->do_lua_string(text.data(), utility::narrow(comp->get_full_name()).data());
+                    PluginLoader::get()->do_lua_string(buf.data(), utility::narrow(comp->get_full_name()).data());
                 }
                 ImGui::TreePop();
             }
@@ -3342,19 +3306,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
                     //comp->set_socket_rotation(name, rotation);
                 }
-                
-/*                if (ImGui::Button("Attach Camera")) {
-                    std::string_view luadata = "local comp = uevr.api:to_uobject(" +
-                     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" + 
-                        (utility::narrow(name.to_string())) + R"('
-local spring = uevr.api:add_component_by_class(comp:get_outer(), uevr.api:find_uobject("Class /Script/Engine.SpringArmComponent"), false)
-                    
 
-                        
-
-                                    )";
-                             PluginLoader::get()->do_lua_string(luadata, "attach");
-                }*/
                 if (comp->get_class()->get_fname().to_string().ends_with(L"MeshComponent")) {
                 
 
@@ -3510,16 +3462,6 @@ void UObjectHook::ui_handle_material_interface(sdk::UObject* object) {
                         if (!this->exists(comp) || !this->exists(object)) {
                             return;
                         }
-
-                        /*struct {
-                            int32_t index{};
-                            sdk::UObject* material{};
-                        } params{};
-
-                        params.index = i;
-                        params.material = object;
-
-                        comp->process_event(set_material_fn, &params);*/
 
                         struct {
                             int32_t index{};
@@ -3984,31 +3926,30 @@ const auto check_flags = [](uint64_t flags){
         }
 
         const auto edit_property_flags = [&](std::string _prop_name, sdk::FProperty* _fprop) {
-                ImGui::SetNextItemOpen(false, ImGuiCond_Once);
-                    auto flags = _fprop->get_property_flags();
-                    for (auto& _prop : check_flags(flags)) {
-                        ImGui::BulletText(_prop.first.data());
-                        ImGui::SameLine();
-                        auto enabled = &_prop.second;
-                        if (ImGui::Checkbox(std::string("##").append(_prop_name).c_str(), enabled)) {
-                            auto new_flags = flags;
-
-                            for (auto&& f : EPropertyFlags) {
-                                if (f.first == _prop.first) {
-                                    if (enabled) {
-                                        flags |= (uint64_t)f.second;
-                                    } else {
-                                        flags &= ~(uint64_t)f.second;
-                                    }
-                                    break;
-                                }
+            auto flags = _fprop->get_property_flags();
+            auto current = check_flags(flags);
+            for (auto& [flag_name, is_set] : current) {
+                ImGui::BulletText("%s", flag_name.data());
+                ImGui::SameLine();
+                // Previous version did `auto enabled = &_prop.second; if (enabled)` which always
+                // evaluated true (it tested the address, not the value), so the checkbox could
+                // only ever set bits, never clear them. Also an unused `auto new_flags = flags;`
+                // that's been deleted.
+                if (ImGui::Checkbox((std::string{"##"} + _prop_name + std::string{flag_name}).c_str(), &is_set)) {
+                    for (auto&& [enum_name, bit] : EPropertyFlags) {
+                        if (enum_name == flag_name) {
+                            if (is_set) {
+                                flags |= (uint64_t)bit;
+                            } else {
+                                flags &= ~(uint64_t)bit;
                             }
-                            _fprop->get_property_flags() = flags;
+                            break;
                         }
-           
-
+                    }
+                    _fprop->get_property_flags() = flags;
                 }
-            };
+            }
+        };
         // Right-click lambda for supported properties, usually for saving.
         auto display_context = [&](auto value) {
             if (!ImGui::BeginPopupContextItem()) {
@@ -4496,18 +4437,6 @@ void* UObjectHook::destructor(sdk::UObjectBase* object, void* rdx, void* r8, voi
             if (object == hook->m_camera_attach.object) {
                 hook->m_camera_attach.object = nullptr;
             }
-
-            /*for (auto super = (sdk::UStruct*)it->second->uclass; super != nullptr;) {
-                hook->m_objects_by_class[(sdk::UClass*)super].erase(object);
-
-                // Just make sure we don't do any operations on super because it might be invalid...
-                if (!hook->m_objects.contains(super)) {
-                    SPDLOG_ERROR("Super for {:x} is not valid", (uintptr_t)object);
-                    break;
-                }
-
-                super = super->get_super_struct();
-            }*/
 
             for (auto super : it->second->super_classes) {
                 hook->m_objects_by_class[super].erase(object);

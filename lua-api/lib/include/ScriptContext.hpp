@@ -3,9 +3,11 @@
 #include <iostream>
 #include <memory>
 #include <shared_mutex>
+#include <unordered_map>
 
 #include "ScriptPrerequisites.hpp"
 #include <uevr/API.hpp>
+#include <safetyhook.hpp>
 
 #include <vector>
 
@@ -171,6 +173,41 @@ private:
 
     std::shared_mutex m_ufunction_hooks_mtx{};
     std::unordered_map<uevr::API::UFunction*, std::unique_ptr<UFunctionHookState>> m_ufunction_hooks{};
+
+public:
+    // Lua-owned safetyhook MidHook. The C-side destination is a single shared dispatcher; it
+    // finds the right LuaMidHook by looking up whose trampoline contains the current
+    // Context::rip on entry. Ownership is per-ScriptContext (so a state reset tears its hooks
+    // down with it), and every live hook is also registered in a process-global vector so the
+    // dispatcher can resolve hooks belonging to any state.
+    //
+    // Note: full "inline" hooks (replace the entire function) would need per-signature thunk
+    // generation - they're not safely callable from Lua without knowing the calling convention
+    // and return type up front. MidHook gives Lua scripts register-level read/write access
+    // before the original instructions execute, which covers nearly every practical use case.
+    struct LuaMidHook {
+        SafetyHookMid hook;
+        sol::protected_function callback;
+        std::weak_ptr<ScriptContext> owner;
+        uintptr_t target_addr{};
+    };
+
+    // Returns the LuaMidHook (also retained in the owning ScriptContext); nullptr on failure.
+    std::shared_ptr<LuaMidHook> create_mid_hook(uintptr_t target, sol::protected_function cb);
+    bool remove_mid_hook(uintptr_t target);
+
+private:
+    std::shared_mutex m_mid_hooks_mtx{};
+    std::unordered_map<uintptr_t, std::shared_ptr<LuaMidHook>> m_mid_hooks{};
+
+    // Process-global registry the C dispatcher uses to resolve a hook from ctx.rip. A shared_ptr
+    // keeps the hook alive even if its ScriptContext goes away mid-dispatch.
+    static inline std::shared_mutex s_all_mid_hooks_mtx{};
+    static inline std::vector<std::shared_ptr<LuaMidHook>> s_all_mid_hooks{};
+
+    static void global_mid_hook_dispatcher(safetyhook::Context& ctx);
+    void invoke_mid_hook(LuaMidHook& h, safetyhook::Context& ctx);
+
     static bool global_ufunction_pre_handler(uevr::API::UFunction* fn, uevr::API::UObject* obj, void* params, void* result);
     static void global_ufunction_post_handler(uevr::API::UFunction* fn, uevr::API::UObject* obj, void* params, void* result);
 

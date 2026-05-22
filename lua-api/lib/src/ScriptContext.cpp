@@ -73,6 +73,37 @@ ScriptContext::~ScriptContext() {
     std::scoped_lock _{m_mtx};
     ScriptContext::log("ScriptContext destructor called");
 
+    // Tear down any Lua-owned safetyhook MidHooks BEFORE we drop the sol::state. Each hook holds
+    // a sol::protected_function whose destructor calls luaL_unref against the registry; the
+    // state must still be alive at that point. We also remove them from the process-global
+    // registry so the dispatcher won't try to invoke a callback against a destroyed state if a
+    // game thread races against context teardown.
+    {
+        std::vector<std::shared_ptr<LuaMidHook>> to_remove;
+        {
+            std::unique_lock __{m_mid_hooks_mtx};
+            to_remove.reserve(m_mid_hooks.size());
+            for (auto& [_, h] : m_mid_hooks) {
+                to_remove.push_back(h);
+            }
+            m_mid_hooks.clear();
+        }
+        // Reset the underlying hooks first (restores original bytes; no new dispatches will fire
+        // for them after this), then drop them from the global registry.
+        for (auto& h : to_remove) {
+            h->hook.reset();
+        }
+        {
+            std::unique_lock __{s_all_mid_hooks_mtx};
+            std::erase_if(s_all_mid_hooks, [&](const auto& h) {
+                for (auto& removed : to_remove) {
+                    if (h.get() == removed.get()) return true;
+                }
+                return false;
+            });
+        }
+    }
+
     // TODO: this probably does not support multiple states
     // Addendum: I decided this is not necessary, for now...
     // because all of the functions are static
@@ -1037,11 +1068,74 @@ int ScriptContext::setup_bindings() {
         &uevr::API::get_uobject_array, "get_console_manager", &uevr::API::get_console_manager, "dispatch_custom_event",
         [](uevr::API* api, const char* event_name, const char* event_data) { api->dispatch_custom_event(event_name, event_data); });
 
+    // safetyhook::Context binding - exposes register read/write to lua mid-hook callbacks.
+    // Members are bound as plain references so `ctx.rax = 1` writes the saved-register slot
+    // that safetyhook will restore into the real register after the hook returns.
+    m_lua.new_usertype<safetyhook::Context64>(
+        "UEVR_HookContext",
+        "rax", &safetyhook::Context64::rax,
+        "rbx", &safetyhook::Context64::rbx,
+        "rcx", &safetyhook::Context64::rcx,
+        "rdx", &safetyhook::Context64::rdx,
+        "rsi", &safetyhook::Context64::rsi,
+        "rdi", &safetyhook::Context64::rdi,
+        "rbp", &safetyhook::Context64::rbp,
+        "rsp", &safetyhook::Context64::rsp,
+        "r8",  &safetyhook::Context64::r8,
+        "r9",  &safetyhook::Context64::r9,
+        "r10", &safetyhook::Context64::r10,
+        "r11", &safetyhook::Context64::r11,
+        "r12", &safetyhook::Context64::r12,
+        "r13", &safetyhook::Context64::r13,
+        "r14", &safetyhook::Context64::r14,
+        "r15", &safetyhook::Context64::r15,
+        "rflags", &safetyhook::Context64::rflags,
+        "rip", &safetyhook::Context64::rip,
+        "trampoline_rsp", &safetyhook::Context64::trampoline_rsp,
+        // Untyped stack/memory peek helpers - safer than asking scripts to compute addresses.
+        "read_qword", [](safetyhook::Context64& self, uintptr_t addr) { return *(uint64_t*)addr; },
+        "read_dword", [](safetyhook::Context64& self, uintptr_t addr) { return *(uint32_t*)addr; },
+        "read_word",  [](safetyhook::Context64& self, uintptr_t addr) { return *(uint16_t*)addr; },
+        "read_byte",  [](safetyhook::Context64& self, uintptr_t addr) { return *(uint8_t*)addr; },
+        "read_float", [](safetyhook::Context64& self, uintptr_t addr) { return *(float*)addr; },
+        "read_double",[](safetyhook::Context64& self, uintptr_t addr) { return *(double*)addr; },
+        "write_qword",[](safetyhook::Context64& self, uintptr_t addr, uint64_t v) { *(uint64_t*)addr = v; },
+        "write_dword",[](safetyhook::Context64& self, uintptr_t addr, uint32_t v) { *(uint32_t*)addr = v; },
+        "write_word", [](safetyhook::Context64& self, uintptr_t addr, uint16_t v) { *(uint16_t*)addr = v; },
+        "write_byte", [](safetyhook::Context64& self, uintptr_t addr, uint8_t v)  { *(uint8_t*)addr = v; },
+        "write_float",[](safetyhook::Context64& self, uintptr_t addr, float v)    { *(float*)addr = v; },
+        "write_double",[](safetyhook::Context64& self, uintptr_t addr, double v)  { *(double*)addr = v; });
+
+    // LuaMidHook usertype - returned to scripts so they can remove() their hook explicitly.
+    // The hook stays alive as long as the script holds the reference (or its ScriptContext is
+    // alive); GC of the lua handle just drops one shared_ptr, the ScriptContext + global registry
+    // still keep it.
+    m_lua.new_usertype<LuaMidHook>("UEVR_MidHook",
+        "target_address", [](LuaMidHook& self) { return self.target_addr; },
+        "remove", [](sol::this_state s, LuaMidHook& self) {
+            auto owner = self.owner.lock();
+            if (owner == nullptr) return false;
+            return owner->remove_mid_hook(self.target_addr);
+        });
+
     setup_callback_bindings();
 
     auto out = m_lua.create_table();
     out["params"] = m_plugin_initialize_param;
     out["api"] = uevr::API::get().get();
+
+    // Top-level inline-hook helpers (live under uevr.hook_create_mid / uevr.hook_remove_mid).
+    out["hook_create_mid"] = [this](sol::this_state s, uintptr_t target, sol::protected_function cb) -> sol::object {
+        auto hook = create_mid_hook(target, std::move(cb));
+        if (hook == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        return sol::make_object(s, hook);
+    };
+    out["hook_remove_mid"] = [this](uintptr_t target) -> bool {
+        return remove_mid_hook(target);
+    };
+
     out["types"] = m_lua.create_table_with("UObject", m_lua["UEVR_UObject"], "UStruct", m_lua["UEVR_UStruct"], "UClass",
         m_lua["UEVR_UClass"], "UFunction", m_lua["UEVR_UFunction"], "FField", m_lua["UEVR_FField"], "FFieldClass",
         m_lua["UEVR_FFieldClass"], "FConsoleManager", m_lua["UEVR_FConsoleManager"], "IConsoleObject", m_lua["UEVR_IConsoleObject"],
@@ -1116,6 +1210,116 @@ void ScriptContext::global_ufunction_post_handler(uevr::API::UFunction* fn, uevr
         }
     });
 }
+
+// ----- Lua-owned safetyhook MidHook plumbing -----------------------------------------------
+
+std::shared_ptr<ScriptContext::LuaMidHook> ScriptContext::create_mid_hook(
+    uintptr_t target, sol::protected_function cb) {
+    if (target == 0 || !cb.valid()) {
+        return nullptr;
+    }
+
+    {
+        std::shared_lock _{m_mid_hooks_mtx};
+        if (m_mid_hooks.contains(target)) {
+            // Already hooked from this state; the user should remove first if they want to replace.
+            return nullptr;
+        }
+    }
+
+    auto entry = std::make_shared<LuaMidHook>();
+    entry->callback = std::move(cb);
+    entry->owner = weak_from_this();
+    entry->target_addr = target;
+
+    auto created = safetyhook::create_mid(reinterpret_cast<void*>(target), &ScriptContext::global_mid_hook_dispatcher);
+    if (!created) {
+        log_error("create_mid_hook: safetyhook::create_mid failed");
+        return nullptr;
+    }
+    entry->hook = std::move(created);
+
+    {
+        std::unique_lock _{m_mid_hooks_mtx};
+        m_mid_hooks[target] = entry;
+    }
+    {
+        std::unique_lock _{s_all_mid_hooks_mtx};
+        s_all_mid_hooks.push_back(entry);
+    }
+
+    return entry;
+}
+
+bool ScriptContext::remove_mid_hook(uintptr_t target) {
+    std::shared_ptr<LuaMidHook> removed;
+    {
+        std::unique_lock _{m_mid_hooks_mtx};
+        auto it = m_mid_hooks.find(target);
+        if (it == m_mid_hooks.end()) {
+            return false;
+        }
+        removed = it->second;
+        m_mid_hooks.erase(it);
+    }
+
+    // Reset the underlying safetyhook BEFORE we drop it from the global registry, so the
+    // patched bytes are restored and no late dispatch fires against a hook entry that's
+    // already being torn down.
+    removed->hook.reset();
+
+    {
+        std::unique_lock _{s_all_mid_hooks_mtx};
+        std::erase_if(s_all_mid_hooks, [&](const auto& h) { return h.get() == removed.get(); });
+    }
+
+    return true;
+}
+
+void ScriptContext::global_mid_hook_dispatcher(safetyhook::Context& ctx) {
+    // ctx.rip points to safetyhook's trampoline (the relocated original instructions). Find the
+    // hook whose trampoline contains it. Iterating is fine - the registry is tiny in practice.
+    std::shared_ptr<LuaMidHook> hook;
+    {
+        std::shared_lock _{s_all_mid_hooks_mtx};
+        for (auto& h : s_all_mid_hooks) {
+            const auto& tramp = h->hook.trampoline();
+            const auto base = tramp.address();
+            if (ctx.rip >= base && ctx.rip < base + tramp.size()) {
+                hook = h;
+                break;
+            }
+        }
+    }
+    if (hook == nullptr) {
+        return;
+    }
+
+    auto ctx_owner = hook->owner.lock();
+    if (ctx_owner == nullptr) {
+        // Owning state went away between the hook firing and now - just skip.
+        return;
+    }
+    ctx_owner->invoke_mid_hook(*hook, ctx);
+}
+
+void ScriptContext::invoke_mid_hook(LuaMidHook& h, safetyhook::Context& ctx) {
+    std::scoped_lock _{m_mtx};
+    if (!h.callback.valid()) {
+        return;
+    }
+    try {
+        // Pass the Context as a userdata pointer so the lua callback can read/write registers in
+        // place via the bound usertype.
+        handle_protected_result(h.callback(&ctx));
+    } catch (const std::exception& e) {
+        log_error(std::string("Exception in mid hook callback: ") + e.what());
+    } catch (...) {
+        log_error("Unknown exception in mid hook callback");
+    }
+}
+
+// -----------------------------------------------------------------------------------------------
 
 void ScriptContext::on_xinput_get_state(uint32_t* retval, uint32_t user_index, void* state) {
     g_contexts.for_each([=](auto ctx) {
