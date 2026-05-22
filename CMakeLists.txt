@@ -304,6 +304,9 @@ list(APPEND imgui_SOURCES
 	"dependencies/submodules/imgui/imgui.cpp"
 	"dependencies/submodules/imgui/imgui_demo.cpp"
 	"dependencies/submodules/imgui/imgui_draw.cpp"
+	"dependencies/submodules/imgui/imgui_impl_dx11.cpp"
+	"dependencies/submodules/imgui/imgui_impl_dx12.cpp"
+	"dependencies/submodules/imgui/imgui_impl_win32.cpp"
 	"dependencies/submodules/imgui/imgui_tables.cpp"
 	"dependencies/submodules/imgui/imgui_widgets.cpp"
 )
@@ -340,6 +343,7 @@ set(plugin_renderlib_SOURCES "")
 list(APPEND plugin_renderlib_SOURCES
 	"examples/renderlib/imgui/cimgui.cpp"
 	"examples/renderlib/imgui/imgui.cpp"
+	"examples/renderlib/imgui/imgui_demo.cpp"
 	"examples/renderlib/imgui/imgui_draw.cpp"
 	"examples/renderlib/imgui/imgui_impl_dx11.cpp"
 	"examples/renderlib/imgui/imgui_impl_dx12.cpp"
