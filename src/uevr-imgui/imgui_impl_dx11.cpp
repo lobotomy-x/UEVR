@@ -51,10 +51,17 @@
 // DirectX
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include <stdio.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
+#include <dxgi.h>
+#include <dxgiformat.h>
+#include <string.h>
+#include <d3dcommon.h>
+#include <Windows.h>
+#include <cstddef>
+#include <cstdio>
+#include "uevr_imconfig.hpp"
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
@@ -779,7 +786,6 @@ struct ImGui_ImplDX11_ViewportData {
 
 // Multi-Viewports: configure templates used when creating swapchains for secondary viewports. Will try them in order.
 // This is intentionally not declared in the .h file yet, so you will need to copy this declaration:
-void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count);
 void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count) {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     bd->SwapChainDescsForViewports.resize(desc_templates_count);
