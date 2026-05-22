@@ -545,52 +545,88 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
         const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
         switch (inner_name_hash) {
-       
+            // UE's TArray<T> stores elements inline, not as pointers - these casts used to be
+            // TArray<T*> with a TArray<T*>-typed loop, which read sizeof(T*) bytes per element
+            // (e.g. 8 bytes interpreted as a "pointer" instead of a 4-byte float). Result was
+            // half the array length, with each entry being garbage bits of two adjacent values
+            // reinterpreted as a pointer/integer. Fixed to use the actual element type.
             case L"FloatProperty"_fnv: {
-                const auto& arr = *(uevr::API::TArray<float*>*)((uintptr_t)self + offset);
-                return tarray_to_table<float*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<float>*)((uintptr_t)self + offset);
+                return tarray_to_table<float>(s, arr);
             }
             case L"DoubleProperty"_fnv: {
-                const auto& arr = *(uevr::API::TArray<double*>*)((uintptr_t)self + offset);
-                return tarray_to_table<double*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<double>*)((uintptr_t)self + offset);
+                return tarray_to_table<double>(s, arr);
             }
             case L"ByteProperty"_fnv: {
-                const auto& arr = *(uevr::API::TArray<uint8_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<uint8_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint8_t>(s, arr);
+            }
+            case L"BoolProperty"_fnv: {
+                // FBoolProperty TArray stores uint8 per element; convert to lua bools.
+                const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+                if (arr.data == nullptr || arr.count == 0) {
+                    return sol::make_object(s, sol::lua_nil);
+                }
+                auto lua_arr = sol::state_view{s}.create_table();
+                for (int32_t i = 0; i < arr.count; ++i) {
+                    lua_arr[i + 1] = sol::make_object(s, arr.data[i] != 0);
+                }
+                return sol::make_object(s, lua_arr);
             }
             case L"Int8Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<int8_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<int8_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<int8_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<int8_t>(s, arr);
             }
             case L"Int16Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<int16_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<int16_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<int16_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<int16_t>(s, arr);
             }
             case L"UInt16Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<uint16_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<uint16_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<uint16_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint16_t>(s, arr);
             }
-            case L"IntProperty"_fnv: {
-                const auto& arr = *(uevr::API::TArray<int32_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<int32_t*>(s, arr);
+            case L"IntProperty"_fnv:
+            case L"EnumProperty"_fnv: {
+                const auto& arr = *(uevr::API::TArray<int32_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<int32_t>(s, arr);
             }
             case L"UIntProperty"_fnv:
             case L"UInt32Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<uint32_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<uint32_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<uint32_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint32_t>(s, arr);
             }
             case L"UInt64Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<uint64_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<uint64_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<uint64_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<uint64_t>(s, arr);
             }
             case L"Int64Property"_fnv: {
-                const auto& arr = *(uevr::API::TArray<int64_t*>*)((uintptr_t)self + offset);
-                return tarray_to_table<int64_t*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<int64_t>*)((uintptr_t)self + offset);
+                return tarray_to_table<int64_t>(s, arr);
             }
             case L"StrProperty"_fnv: {
+                // FString = TArray<wchar_t>. TArray<FString> stores FString values inline (16 bytes
+                // each), not pointers - the previous TArray<FString*> cast made arr.data[i] read 8
+                // bytes per element (the FString::data pointer of element 2i, then the
+                // count+capacity of element 2i, etc.) and converted that to a meaningless wchar_t*
+                // string. Decode each inline FString to a std::wstring.
                 using FString = uevr::API::TArray<wchar_t>;
-                const auto& arr = *(uevr::API::TArray<FString*>*)((uintptr_t)self + offset);
-                return tarray_to_table<FString*>(s, arr);
+                const auto& arr = *(uevr::API::TArray<FString>*)((uintptr_t)self + offset);
+                if (arr.data == nullptr || arr.count == 0) {
+                    return sol::make_object(s, sol::lua_nil);
+                }
+                auto lua_arr = sol::state_view{s}.create_table();
+                for (int32_t i = 0; i < arr.count; ++i) {
+                    const auto& str = arr.data[i];
+                    if (str.data != nullptr && str.count > 0) {
+                        // FString count includes the trailing null; strip it for the lua string.
+                        const auto len = (size_t)str.count - (str.data[str.count - 1] == L'\0' ? 1 : 0);
+                        lua_arr[i + 1] = std::wstring(str.data, len);
+                    } else {
+                        lua_arr[i + 1] = std::wstring{};
+                    }
+                }
+                return sol::make_object(s, lua_arr);
             }
         case L"InterfaceProperty"_fnv:
         case L"ObjectProperty"_fnv: {
@@ -632,28 +668,6 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
 
             auto lua_arr = sol::state_view{s}.create_table();
             for (size_t i = 0; i < arr.count; ++i) {
-                lua_arr[i + 1] = sol::make_object(s, arr.data[i]);
-            }
-            return sol::make_object(s, lua_arr);
-        }
-        case L"BoolProperty"_fnv: {
-            const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
-            if (arr.data == nullptr || arr.count == 0) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-            auto lua_arr = sol::state_view{s}.create_table();
-            for (int32_t i = 0; i < arr.count; ++i) {
-                lua_arr[i + 1] = sol::make_object(s, arr.data[i] != 0);
-            }
-            return sol::make_object(s, lua_arr);
-        }
-        case L"EnumProperty"_fnv: {
-            const auto& arr = *(uevr::API::TArray<int32_t>*)((uintptr_t)self + offset);
-            if (arr.data == nullptr || arr.count == 0) {
-                return sol::make_object(s, sol::lua_nil);
-            }
-            auto lua_arr = sol::state_view{s}.create_table();
-            for (int32_t i = 0; i < arr.count; ++i) {
                 lua_arr[i + 1] = sol::make_object(s, arr.data[i]);
             }
             return sol::make_object(s, lua_arr);
