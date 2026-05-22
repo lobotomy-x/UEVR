@@ -545,9 +545,19 @@ void LuaLoader::reset_scripts() {
         }
     }
 
+    // CRITICAL: panel entries and queued tasks both hold sol::protected_function refs into the
+    // script states' lua_State. sol::protected_function's destructor calls luaL_unref against the
+    // registry, so they must run BEFORE we close the lua_State (which happens inside ScriptState's
+    // destructor when the last shared_ptr drops). Otherwise luaL_unref dereferences freed memory
+    // (lua_rawgeti access violation).
+    m_script_panels.clear();
+    {
+        std::lock_guard<std::mutex> _t{m_task_mtx};
+        m_tasks.clear();
+    }
+
     m_main_state.reset();
     m_states.clear();
-    m_script_panels.clear();
 
     spdlog::info("[LuaLoader] Destroyed all Lua states.");
 
