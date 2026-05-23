@@ -465,18 +465,15 @@ void Framework::run_imgui_frame(bool from_present) {
     ImGui::EndFrame();
     ImGui::Render();
 
-    // Drive secondary viewports regardless of from_present. The previous gate (`from_present &&`)
-    // meant that on D3D11 and D3D12, where on_frame_d3d11/d3d12 invoke run_imgui_frame(false) from
-    // the engine tick, UpdatePlatformWindows + RenderPlatformWindowsDefault never ran. Each
-    // secondary viewport got a Platform_CreateWindow (so its OS window appeared) but its
-    // Renderer_RenderWindow / Renderer_SwapBuffers were never called - leaving the popup with the
-    // initial clear color and no ImGui content drawn into it.
-    // Mod/script callbacks are still gated on !from_present above; this section is pure ImGui
-    // platform/renderer plumbing and is safe to run from either thread.
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-    }
+    // NOTE: UpdatePlatformWindows + RenderPlatformWindowsDefault deliberately do NOT happen here.
+    // ImGui::Render() builds DrawData per viewport (CPU side) but the actual GPU work of drawing
+    // the secondary viewports' content into their swapchains must happen on the same thread as
+    // the main RenderDrawData call - which for D3D11 is the present thread (DX11 immediate
+    // context is not safe to use from two threads). The driving call is in on_frame_d3d11 /
+    // on_frame_d3d12 right after the main RenderDrawData. The previous gate "from_present &&"
+    // was correct for that purpose but had no effect once the engine-tick path bypassed the
+    // present-thread imgui call (m_has_engine_thread guard in on_frame_d3d11), so secondary
+    // viewports never rendered.
 
     m_has_frame = true;
 }
@@ -547,6 +544,16 @@ void Framework::on_frame_d3d11() {
     // Set the back buffer to be the render target.
     context->OMSetRenderTargets(1, m_d3d11.bb_rtv.GetAddressOf(), nullptr);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+    // Drive secondary viewports on the present thread (same thread as the main RenderDrawData
+    // above). ImGui::Render() already built per-viewport DrawData during run_imgui_frame on the
+    // engine thread; here we just walk the platform windows and render+present each into its
+    // swapchain. DX11 immediate context isn't thread-safe, so doing this on the engine thread
+    // races the main RenderDrawData and produces black popups.
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
 
     m_mods->on_post_frame();
 }
@@ -723,6 +730,13 @@ void Framework::on_frame_d3d12() {
         cmd_ctx->cmd_list->ResourceBarrier(1, &barrier);
 
         cmd_ctx->execute();
+    }
+
+    // Drive secondary viewports on the present thread, same as D3D11. See the comment in
+    // run_imgui_frame for why this isn't done there.
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
     }
 
     if (is_init_ok) {
