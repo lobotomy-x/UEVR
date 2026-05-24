@@ -16,6 +16,7 @@
 #include "utility/Module.hpp"
 #include "utility/Patch.hpp"
 #include "utility/Scan.hpp"
+#include "utility/ScopeGuard.hpp"
 #include "utility/Thread.hpp"
 #include "utility/String.hpp"
 #include "utility/Input.hpp"
@@ -480,6 +481,19 @@ void Framework::run_imgui_frame(bool from_present) {
 
 // D3D11 Draw funciton
 void Framework::on_frame_d3d11() {
+    // Recursion guard: D3D11Hook's Present hook fires for every IDXGISwapChain in the process,
+    // including the secondary swap chains created by ImGui multi-viewport. When this function
+    // calls ImGui::RenderPlatformWindowsDefault() below, that walks each secondary viewport and
+    // calls vd->SwapChain->Present(), which immediately re-enters us. Stack overflow before
+    // anything actually renders. The thread_local flag is set across the entire body so any
+    // nested D3D11Hook::present callback during a frame becomes a no-op.
+    static thread_local bool s_in_d3d11_frame = false;
+    if (s_in_d3d11_frame) {
+        return;
+    }
+    s_in_d3d11_frame = true;
+    auto _guard = utility::ScopeGuard{[] { s_in_d3d11_frame = false; }};
+
     std::scoped_lock _{ m_imgui_mtx };
 
     spdlog::debug("on_frame (D3D11)");
@@ -598,6 +612,19 @@ void Framework::on_post_present_d3d11() {
 
 // D3D12 Draw funciton
 void Framework::on_frame_d3d12() {
+    // Same recursion guard as on_frame_d3d11 - see comment there. D3D12Hook keys its present
+    // callback to the command queue rather than the swap chain so the recursion symptom is more
+    // subtle than DX11's stack overflow (we observed black secondary viewports instead of a
+    // crash), but the underlying issue is the same: a nested re-entry of the host frame from
+    // inside RenderPlatformWindowsDefault would still try to drive the main viewport's draw
+    // data into whichever swap chain happens to be presenting.
+    static thread_local bool s_in_d3d12_frame = false;
+    if (s_in_d3d12_frame) {
+        return;
+    }
+    s_in_d3d12_frame = true;
+    auto _guard = utility::ScopeGuard{[] { s_in_d3d12_frame = false; }};
+
     std::scoped_lock _{ m_imgui_mtx };
 
     m_renderer_type = RendererType::D3D12;
