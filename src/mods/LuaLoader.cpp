@@ -679,13 +679,21 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     };
 
     lua["uevr"]["lua"] = lua_table;
+
+    // SDK fast-path bindings live under `uevr.api_fast` and therefore need
+    // `lua["uevr"]` to already exist as a table. add_additional_bindings runs
+    // from inside setup_bindings — before ScriptState assigns the returned
+    // sol::table to m_lua["uevr"] — so writing to lua["uevr"]["api_fast"]
+    // from there panics with "attempt to index a nil value". state_post_init
+    // runs after the assignment, so this is the right place for any binding
+    // that needs to live under `uevr.*`.
+    bindings::open_sdk_fast(lua);
 }
 
 void LuaLoader::add_additional_bindings(sol::state_view& lua) {
     bindings::open_imgui(lua);
     bindings::open_json(lua);
     bindings::open_fs(lua);
-    bindings::open_sdk_fast(lua);
 }
 
 void LuaLoader::dispatch_event(std::string_view event_name, std::string_view event_data) {
