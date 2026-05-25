@@ -1259,6 +1259,16 @@ static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags fl
 
     if (flags & ImGuiViewportFlags_TopMost)
         *out_ex_style |= WS_EX_TOPMOST;
+
+    // UEVR-local: force every popped-out viewport to be WS_EX_TOPMOST.
+    // Without this, clicking back into the host game's window puts the
+    // game on top of any popup because popups aren't TOPMOST by default,
+    // which is the "main UEVR window goes behind the game window"
+    // symptom the user hit. The trade-off is that popups also float above
+    // OTHER apps when alt-tabbing — acceptable for a VR mod where the
+    // desktop is typically a single-app debug surface. Comment out this
+    // line if you need popups to behave like regular OS windows.
+    *out_ex_style |= WS_EX_TOPMOST;
 }
 
 static HWND ImGui_ImplWin32_GetHwndFromViewport(ImGuiViewport* viewport) {
