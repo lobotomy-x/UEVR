@@ -752,11 +752,33 @@ bool LuaLoader::stop_worker(const std::string& name) {
         worker = std::move(it->second);
         m_workers.erase(it);
     }
+    // Flip the stop flag + wake any cv-wait BEFORE handing off — the janitor
+    // thread below only needs to clean up after the worker observes these.
     worker->stop_requested.store(true, std::memory_order_release);
     worker->queue_cv.notify_all();
-    if (worker->thread.joinable()) {
-        worker->thread.join();
-    }
+
+    // Hand the join off to a detached janitor thread so this call returns
+    // immediately. The previous implementation joined synchronously, which
+    // blocked the calling thread (typically the render thread, since
+    // stop_worker is invoked from a script panel button) for the entire
+    // remaining duration of whatever Lua chunk the worker was running. A
+    // multi-million-iteration benchmark could leave the game frozen for
+    // several seconds; long enough that the OS reports it as a crash /
+    // not-responding watchdog event. By detaching, we let the worker exit
+    // its current Lua chunk, observe stop_requested at the next loop
+    // iteration, return from worker_thread_main, and then the janitor
+    // joins+destructs the WorkerState. The render thread is never blocked.
+    //
+    // The janitor takes ownership of the moved unique_ptr; the WorkerState
+    // (including its std::thread) outlives this call and is freed only
+    // after the worker thread terminates.
+    std::thread janitor{[w = std::move(worker)]() mutable {
+        if (w->thread.joinable()) {
+            w->thread.join();
+        }
+        // w destructs here on the janitor thread.
+    }};
+    janitor.detach();
     return true;
 }
 

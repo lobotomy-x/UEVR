@@ -2979,8 +2979,23 @@ void UObjectHook::draw_main() {
         ImGui::TreePop();
     }
 
-    m_ObjectsByClass = ImGui::TreeNode("Objects by class");
-    if (m_ObjectsByClass) {
+    // ALWAYS call TreePop if the outer TreeNode opened, even if something
+    // inside throws. The explicit `if (...) { ... TreePop(); }` we had before
+    // would skip TreePop on any exception escaping the body — and the
+    // in-iteration ScopeGuards only cover the *inner* per-class / per-object
+    // TreeNodes, not this outer one. Without this guard, a single throw from
+    // a deeply nested ui_handle_struct could leave the right-pane TreeNode
+    // unbalanced and trigger ImGui's "Missing TreePop()" recovery.
+    // `m_ObjectsByClass` here is a *static local* (declared above in this
+    // function), not a member; capture it by reference.
+    const bool objects_by_class_open = ImGui::TreeNode("Objects by class");
+    m_ObjectsByClass = objects_by_class_open; // legacy: keeps the static cache in sync
+    utility::ScopeGuard objects_by_class_guard{[objects_by_class_open]() {
+        if (objects_by_class_open) {
+            ImGui::TreePop();
+        }
+    }};
+    if (objects_by_class_open) {
         ImGui::TreeNodeSetOpen(CommonID, false);
         ImGui::Checkbox("Hide Default Classes", &m_hide_default_classes);
         static char filter[256]{};
@@ -3100,15 +3115,18 @@ void UObjectHook::draw_main() {
             // ImGui's end-of-frame recovery fires "Missing TreePop()" and
             // poisons the rest of the window's state for the next frame.
             const bool class_node_open = ImGui::TreeNode(uclass_name.data());
-            // Make every class entry in the Objects-by-class view a draggable
-            // UClass source so users can drop it into a function caller's
-            // ClassProperty slot.
-            make_drag_source_for_class(uclass, uclass_name.c_str());
+            // Register the TreePop guard BEFORE any other call that operates
+            // on the previous item (drag source). If make_drag_source_for_class
+            // ever throws, the guard still runs and balances the TreeNode.
             utility::ScopeGuard class_node_guard{[class_node_open]() {
                 if (class_node_open) {
                     ImGui::TreePop();
                 }
             }};
+            // Make every class entry in the Objects-by-class view a draggable
+            // UClass source so users can drop it into a function caller's
+            // ClassProperty slot.
+            make_drag_source_for_class(uclass, uclass_name.c_str());
 
             if (!class_node_open) {
                 ui_standard_object_context_menu(uclass);
@@ -3217,12 +3235,14 @@ void UObjectHook::draw_main() {
 
                 const auto obj_name = utility::narrow(obj_meta->full_name);
                 const bool obj_node_open = ImGui::TreeNode(obj_name.data());
-                make_drag_source_for_object((sdk::UObject*)object, obj_name.c_str());
+                // Guard MUST be registered before any other call that operates
+                // on the previous item — see the per-class comment above.
                 utility::ScopeGuard obj_node_guard{[obj_node_open]() {
                     if (obj_node_open) {
                         ImGui::TreePop();
                     }
                 }};
+                make_drag_source_for_object((sdk::UObject*)object, obj_name.c_str());
 
                 if (!obj_node_open) {
                     ui_standard_object_context_menu(object);
@@ -3239,7 +3259,8 @@ void UObjectHook::draw_main() {
             }
         }
 
-        ImGui::TreePop();
+        // TreePop is now handled by objects_by_class_guard so it runs even
+        // on exception. (Used to be an explicit `ImGui::TreePop();` here.)
     }
 }
 
