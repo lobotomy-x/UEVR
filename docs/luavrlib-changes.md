@@ -132,6 +132,13 @@ uevr.has_worker(name)                       -> bool
 uevr.set_shared(key, value)                          -- cross-state shared map (int/double/float/string/bool)
 uevr.get_shared(key)                         -> value
 uevr.run_on_game_thread(fn)                          -- defer fn to the next engine tick
+
+uevr.log_info(msg)                                   -- routes to spdlog::info ("[lua] msg")
+uevr.log_warn(msg)                                   -- routes to spdlog::warn
+uevr.log_error(msg)                                  -- routes to spdlog::error
+    -- Workers get the same triple; messages tagged "[lua-worker] msg".
+    -- Necessary because workers have no usable stdout, so `print()` from
+    -- a worker goes nowhere visible.
 ```
 
 Workers own a private `ScriptState` (no `uevr.api` surface — most of

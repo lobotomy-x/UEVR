@@ -660,6 +660,15 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     lua["uevr"]["run_on_game_thread"] = [this](sol::protected_function fn) {
         queue_task(fn); };
 
+    // Lightweight log channel: routes a Lua string straight to spdlog. Useful
+    // for workers (which don't have a redirected stdout, so `print()` goes
+    // nowhere visible) and for main-state diagnostics when you want messages
+    // to land in the UEVR log file. log_info/warn/error map 1:1 to spdlog
+    // severities.
+    lua["uevr"]["log_info"]  = [](const std::string& msg) { spdlog::info ("[lua] {}", msg); };
+    lua["uevr"]["log_warn"]  = [](const std::string& msg) { spdlog::warn ("[lua] {}", msg); };
+    lua["uevr"]["log_error"] = [](const std::string& msg) { spdlog::error("[lua] {}", msg); };
+
     // Multistate worker thread API.
     // Workers are background threads that own a private ScriptState; scripts can dispatch chunks of
     // Lua source to them via send_to_worker. Communication back happens through set_shared/get_shared
@@ -817,6 +826,13 @@ void LuaLoader::worker_thread_main(const std::string& name, const std::string& b
             if (val.type() == typeid(bool)) return sol::make_object(s, std::any_cast<bool>(val));
             return sol::make_object(s, sol::lua_nil);
         };
+
+        // Worker states get the same log channel as the main state so
+        // diagnostic prints from background scripts actually surface
+        // somewhere visible (workers have no usable stdout).
+        uevr_tbl["log_info"]  = [](const std::string& msg) { spdlog::info ("[lua-worker] {}", msg); };
+        uevr_tbl["log_warn"]  = [](const std::string& msg) { spdlog::warn ("[lua-worker] {}", msg); };
+        uevr_tbl["log_error"] = [](const std::string& msg) { spdlog::error("[lua-worker] {}", msg); };
     }
 
     if (!bootstrap_source.empty()) {
