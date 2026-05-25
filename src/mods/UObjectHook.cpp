@@ -35,6 +35,487 @@
 
 #define VERBOSE_UOBJECTHOOK
 
+// ---------------------------------------------------------------------------
+// Interactive function-caller helpers
+//
+// The previous ui_handle_functions only knew how to call (a) zero-arg
+// functions, (b) functions with exactly one bool / int / string parameter, and
+// hard-coded the string value to "Hello world!". Anything else just listed the
+// parameter names with no editor and no Call button.
+//
+// The helpers in this block render a per-parameter editor for the common
+// property types and a Call button that assembles a parameter buffer of the
+// correct size from the property offsets. UObject* / UClass* parameters
+// appear as drag-and-drop targets that accept payloads dropped from the
+// matching TreeNode label elsewhere in the UObjectHook view.
+// ---------------------------------------------------------------------------
+
+namespace {
+// Payload type identifiers used by ImGui's drag-and-drop machinery. Anything
+// elsewhere in UObjectHook can publish a payload of the same type and the
+// function-caller target will pick it up.
+constexpr const char* kDragPayloadUObject = "UEVR_UObject";
+constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
+
+// Per-(function, object) state for the function-caller widget. Keys are the
+// raw function/object pointers; the entry sticks around until the address is
+// reused — acceptable for a debug menu.
+struct ParamEditState {
+    // Scratch fields. For each property field name we keep typed scratch so
+    // the editor can survive frames without re-parsing strings.
+    std::unordered_map<std::string, bool>     bools;
+    std::unordered_map<std::string, int>      ints;
+    std::unordered_map<std::string, int64_t>  int64s;
+    std::unordered_map<std::string, uint64_t> uint64s;
+    std::unordered_map<std::string, float>    floats;
+    std::unordered_map<std::string, double>   doubles;
+    std::unordered_map<std::string, std::string>     text;   // narrow buffer, edited via InputText
+    std::unordered_map<std::string, std::wstring>    wtext;  // committed wide form, kept alive while we point an FString at it
+    std::unordered_map<std::string, sdk::UObject*>   objs;   // ObjectProperty / InterfaceProperty slot
+    std::unordered_map<std::string, sdk::UClass*>    classes;// ClassProperty slot
+    std::unordered_map<std::string, glm::vec4>       vec;    // struct scratch (xyz[w]) for FVector / FRotator / FVector2D / FQuat
+    std::string return_repr{"<no call yet>"};
+    std::string error_repr{};
+};
+
+struct ParamKey {
+    sdk::UFunction* fn{};
+    void* self{};
+    bool operator==(const ParamKey& o) const { return fn == o.fn && self == o.self; }
+};
+struct ParamKeyHash {
+    size_t operator()(const ParamKey& k) const noexcept {
+        return std::hash<void*>{}(k.fn) ^ (std::hash<void*>{}(k.self) << 1);
+    }
+};
+
+ParamEditState& get_param_state(sdk::UFunction* fn, void* self) {
+    static std::unordered_map<ParamKey, ParamEditState, ParamKeyHash> s_state;
+    return s_state[{fn, self}];
+}
+
+// Attach a drag-source to the *previous* item, carrying an FObject pointer.
+// Call this right after `ImGui::TreeNode(label)` (or other selectable widget)
+// to make that node draggable.
+void make_drag_source_for_object(sdk::UObject* obj, const char* label) {
+    if (obj == nullptr) return;
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+        ImGui::SetDragDropPayload(kDragPayloadUObject, &obj, sizeof(obj));
+        ImGui::Text("UObject: %s", label != nullptr ? label : "<anon>");
+        ImGui::EndDragDropSource();
+    }
+}
+
+void make_drag_source_for_class(sdk::UClass* c, const char* label) {
+    if (c == nullptr) return;
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+        ImGui::SetDragDropPayload(kDragPayloadUClass, &c, sizeof(c));
+        ImGui::Text("UClass: %s", label != nullptr ? label : "<anon>");
+        ImGui::EndDragDropSource();
+    }
+}
+
+// Drop target that returns the dropped pointer on the frame it lands,
+// otherwise nullptr. Caller is responsible for placing a target widget
+// (Button / Selectable / Text) immediately before calling this.
+sdk::UObject* accept_object_drop() {
+    if (!ImGui::BeginDragDropTarget()) {
+        return nullptr;
+    }
+    sdk::UObject* result = nullptr;
+    if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload(kDragPayloadUObject)) {
+        if (p->DataSize == (int)sizeof(sdk::UObject*)) {
+            result = *reinterpret_cast<sdk::UObject**>(p->Data);
+        }
+    }
+    ImGui::EndDragDropTarget();
+    return result;
+}
+
+sdk::UClass* accept_class_drop() {
+    if (!ImGui::BeginDragDropTarget()) {
+        return nullptr;
+    }
+    sdk::UClass* result = nullptr;
+    if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload(kDragPayloadUClass)) {
+        if (p->DataSize == (int)sizeof(sdk::UClass*)) {
+            result = *reinterpret_cast<sdk::UClass**>(p->Data);
+        }
+    }
+    ImGui::EndDragDropTarget();
+    return result;
+}
+
+// Render a single parameter editor; returns nothing — state is stashed inside
+// `s`. `prop_name_narrow` and `name_hash` are precomputed by the caller to
+// avoid hashing/converting twice per frame.
+void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::string& prop_name_narrow, size_t name_hash) {
+    using namespace ::utility;
+    ImGui::PushID(prop);
+    utility::ScopeGuard pop{[]() { ImGui::PopID(); }};
+
+    switch (name_hash) {
+    case L"BoolProperty"_fnv: {
+        bool& b = s.bools[prop_name_narrow];
+        ImGui::Checkbox(prop_name_narrow.c_str(), &b);
+        break;
+    }
+    case L"ByteProperty"_fnv:
+    case L"UInt16Property"_fnv:
+    case L"Int16Property"_fnv:
+    case L"Int8Property"_fnv:
+    case L"IntProperty"_fnv:
+    case L"UInt32Property"_fnv:
+    case L"UIntProperty"_fnv:
+    case L"EnumProperty"_fnv: {
+        int& v = s.ints[prop_name_narrow];
+        ImGui::InputInt(prop_name_narrow.c_str(), &v);
+        break;
+    }
+    case L"Int64Property"_fnv: {
+        int64_t& v = s.int64s[prop_name_narrow];
+        ImGui::InputScalar(prop_name_narrow.c_str(), ImGuiDataType_S64, &v);
+        break;
+    }
+    case L"UInt64Property"_fnv: {
+        uint64_t& v = s.uint64s[prop_name_narrow];
+        ImGui::InputScalar(prop_name_narrow.c_str(), ImGuiDataType_U64, &v);
+        break;
+    }
+    case L"FloatProperty"_fnv: {
+        float& v = s.floats[prop_name_narrow];
+        ImGui::DragFloat(prop_name_narrow.c_str(), &v, 0.1f);
+        break;
+    }
+    case L"DoubleProperty"_fnv: {
+        double& v = s.doubles[prop_name_narrow];
+        // ImGui's DragScalar gives us a double-aware editor.
+        ImGui::DragScalar(prop_name_narrow.c_str(), ImGuiDataType_Double, &v, 0.1f);
+        break;
+    }
+    case L"NameProperty"_fnv:
+    case L"StrProperty"_fnv:
+    case L"TextProperty"_fnv: {
+        std::string& buf = s.text[prop_name_narrow];
+        if (buf.size() < 256) buf.resize(256);
+        if (ImGui::InputText(prop_name_narrow.c_str(), buf.data(), buf.size())) {
+            // Keep buffer null-terminated by trimming after the first \0.
+            buf.resize(std::strlen(buf.c_str()));
+            buf.resize(256);
+        }
+        break;
+    }
+    case L"InterfaceProperty"_fnv:
+    case L"ObjectProperty"_fnv: {
+        sdk::UObject*& slot = s.objs[prop_name_narrow];
+        const auto label = slot == nullptr
+            ? std::string{"[drop UObject here] "} + prop_name_narrow
+            : std::string{"[obj "} + std::to_string((uintptr_t)slot) + "] " + prop_name_narrow;
+        ImGui::Button(label.c_str(), ImVec2{0, 0});
+        if (auto dropped = accept_object_drop(); dropped != nullptr) {
+            slot = dropped;
+        }
+        if (slot != nullptr) {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("clear")) {
+                slot = nullptr;
+            }
+        }
+        break;
+    }
+    case L"ClassProperty"_fnv: {
+        sdk::UClass*& slot = s.classes[prop_name_narrow];
+        const auto label = slot == nullptr
+            ? std::string{"[drop UClass here] "} + prop_name_narrow
+            : std::string{"[class "} + std::to_string((uintptr_t)slot) + "] " + prop_name_narrow;
+        ImGui::Button(label.c_str(), ImVec2{0, 0});
+        if (auto dropped = accept_class_drop(); dropped != nullptr) {
+            slot = dropped;
+        }
+        if (slot != nullptr) {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("clear")) {
+                slot = nullptr;
+            }
+        }
+        break;
+    }
+    case L"StructProperty"_fnv: {
+        // Render up to 4 floats from scratch state; on Call we'll memcpy this
+        // into the per-struct layout (FVector 12B, FVector2D 8B, FRotator 12B,
+        // FQuat 16B, FLinearColor 16B, FTransform unsupported here).
+        auto& v = s.vec[prop_name_narrow];
+        const auto sp = (sdk::FStructProperty*)prop;
+        const auto strukt = sp != nullptr ? sp->get_struct() : nullptr;
+        if (strukt == nullptr) {
+            ImGui::Text("StructProperty %s — unknown struct", prop_name_narrow.c_str());
+            break;
+        }
+        const auto sname = utility::narrow(strukt->get_fname().to_string());
+        ImGui::Text("[%s]", sname.c_str());
+        if (sname == "Vector2D") {
+            ImGui::DragFloat2(prop_name_narrow.c_str(), &v.x, 0.1f);
+        } else if (sname == "Vector" || sname == "Rotator") {
+            ImGui::DragFloat3(prop_name_narrow.c_str(), &v.x, 0.1f);
+        } else if (sname == "Quat" || sname == "LinearColor" || sname == "Vector4") {
+            ImGui::DragFloat4(prop_name_narrow.c_str(), &v.x, 0.1f);
+        } else {
+            ImGui::TextDisabled("(unsupported struct in caller — call manually via Lua)");
+        }
+        break;
+    }
+    default:
+        ImGui::TextDisabled("%s (unsupported in caller)", prop_name_narrow.c_str());
+        break;
+    }
+}
+
+// Write the scratch value for `prop` into the params buffer at the property's
+// offset. Returns false if the property type isn't supported (in which case the
+// buffer is left zero-initialised at that offset).
+bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& name, size_t name_hash, uint8_t* params, size_t params_size) {
+    const auto offset = prop->get_offset();
+    if (offset < 0 || (size_t)offset >= params_size) {
+        return false;
+    }
+
+    auto out = params + offset;
+    switch (name_hash) {
+    case L"BoolProperty"_fnv: {
+        auto fbp = (sdk::FBoolProperty*)prop;
+        fbp->set_value_in_object(params, s.bools[name]);
+        return true;
+    }
+    case L"ByteProperty"_fnv:        *(uint8_t*)out  = (uint8_t)s.ints[name];  return true;
+    case L"Int8Property"_fnv:        *(int8_t*)out   = (int8_t)s.ints[name];   return true;
+    case L"UInt16Property"_fnv:      *(uint16_t*)out = (uint16_t)s.ints[name]; return true;
+    case L"Int16Property"_fnv:       *(int16_t*)out  = (int16_t)s.ints[name];  return true;
+    case L"IntProperty"_fnv:         *(int32_t*)out  = (int32_t)s.ints[name];  return true;
+    case L"UInt32Property"_fnv:
+    case L"UIntProperty"_fnv:        *(uint32_t*)out = (uint32_t)s.ints[name]; return true;
+    case L"EnumProperty"_fnv:        *(int32_t*)out  = (int32_t)s.ints[name];  return true;
+    case L"Int64Property"_fnv:       *(int64_t*)out  = s.int64s[name];         return true;
+    case L"UInt64Property"_fnv:      *(uint64_t*)out = s.uint64s[name];        return true;
+    case L"FloatProperty"_fnv:       *(float*)out    = s.floats[name];         return true;
+    case L"DoubleProperty"_fnv:      *(double*)out   = s.doubles[name];        return true;
+    case L"NameProperty"_fnv: {
+        s.wtext[name] = utility::widen(s.text[name]);
+        // FName has a 2-arg constructor (wstring_view, EFindName) — EFindName
+        // is in the sdk namespace, not nested in FName.
+        *(sdk::FName*)out = sdk::FName{std::wstring_view{s.wtext[name]}, sdk::EFindName::Add};
+        return true;
+    }
+    case L"StrProperty"_fnv: {
+        s.wtext[name] = utility::widen(s.text[name]);
+        auto& arr = *(sdk::TArrayLite<wchar_t>*)out;
+        arr.data = (wchar_t*)s.wtext[name].c_str();
+        arr.count = (int32_t)s.wtext[name].size();
+        arr.capacity = arr.count + 1;
+        return true;
+    }
+    case L"InterfaceProperty"_fnv:
+    case L"ObjectProperty"_fnv:      *(sdk::UObject**)out = s.objs[name];     return true;
+    case L"ClassProperty"_fnv:       *(sdk::UClass**)out  = s.classes[name];  return true;
+    case L"StructProperty"_fnv: {
+        // Pack the float scratch into the underlying struct layout. We only
+        // handle the well-known small POD structs here; everything else stays
+        // zero-initialised.
+        const auto sp = (sdk::FStructProperty*)prop;
+        const auto strukt = sp->get_struct();
+        if (strukt == nullptr) return false;
+        const auto sname = utility::narrow(strukt->get_fname().to_string());
+        auto& v = s.vec[name];
+        const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+            sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+        if (sname == "Vector2D") {
+            if (is_ue5_vec) {
+                *(double*)(out + 0) = (double)v.x;
+                *(double*)(out + 8) = (double)v.y;
+            } else {
+                *(float*)(out + 0) = v.x;
+                *(float*)(out + 4) = v.y;
+            }
+            return true;
+        }
+        if (sname == "Vector" || sname == "Rotator") {
+            if (is_ue5_vec) {
+                *(double*)(out + 0)  = (double)v.x;
+                *(double*)(out + 8)  = (double)v.y;
+                *(double*)(out + 16) = (double)v.z;
+            } else {
+                *(float*)(out + 0) = v.x;
+                *(float*)(out + 4) = v.y;
+                *(float*)(out + 8) = v.z;
+            }
+            return true;
+        }
+        if (sname == "Quat" || sname == "LinearColor" || sname == "Vector4") {
+            if (is_ue5_vec && sname == "Quat") {
+                *(double*)(out + 0)  = (double)v.x;
+                *(double*)(out + 8)  = (double)v.y;
+                *(double*)(out + 16) = (double)v.z;
+                *(double*)(out + 24) = (double)v.w;
+            } else {
+                *(float*)(out + 0)  = v.x;
+                *(float*)(out + 4)  = v.y;
+                *(float*)(out + 8)  = v.z;
+                *(float*)(out + 12) = v.w;
+            }
+            return true;
+        }
+        return false;
+    }
+    default:
+        return false;
+    }
+}
+
+// Render `prop` after a call to provide a read-out of the value it holds.
+// Used for return values and out parameters.
+std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, size_t /*params_size*/) {
+    const auto pc = prop->get_class();
+    if (pc == nullptr) return "<no class>";
+    // FFieldClass exposes get_name() (returning FName by ref), not get_fname().
+    const auto name_hash = ::utility::hash(pc->get_name().to_string());
+    const auto offset = prop->get_offset();
+    auto in = params + offset;
+
+    switch (name_hash) {
+    case L"BoolProperty"_fnv: {
+        auto fbp = (sdk::FBoolProperty*)prop;
+        return fbp->get_value_from_object(const_cast<uint8_t*>(params)) ? "true" : "false";
+    }
+    case L"ByteProperty"_fnv:        return std::to_string(*(uint8_t*)in);
+    case L"Int8Property"_fnv:        return std::to_string(*(int8_t*)in);
+    case L"Int16Property"_fnv:       return std::to_string(*(int16_t*)in);
+    case L"UInt16Property"_fnv:      return std::to_string(*(uint16_t*)in);
+    case L"IntProperty"_fnv:
+    case L"EnumProperty"_fnv:        return std::to_string(*(int32_t*)in);
+    case L"UInt32Property"_fnv:
+    case L"UIntProperty"_fnv:        return std::to_string(*(uint32_t*)in);
+    case L"Int64Property"_fnv:       return std::to_string(*(int64_t*)in);
+    case L"UInt64Property"_fnv:      return std::to_string(*(uint64_t*)in);
+    case L"FloatProperty"_fnv:       return std::to_string(*(float*)in);
+    case L"DoubleProperty"_fnv:      return std::to_string(*(double*)in);
+    case L"NameProperty"_fnv:        return utility::narrow(((sdk::FName*)in)->to_string());
+    case L"StrProperty"_fnv: {
+        const auto& arr = *(sdk::TArrayLite<wchar_t>*)in;
+        if (arr.data == nullptr || arr.count <= 0) return "\"\"";
+        return std::string{"\""} + utility::narrow(std::wstring{arr.data, (size_t)arr.count}) + "\"";
+    }
+    case L"InterfaceProperty"_fnv:
+    case L"ObjectProperty"_fnv: {
+        auto* obj = *(sdk::UObject**)in;
+        if (obj == nullptr) return "nullptr";
+        return std::to_string((uintptr_t)obj);
+    }
+    case L"ClassProperty"_fnv: {
+        auto* c = *(sdk::UClass**)in;
+        if (c == nullptr) return "nullptr";
+        return std::to_string((uintptr_t)c);
+    }
+    default:
+        return std::string{"<"} + utility::narrow(pc->get_name().to_string()) + " unsupported>";
+    }
+}
+
+// Render the interactive caller widget for a single (object, function) pair.
+// Must be called when ImGui is inside an open container (e.g. between
+// TreeNode("MyFunc") and the matching TreePop).
+void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
+    if (self == nullptr || fn == nullptr) return;
+    auto& s = get_param_state(fn, self);
+
+    auto parameters = fn->get_child_properties();
+
+    // Iterate once for editors. Skip return params (which are an *output*).
+    std::vector<sdk::FProperty*> in_params{};
+    sdk::FProperty* return_prop = nullptr;
+    std::vector<sdk::FProperty*> out_params{};
+    for (auto p = parameters; p != nullptr; p = p->get_next()) {
+        if (!p->get_class()->get_name().to_string().contains(L"Property")) continue;
+        auto prop = (sdk::FProperty*)p;
+        if (prop->is_return_param()) { return_prop = prop; continue; }
+        if (prop->is_out_param() && !prop->is_reference_param()) {
+            out_params.push_back(prop);
+            continue;
+        }
+        in_params.push_back(prop);
+    }
+
+    if (in_params.empty() && return_prop == nullptr && out_params.empty()) {
+        if (ImGui::Button("Call (no args)")) {
+            std::vector<uint8_t> params{};
+            params.resize(std::max<size_t>(64, (size_t)fn->get_properties_size()));
+            self->process_event(fn, params.data());
+            s.return_repr = "<void>";
+            s.error_repr.clear();
+        }
+        if (!s.return_repr.empty()) {
+            ImGui::Text("→ %s", s.return_repr.c_str());
+        }
+        if (!s.error_repr.empty()) {
+            ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "err: %s", s.error_repr.c_str());
+        }
+        return;
+    }
+
+    for (auto prop : in_params) {
+        const auto name = utility::narrow(prop->get_field_name().to_string());
+        const auto name_hash = utility::hash(prop->get_class()->get_name().to_string());
+        render_param_editor(s, prop, name, name_hash);
+    }
+
+    for (auto prop : out_params) {
+        const auto name = utility::narrow(prop->get_field_name().to_string());
+        ImGui::TextColored(ImVec4{0, 1, 0, 1}, "[Out] %s", name.c_str());
+    }
+
+    if (ImGui::Button("Call")) {
+        s.error_repr.clear();
+        try {
+            const auto params_size = std::max<size_t>(64, (size_t)fn->get_properties_size());
+            std::vector<uint8_t> params(params_size, 0);
+
+            for (auto prop : in_params) {
+                const auto name = utility::narrow(prop->get_field_name().to_string());
+                const auto name_hash = utility::hash(prop->get_class()->get_name().to_string());
+                if (!encode_param(s, prop, name, name_hash, params.data(), params_size)) {
+                    SPDLOG_WARN("[UObjectHook] caller: unsupported param type {} for {}", name, utility::narrow(fn->get_fname().to_string()));
+                }
+            }
+
+            self->process_event(fn, params.data());
+
+            if (return_prop != nullptr) {
+                s.return_repr = format_return_value(return_prop, params.data(), params_size);
+            } else if (!out_params.empty()) {
+                std::string acc;
+                for (auto* p : out_params) {
+                    if (!acc.empty()) acc += " | ";
+                    acc += utility::narrow(p->get_field_name().to_string()) + "=" + format_return_value(p, params.data(), params_size);
+                }
+                s.return_repr = std::move(acc);
+            } else {
+                s.return_repr = "<void>";
+            }
+        } catch (const std::exception& e) {
+            s.error_repr = e.what();
+        } catch (...) {
+            s.error_repr = "unknown exception";
+        }
+    }
+
+    if (!s.return_repr.empty()) {
+        ImGui::Text("→ %s", s.return_repr.c_str());
+    }
+    if (!s.error_repr.empty()) {
+        ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "err: %s", s.error_repr.c_str());
+    }
+}
+
+} // namespace
+
 std::shared_ptr<UObjectHook>& UObjectHook::get() {
     static std::shared_ptr<UObjectHook> instance = std::make_shared<UObjectHook>();
     return instance;
@@ -2303,10 +2784,14 @@ void UObjectHook::draw_main() {
                 std::wstring comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
 
                 ImGui::PushID(comp);
-                if (ImGui::TreeNode(utility::narrow(comp_name).data())) {
+                const std::string drag_label = utility::narrow(comp_name);
+                if (ImGui::TreeNode(drag_label.data())) {
+                    make_drag_source_for_object(comp, drag_label.c_str());
                     ui_handle_object(comp);
 
                     ImGui::TreePop();
+                } else {
+                    make_drag_source_for_object(comp, drag_label.c_str());
                 }
                 ImGui::PopID();
             }
@@ -2375,9 +2860,13 @@ void UObjectHook::draw_main() {
 
                 std::wstring comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
 
-                if (ImGui::TreeNode(utility::narrow(comp_name).data())) {
+                const std::string narrow_comp_name = utility::narrow(comp_name);
+                if (ImGui::TreeNode(narrow_comp_name.data())) {
+                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
                     ui_handle_object(comp);
                     ImGui::TreePop();
+                } else {
+                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
                 }
             }
 
@@ -2394,9 +2883,13 @@ void UObjectHook::draw_main() {
                 continue;
             }
 
-            if (ImGui::TreeNode(utility::narrow(object->get_full_name()).data())) {
+            const auto obj_label = utility::narrow(object->get_full_name());
+            if (ImGui::TreeNode(obj_label.data())) {
+                make_drag_source_for_object(object, obj_label.c_str());
                 ui_handle_object(object);
                 ImGui::TreePop();
+            } else {
+                make_drag_source_for_object(object, obj_label.c_str());
             }
         }
 
@@ -2607,6 +3100,10 @@ void UObjectHook::draw_main() {
             // ImGui's end-of-frame recovery fires "Missing TreePop()" and
             // poisons the rest of the window's state for the next frame.
             const bool class_node_open = ImGui::TreeNode(uclass_name.data());
+            // Make every class entry in the Objects-by-class view a draggable
+            // UClass source so users can drop it into a function caller's
+            // ClassProperty slot.
+            make_drag_source_for_class(uclass, uclass_name.c_str());
             utility::ScopeGuard class_node_guard{[class_node_open]() {
                 if (class_node_open) {
                     ImGui::TreePop();
@@ -2720,6 +3217,7 @@ void UObjectHook::draw_main() {
 
                 const auto obj_name = utility::narrow(obj_meta->full_name);
                 const bool obj_node_open = ImGui::TreeNode(obj_name.data());
+                make_drag_source_for_object((sdk::UObject*)object, obj_name.c_str());
                 utility::ScopeGuard obj_node_guard{[obj_node_open]() {
                     if (obj_node_open) {
                         ImGui::TreePop();
@@ -3751,106 +4249,34 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
 
         if (ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data())) {
             if (is_real_object) {
+                // Show parameter signature (type + name + [Out]/[struct-name]) so
+                // the user can tell what the editors below will be writing into.
                 auto parameters = func->get_child_properties();
-
-                if (parameters == nullptr ||
-                    (parameters->get_next() == nullptr && parameters->get_field_name().to_string() == L"ReturnValue")) {
-                    if (ImGui::Button("Call")) {
-                        struct {
-                            char poop[1024]{};
-                        } params{};
-
-                        object_real->process_event(func, &params);
-                    }
-                } else if (parameters->get_next() == nullptr) {
-                    switch (utility::hash(utility::narrow(parameters->get_class()->get_name().to_string()))) {
-                    case "BoolProperty"_fnv: {
-                        if (ImGui::Button("Enable")) {
-                            struct {
-                                bool enabled{true};
-                                char padding[0x10];
-                            } params{};
-
-                            object_real->process_event(func, &params);
-                        }
-
-                        ImGui::SameLine();
-
-                        if (ImGui::Button("Disable")) {
-                            struct {
-                                bool enabled{false};
-                                char padding[0x10];
-                            } params{};
-
-                            object_real->process_event(func, &params);
-                        }
-                    } break;
-                    case "StrProperty"_fnv: {
-                        if (ImGui::Button("Call")) {
-                            struct {
-                                sdk::TArrayLite<wchar_t> str{};
-                                char padding[0x10];
-                            } params{};
-
-                            params.str.data = (wchar_t*)L"Hello world!";
-                            params.str.count = wcslen(params.str.data);
-                            params.str.capacity = params.str.count + 1;
-
-                            object_real->process_event(func, &params);
-                        }
-                    } break;
-                    case "UInt32Property"_fnv:
-                    case "IntProperty"_fnv:
-                    case "EnumProperty"_fnv: {
-                        static int value = 0;
-                        ImGui::InputInt("Value", &value);
-
-                        if (ImGui::Button("Call")) {
-                            struct {
-                                int value{};
-                                char padding[0x10];
-                            } params{};
-
-                            params.value = value;
-
-                            object_real->process_event(func, &params);
-                        }
-                    } break;
-
-                    default:
-                        break;
-                    };
-                }
-
                 for (auto param = parameters; param != nullptr; param = param->get_next()) {
                     const auto cname = utility::narrow(param->get_class()->get_name().to_string());
-                    ImGui::Text("%s %s", cname.data(), utility::narrow(param->get_field_name().to_string()).data());
+                    ImGui::TextDisabled("%s %s", cname.data(), utility::narrow(param->get_field_name().to_string()).data());
 
                     if (cname.contains("Property")) {
                         const auto prop = (sdk::FProperty*)param;
-
                         if (prop->is_out_param()) {
                             ImGui::SameLine();
                             ImGui::TextColored(ImVec4{0.0f, 1.0f, 0.0f, 1.0f}, "[Out]");
                         }
-
-                        // Display full name of StructProperty
                         if (cname == "StructProperty") {
-                            const auto prop = (sdk::FStructProperty*)param;
-                            const auto s = prop->get_struct();
-
-                            if (s != nullptr) {
-                                const auto struct_name = utility::narrow(s->get_full_name());
-                                constexpr auto r = (float)78.0f / 255.0f;
-                                constexpr auto g = (float)201.0f / 255.0f;
-                                constexpr auto b = (float)176.0f / 255.0f;
-
-                                ImGui::SameLine();
-                                ImGui::TextColored(ImVec4{r, g, b, 1.0f}, "[%s]", struct_name.data());
+                            if (const auto sp = (sdk::FStructProperty*)param; sp != nullptr) {
+                                if (const auto strukt = sp->get_struct(); strukt != nullptr) {
+                                    const auto struct_name = utility::narrow(strukt->get_full_name());
+                                    ImGui::SameLine();
+                                    ImGui::TextColored(ImVec4{78.0f/255.0f, 201.0f/255.0f, 176.0f/255.0f, 1.0f}, "[%s]", struct_name.data());
+                                }
                             }
                         }
                     }
                 }
+
+                ImGui::Separator();
+                // Interactive editor + Call button + return-value display.
+                render_function_call(object_real, func);
             }
 
             ImGui::TreePop();
