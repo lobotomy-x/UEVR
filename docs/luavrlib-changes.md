@@ -96,6 +96,7 @@ uevr.api_fast.set_actor_location(actor, loc, sweep?, teleport?) -> bool
 uevr.api_fast.set_actor_rotation(actor, rot, teleport?)         -> bool
 uevr.api_fast.get_root_component(actor)                         -> UObject*
 uevr.api_fast.get_component_by_class(actor, uclass)             -> UObject*
+uevr.api_fast.get_all_components(actor)                         -> UObject[]
 uevr.api_fast.destroy_actor(actor)                              -> bool
 
 -- USceneComponent

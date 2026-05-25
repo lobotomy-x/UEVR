@@ -212,6 +212,26 @@ sol::table batch_actor_locations(sol::this_state s, sol::table actors) {
     return out;
 }
 
+// Return a flat Lua table of all UActorComponents attached to `actor`. The
+// SDK's AActor::get_all_components() does the reflection internally and
+// returns a std::vector<UActorComponent*>; we just translate it into a Lua
+// table in one binding call instead of forcing scripts through
+// actor:get_components() which also goes through the generic reflection
+// dispatcher.
+sol::table get_all_components(sol::this_state s, uevr::API::UObject* obj) {
+    auto out = sol::state_view{s}.create_table();
+    auto actor = sdk_cast<sdk::AActor>(obj);
+    if (actor == nullptr) {
+        return out;
+    }
+    auto comps = actor->get_all_components();
+    int i = 1;
+    for (auto* c : comps) {
+        out[i++] = reinterpret_cast<uevr::API::UObject*>(c);
+    }
+    return out;
+}
+
 bool is_actor(uevr::API::UObject* obj) {
     return sdk_cast<sdk::AActor>(obj) != nullptr;
 }
@@ -248,6 +268,7 @@ void bindings::open_sdk_fast(sol::state_view& lua) {
     // Hierarchy / lifecycle.
     t["get_root_component"]    = &get_root_component;
     t["get_component_by_class"]= &get_component_by_class;
+    t["get_all_components"]    = &get_all_components;
     t["destroy_actor"]         = &destroy_actor;
 
     // Batch helper: one Lua crossing for many transforms.
