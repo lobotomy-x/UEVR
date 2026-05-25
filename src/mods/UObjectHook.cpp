@@ -3226,11 +3226,23 @@ void UObjectHook::draw_main() {
             auto sort_classes = [this](std::vector<sdk::UClass*> classes) {
                 std::sort(classes.begin(), classes.end(), [this](sdk::UClass* a, sdk::UClass* b) {
                     std::shared_lock _{m_mutex};
-                    if (!m_objects.contains(a) || !m_objects.contains(b)) {
-                        return false;
+                    // Use find() rather than operator[] — `m_meta_objects` is
+                    // a unique_ptr map and operator[] silently inserts a null
+                    // unique_ptr under shared_lock when the key is missing,
+                    // which then dereferences null on the next line. (The old
+                    // m_objects.contains() guard is on a *different* set than
+                    // m_meta_objects and could diverge during concurrent
+                    // add/remove from the UObjectBase hook.)
+                    auto ita = m_meta_objects.find(a);
+                    auto itb = m_meta_objects.find(b);
+                    const bool a_ok = ita != m_meta_objects.end() && ita->second != nullptr;
+                    const bool b_ok = itb != m_meta_objects.end() && itb->second != nullptr;
+                    if (!a_ok || !b_ok) {
+                        // Stable fallback ordering by pointer when meta is missing
+                        // (unordered_map iterators aren't <-comparable).
+                        return (uintptr_t)a < (uintptr_t)b;
                     }
-
-                    return m_meta_objects[a]->full_name < m_meta_objects[b]->full_name;
+                    return ita->second->full_name < itb->second->full_name;
                 });
 
                 return classes;
@@ -3482,7 +3494,12 @@ void UObjectHook::ui_standard_object_context_menu(sdk::UObjectBase* object) {
         };
 
         if (ImGui::Button("Copy Name")) {
-            sc(utility::narrow(m_meta_objects[object]->full_name));
+            // Use find() so a missing entry doesn't default-insert a null
+            // unique_ptr and crash the right-click menu (same operator[]
+            // hazard as the Objects-by-class iteration).
+            if (auto it = m_meta_objects.find(object); it != m_meta_objects.end() && it->second != nullptr) {
+                sc(utility::narrow(it->second->full_name));
+            }
         }
 
 
