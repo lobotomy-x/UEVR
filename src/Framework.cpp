@@ -36,19 +36,21 @@
 
 namespace fs = std::filesystem;
 using namespace std::literals;
-// Multi-viewport is intentionally NOT in the default IMGUICONFIGFLAGS — see
-// docs/imgui-multiviewport-status.md for the open input/focus/z-order issues
-// that are still unresolved on this branch. The renderer- and platform-side
-// scaffolding is still in place (DX11/DX12 backends, Win32 callbacks,
-// UpdatePlatformWindows/RenderPlatformWindowsDefault in the present path), so
-// re-enabling is just a matter of OR'ing `ImGuiConfigFlags_ViewportsEnable`
-// back in here once those issues are addressed. Docking still works without
-// multi-viewport — popped-out windows just dock back inside the host overlay
-// instead of becoming OS-level top-level windows.
+// Multi-viewport is re-enabled now that pump_secondary_viewport_messages()
+// drains the present-thread queue for popup HWNDs (see Framework.cpp helper).
+// The previous frozen-popup symptom was caused by per-thread Win32 message
+// queues: popup HWNDs were created on the present thread but only the game
+// thread had a message pump, so popup messages accumulated and never reached
+// the per-viewport WndProc. The renderer-side (DX11 swap-chain template,
+// DX12 RSSetViewports fix) and Framework recursion guards from earlier
+// commits remain in place. See docs/imgui-multiviewport-status.md for the
+// full timeline. If you hit issues, clear ImGuiConfigFlags_ViewportsEnable
+// here to fall back to docking-only (popped-out panels dock back inside the
+// host overlay instead of becoming top-level OS windows).
 #define IMGUICONFIGFLAGS                                                                                                \
     ImGuiConfigFlags_DockingEnable |\
         ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | \
-        ImGuiConfigFlags_NavEnableSetMousePos
+        ImGuiConfigFlags_NavEnableSetMousePos | ImGuiConfigFlags_ViewportsEnable
 
 std::unique_ptr<Framework> g_framework{};
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -436,6 +438,46 @@ Framework::~Framework() {
     }
 }
 
+// Drain queued Win32 messages destined for secondary ImGui viewports.
+//
+// Why this exists: Win32 message queues are PER-THREAD, and the thread that
+// created an HWND (via CreateWindowEx) is the one whose queue receives that
+// window's messages. UEVR's ImGui platform windows are created during
+// ImGui::UpdatePlatformWindows() from the present thread (because the
+// renderer-side requires it — DX11 immediate context isn't thread-safe). The
+// game's own message pump (FWindowsApplication::PumpMessages in UE) runs on
+// the game thread and only sees messages for the GAME's main HWND.
+//
+// Result: popup-HWND messages (WM_LBUTTONDOWN, WM_CHAR, WM_MOVE, etc.) sit
+// in the present thread's queue forever, never get dispatched to
+// ImGui_ImplWin32_WndProcHandler_PlatformWindow, and the popup feels
+// frozen — exactly the "can't click windows outside the main game window"
+// symptom we hit when we first turned ViewportsEnable on.
+//
+// This helper walks the platform_io.Viewports list (skipping the main
+// viewport at index 0, which the game pumps for us) and runs PeekMessageW
+// + TranslateMessage + DispatchMessageW for each popup's HWND, draining its
+// per-thread queue and routing the messages through the popup's WndProc.
+// PeekMessage with a non-NULL hwnd filter only pulls messages for that
+// specific window, so we don't risk stealing any game-thread messages.
+//
+// This is a no-op when ViewportsEnable is off (the viewports list only
+// contains the main one) and when called with no popups yet open.
+static void pump_secondary_viewport_messages() {
+    auto& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; ++i) {
+        const HWND hwnd = (HWND)platform_io.Viewports[i]->PlatformHandle;
+        if (hwnd == nullptr) {
+            continue;
+        }
+        MSG msg{};
+        while (::PeekMessageW(&msg, hwnd, 0, 0, PM_REMOVE)) {
+            ::TranslateMessage(&msg);
+            ::DispatchMessageW(&msg);
+        }
+    }
+}
+
 void Framework::run_imgui_frame(bool from_present) {
     std::scoped_lock _{ m_imgui_mtx };
 
@@ -576,6 +618,7 @@ void Framework::on_frame_d3d11() {
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
+        pump_secondary_viewport_messages();
     }
 
     m_mods->on_post_frame();
@@ -773,6 +816,7 @@ void Framework::on_frame_d3d12() {
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
+        pump_secondary_viewport_messages();
     }
 
     if (is_init_ok) {

@@ -4,10 +4,17 @@ _Last updated: 2026-05-25 (luavrlib branch)_
 
 ## TL;DR
 
-ImGui multi-viewport (`ImGuiConfigFlags_ViewportsEnable`) is **disabled by
-default on this branch**. Docking (`ImGuiConfigFlags_DockingEnable`) is still
-enabled — popped-out panels just dock back inside the host overlay instead of
-becoming top-level OS windows.
+ImGui multi-viewport (`ImGuiConfigFlags_ViewportsEnable`) is **re-enabled** as
+of the `pump_secondary_viewport_messages()` commit. The previous frozen-popup
+symptom was caused by Win32's per-thread message queues — popup HWNDs are
+created on the present thread by ImGui's CreateWindow callback, but only the
+game thread runs the message pump, so popup messages (clicks, keys, moves)
+accumulated forever and never reached the per-viewport WndProc. The new
+helper drains the present-thread queue for each popup HWND after
+`RenderPlatformWindowsDefault`. If you hit regressions, clearing the
+`ImGuiConfigFlags_ViewportsEnable` bit in `Framework.cpp::IMGUICONFIGFLAGS`
+falls back to docking-only (popped-out panels dock back inside the host
+overlay instead of becoming top-level OS windows).
 
 The renderer-side and platform-side scaffolding is intact (DX11/DX12 backends
 correctly handle secondary swap chains, the present-thread path calls
