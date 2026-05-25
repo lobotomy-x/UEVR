@@ -74,6 +74,11 @@ struct ParamEditState {
     std::unordered_map<std::string, sdk::UObject*>   objs;   // ObjectProperty / InterfaceProperty slot
     std::unordered_map<std::string, sdk::UClass*>    classes;// ClassProperty slot
     std::unordered_map<std::string, glm::vec4>       vec;    // struct scratch (xyz[w]) for FVector / FRotator / FVector2D / FQuat
+    // Text-input fallback for drop targets (Object / Class slots) — see
+    // render_object_text_input / render_class_text_input. Keyed by prop name
+    // so each ObjectProperty has its own buffer that survives frames.
+    std::unordered_map<std::string, std::string>     obj_text;
+    std::unordered_map<std::string, std::string>     cls_text;
     std::string return_repr{"<no call yet>"};
     std::string error_repr{};
     // If the last call returned an Object/Interface/Class property, also
@@ -151,6 +156,244 @@ sdk::UClass* accept_class_drop() {
     }
     ImGui::EndDragDropTarget();
     return result;
+}
+
+// -----------------------------------------------------------------------------
+// Typed-query resolvers (text-input alternative to drag-and-drop).
+//
+// Three accepted forms, in priority order:
+//   1. "0xADDR" / "ADDR"        — hex pointer cast directly. Caller-trusted;
+//                                  we do NOT validate via FUObjectArray scan
+//                                  (the user knows what they typed and an
+//                                  exhaustive scan is expensive). Bad input
+//                                  → wild pointer → caller's problem.
+//   2. "Class /Script/Foo.Bar"  — full UE name with a space. Routed through
+//                                  sdk::find_uobject which already caches.
+//   3. "Bar"                    — short name. Linear scan of FUObjectArray
+//                                  comparing each object's FName. First hit
+//                                  wins (sorted to be insertion order).
+//
+// Mirrors the user's Lua object_lookup widget in Scripts/ImGui.lua —
+// `input:to_address()` + `api:to_uobject(addr)` vs `api:find_uobject(name)`.
+// -----------------------------------------------------------------------------
+sdk::UObject* resolve_object_query(std::string_view query_raw) {
+    std::string q{query_raw};
+    while (!q.empty() && std::isspace((unsigned char)q.back())) q.pop_back();
+    while (!q.empty() && std::isspace((unsigned char)q.front())) q.erase(0, 1);
+    if (q.empty()) return nullptr;
+
+    // Hex address form
+    {
+        std::string_view hex = q;
+        if (hex.starts_with("0x") || hex.starts_with("0X")) hex.remove_prefix(2);
+        if (!hex.empty() && std::all_of(hex.begin(), hex.end(), [](char c){
+            return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        })) {
+            try {
+                auto addr = std::stoull(std::string{hex}, nullptr, 16);
+                if (addr > 0x10000) {
+                    return reinterpret_cast<sdk::UObject*>(addr);
+                }
+            } catch (...) {}
+        }
+    }
+
+    // Full-name form (contains a space, e.g. "Class /Script/Engine.Character")
+    if (q.find(' ') != std::string::npos) {
+        return reinterpret_cast<sdk::UObject*>(sdk::find_uobject(utility::widen(q)));
+    }
+
+    // Short-name fallback — linear scan. O(N) but find_uobject already does
+    // a wider linear scan internally for full-name misses, so this is no
+    // worse and we're inside a debug menu anyway.
+    auto arr = sdk::FUObjectArray::get();
+    if (arr == nullptr) return nullptr;
+    const auto wq = utility::widen(q);
+    const auto count = arr->get_object_count();
+    for (int32_t i = 0; i < count; ++i) {
+        auto item = arr->get_object(i);
+        if (item == nullptr || item->object == nullptr) continue;
+        auto obj = reinterpret_cast<sdk::UObject*>(item->object);
+        try {
+            if (obj->get_fname().to_string() == wq) {
+                return obj;
+            }
+        } catch (...) {}
+    }
+    return nullptr;
+}
+
+// Same parser but requires the resolved object to be (or derive from) UClass.
+// Returns nullptr if the query resolves to something that isn't a class.
+sdk::UClass* resolve_class_query(std::string_view query_raw) {
+    auto obj = resolve_object_query(query_raw);
+    if (obj == nullptr) return nullptr;
+    auto cls = obj->get_class();
+    if (cls == nullptr) return nullptr;
+    // is_a checks the class hierarchy; an actual UClass instance passes
+    // because its meta-class derives from UClass::static_class().
+    if (cls->is_a(sdk::UClass::static_class())) {
+        return reinterpret_cast<sdk::UClass*>(obj);
+    }
+    return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+// Live Function Caller slot state — shared between the in-tree TreeNode (in
+// UObjectHook::draw_main) and the dockable pop-out window
+// (UObjectHook::draw_function_caller_window). Both surfaces render the same
+// kSlotCount slots and any change in one surface is immediately visible in
+// the other.
+// -----------------------------------------------------------------------------
+constexpr int kLiveCallerSlotCount = 4;
+struct LiveSlot {
+    sdk::UObject* target{};
+    std::string target_text;          // text-input fallback for the target
+    std::string fn_name;
+    sdk::UFunction* resolved{};
+    std::string resolved_label;
+    std::string resolve_error;
+};
+static std::array<LiveSlot, kLiveCallerSlotCount> s_live_slots{};
+
+// Forward decls — render_live_caller_slots() uses both render_function_call()
+// and render_object_text_input(), defined further down in this TU.
+void render_function_call(sdk::UObject* self, sdk::UFunction* fn);
+sdk::UObject* render_object_text_input(const char* id, std::string& buf);
+
+void render_live_caller_slots() {
+    for (int i = 0; i < kLiveCallerSlotCount; ++i) {
+        ImGui::PushID(i);
+        utility::ScopeGuard pop_id{[]() { ImGui::PopID(); }};
+
+        ImGui::Text("Slot %d", i + 1);
+        ImGui::Indent();
+
+        auto& slot = s_live_slots[i];
+        const std::string target_label = slot.target == nullptr
+            ? std::string{"[drop UObject here]"}
+            : (std::string{"["} + std::to_string((uintptr_t)slot.target) + "] "
+               + utility::narrow(slot.target->get_full_name()));
+        ImGui::Button(target_label.c_str(), ImVec2{0, 0});
+        if (auto dropped = accept_object_drop(); dropped != nullptr) {
+            if (slot.target != dropped) {
+                slot.resolved = nullptr;
+                slot.resolved_label.clear();
+                slot.resolve_error.clear();
+            }
+            slot.target = dropped;
+        }
+        if (slot.target != nullptr) {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("clear target")) {
+                slot.target = nullptr;
+                slot.resolved = nullptr;
+                slot.resolved_label.clear();
+            }
+        }
+        // Text-input fallback: type "Character" / "Class /Script/Engine.Character" / "0xADDR".
+        ImGui::SameLine();
+        if (auto resolved = render_object_text_input("##slot_target", slot.target_text);
+            resolved != nullptr) {
+            if (slot.target != resolved) {
+                slot.resolved = nullptr;
+                slot.resolved_label.clear();
+                slot.resolve_error.clear();
+            }
+            slot.target = resolved;
+        }
+
+        // Function name + Resolve. Enter triggers Resolve.
+        std::array<char, 256> name_buf{};
+        const auto copy_n = std::min(slot.fn_name.size(), name_buf.size() - 1);
+        std::memcpy(name_buf.data(), slot.fn_name.data(), copy_n);
+        bool want_resolve = false;
+        if (ImGui::InputText("function name", name_buf.data(), name_buf.size(),
+                             ImGuiInputTextFlags_EnterReturnsTrue)) {
+            slot.fn_name.assign(name_buf.data());
+            want_resolve = true;
+        } else if (std::strcmp(name_buf.data(), slot.fn_name.c_str()) != 0) {
+            slot.fn_name.assign(name_buf.data());
+            slot.resolved = nullptr;
+            slot.resolved_label.clear();
+            slot.resolve_error.clear();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Resolve")) want_resolve = true;
+        if (want_resolve) {
+            slot.resolved = nullptr;
+            slot.resolved_label.clear();
+            slot.resolve_error.clear();
+            if (slot.target == nullptr) {
+                slot.resolve_error = "no target";
+            } else if (slot.fn_name.empty()) {
+                slot.resolve_error = "empty name";
+            } else {
+                const auto wname = utility::widen(slot.fn_name);
+                sdk::UFunction* fn = nullptr;
+                if (auto* cls = slot.target->get_class(); cls != nullptr) {
+                    fn = cls->find_function(wname.c_str());
+                }
+                if (fn == nullptr) {
+                    slot.resolve_error = "no function with that name on the target's class";
+                } else {
+                    slot.resolved = fn;
+                    slot.resolved_label = utility::narrow(fn->get_full_name());
+                }
+            }
+        }
+
+        if (!slot.resolve_error.empty()) {
+            ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "%s", slot.resolve_error.c_str());
+        }
+        if (slot.resolved != nullptr) {
+            ImGui::TextColored(ImVec4{0.4f, 1.0f, 0.4f, 1.0f}, "→ %s", slot.resolved_label.c_str());
+            ImGui::Separator();
+            try {
+                render_function_call(slot.target, slot.resolved);
+            } catch (const std::exception& e) {
+                ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw: %s", e.what());
+            } catch (...) {
+                ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw (unknown)");
+            }
+        }
+
+        ImGui::Unindent();
+        ImGui::Separator();
+    }
+}
+
+// Helper widget: a small InputText next to a drop target that accepts the
+// same three forms above. Returns the resolved object if the user pressed
+// Enter and the parse succeeded, nullptr otherwise. The input buffer is
+// owned by the caller (so per-slot state survives frames).
+sdk::UObject* render_object_text_input(const char* id, std::string& buf) {
+    std::array<char, 256> raw{};
+    const auto copy_n = std::min(buf.size(), raw.size() - 1);
+    std::memcpy(raw.data(), buf.data(), copy_n);
+    ImGui::SetNextItemWidth(220.0f);
+    const bool entered = ImGui::InputTextWithHint(id, "or type name / 0xADDR + Enter",
+        raw.data(), raw.size(), ImGuiInputTextFlags_EnterReturnsTrue);
+    if (std::strcmp(raw.data(), buf.c_str()) != 0) {
+        buf.assign(raw.data());
+    }
+    if (entered) {
+        if (auto obj = resolve_object_query(buf); obj != nullptr) {
+            buf.clear();
+            return obj;
+        }
+    }
+    return nullptr;
+}
+
+sdk::UClass* render_class_text_input(const char* id, std::string& buf) {
+    auto obj = render_object_text_input(id, buf);
+    if (obj == nullptr) return nullptr;
+    auto cls = obj->get_class();
+    if (cls != nullptr && cls->is_a(sdk::UClass::static_class())) {
+        return reinterpret_cast<sdk::UClass*>(obj);
+    }
+    return nullptr;
 }
 
 // Render a single parameter editor; returns nothing — state is stashed inside
@@ -234,6 +477,15 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
                 slot = nullptr;
             }
         }
+        // Text-input fallback: type a name (full or short) or 0xADDR and
+        // press Enter to populate the slot without needing a drag-source.
+        // Mirrors the user's Scripts/ImGui.lua object_lookup pattern.
+        ImGui::SameLine();
+        if (auto resolved = render_object_text_input(("##objtext_" + prop_name_narrow).c_str(),
+                                                     s.obj_text[prop_name_narrow]);
+            resolved != nullptr) {
+            slot = resolved;
+        }
         break;
     }
     case L"ClassProperty"_fnv:
@@ -251,6 +503,12 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
             if (ImGui::SmallButton("clear")) {
                 slot = nullptr;
             }
+        }
+        ImGui::SameLine();
+        if (auto resolved = render_class_text_input(("##clstext_" + prop_name_narrow).c_str(),
+                                                    s.cls_text[prop_name_narrow]);
+            resolved != nullptr) {
+            slot = resolved;
         }
         break;
     }
@@ -2704,6 +2962,216 @@ void UObjectHook::on_frame() {
     if (m_keybind_toggle_uobject_hook->is_key_down_once()) {
         set_disabled(!is_disabled());
     }
+
+    // Dockable pop-out windows live OUTSIDE the sidebar tree (which only
+    // renders when the user has UObjectHook focused as a sidebar entry).
+    // We draw them every imgui frame instead, gated on their toggle bools.
+    // Both windows auto-attach to Framework's main dockspace via
+    // SetNextWindowDockID(FirstUseEver) just like Lua imgui.begin_window.
+    if (m_show_class_browser) {
+        try { draw_class_browser_window(); }
+        catch (const std::exception& e) { spdlog::error("[UObjectHook] class browser threw: {}", e.what()); }
+        catch (...)                     { spdlog::error("[UObjectHook] class browser threw (unknown)"); }
+    }
+    if (m_show_function_caller) {
+        try { draw_function_caller_window(); }
+        catch (const std::exception& e) { spdlog::error("[UObjectHook] function caller window threw: {}", e.what()); }
+        catch (...)                     { spdlog::error("[UObjectHook] function caller window threw (unknown)"); }
+    }
+}
+
+// Helper: docks the next window into the main UEVR dockspace on first use.
+static void uobjecthook_dock_into_host_once() {
+    if (auto host = Framework::get_main_dockspace_id(); host != 0) {
+        ImGui::SetNextWindowDockID(host, ImGuiCond_FirstUseEver);
+    }
+}
+
+void UObjectHook::draw_class_browser_window() {
+    uobjecthook_dock_into_host_once();
+    if (!ImGui::Begin("UEVR Class Browser", &m_show_class_browser)) {
+        ImGui::End();
+        return;
+    }
+    utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
+
+    // Filter input shared across tabs. The class iteration uses
+    // m_sorted_classes (built by the Objects-by-class sort task), which is
+    // typically a large list (~thousands), so we always filter even if the
+    // filter buffer is empty — narrowing happens substring on full name.
+    std::array<char, 256> filter_buf{};
+    const auto n = std::min(m_class_browser_filter.size(), filter_buf.size() - 1);
+    std::memcpy(filter_buf.data(), m_class_browser_filter.data(), n);
+    if (ImGui::InputTextWithHint("filter", "type substring of class name",
+                                 filter_buf.data(), filter_buf.size())) {
+        m_class_browser_filter.assign(filter_buf.data());
+    }
+    const auto wfilter = utility::widen(m_class_browser_filter);
+    const bool has_filter = !wfilter.empty();
+
+    if (!ImGui::BeginTabBar("ClassBrowserTabs")) {
+        return;
+    }
+    utility::ScopeGuard tab_guard{[]() { ImGui::EndTabBar(); }};
+
+    // ---- Classes tab -------------------------------------------------------
+    if (ImGui::BeginTabItem("Classes")) {
+        ImGui::TextDisabled("%zu classes — drag a row into a Class slot, or click to inspect", m_sorted_classes.size());
+        if (ImGui::BeginChild("class_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            std::shared_lock _{m_mutex};
+            // Linear iteration over the (already-sorted) class list; with
+            // any filter active the visible count is small enough that
+            // an ImGuiListClipper isn't worth the bookkeeping.
+            for (auto* uclass : m_sorted_classes) {
+                if (uclass == nullptr) continue;
+                auto it = m_meta_objects.find(uclass);
+                if (it == m_meta_objects.end() || it->second == nullptr) continue;
+                const auto& full = it->second->full_name;
+                if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                const auto narrow = utility::narrow(full);
+                ImGui::PushID(uclass);
+                ImGui::Selectable(narrow.c_str());
+                // Drag source for the UEVR_UClass payload that the function
+                // caller's Class drop targets accept.
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
+                    ImGui::Text("UClass: %s", narrow.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                ImGui::PopID();
+            }
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+    }
+
+    // ---- ScriptStructs tab -------------------------------------------------
+    if (ImGui::BeginTabItem("ScriptStructs")) {
+        static const auto script_struct_class = sdk::UScriptStruct::static_class();
+        ImGui::TextDisabled("walks FUObjectArray looking for UScriptStruct instances");
+        if (ImGui::BeginChild("ss_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            if (script_struct_class == nullptr) {
+                ImGui::Text("UScriptStruct::static_class() returned null");
+            } else {
+                auto arr = sdk::FUObjectArray::get();
+                const auto count = arr ? arr->get_object_count() : 0;
+                int shown = 0;
+                for (int32_t i = 0; i < count && shown < 5000; ++i) {
+                    auto item = arr->get_object(i);
+                    if (item == nullptr || item->object == nullptr) continue;
+                    auto obj = (sdk::UObject*)item->object;
+                    auto cls = obj->get_class();
+                    if (cls == nullptr || !cls->is_a(script_struct_class)) continue;
+                    std::wstring full;
+                    try { full = obj->get_full_name(); } catch (...) { continue; }
+                    if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                    const auto narrow = utility::narrow(full);
+                    ImGui::PushID(obj);
+                    ImGui::Selectable(narrow.c_str());
+                    if (ImGui::BeginDragDropSource()) {
+                        // UScriptStruct is a UObject, publish as UObject so
+                        // generic Object drop targets accept it. Specialised
+                        // struct-drop targets can sniff is_a(UScriptStruct).
+                        ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                        ImGui::Text("UScriptStruct: %s", narrow.c_str());
+                        ImGui::EndDragDropSource();
+                    }
+                    ImGui::PopID();
+                    ++shown;
+                }
+                if (shown == 5000) ImGui::Text("(truncated at 5000 — narrow your filter)");
+            }
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+    }
+
+    // ---- Enums tab ---------------------------------------------------------
+    if (ImGui::BeginTabItem("Enums")) {
+        static const auto enum_class = sdk::find_uobject<sdk::UClass>(L"Class /Script/CoreUObject.Enum");
+        ImGui::TextDisabled("walks FUObjectArray looking for UEnum instances");
+        if (ImGui::BeginChild("enum_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            if (enum_class == nullptr) {
+                ImGui::Text("CoreUObject.Enum not found");
+            } else {
+                auto arr = sdk::FUObjectArray::get();
+                const auto count = arr ? arr->get_object_count() : 0;
+                int shown = 0;
+                for (int32_t i = 0; i < count && shown < 5000; ++i) {
+                    auto item = arr->get_object(i);
+                    if (item == nullptr || item->object == nullptr) continue;
+                    auto obj = (sdk::UObject*)item->object;
+                    auto cls = obj->get_class();
+                    if (cls == nullptr || !cls->is_a(enum_class)) continue;
+                    std::wstring full;
+                    try { full = obj->get_full_name(); } catch (...) { continue; }
+                    if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                    const auto narrow = utility::narrow(full);
+                    ImGui::PushID(obj);
+                    ImGui::Selectable(narrow.c_str());
+                    if (ImGui::BeginDragDropSource()) {
+                        ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                        ImGui::Text("UEnum: %s", narrow.c_str());
+                        ImGui::EndDragDropSource();
+                    }
+                    ImGui::PopID();
+                    ++shown;
+                }
+                if (shown == 5000) ImGui::Text("(truncated at 5000 — narrow your filter)");
+            }
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+    }
+
+    // ---- Functions tab -----------------------------------------------------
+    if (ImGui::BeginTabItem("Functions")) {
+        static const auto func_class = sdk::UFunction::static_class();
+        ImGui::TextDisabled("walks FUObjectArray looking for UFunction instances (very large; filter recommended)");
+        if (ImGui::BeginChild("fn_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            auto arr = sdk::FUObjectArray::get();
+            const auto count = arr ? arr->get_object_count() : 0;
+            int shown = 0;
+            const int kFnCap = has_filter ? 5000 : 500;
+            for (int32_t i = 0; i < count && shown < kFnCap; ++i) {
+                auto item = arr->get_object(i);
+                if (item == nullptr || item->object == nullptr) continue;
+                auto obj = (sdk::UObject*)item->object;
+                auto cls = obj->get_class();
+                if (cls == nullptr || !cls->is_a(func_class)) continue;
+                std::wstring full;
+                try { full = obj->get_full_name(); } catch (...) { continue; }
+                if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                const auto narrow = utility::narrow(full);
+                ImGui::PushID(obj);
+                ImGui::Selectable(narrow.c_str());
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                    ImGui::Text("UFunction: %s", narrow.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                ImGui::PopID();
+                ++shown;
+            }
+            if (shown == kFnCap) ImGui::Text("(truncated at %d — narrow your filter)", kFnCap);
+        }
+        ImGui::EndChild();
+        ImGui::EndTabItem();
+    }
+}
+
+void UObjectHook::draw_function_caller_window() {
+    uobjecthook_dock_into_host_once();
+    if (!ImGui::Begin("UEVR Function Caller", &m_show_function_caller)) {
+        ImGui::End();
+        return;
+    }
+    utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
+
+    ImGui::TextDisabled("Same slots as the inline caller in UObjectHook → Main.");
+    ImGui::TextDisabled("State is shared; drop UObjects from the Class Browser, the in-tree views, or type names.");
+    ImGui::Separator();
+    render_live_caller_slots();
 }
 
 void UObjectHook::on_draw_ui() {
@@ -2973,119 +3441,25 @@ void UObjectHook::draw_main() {
     // give it a small fixed size (kSlotCount) instead of an unbounded vector,
     // so the widget is bounded and the user does not have to manually add /
     // remove rows.
+    // Toggle buttons for the dockable pop-out windows. Both can be open
+    // simultaneously and dock anywhere via the host dockspace.
+    ImGui::Checkbox("Class Browser window", &m_show_class_browser);
+    ImGui::SameLine();
+    ImGui::Checkbox("Function Caller window", &m_show_function_caller);
+    ImGui::Separator();
+
+    // Live Function Caller — pinned workbench-style widget that sits ABOVE the
+    // deep object tree so the user does not have to drill through
+    // Objects-by-class → SomeUClass → SomeObject → Functions → fn each time
+    // they want to invoke a function. Same slot state (s_live_slots in the
+    // anonymous namespace) is shared with the dockable pop-out window, so
+    // changes made in either surface stay in sync.
     ImGui::SetNextItemOpen(true, ImGuiCond_Once); // open on first show for discoverability
-    if (ImGui::TreeNode("Live Function Caller")) {
-        constexpr int kSlotCount = 4;
-        struct LiveSlot {
-            sdk::UObject* target{};
-            std::string fn_name;
-            sdk::UFunction* resolved{};
-            std::string resolved_label;       // pretty-printed for display
-            std::string resolve_error;
-        };
-        static std::array<LiveSlot, kSlotCount> s_slots{};
-
-        ImGui::TextDisabled("Drop a UObject into the target slot, type a function name, hit Resolve.");
-        ImGui::TextDisabled("Slot state is preserved across frames; multiple slots can be live at once.");
+    if (ImGui::TreeNode("Live Function Caller (inline)")) {
+        ImGui::TextDisabled("Drop a UObject / type a name or 0xADDR; type the function name; Enter or Resolve.");
+        ImGui::TextDisabled("State is shared with the pop-out 'Function Caller window' above.");
         ImGui::Separator();
-
-        for (int i = 0; i < kSlotCount; ++i) {
-            ImGui::PushID(i);
-            utility::ScopeGuard pop_id{[]() { ImGui::PopID(); }};
-
-            ImGui::Text("Slot %d", i + 1);
-            ImGui::Indent();
-
-            // Target drop slot.
-            auto& slot = s_slots[i];
-            const std::string target_label = slot.target == nullptr
-                ? std::string{"[drop UObject here]"}
-                : (std::string{"["} + std::to_string((uintptr_t)slot.target) + "] "
-                   + utility::narrow(slot.target->get_full_name()));
-            ImGui::Button(target_label.c_str(), ImVec2{0, 0});
-            if (auto dropped = accept_object_drop(); dropped != nullptr) {
-                if (slot.target != dropped) {
-                    // Re-resolution required when the target class changes.
-                    slot.resolved = nullptr;
-                    slot.resolved_label.clear();
-                    slot.resolve_error.clear();
-                }
-                slot.target = dropped;
-            }
-            if (slot.target != nullptr) {
-                ImGui::SameLine();
-                if (ImGui::SmallButton("clear target")) {
-                    slot.target = nullptr;
-                    slot.resolved = nullptr;
-                    slot.resolved_label.clear();
-                }
-            }
-
-            // Function name + Resolve. EnterReturnsTrue means pressing Enter
-            // in the InputText also triggers resolution, so the user does not
-            // have to click the Resolve button each time.
-            std::array<char, 256> name_buf{};
-            const auto copy_n = std::min(slot.fn_name.size(), name_buf.size() - 1);
-            std::memcpy(name_buf.data(), slot.fn_name.data(), copy_n);
-            bool want_resolve = false;
-            if (ImGui::InputText("function name", name_buf.data(), name_buf.size(),
-                                 ImGuiInputTextFlags_EnterReturnsTrue)) {
-                slot.fn_name.assign(name_buf.data());
-                want_resolve = true;
-            } else if (std::strcmp(name_buf.data(), slot.fn_name.c_str()) != 0) {
-                // InputText returned false but contents changed mid-edit;
-                // update the cached name without triggering a resolve.
-                slot.fn_name.assign(name_buf.data());
-                slot.resolved = nullptr;
-                slot.resolved_label.clear();
-                slot.resolve_error.clear();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Resolve")) want_resolve = true;
-            if (want_resolve) {
-                slot.resolved = nullptr;
-                slot.resolved_label.clear();
-                slot.resolve_error.clear();
-                if (slot.target == nullptr) {
-                    slot.resolve_error = "no target";
-                } else if (slot.fn_name.empty()) {
-                    slot.resolve_error = "empty name";
-                } else {
-                    const auto wname = utility::widen(slot.fn_name);
-                    sdk::UFunction* fn = nullptr;
-                    auto* cls = slot.target->get_class();
-                    if (cls != nullptr) {
-                        fn = cls->find_function(wname.c_str());
-                    }
-                    if (fn == nullptr) {
-                        slot.resolve_error = "no function with that name on the target's class";
-                    } else {
-                        slot.resolved = fn;
-                        slot.resolved_label = utility::narrow(fn->get_full_name());
-                    }
-                }
-            }
-
-            if (!slot.resolve_error.empty()) {
-                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "%s", slot.resolve_error.c_str());
-            }
-            if (slot.resolved != nullptr) {
-                ImGui::TextColored(ImVec4{0.4f, 1.0f, 0.4f, 1.0f}, "→ %s", slot.resolved_label.c_str());
-                ImGui::Separator();
-                // Reuse the same editor + Call button used in the in-tree caller.
-                try {
-                    render_function_call(slot.target, slot.resolved);
-                } catch (const std::exception& e) {
-                    ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw: %s", e.what());
-                } catch (...) {
-                    ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw (unknown)");
-                }
-            }
-
-            ImGui::Unindent();
-            ImGui::Separator();
-        }
-
+        render_live_caller_slots();
         ImGui::TreePop();
     }
 

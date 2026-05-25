@@ -84,6 +84,16 @@ protected:
     void draw_developer();
     void draw_main();
 
+    // Dockable pop-out windows (rendered from on_frame). Toggle via
+    // checkboxes at the top of draw_main. Both auto-attach to the UEVR
+    // main dockspace host on first show.
+    void draw_class_browser_window();
+    void draw_function_caller_window();
+    bool m_show_class_browser{false};
+    bool m_show_function_caller{false};
+    // Filter buffer for the class browser (shared across tabs)
+    std::string m_class_browser_filter{};
+
     void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
 
