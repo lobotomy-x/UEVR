@@ -36,10 +36,19 @@
 
 namespace fs = std::filesystem;
 using namespace std::literals;
+// Multi-viewport is intentionally NOT in the default IMGUICONFIGFLAGS — see
+// docs/imgui-multiviewport-status.md for the open input/focus/z-order issues
+// that are still unresolved on this branch. The renderer- and platform-side
+// scaffolding is still in place (DX11/DX12 backends, Win32 callbacks,
+// UpdatePlatformWindows/RenderPlatformWindowsDefault in the present path), so
+// re-enabling is just a matter of OR'ing `ImGuiConfigFlags_ViewportsEnable`
+// back in here once those issues are addressed. Docking still works without
+// multi-viewport — popped-out windows just dock back inside the host overlay
+// instead of becoming OS-level top-level windows.
 #define IMGUICONFIGFLAGS                                                                                                \
     ImGuiConfigFlags_DockingEnable |\
         ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | \
-        ImGuiConfigFlags_NavEnableSetMousePos |  ImGuiConfigFlags_ViewportsEnable
+        ImGuiConfigFlags_NavEnableSetMousePos
 
 std::unique_ptr<Framework> g_framework{};
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
