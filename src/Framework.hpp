@@ -103,6 +103,8 @@ public:
     bool is_game_data_intialized() const { return m_game_data_initialized; }
 
     void run_imgui_frame(bool from_present);
+    void setup_main_dockspace();
+    static ImGuiID get_main_dockspace_id();
 
     void on_frame_d3d11();
     void on_post_present_d3d11();

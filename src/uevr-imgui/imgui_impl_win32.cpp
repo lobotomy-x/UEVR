@@ -1538,6 +1538,21 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
             if (viewport->Flags & ImGuiViewportFlags_NoInputs)
                 result = HTTRANSPARENT;
             break;
+        case WM_PAINT:
+        case WM_ERASEBKGND:
+            // Our backbuffer is presented via DXGI; we do NOT want DefWindowProc
+            // to clear the client area with the WNDCLASS hbrBackground (COLOR_BACKGROUND).
+            // That clear briefly overwrites the swap-chain's last-presented frame,
+            // and on slow paths the user sees a black/desktop-coloured popup until
+            // the next Present. Handle WM_PAINT as a no-op (validate the update
+            // rect so Windows stops re-queuing it) and intercept WM_ERASEBKGND
+            // so Windows doesn't paint the background at all.
+            if (msg == WM_PAINT) {
+                PAINTSTRUCT ps{};
+                ::BeginPaint(hWnd, &ps);
+                ::EndPaint(hWnd, &ps);
+            }
+            return msg == WM_ERASEBKGND ? 1 : 0;
         }
     }
     if (result == 0)

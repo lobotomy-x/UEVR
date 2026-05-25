@@ -1093,6 +1093,15 @@ bool begin_window(const char* name, sol::object open_obj, ImGuiWindowFlags flags
         return false;
     }
 
+    // Auto-dock new windows into the main UEVR dockspace host on first use,
+    // so any script doing `imgui.begin_window("Foo")` from on_frame ends up
+    // attached to the workspace covering the game window. The user can drag
+    // the title-bar to detach later — SetNextWindowDockID with FirstUseEver
+    // only assigns the dock once, then respects the user's choice.
+    if (const auto host = Framework::get_main_dockspace_id(); host != 0) {
+        ImGui::SetNextWindowDockID(host, ImGuiCond_FirstUseEver);
+    }
+
     ImGui::Begin(name, open_p, flags);
 
     return open;
@@ -2762,6 +2771,11 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_next_item_width"] = api::imgui::set_next_item_width;
     imgui["set_next_window_dock_id"] = api::imgui::set_next_window_dock_id;
     imgui["set_next_window_docked"] = api::imgui::set_next_window_docked;
+    // Returns the ID of the always-on UEVR_MainDockSpace covering the
+    // entire game window. begin_window() auto-docks into this on first
+    // use, but scripts that build their own dock tree or use direct
+    // ImGui::Begin / sub-dockspaces can grab it here.
+    imgui["get_main_dockspace_id"] = []() -> ImGuiID { return Framework::get_main_dockspace_id(); };
     imgui["set_next_window_pos"] = api::imgui::set_next_window_pos;
     imgui["set_next_window_scroll"] = api::imgui::set_next_window_scroll;
     imgui["set_next_window_size"] = api::imgui::set_next_window_size;

@@ -438,6 +438,60 @@ Framework::~Framework() {
     }
 }
 
+// Static accessor for the main dockspace ID. Set by setup_main_dockspace()
+// every frame; read by begin_window() in bindings/ImGui.cpp so scripts that
+// don't explicitly position their windows get docked into the host on
+// first use. Zero means "no host registered yet" — bindings fall back to
+// regular Begin in that case.
+static ImGuiID s_main_dockspace_id = 0;
+
+ImGuiID Framework::get_main_dockspace_id() {
+    return s_main_dockspace_id;
+}
+
+void Framework::setup_main_dockspace() {
+    // Docking only makes sense when the user has DockingEnable; the host
+    // window itself would render an empty fullscreen panel without it.
+    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable) == 0) {
+        s_main_dockspace_id = 0;
+        return;
+    }
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (viewport == nullptr) {
+        s_main_dockspace_id = 0;
+        return;
+    }
+
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    constexpr ImGuiWindowFlags host_flags =
+        ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+    ImGui::Begin("UEVR_DockSpaceHost", nullptr, host_flags);
+    ImGui::PopStyleVar(3);
+
+    // PassthruCentralNode: the central area is transparent so the game
+    // shows through; only sides/dock-tabs/floating-but-docked panels get
+    // ImGui chrome.
+    // NoUndocking: keep windows that the script docked here from being
+    //   dragged into separate viewports unless the user explicitly grabs
+    //   them by the title-bar.
+    constexpr ImGuiDockNodeFlags dock_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+
+    s_main_dockspace_id = ImGui::GetID("UEVR_MainDockSpace");
+    ImGui::DockSpace(s_main_dockspace_id, ImVec2(0.0f, 0.0f), dock_flags);
+    ImGui::End();
+}
+
 // Drain queued Win32 messages destined for secondary ImGui viewports.
 //
 // Why this exists: Win32 message queues are PER-THREAD, and the thread that
@@ -506,6 +560,14 @@ void Framework::run_imgui_frame(bool from_present) {
     }
 
     ImGui::NewFrame();
+
+    // Create the always-on host dockspace that covers the entire game window.
+    // Any window opened with `imgui.begin_window(name)` from a script gets
+    // SetNextWindowDockID'd to this host on first use, so panels auto-attach
+    // to the host workspace and the user only sees a floating/separate
+    // window when they explicitly drag one out. PassthruCentralNode means
+    // the central area is see-through to the game underneath.
+    setup_main_dockspace();
 
     if (!from_present) {
         call_on_frame();
@@ -616,9 +678,16 @@ void Framework::on_frame_d3d11() {
     // swapchain. DX11 immediate context isn't thread-safe, so doing this on the engine thread
     // races the main RenderDrawData and produces black popups.
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        // Drain pending popup-HWND messages BEFORE UpdatePlatformWindows
+        // so any WM_SIZE / WM_MOVE / WM_DESTROY from the previous frame
+        // is reflected in the viewport state this frame. Running it
+        // *after* the render produced black popups because messages like
+        // WM_SIZE forced a swap-chain reset between Present and the
+        // next render call, so the visible buffer was the just-cleared
+        // recreated back-buffer instead of our actual drawn content.
+        pump_secondary_viewport_messages();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
-        pump_secondary_viewport_messages();
     }
 
     m_mods->on_post_frame();
@@ -814,9 +883,16 @@ void Framework::on_frame_d3d12() {
     // Drive secondary viewports on the present thread, same as D3D11. See the comment in
     // run_imgui_frame for why this isn't done there.
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        // Drain pending popup-HWND messages BEFORE UpdatePlatformWindows
+        // so any WM_SIZE / WM_MOVE / WM_DESTROY from the previous frame
+        // is reflected in the viewport state this frame. Running it
+        // *after* the render produced black popups because messages like
+        // WM_SIZE forced a swap-chain reset between Present and the
+        // next render call, so the visible buffer was the just-cleared
+        // recreated back-buffer instead of our actual drawn content.
+        pump_secondary_viewport_messages();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
-        pump_secondary_viewport_messages();
     }
 
     if (is_init_ok) {
