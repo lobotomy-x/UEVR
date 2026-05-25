@@ -76,6 +76,13 @@ struct ParamEditState {
     std::unordered_map<std::string, glm::vec4>       vec;    // struct scratch (xyz[w]) for FVector / FRotator / FVector2D / FQuat
     std::string return_repr{"<no call yet>"};
     std::string error_repr{};
+    // If the last call returned an Object/Interface/Class property, also
+    // stash the raw pointer so the result display can act as a drag SOURCE
+    // (you can drop the returned UObject into another caller slot or any
+    // other ObjectProperty drop target without re-finding it through the
+    // tree).
+    sdk::UObject* return_obj{nullptr};
+    sdk::UClass*  return_class{nullptr};
 };
 
 struct ParamKey {
@@ -407,12 +414,52 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
     case L"ObjectProperty"_fnv: {
         auto* obj = *(sdk::UObject**)in;
         if (obj == nullptr) return "nullptr";
-        return std::to_string((uintptr_t)obj);
+        // Pretty-print so the user sees the object's full name (matches the
+        // labels used everywhere else in UObjectHook) plus the address in
+        // brackets. Falls back to the raw address if name access fails.
+        try {
+            return std::string{"["} + std::to_string((uintptr_t)obj) + "] " + utility::narrow(obj->get_full_name());
+        } catch (...) {
+            return std::to_string((uintptr_t)obj);
+        }
     }
     case L"ClassProperty"_fnv: {
         auto* c = *(sdk::UClass**)in;
         if (c == nullptr) return "nullptr";
-        return std::to_string((uintptr_t)c);
+        try {
+            return std::string{"["} + std::to_string((uintptr_t)c) + "] " + utility::narrow(c->get_full_name());
+        } catch (...) {
+            return std::to_string((uintptr_t)c);
+        }
+    }
+    case L"StructProperty"_fnv: {
+        // Best-effort: dump well-known small POD structs in human-readable
+        // form. Falls back to "<struct unsupported>" for anything else.
+        const auto sp = (sdk::FStructProperty*)prop;
+        const auto strukt = sp ? sp->get_struct() : nullptr;
+        if (strukt == nullptr) return "<struct: unknown layout>";
+        const auto sname = utility::narrow(strukt->get_fname().to_string());
+        const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+            sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+        auto fmt3 = [in, is_ue5_vec]() {
+            if (is_ue5_vec) {
+                return std::format("({:.3f}, {:.3f}, {:.3f})", *(double*)(in+0), *(double*)(in+8), *(double*)(in+16));
+            }
+            return std::format("({:.3f}, {:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4), *(float*)(in+8));
+        };
+        auto fmt2 = [in, is_ue5_vec]() {
+            if (is_ue5_vec) {
+                return std::format("({:.3f}, {:.3f})", *(double*)(in+0), *(double*)(in+8));
+            }
+            return std::format("({:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4));
+        };
+        auto fmt4 = [in]() {
+            return std::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4), *(float*)(in+8), *(float*)(in+12));
+        };
+        if (sname == "Vector" || sname == "Rotator") return "[" + sname + "] " + fmt3();
+        if (sname == "Vector2D")                     return "[Vector2D] " + fmt2();
+        if (sname == "Vector4" || sname == "Quat" || sname == "LinearColor") return "[" + sname + "] " + fmt4();
+        return "<struct " + sname + ">";
     }
     default:
         return std::string{"<"} + utility::narrow(pc->get_name().to_string()) + " unsupported>";
@@ -487,8 +534,22 @@ void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
 
             self->process_event(fn, params.data());
 
+            // Clear previous return-pointer state — we'll set it again below
+            // if the return is an Object/Class type.
+            s.return_obj = nullptr;
+            s.return_class = nullptr;
+
             if (return_prop != nullptr) {
                 s.return_repr = format_return_value(return_prop, params.data(), params_size);
+                // Capture the raw pointer for the drag-source affordance.
+                if (const auto rc = return_prop->get_class(); rc != nullptr) {
+                    const auto rh = ::utility::hash(rc->get_name().to_string());
+                    if (rh == L"ObjectProperty"_fnv || rh == L"InterfaceProperty"_fnv) {
+                        s.return_obj = *(sdk::UObject**)(params.data() + return_prop->get_offset());
+                    } else if (rh == L"ClassProperty"_fnv) {
+                        s.return_class = *(sdk::UClass**)(params.data() + return_prop->get_offset());
+                    }
+                }
             } else if (!out_params.empty()) {
                 std::string acc;
                 for (auto* p : out_params) {
@@ -508,6 +569,20 @@ void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
 
     if (!s.return_repr.empty()) {
         ImGui::Text("→ %s", s.return_repr.c_str());
+    }
+    // If the return value was a UObject* or UClass*, render a tiny drag
+    // handle next to it so the caller can chain the return into another
+    // function's parameter slot (or anywhere else that accepts the same
+    // drag payload).
+    if (s.return_obj != nullptr) {
+        ImGui::SameLine();
+        ImGui::SmallButton("drag UObject");
+        make_drag_source_for_object(s.return_obj, "function return");
+    }
+    if (s.return_class != nullptr) {
+        ImGui::SameLine();
+        ImGui::SmallButton("drag UClass");
+        make_drag_source_for_class(s.return_class, "function return");
     }
     if (!s.error_repr.empty()) {
         ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "err: %s", s.error_repr.c_str());
