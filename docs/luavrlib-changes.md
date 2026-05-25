@@ -159,10 +159,36 @@ returns a real Lua table for:
 - `ObjectProperty`, `InterfaceProperty`, `ClassProperty` (UObject* / UClass*)
 - `StructProperty` (StructObject elements, sized via UScriptStruct or
   UStruct properties_size fallback)
+- `WeakObjectProperty`, `LazyObjectProperty` — resolved via
+  `FUObjectArray::get_item(index)` with serial-number validation.
+  Stale entries surface as `nil` instead of crashing on deref.
+- `SoftObjectProperty`, `SoftClassProperty` — resolved if currently
+  loaded, otherwise emitted as a path wstring (`/Game/Foo.Foo_C` or
+  `/Game/Foo.Foo_C:SubPath`) so scripts can pass it to
+  `find_uobject` / `StaticLoadObject` to materialize.
 
 Old code cast all of these as `TArray<T*>` and walked
 `sizeof(void*)` per element, which produced half-length garbage for
-primitive arrays.
+primitive arrays. The Weak/Lazy/Soft families used to just return nil
+silently for both scalar and array reads — exposing the dumper-7 SDK
+revealed these were entire missing slices of the FProperty taxonomy.
+
+### Additional scalar property types now read/written
+- `WeakObjectProperty` / `LazyObjectProperty` — read returns the live
+  UObject (or nil if the weak ref is stale); write accepts a UObject*
+  and snapshots `{ ObjectIndex, ObjectSerialNumber }` into the slot
+  from the FUObjectArray.
+- `SoftObjectProperty` / `SoftClassProperty` — read returns the live
+  UObject when loaded, else a path wstring. Write accepts either a
+  UObject* (caches the weak ptr) or a path string (writes the FName,
+  clears the weak prefix).
+- `DelegateProperty`, `MulticastDelegateProperty`,
+  `MulticastInlineDelegateProperty`, `MulticastSparseDelegateProperty`
+  — read returns the sentinel string `"<delegate>"` (was nil → silent
+  data loss). Full binding-target introspection is a future task.
+- `MapProperty` / `SetProperty` — explicitly return nil (was nil
+  before too, but now intentional). Full TMap/TSet reads need
+  `FScriptMapHelper` / `FScriptSetHelper` bindings.
 
 ### GLM bindings (Vector / Quat / Matrix / Transform) — full rewrite
 - Vector2/3/4 in both float and double precision

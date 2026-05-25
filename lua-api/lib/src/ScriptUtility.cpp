@@ -418,6 +418,93 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
         }
 
         return sol::make_object(s, *(uevr::API::UClass**)((uintptr_t)self + offset));
+
+    // Added on the luavrlib branch — the dumper-7 SDK confirms these are
+    // first-class FProperty types alongside ObjectProperty / ClassProperty
+    // that we previously fell through on (returning nil for any of these
+    // produced silent data loss in scripts that read e.g. AActor::Owner
+    // through a weak pointer, or any soft asset reference).
+    case L"WeakObjectProperty"_fnv: {
+        // FWeakObjectPtr layout (every UE4/5 version): two adjacent int32s,
+        //   ObjectIndex (-1 / 0 = invalid), ObjectSerialNumber.
+        // Validate via FUObjectArray::get_item — a stale weak pointer is
+        // indistinguishable from a valid one without the serial check.
+        auto raw = (int32_t*)((uintptr_t)self + offset);
+        const auto obj_index = raw[0];
+        const auto serial = raw[1];
+        if (obj_index <= 0) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        auto item = uevr::API::FUObjectArray::get()->get_item(obj_index);
+        if (item == nullptr || item->serial_number != serial || item->object == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        return sol::make_object(s, item->object);
+    }
+    case L"LazyObjectProperty"_fnv: {
+        // FLazyObjectPtr is FWeakObjectPtr followed by an FUniqueObjectGuid
+        // (FGuid, 16B). For runtime resolution the weak-ptr prefix is what
+        // matters; we ignore the GUID (only used by editor persistence).
+        auto raw = (int32_t*)((uintptr_t)self + offset);
+        const auto obj_index = raw[0];
+        const auto serial = raw[1];
+        if (obj_index <= 0) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        auto item = uevr::API::FUObjectArray::get()->get_item(obj_index);
+        if (item == nullptr || item->serial_number != serial || item->object == nullptr) {
+            return sol::make_object(s, sol::lua_nil);
+        }
+        return sol::make_object(s, item->object);
+    }
+    case L"SoftObjectProperty"_fnv:
+    case L"SoftClassProperty"_fnv: {
+        // FSoftObjectPtr: { FWeakObjectPtr WeakPtr; FSoftObjectPath Path; }
+        // FSoftObjectPath: { FName AssetPathName (8B); FString SubPathString (16B = TArray<wchar_t>); }
+        // Fast path: if the asset is currently loaded the weak pointer is
+        // valid, return the live UObject directly. Otherwise fall back to
+        // returning the path as a wstring so scripts can pass it to
+        // StaticLoadObject / find_uobject when they want to materialize it.
+        auto raw = (int32_t*)((uintptr_t)self + offset);
+        const auto obj_index = raw[0];
+        const auto serial = raw[1];
+        if (obj_index > 0) {
+            auto item = uevr::API::FUObjectArray::get()->get_item(obj_index);
+            if (item != nullptr && item->serial_number == serial && item->object != nullptr) {
+                return sol::make_object(s, item->object);
+            }
+        }
+        using FString = uevr::API::TArray<wchar_t>;
+        auto* asset_name = (uevr::API::FName*)((uintptr_t)self + offset + 8);
+        auto* sub_path   = (FString*)((uintptr_t)self + offset + 8 + sizeof(uevr::API::FName));
+        std::wstring path = asset_name->to_string();
+        if (sub_path->data != nullptr && sub_path->count > 0) {
+            path += L":";
+            const auto len = (size_t)sub_path->count - (sub_path->data[sub_path->count - 1] == L'\0' ? 1 : 0);
+            path.append(sub_path->data, len);
+        }
+        return sol::make_object(s, path);
+    }
+    case L"DelegateProperty"_fnv:
+    case L"MulticastDelegateProperty"_fnv:
+    case L"MulticastInlineDelegateProperty"_fnv:
+    case L"MulticastSparseDelegateProperty"_fnv:
+        // Delegate layouts vary between UE versions (FScriptDelegate vs
+        // FMulticastScriptDelegate vs FSparseDelegate). For now return a
+        // sentinel string so scripts can detect the property exists rather
+        // than misinterpreting the binding as missing. Resolving binding
+        // targets requires per-version layout work; revisit when needed.
+        return sol::make_object(s, std::string{"<delegate>"});
+    case L"MapProperty"_fnv:
+    case L"SetProperty"_fnv:
+        // FScriptMap / FScriptSet need their respective helpers
+        // (FScriptMapHelper / FScriptSetHelper) to iterate safely — the
+        // internal sparse-array layout is engine-version-dependent. Return
+        // nil for now (was previously falling through to "unsupported").
+        // TODO: bind FScriptMapHelper / FScriptSetHelper when a script
+        // actually needs to read TMap<K,V> / TSet<T>.
+        return sol::make_object(s, sol::lua_nil);
+
     case L"Function"_fnv:
         return sol::make_object(s, (uevr::API::UFunction*)desc); // Not actually a property inside the object
     case L"StructProperty"_fnv: {
@@ -706,7 +793,67 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
             }
             return sol::make_object(s, lua_arr);
         }
-            // TODO: Add support for other types
+        case L"WeakObjectProperty"_fnv:
+        case L"LazyObjectProperty"_fnv: {
+            // Both layouts share the FWeakObjectPtr prefix (8B). For Lazy
+            // the trailing 16B FGuid is ignored — same resolution path.
+            const auto stride = (name_hash == L"WeakObjectProperty"_fnv) ? (int32_t)8 : (int32_t)24;
+            struct WeakPrefix { int32_t object_index; int32_t serial_number; };
+            const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+            if (arr.data == nullptr || arr.count == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+            auto lua_arr = sol::state_view{s}.create_table();
+            for (int32_t i = 0; i < arr.count; ++i) {
+                auto* w = (WeakPrefix*)((uintptr_t)arr.data + (uintptr_t)i * stride);
+                if (w->object_index <= 0) {
+                    lua_arr[i + 1] = sol::lua_nil;
+                    continue;
+                }
+                auto item = uevr::API::FUObjectArray::get()->get_item(w->object_index);
+                if (item == nullptr || item->serial_number != w->serial_number || item->object == nullptr) {
+                    lua_arr[i + 1] = sol::lua_nil;
+                    continue;
+                }
+                lua_arr[i + 1] = sol::make_object(s, item->object);
+            }
+            return sol::make_object(s, lua_arr);
+        }
+        case L"SoftObjectProperty"_fnv:
+        case L"SoftClassProperty"_fnv: {
+            // FSoftObjectPtr stride = 8 (weak prefix) + 8 (FName) + 16 (FString) = 32B.
+            constexpr int32_t kStride = 8 + 8 + 16;
+            using FString = uevr::API::TArray<wchar_t>;
+            const auto& arr = *(uevr::API::TArray<uint8_t>*)((uintptr_t)self + offset);
+            if (arr.data == nullptr || arr.count == 0) {
+                return sol::make_object(s, sol::lua_nil);
+            }
+            auto lua_arr = sol::state_view{s}.create_table();
+            for (int32_t i = 0; i < arr.count; ++i) {
+                auto base = (uintptr_t)arr.data + (uintptr_t)i * kStride;
+                const auto obj_index = *(int32_t*)base;
+                const auto serial = *(int32_t*)(base + 4);
+                if (obj_index > 0) {
+                    auto item = uevr::API::FUObjectArray::get()->get_item(obj_index);
+                    if (item != nullptr && item->serial_number == serial && item->object != nullptr) {
+                        lua_arr[i + 1] = sol::make_object(s, item->object);
+                        continue;
+                    }
+                }
+                // Stale weak ref → emit the path string instead.
+                auto* asset_name = (uevr::API::FName*)(base + 8);
+                auto* sub_path   = (FString*)(base + 8 + sizeof(uevr::API::FName));
+                std::wstring path = asset_name->to_string();
+                if (sub_path->data != nullptr && sub_path->count > 0) {
+                    path += L":";
+                    const auto len = (size_t)sub_path->count - (sub_path->data[sub_path->count - 1] == L'\0' ? 1 : 0);
+                    path.append(sub_path->data, len);
+                }
+                lua_arr[i + 1] = sol::make_object(s, path);
+            }
+            return sol::make_object(s, lua_arr);
+        }
+            // TODO: TArray<TMap>, TArray<TSet>, delegate arrays
         };
 
         return sol::make_object(s, sol::lua_nil);
@@ -876,6 +1023,85 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
     case L"ClassProperty"_fnv:
         *(uevr::API::UClass**)((uintptr_t)self + offset) = value.as<uevr::API::UClass*>();
         return;
+
+    // luavrlib-branch additions: scalar setters for the FProperty types
+    // whose read paths were added above. These never used to write, so a
+    // script doing `actor.WeakOwner = some_uobject` was a silent no-op.
+    case L"WeakObjectProperty"_fnv:
+    case L"LazyObjectProperty"_fnv: {
+        // Pack the target UObject* into the FWeakObjectPtr prefix
+        // { int32 ObjectIndex; int32 ObjectSerialNumber; }. We pull the
+        // serial number from the live FUObjectArray entry — without it,
+        // the engine treats any subsequent dereference as stale.
+        // (Lazy: the trailing FUniqueObjectGuid is left untouched — it is
+        // only used by editor persistence and is meaningless at runtime.)
+        auto raw = (int32_t*)((uintptr_t)self + offset);
+        auto target = value.is<uevr::API::UObject*>() ? value.as<uevr::API::UObject*>() : nullptr;
+        if (target == nullptr) {
+            raw[0] = 0;
+            raw[1] = 0;
+            return;
+        }
+        // UObject internal index lives at offset 0xC in the engine's
+        // UObjectBase layout (see Dumper-7 SDK). Read it raw.
+        const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
+        raw[0] = obj_index;
+        if (auto item = uevr::API::FUObjectArray::get()->get_item(obj_index); item != nullptr) {
+            raw[1] = item->serial_number;
+        } else {
+            raw[1] = 0;
+        }
+        return;
+    }
+    case L"SoftObjectProperty"_fnv:
+    case L"SoftClassProperty"_fnv: {
+        // Accept either a UObject* (we'll cache the weak ptr and store the
+        // object's full name as the asset path) or a wstring/string path
+        // ("/Game/Foo.Foo_C"). String form is the common case for setting
+        // a soft reference without forcing a load.
+        using FString = uevr::API::TArray<wchar_t>;
+        auto raw = (int32_t*)((uintptr_t)self + offset);
+        auto* asset_name = (uevr::API::FName*)((uintptr_t)self + offset + 8);
+        auto* sub_path   = (FString*)((uintptr_t)self + offset + 8 + sizeof(uevr::API::FName));
+
+        if (value.is<uevr::API::UObject*>()) {
+            auto target = value.as<uevr::API::UObject*>();
+            if (target == nullptr) {
+                raw[0] = 0; raw[1] = 0;
+                return;
+            }
+            const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
+            raw[0] = obj_index;
+            if (auto item = uevr::API::FUObjectArray::get()->get_item(obj_index); item != nullptr) {
+                raw[1] = item->serial_number;
+            } else {
+                raw[1] = 0;
+            }
+            // We could also write the asset path here from
+            // target->get_full_name(), but allocating an FString in-place is
+            // engine-version-sensitive; leave the path alone since the live
+            // weak ref is sufficient while the object is loaded.
+            return;
+        }
+        // String form: clear the weak prefix and write a fresh FName for
+        // the path. SubPath is left alone (you can set it independently by
+        // formatting the input as "Asset:SubPath" and letting downstream
+        // code parse it — out of scope for this writer).
+        raw[0] = 0; raw[1] = 0;
+        std::wstring path;
+        if (value.is<std::wstring>()) {
+            path = value.as<std::wstring>();
+        } else if (value.is<std::string>()) {
+            path = ::utility::widen(value.as<std::string>());
+        } else {
+            throw sol::error("SoftObjectProperty setter expects a UObject* or a path string");
+        }
+        // uevr::API::FName(wstring_view, EFindName=Add) — see include/uevr/API.hpp.
+        *asset_name = uevr::API::FName{std::wstring_view{path}, uevr::API::FName::EFindName::Add};
+        (void)sub_path; // intentionally untouched
+        return;
+    }
+
     case L"ArrayProperty"_fnv: {
         if (!value.is<sol::lua_table>()) {
             throw sol::error("Setting TArray from non-table is not implemented");
