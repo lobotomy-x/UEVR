@@ -2844,6 +2844,7 @@ void UObjectHook::draw_main() {
     // give it a small fixed size (kSlotCount) instead of an unbounded vector,
     // so the widget is bounded and the user does not have to manually add /
     // remove rows.
+    ImGui::SetNextItemOpen(true, ImGuiCond_Once); // open on first show for discoverability
     if (ImGui::TreeNode("Live Function Caller")) {
         constexpr int kSlotCount = 4;
         struct LiveSlot {
@@ -2891,18 +2892,28 @@ void UObjectHook::draw_main() {
                 }
             }
 
-            // Function name + Resolve.
+            // Function name + Resolve. EnterReturnsTrue means pressing Enter
+            // in the InputText also triggers resolution, so the user does not
+            // have to click the Resolve button each time.
             std::array<char, 256> name_buf{};
             const auto copy_n = std::min(slot.fn_name.size(), name_buf.size() - 1);
             std::memcpy(name_buf.data(), slot.fn_name.data(), copy_n);
-            if (ImGui::InputText("function name", name_buf.data(), name_buf.size())) {
+            bool want_resolve = false;
+            if (ImGui::InputText("function name", name_buf.data(), name_buf.size(),
+                                 ImGuiInputTextFlags_EnterReturnsTrue)) {
+                slot.fn_name.assign(name_buf.data());
+                want_resolve = true;
+            } else if (std::strcmp(name_buf.data(), slot.fn_name.c_str()) != 0) {
+                // InputText returned false but contents changed mid-edit;
+                // update the cached name without triggering a resolve.
                 slot.fn_name.assign(name_buf.data());
                 slot.resolved = nullptr;
                 slot.resolved_label.clear();
                 slot.resolve_error.clear();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Resolve")) {
+            if (ImGui::Button("Resolve")) want_resolve = true;
+            if (want_resolve) {
                 slot.resolved = nullptr;
                 slot.resolved_label.clear();
                 slot.resolve_error.clear();
