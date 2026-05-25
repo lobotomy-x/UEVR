@@ -2757,6 +2757,123 @@ void UObjectHook::draw_developer() {
 }
 
 void UObjectHook::draw_main() {
+    // Live Function Caller — pinned workbench-style widget that sits ABOVE the
+    // deep object tree so the user does not have to drill through
+    // Objects-by-class → SomeUClass → SomeObject → Functions → fn each time
+    // they want to invoke a function. Each slot accepts a drag-and-dropped
+    // UObject from anywhere in the tree, lets the user type a function name,
+    // resolves the UFunction on demand, and then reuses the same per-property
+    // editor + Call button as the in-tree caller (via render_function_call).
+    //
+    // State for each slot lives in a function-local static. We deliberately
+    // give it a small fixed size (kSlotCount) instead of an unbounded vector,
+    // so the widget is bounded and the user does not have to manually add /
+    // remove rows.
+    if (ImGui::TreeNode("Live Function Caller")) {
+        constexpr int kSlotCount = 4;
+        struct LiveSlot {
+            sdk::UObject* target{};
+            std::string fn_name;
+            sdk::UFunction* resolved{};
+            std::string resolved_label;       // pretty-printed for display
+            std::string resolve_error;
+        };
+        static std::array<LiveSlot, kSlotCount> s_slots{};
+
+        ImGui::TextDisabled("Drop a UObject into the target slot, type a function name, hit Resolve.");
+        ImGui::TextDisabled("Slot state is preserved across frames; multiple slots can be live at once.");
+        ImGui::Separator();
+
+        for (int i = 0; i < kSlotCount; ++i) {
+            ImGui::PushID(i);
+            utility::ScopeGuard pop_id{[]() { ImGui::PopID(); }};
+
+            ImGui::Text("Slot %d", i + 1);
+            ImGui::Indent();
+
+            // Target drop slot.
+            auto& slot = s_slots[i];
+            const std::string target_label = slot.target == nullptr
+                ? std::string{"[drop UObject here]"}
+                : (std::string{"["} + std::to_string((uintptr_t)slot.target) + "] "
+                   + utility::narrow(slot.target->get_full_name()));
+            ImGui::Button(target_label.c_str(), ImVec2{0, 0});
+            if (auto dropped = accept_object_drop(); dropped != nullptr) {
+                if (slot.target != dropped) {
+                    // Re-resolution required when the target class changes.
+                    slot.resolved = nullptr;
+                    slot.resolved_label.clear();
+                    slot.resolve_error.clear();
+                }
+                slot.target = dropped;
+            }
+            if (slot.target != nullptr) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("clear target")) {
+                    slot.target = nullptr;
+                    slot.resolved = nullptr;
+                    slot.resolved_label.clear();
+                }
+            }
+
+            // Function name + Resolve.
+            std::array<char, 256> name_buf{};
+            const auto copy_n = std::min(slot.fn_name.size(), name_buf.size() - 1);
+            std::memcpy(name_buf.data(), slot.fn_name.data(), copy_n);
+            if (ImGui::InputText("function name", name_buf.data(), name_buf.size())) {
+                slot.fn_name.assign(name_buf.data());
+                slot.resolved = nullptr;
+                slot.resolved_label.clear();
+                slot.resolve_error.clear();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Resolve")) {
+                slot.resolved = nullptr;
+                slot.resolved_label.clear();
+                slot.resolve_error.clear();
+                if (slot.target == nullptr) {
+                    slot.resolve_error = "no target";
+                } else if (slot.fn_name.empty()) {
+                    slot.resolve_error = "empty name";
+                } else {
+                    const auto wname = utility::widen(slot.fn_name);
+                    sdk::UFunction* fn = nullptr;
+                    auto* cls = slot.target->get_class();
+                    if (cls != nullptr) {
+                        fn = cls->find_function(wname.c_str());
+                    }
+                    if (fn == nullptr) {
+                        slot.resolve_error = "no function with that name on the target's class";
+                    } else {
+                        slot.resolved = fn;
+                        slot.resolved_label = utility::narrow(fn->get_full_name());
+                    }
+                }
+            }
+
+            if (!slot.resolve_error.empty()) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "%s", slot.resolve_error.c_str());
+            }
+            if (slot.resolved != nullptr) {
+                ImGui::TextColored(ImVec4{0.4f, 1.0f, 0.4f, 1.0f}, "→ %s", slot.resolved_label.c_str());
+                ImGui::Separator();
+                // Reuse the same editor + Call button used in the in-tree caller.
+                try {
+                    render_function_call(slot.target, slot.resolved);
+                } catch (const std::exception& e) {
+                    ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw: %s", e.what());
+                } catch (...) {
+                    ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "render_function_call threw (unknown)");
+                }
+            }
+
+            ImGui::Unindent();
+            ImGui::Separator();
+        }
+
+        ImGui::TreePop();
+    }
+
     if (!m_motion_controller_attached_components.empty()) {
 
         if (ImGui::TreeNode("Attached Components")) {
