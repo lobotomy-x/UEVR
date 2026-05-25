@@ -41,7 +41,7 @@ ScriptState::ScriptState(const ScriptState::GarbageCollectionData& gc_data, UEVR
     os["setlocale"] = sol::nil;
     os["getenv"] = sol::nil;*/
 
-    auto debug = m_lua["debug"];
+//    auto debug = m_lua["debug"];
     // TODO: Make this actually support multiple states
     // This stores a global reference to itself, meaning it doesn't support multiple states
     // We pass along the shared_ptr (impl) so the context can keep it alive if for some reason the state is destroyed before the context

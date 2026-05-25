@@ -2547,37 +2547,49 @@ void UObjectHook::draw_main() {
             //}
         }};
 
-        for (auto uclass : m_sorted_classes) {
-            const auto& objects_ref = m_objects_by_class[uclass];
+        // Defensive helper: look up an object's meta entry without mutating the
+        // map (avoids the silent default-insert that operator[] does on
+        // unordered_map<*, unique_ptr<...>>). Under shared_lock the writer
+        // can race with us, so we also guard against a stale/null entry.
+        auto get_meta = [this](sdk::UObjectBase* obj) -> const MetaObject* {
+            if (obj == nullptr) return nullptr;
+            auto it = m_meta_objects.find(obj);
+            if (it == m_meta_objects.end() || it->second == nullptr) {
+                return nullptr;
+            }
+            return it->second.get();
+        };
 
-            if (objects_ref.empty()) {
+        for (auto uclass : m_sorted_classes) {
+            auto objects_ref_it = m_objects_by_class.find(uclass);
+            if (objects_ref_it == m_objects_by_class.end() || objects_ref_it->second.empty()) {
                 continue;
             }
+            const auto& objects_ref = objects_ref_it->second;
 
-            if (!m_meta_objects.contains(uclass)) {
+            const auto* uclass_meta = get_meta(uclass);
+            if (uclass_meta == nullptr) {
                 continue;
             }
 
             if (objects_ref.size() == 1 && m_hide_default_classes) {
                 auto first = *objects_ref.begin();
-
-                if (m_meta_objects.contains(first)) {
-                    auto fc = first != nullptr ? m_meta_objects[first]->uclass : nullptr;
-
-                    if (fc != nullptr && m_meta_objects.contains(fc) && fc->get_class_default_object() == first) {
+                if (const auto* first_meta = get_meta(first); first_meta != nullptr) {
+                    auto fc = first_meta->uclass;
+                    if (fc != nullptr && get_meta(fc) != nullptr && fc->get_class_default_object() == first) {
                         continue;
                     }
                 }
             }
 
-            const auto uclass_name = utility::narrow(m_meta_objects[uclass]->full_name);
+            const auto uclass_name = utility::narrow(uclass_meta->full_name);
             bool valid = true;
 
             if (!filter_empty) {
                 valid = false;
 
                 for (auto super = (sdk::UStruct*)uclass; super; super = super->get_super_struct()) {
-                    if (auto it = m_meta_objects.find(super); it != m_meta_objects.end()) {
+                    if (auto it = m_meta_objects.find(super); it != m_meta_objects.end() && it->second != nullptr) {
                         if (it->second->full_name.find(wide_filter) != std::wstring::npos) {
                             valid = true;
                             break;
@@ -2590,102 +2602,142 @@ void UObjectHook::draw_main() {
                 continue;
             }
 
-            if (ImGui::TreeNode(uclass_name.data())) {
-                ui_standard_object_context_menu(uclass);
-
-                std::vector<sdk::UObjectBase*> objects{};
-
-                for (auto object : objects_ref) {
-                    if (m_hide_default_classes) {
-                        if (auto c = m_meta_objects[object]->uclass; c != nullptr && m_meta_objects.contains(c) && c->get_class_default_object() != object) {
-                            objects.push_back(object);
-                        }
-                    } else {
-                        objects.push_back(object);   
-                    }
+            // Outer per-uclass TreeNode. We pair it with a ScopeGuard so the
+            // TreePop happens even if something inside throws — otherwise
+            // ImGui's end-of-frame recovery fires "Missing TreePop()" and
+            // poisons the rest of the window's state for the next frame.
+            const bool class_node_open = ImGui::TreeNode(uclass_name.data());
+            utility::ScopeGuard class_node_guard{[class_node_open]() {
+                if (class_node_open) {
+                    ImGui::TreePop();
                 }
+            }};
 
-                std::sort(objects.begin(), objects.end(), [this](sdk::UObjectBase* a, sdk::UObjectBase* b) {
-                    return m_meta_objects[a]->full_name < m_meta_objects[b]->full_name;
-                });
+            if (!class_node_open) {
+                ui_standard_object_context_menu(uclass);
+                continue;
+            }
 
-                if (uclass->is_a(sdk::AActor::static_class())) {
-                    static char component_add_name[256]{};
+            ui_standard_object_context_menu(uclass);
 
-                    if (ImGui::InputText("Add Component Permanently", component_add_name, sizeof(component_add_name), ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue)) {
-                        const auto component_c = sdk::find_uobject<sdk::UClass>(utility::widen(component_add_name));
+            std::vector<sdk::UObjectBase*> objects{};
+            objects.reserve(objects_ref.size());
 
-                        if (component_c != nullptr) {
-                            m_on_creation_add_component_jobs[uclass] = [this, component_c](sdk::UObject* object) {
-                                if (!this->exists(object)) {
-                                    return;
-                                }
+            for (auto object : objects_ref) {
+                if (m_hide_default_classes) {
+                    const auto* obj_meta = get_meta(object);
+                    if (obj_meta == nullptr) continue;
+                    auto c = obj_meta->uclass;
+                    if (c != nullptr && get_meta(c) != nullptr && c->get_class_default_object() != object) {
+                        objects.push_back(object);
+                    }
+                } else {
+                    objects.push_back(object);
+                }
+            }
 
-                                if (object == object->get_class()->get_class_default_object()) {
-                                    return;
-                                }
+            std::sort(objects.begin(), objects.end(), [&get_meta](sdk::UObjectBase* a, sdk::UObjectBase* b) {
+                const auto* ma = get_meta(a);
+                const auto* mb = get_meta(b);
+                if (ma == nullptr || mb == nullptr) {
+                    return ma < mb; // stable-ish ordering for nulls
+                }
+                return ma->full_name < mb->full_name;
+            });
 
-                                auto actor = (sdk::AActor*)object;
-                                auto component = (sdk::UObject*)actor->add_component_by_class(component_c);
+            if (uclass->is_a(sdk::AActor::static_class())) {
+                static char component_add_name[256]{};
 
-                                if (component != nullptr) {
-                                    if (component->get_class()->is_a(sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.SphereComponent"))) {
-                                        struct SphereRadiusParams {
-                                            float radius{};
-                                        };
+                if (ImGui::InputText("Add Component Permanently", component_add_name, sizeof(component_add_name), ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue)) {
+                    const auto component_c = sdk::find_uobject<sdk::UClass>(utility::widen(component_add_name));
 
-                                        auto params = SphereRadiusParams{};
-                                        params.radius = 100.f;
+                    if (component_c != nullptr) {
+                        m_on_creation_add_component_jobs[uclass] = [this, component_c](sdk::UObject* object) {
+                            if (!this->exists(object)) {
+                                return;
+                            }
 
-                                        const auto fn = component->get_class()->find_function(L"SetSphereRadius");
+                            if (object == object->get_class()->get_class_default_object()) {
+                                return;
+                            }
 
-                                        if (fn != nullptr) {
-                                            component->process_event(fn, &params);
-                                        }
-                                    }
+                            auto actor = (sdk::AActor*)object;
+                            auto component = (sdk::UObject*)actor->add_component_by_class(component_c);
 
-                                    struct {
-                                        bool hidden{false};
-                                        bool propagate{true};
-                                    } set_hidden_params{};
+                            if (component != nullptr) {
+                                if (component->get_class()->is_a(sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.SphereComponent"))) {
+                                    struct SphereRadiusParams {
+                                        float radius{};
+                                    };
 
-                                    const auto fn = component->get_class()->find_function(L"SetHiddenInGame");
+                                    auto params = SphereRadiusParams{};
+                                    params.radius = 100.f;
+
+                                    const auto fn = component->get_class()->find_function(L"SetSphereRadius");
 
                                     if (fn != nullptr) {
-                                        component->process_event(fn, &set_hidden_params);
+                                        component->process_event(fn, &params);
                                     }
-
-                                    actor->finish_add_component(component);
-
-                                    // Set component_add_name to empty
-                                    component_add_name[0] = '\0';
-                                } else {
-                                    component_add_name[0] = 'e';
-                                    component_add_name[1] = 'r';
-                                    component_add_name[2] = 'r';
-                                    component_add_name[3] = '\0';
                                 }
-                            };
-                        } else {
-                            strcpy_s(component_add_name, "Nonexistent component");
-                        }
-                    }
-                }
 
-                for (const auto& object : objects) {
+                                struct {
+                                    bool hidden{false};
+                                    bool propagate{true};
+                                } set_hidden_params{};
 
-                    if (ImGui::TreeNode(utility::narrow(m_meta_objects[object]->full_name).data())) {
-                        ui_handle_object((sdk::UObject*)object);
-                        
-                        ImGui::TreePop();
+                                const auto fn = component->get_class()->find_function(L"SetHiddenInGame");
+
+                                if (fn != nullptr) {
+                                    component->process_event(fn, &set_hidden_params);
+                                }
+
+                                actor->finish_add_component(component);
+
+                                // Set component_add_name to empty
+                                component_add_name[0] = '\0';
+                            } else {
+                                component_add_name[0] = 'e';
+                                component_add_name[1] = 'r';
+                                component_add_name[2] = 'r';
+                                component_add_name[3] = '\0';
+                            }
+                        };
                     } else {
-                        ui_standard_object_context_menu(object);
+                        strcpy_s(component_add_name, "Nonexistent component");
                     }
                 }
+            }
 
-                ImGui::TreePop();
-            } else {
-                ui_standard_object_context_menu(uclass);
+            for (const auto& object : objects) {
+                const auto* obj_meta = get_meta(object);
+                if (obj_meta == nullptr) {
+                    // Object lost its meta entry between iteration and render
+                    // (concurrent removal). Skip rather than crashing on a
+                    // null deref inside the TreeNode label, which would leave
+                    // the parent TreeNode unbalanced.
+                    continue;
+                }
+
+                const auto obj_name = utility::narrow(obj_meta->full_name);
+                const bool obj_node_open = ImGui::TreeNode(obj_name.data());
+                utility::ScopeGuard obj_node_guard{[obj_node_open]() {
+                    if (obj_node_open) {
+                        ImGui::TreePop();
+                    }
+                }};
+
+                if (!obj_node_open) {
+                    ui_standard_object_context_menu(object);
+                    continue;
+                }
+
+                try {
+                    ui_handle_object((sdk::UObject*)object);
+                } catch (const std::exception& e) {
+                    ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_object threw: %s", e.what());
+                } catch (...) {
+                    ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_object threw an unknown exception");
+                }
             }
         }
 
@@ -4318,19 +4370,38 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             }
         }
 
-        for (size_t i = 0; i < array_obj.count; ++i) try {
+        for (size_t i = 0; i < array_obj.count; ++i) {
             auto element = (void*)((uintptr_t)array_obj.data + (i * element_size));
 
-            if (element != nullptr) {
-                if (ImGui::TreeNode((void*)element, "Element %d", i)) {
-                    // TODO: Figure out if this can be used with persistent states?
-                    //auto scope = m_path.enter("Element " + std::to_string(i));
-                    ui_handle_struct(element, strukt);
+            if (element == nullptr) {
+                continue;
+            }
+
+            const bool element_node_open = ImGui::TreeNode((void*)element, "Element %d", i);
+            // RAII guard so TreePop always runs even if ui_handle_struct
+            // throws — without this the previous `try { TreeNode ... TreePop }
+            // catch(...) { Text(...); }` swallowed the exception but left the
+            // TreeNode open, which is exactly the missing-TreePop pattern that
+            // ImGui's end-of-frame recovery complains about.
+            utility::ScopeGuard element_guard{[element_node_open]() {
+                if (element_node_open) {
                     ImGui::TreePop();
                 }
+            }};
+
+            if (!element_node_open) {
+                continue;
             }
-        } catch(...) {
-            ImGui::Text("Failed to display element %d", i);
+
+            try {
+                // TODO: Figure out if this can be used with persistent states?
+                //auto scope = m_path.enter("Element " + std::to_string(i));
+                ui_handle_struct(element, strukt);
+            } catch(const std::exception& e) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "Failed to display element %zu: %s", i, e.what());
+            } catch(...) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "Failed to display element %zu (unknown exception)", i);
+            }
         }
 
         break;
@@ -4352,26 +4423,70 @@ void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {
     }
 
     // Display inheritance tree
-    if (ImGui::TreeNode("Inheritance")) {
-        for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
-            if (ImGui::TreeNode(utility::narrow(super->get_full_name()).data())) {
-                ui_handle_struct(addr, super);
+    {
+        const bool inh_open = ImGui::TreeNode("Inheritance");
+        utility::ScopeGuard inh_guard{[inh_open]() {
+            if (inh_open) {
                 ImGui::TreePop();
             }
+        }};
+        if (inh_open) {
+            for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
+                const auto super_name = utility::narrow(super->get_full_name());
+                const bool super_open = ImGui::TreeNode(super_name.data());
+                utility::ScopeGuard super_guard{[super_open]() {
+                    if (super_open) {
+                        ImGui::TreePop();
+                    }
+                }};
+                if (super_open) {
+                    try {
+                        ui_handle_struct(addr, super);
+                    } catch (const std::exception& e) {
+                        ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_struct threw: %s", e.what());
+                    } catch (...) {
+                        ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_struct threw (unknown)");
+                    }
+                }
+            }
         }
-
-        ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Functions")) {
-        ui_handle_functions(addr, uclass);
-        ImGui::TreePop();
+    {
+        const bool fn_open = ImGui::TreeNode("Functions");
+        utility::ScopeGuard fn_guard{[fn_open]() {
+            if (fn_open) {
+                ImGui::TreePop();
+            }
+        }};
+        if (fn_open) {
+            try {
+                ui_handle_functions(addr, uclass);
+            } catch (const std::exception& e) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_functions threw: %s", e.what());
+            } catch (...) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_functions threw (unknown)");
+            }
+        }
     }
 
     ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
-    if (ImGui::TreeNode("Properties")) {
-        ui_handle_properties(addr, uclass);
-        ImGui::TreePop();
+    {
+        const bool props_open = ImGui::TreeNode("Properties");
+        utility::ScopeGuard props_guard{[props_open]() {
+            if (props_open) {
+                ImGui::TreePop();
+            }
+        }};
+        if (props_open) {
+            try {
+                ui_handle_properties(addr, uclass);
+            } catch (const std::exception& e) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_properties threw: %s", e.what());
+            } catch (...) {
+                ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "ui_handle_properties threw (unknown)");
+            }
+        }
     }
 }
 
