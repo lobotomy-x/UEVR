@@ -135,13 +135,18 @@ bool add_world_rotation(uevr::API::UObject* obj, const glm::vec3& rot, sol::opti
 // scale in a single underlying process_event call. UE's K2_SetWorldTransform
 // takes an FTransform parameter; with the SDK helper we hand it the raw
 // glm::vec3 + glm::vec4 + glm::vec3 and avoid four separate dispatches.
-bool set_local_transform(uevr::API::UObject* obj, const glm::vec3& loc, const glm::vec4& quat, const glm::vec3& scale,
+//
+// The rotation argument is typed as glm::quat (== Quaternionf in Lua) so
+// scripts can pass a Quaternionf directly. The SDK signature is
+// `const glm::vec4&`, so we copy out the xyzw components inline.
+bool set_local_transform(uevr::API::UObject* obj, const glm::vec3& loc, const glm::quat& quat, const glm::vec3& scale,
                          sol::optional<bool> sweep, sol::optional<bool> teleport) {
     auto comp = sdk_cast<sdk::USceneComponent>(obj);
     if (comp == nullptr) {
         return false;
     }
-    comp->set_local_transform(loc, quat, scale, sweep.value_or(false), teleport.value_or(false));
+    const glm::vec4 quat_vec{quat.x, quat.y, quat.z, quat.w};
+    comp->set_local_transform(loc, quat_vec, scale, sweep.value_or(false), teleport.value_or(false));
     return true;
 }
 
