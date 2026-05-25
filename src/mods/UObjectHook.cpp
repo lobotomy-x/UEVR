@@ -213,7 +213,13 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
         break;
     }
     case L"InterfaceProperty"_fnv:
-    case L"ObjectProperty"_fnv: {
+    case L"ObjectProperty"_fnv:
+    case L"WeakObjectProperty"_fnv:
+    case L"LazyObjectProperty"_fnv:
+    case L"SoftObjectProperty"_fnv: {
+        // Same drop-target widget for every UObject-flavoured property —
+        // the encode step below handles packing into the appropriate
+        // (raw pointer / FWeakObjectPtr / FSoftObjectPtr) layout.
         sdk::UObject*& slot = s.objs[prop_name_narrow];
         const auto label = slot == nullptr
             ? std::string{"[drop UObject here] "} + prop_name_narrow
@@ -230,7 +236,8 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
         }
         break;
     }
-    case L"ClassProperty"_fnv: {
+    case L"ClassProperty"_fnv:
+    case L"SoftClassProperty"_fnv: {
         sdk::UClass*& slot = s.classes[prop_name_narrow];
         const auto label = slot == nullptr
             ? std::string{"[drop UClass here] "} + prop_name_narrow
@@ -323,6 +330,64 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
     case L"InterfaceProperty"_fnv:
     case L"ObjectProperty"_fnv:      *(sdk::UObject**)out = s.objs[name];     return true;
     case L"ClassProperty"_fnv:       *(sdk::UClass**)out  = s.classes[name];  return true;
+    case L"WeakObjectProperty"_fnv:
+    case L"LazyObjectProperty"_fnv: {
+        // Pack { ObjectIndex, SerialNumber } from the chosen UObject's
+        // FUObjectArray entry. Lazy's trailing FUniqueObjectGuid is left
+        // zeroed — only used by editor persistence.
+        auto raw = (int32_t*)out;
+        auto target = s.objs[name];
+        if (target == nullptr) {
+            raw[0] = 0; raw[1] = 0;
+            return true;
+        }
+        const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC); // UObjectBase::InternalIndex
+        raw[0] = obj_index;
+        if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+            raw[1] = item->serial_number;
+        } else {
+            raw[1] = 0;
+        }
+        return true;
+    }
+    case L"SoftObjectProperty"_fnv: {
+        // Best-effort: just cache the weak prefix from the chosen target.
+        // The FSoftObjectPath itself (FName + FString SubPath) is left
+        // untouched — for in-game live calls the live weak ref is what
+        // matters, persistence is editor-only.
+        auto raw = (int32_t*)out;
+        auto target = s.objs[name];
+        if (target == nullptr) {
+            raw[0] = 0; raw[1] = 0;
+            return true;
+        }
+        const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
+        raw[0] = obj_index;
+        if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+            raw[1] = item->serial_number;
+        } else {
+            raw[1] = 0;
+        }
+        return true;
+    }
+    case L"SoftClassProperty"_fnv: {
+        // Same as SoftObject but the slot holds a UClass* via s.classes —
+        // pack it through the FUObjectArray as a UObject*.
+        auto raw = (int32_t*)out;
+        auto target = s.classes[name];
+        if (target == nullptr) {
+            raw[0] = 0; raw[1] = 0;
+            return true;
+        }
+        const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
+        raw[0] = obj_index;
+        if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+            raw[1] = item->serial_number;
+        } else {
+            raw[1] = 0;
+        }
+        return true;
+    }
     case L"StructProperty"_fnv: {
         // Pack the float scratch into the underlying struct layout. We only
         // handle the well-known small POD structs here; everything else stays
@@ -432,6 +497,70 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
             return std::to_string((uintptr_t)c);
         }
     }
+    case L"WeakObjectProperty"_fnv:
+    case L"LazyObjectProperty"_fnv: {
+        // Read { ObjectIndex, SerialNumber } and resolve via FUObjectArray.
+        // Stale weak ref shows up as "<stale weak: idx=N>" so the user can
+        // tell the difference between a never-set ref and a freed one.
+        auto raw = (const int32_t*)in;
+        const auto obj_index = raw[0];
+        const auto serial = raw[1];
+        if (obj_index <= 0) return "nullptr";
+        auto item = sdk::FUObjectArray::get()->get_object(obj_index);
+        if (item == nullptr || item->object == nullptr) {
+            return std::format("<dead weak: idx={}>", obj_index);
+        }
+        if (item->serial_number != serial) {
+            return std::format("<stale weak: idx={}, expected_serial={}, got={}>", obj_index, serial, item->serial_number);
+        }
+        try {
+            return std::format("[{:#x}] {} (weak)", (uintptr_t)item->object, utility::narrow(((sdk::UObject*)item->object)->get_full_name()));
+        } catch (...) {
+            return std::format("[{:#x}] (weak)", (uintptr_t)item->object);
+        }
+    }
+    case L"SoftObjectProperty"_fnv:
+    case L"SoftClassProperty"_fnv: {
+        // Fast path: weak prefix is live → return the resolved name.
+        // Otherwise fall through to the FSoftObjectPath { FName Asset;
+        // FString SubPath } at offset +8 to render the path string.
+        auto raw = (const int32_t*)in;
+        const auto obj_index = raw[0];
+        const auto serial = raw[1];
+        if (obj_index > 0) {
+            auto item = sdk::FUObjectArray::get()->get_object(obj_index);
+            if (item != nullptr && item->object != nullptr && item->serial_number == serial) {
+                try {
+                    return std::format("[{:#x}] {} (soft, loaded)", (uintptr_t)item->object, utility::narrow(((sdk::UObject*)item->object)->get_full_name()));
+                } catch (...) {
+                    return std::format("[{:#x}] (soft)", (uintptr_t)item->object);
+                }
+            }
+        }
+        auto* asset_name = (sdk::FName*)(in + 8);
+        const auto& sub = *(sdk::TArrayLite<wchar_t>*)(in + 8 + sizeof(sdk::FName));
+        std::wstring path;
+        try {
+            path = asset_name->to_string();
+        } catch (...) {
+            return "<soft: unreadable FName>";
+        }
+        if (sub.data != nullptr && sub.count > 0) {
+            path += L":";
+            const auto len = (size_t)sub.count - (sub.data[sub.count - 1] == L'\0' ? 1 : 0);
+            path.append(sub.data, len);
+        }
+        return std::string{"<soft: "} + utility::narrow(path) + ">";
+    }
+    case L"DelegateProperty"_fnv:
+    case L"MulticastDelegateProperty"_fnv:
+    case L"MulticastInlineDelegateProperty"_fnv:
+    case L"MulticastSparseDelegateProperty"_fnv:
+        return "<delegate>";
+    case L"MapProperty"_fnv:
+        return "<TMap: read not implemented>";
+    case L"SetProperty"_fnv:
+        return "<TSet: read not implemented>";
     case L"StructProperty"_fnv: {
         // Best-effort: dump well-known small POD structs in human-readable
         // form. Falls back to "<struct unsupported>" for anything else.
@@ -4852,7 +4981,7 @@ const auto check_flags = [](uint64_t flags){
         case L"ClassProperty"_fnv:
             {
                 auto& value = *(sdk::UObject**)((uintptr_t)object + fprop->get_offset());
-           
+
                 if (ImGui::TreeNode(prop_name.data())) {
                     auto scope2 = m_path.enter(prop_name);
                     ui_handle_object(value);
@@ -4863,6 +4992,102 @@ const auto check_flags = [](uint64_t flags){
                     ImGui::TreePop();
                 }
             }
+            break;
+        case L"WeakObjectProperty"_fnv:
+        case L"LazyObjectProperty"_fnv:
+            {
+                // Resolve FWeakObjectPtr (UE4/5: { int32 ObjectIndex; int32 ObjectSerialNumber; })
+                // via FUObjectArray with serial validation. Stale → red text + index, so the
+                // user can tell "ref was never set" from "ref pointed at a freed object".
+                auto raw = (int32_t*)((uintptr_t)object + fprop->get_offset());
+                const auto obj_index = raw[0];
+                const auto serial = raw[1];
+                sdk::UObject* resolved = nullptr;
+                bool stale = false;
+                if (obj_index > 0) {
+                    if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+                        if (item->object != nullptr && item->serial_number == serial) {
+                            resolved = (sdk::UObject*)item->object;
+                        } else {
+                            stale = true;
+                        }
+                    }
+                }
+                if (resolved != nullptr) {
+                    if (ImGui::TreeNode(prop_name.data())) {
+                        auto scope2 = m_path.enter(prop_name);
+                        ui_handle_object(resolved);
+                        ImGui::TreePop();
+                    }
+                } else if (stale) {
+                    ImGui::Text("%s: ", prop_name.data());
+                    ImGui::SameLine(0.0f, 0.0f);
+                    ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.5f, 1.0f}, "<stale weak: idx=%d>", obj_index);
+                } else {
+                    ImGui::Text("%s: ", prop_name.data());
+                    ImGui::SameLine(0.0f, 0.0f);
+                    ImGui::TextDisabled("nullptr (weak)");
+                }
+            }
+            break;
+        case L"SoftObjectProperty"_fnv:
+        case L"SoftClassProperty"_fnv:
+            {
+                // FSoftObjectPtr = { FWeakObjectPtr (8B); FSoftObjectPath { FName (8B); FString (16B) } }
+                auto base = (uintptr_t)object + fprop->get_offset();
+                auto raw = (int32_t*)base;
+                const auto obj_index = raw[0];
+                const auto serial = raw[1];
+                sdk::UObject* resolved = nullptr;
+                if (obj_index > 0) {
+                    if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+                        if (item->object != nullptr && item->serial_number == serial) {
+                            resolved = (sdk::UObject*)item->object;
+                        }
+                    }
+                }
+                if (resolved != nullptr) {
+                    if (ImGui::TreeNode(prop_name.data())) {
+                        auto scope2 = m_path.enter(prop_name);
+                        ui_handle_object(resolved);
+                        ImGui::TreePop();
+                    }
+                } else {
+                    // Not loaded — render the asset path so the user knows what
+                    // the reference would resolve to if loaded.
+                    auto* asset_name = (sdk::FName*)(base + 8);
+                    const auto& sub = *(sdk::TArrayLite<wchar_t>*)(base + 8 + sizeof(sdk::FName));
+                    std::wstring path;
+                    try { path = asset_name->to_string(); } catch (...) { path = L"<unreadable>"; }
+                    if (sub.data != nullptr && sub.count > 0) {
+                        path += L":";
+                        const auto len = (size_t)sub.count - (sub.data[sub.count - 1] == L'\0' ? 1 : 0);
+                        path.append(sub.data, len);
+                    }
+                    const auto narrow = utility::narrow(path);
+                    ImGui::Text("%s: ", prop_name.data());
+                    ImGui::SameLine(0.0f, 0.0f);
+                    ImGui::TextColored(ImVec4{0.8f, 0.7f, 1.0f, 1.0f}, "<soft, not loaded: %s>", narrow.c_str());
+                }
+            }
+            break;
+        case L"DelegateProperty"_fnv:
+        case L"MulticastDelegateProperty"_fnv:
+        case L"MulticastInlineDelegateProperty"_fnv:
+        case L"MulticastSparseDelegateProperty"_fnv:
+            ImGui::Text("%s: ", prop_name.data());
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::TextDisabled("<delegate>");
+            break;
+        case L"MapProperty"_fnv:
+            ImGui::Text("%s: ", prop_name.data());
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::TextDisabled("<TMap (display TODO)>");
+            break;
+        case L"SetProperty"_fnv:
+            ImGui::Text("%s: ", prop_name.data());
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::TextDisabled("<TSet (display TODO)>");
             break;
         case L"StructProperty"_fnv:
             {
@@ -5005,6 +5230,78 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             }
         }
 
+        break;
+    }
+    case "WeakObjectProperty"_fnv:
+    case "LazyObjectProperty"_fnv:
+    {
+        // TArray<FWeakObjectPtr> — element stride is 8 (Weak) or 24 (Lazy:
+        // 8B weak + 16B FGuid). Resolve each via FUObjectArray.
+        const auto stride = (inner_c_type == "WeakObjectProperty") ? (int32_t)8 : (int32_t)24;
+        const auto& arr = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
+        for (int32_t i = 0; i < arr.count; ++i) {
+            auto raw = (int32_t*)((uintptr_t)arr.data + (uintptr_t)i * stride);
+            const auto obj_index = raw[0];
+            const auto serial = raw[1];
+            if (obj_index <= 0) {
+                ImGui::BulletText("[%d] nullptr", i);
+                continue;
+            }
+            auto item = sdk::FUObjectArray::get()->get_object(obj_index);
+            if (item == nullptr || item->object == nullptr || item->serial_number != serial) {
+                ImGui::BulletText("[%d] <stale weak idx=%d>", i, obj_index);
+                continue;
+            }
+            auto obj = (sdk::UObject*)item->object;
+            const auto label = std::format("[{}] {} {}", i,
+                utility::narrow(obj->get_class()->get_fname().to_string()),
+                utility::narrow(obj->get_fname().to_string()));
+            if (ImGui::TreeNode(label.c_str())) {
+                ui_handle_object(obj);
+                ImGui::TreePop();
+            }
+        }
+        break;
+    }
+    case "SoftObjectProperty"_fnv:
+    case "SoftClassProperty"_fnv:
+    {
+        // TArray<FSoftObjectPtr> — stride 32B (8B weak + 8B FName + 16B FString SubPath).
+        constexpr int32_t kStride = 32;
+        const auto& arr = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
+        for (int32_t i = 0; i < arr.count; ++i) {
+            const auto base = (uintptr_t)arr.data + (uintptr_t)i * kStride;
+            const auto obj_index = *(int32_t*)base;
+            const auto serial = *(int32_t*)(base + 4);
+            sdk::UObject* resolved = nullptr;
+            if (obj_index > 0) {
+                if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
+                    if (item->object != nullptr && item->serial_number == serial) {
+                        resolved = (sdk::UObject*)item->object;
+                    }
+                }
+            }
+            if (resolved != nullptr) {
+                const auto label = std::format("[{}] {} {} (soft, loaded)", i,
+                    utility::narrow(resolved->get_class()->get_fname().to_string()),
+                    utility::narrow(resolved->get_fname().to_string()));
+                if (ImGui::TreeNode(label.c_str())) {
+                    ui_handle_object(resolved);
+                    ImGui::TreePop();
+                }
+            } else {
+                auto* asset_name = (sdk::FName*)(base + 8);
+                const auto& sub = *(sdk::TArrayLite<wchar_t>*)(base + 8 + sizeof(sdk::FName));
+                std::wstring path;
+                try { path = asset_name->to_string(); } catch (...) { path = L"<unreadable>"; }
+                if (sub.data != nullptr && sub.count > 0) {
+                    path += L":";
+                    const auto len = (size_t)sub.count - (sub.data[sub.count - 1] == L'\0' ? 1 : 0);
+                    path.append(sub.data, len);
+                }
+                ImGui::BulletText("[%d] <soft, not loaded: %s>", i, utility::narrow(path).c_str());
+            }
+        }
         break;
     }
     case "StructProperty"_fnv:
