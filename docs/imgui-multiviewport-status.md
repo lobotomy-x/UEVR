@@ -4,17 +4,31 @@ _Last updated: 2026-05-25 (luavrlib branch)_
 
 ## TL;DR
 
-ImGui multi-viewport (`ImGuiConfigFlags_ViewportsEnable`) is **re-enabled** as
-of the `pump_secondary_viewport_messages()` commit. The previous frozen-popup
-symptom was caused by Win32's per-thread message queues — popup HWNDs are
-created on the present thread by ImGui's CreateWindow callback, but only the
-game thread runs the message pump, so popup messages (clicks, keys, moves)
-accumulated forever and never reached the per-viewport WndProc. The new
-helper drains the present-thread queue for each popup HWND after
-`RenderPlatformWindowsDefault`. If you hit regressions, clearing the
-`ImGuiConfigFlags_ViewportsEnable` bit in `Framework.cpp::IMGUICONFIGFLAGS`
-falls back to docking-only (popped-out panels dock back inside the host
-overlay instead of becoming top-level OS windows).
+ImGui multi-viewport (`ImGuiConfigFlags_ViewportsEnable`) is **re-enabled**
+with two candidate fixes for the previously-reported regressions:
+
+1. **Popup input dead** → `pump_secondary_viewport_messages()` in
+   `Framework.cpp`. Win32 queues messages PER THREAD, and the thread that
+   called `CreateWindowEx` owns that window's queue. ImGui's CreateWindow
+   callback runs on the present thread (the renderer requires it — DX11
+   immediate context isn't thread-safe), but only the game thread pumps
+   messages. The helper walks `platform_io.Viewports[1..]` after
+   `RenderPlatformWindowsDefault` and runs `PeekMessageW` +
+   `TranslateMessage` + `DispatchMessageW` per popup HWND so their
+   messages actually reach `ImGui_ImplWin32_WndProcHandler_PlatformWindow`.
+
+2. **Popup z-orders behind game window** → unconditional `WS_EX_TOPMOST`
+   in `ImGui_ImplWin32_GetWin32StyleFromViewportFlags`. ImGui's default is
+   `WS_EX_TOPMOST` only if `ImGuiViewportFlags_TopMost` is set; for our
+   use case (VR mod, desktop is a single-app debug surface) it makes more
+   sense to keep popups above the game always.
+
+If you hit regressions: clearing the `ImGuiConfigFlags_ViewportsEnable`
+bit in `Framework.cpp::IMGUICONFIGFLAGS` falls back to docking-only
+(popped-out panels dock back inside the host overlay instead of becoming
+top-level OS windows). The `*out_ex_style |= WS_EX_TOPMOST` line at the
+bottom of `ImGui_ImplWin32_GetWin32StyleFromViewportFlags` can also be
+commented out independently if topmost popups become annoying.
 
 The renderer-side and platform-side scaffolding is intact (DX11/DX12 backends
 correctly handle secondary swap chains, the present-thread path calls
