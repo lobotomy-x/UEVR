@@ -112,6 +112,20 @@ public:
     // setup_main_dockspace() comment in Framework.cpp.
     bool m_use_main_dockspace{false};
 
+    // One-frame "reset every window to its default position / collapse /
+    // focus state" pulse. Set by the PageUp keybind (Framework::on_message)
+    // and by the menu just-opened path in draw_ui. Consumed at the end of
+    // run_imgui_frame so all mods drawing this frame see the same value.
+    // Mod windows (UObjectHook Class Browser etc.) should check
+    // is_force_reset_windows() at the top of their Begin to recenter.
+    static bool consume_force_reset_windows();
+    static void request_force_reset_windows();
+    static bool is_force_reset_windows();
+
+    // Accessor for the imgui mutex so the present-thread popup pump and
+    // any other site outside this class can serialise with on_message.
+    std::recursive_mutex& get_imgui_mtx() { return m_imgui_mtx; }
+
     void on_frame_d3d11();
     void on_post_present_d3d11();
     void on_frame_d3d12();

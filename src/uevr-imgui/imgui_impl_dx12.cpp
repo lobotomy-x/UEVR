@@ -1178,6 +1178,18 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
+    // Defensive null checks — same rationale as the DX11 backend:
+    // pump_secondary_viewport_messages can dispatch a WM_SIZE in the same
+    // frame as Renderer_CreateWindow / Renderer_DestroyWindow, leaving the
+    // viewport's RendererUserData unallocated or already torn down. Both
+    // cases were a 0x0 deref crash on the render thread.
+    if (vd == nullptr || bd == nullptr) {
+        return;
+    }
+    if (size.x <= 0.0f || size.y <= 0.0f) {
+        return;
+    }
+
     ImGui_WaitForPendingOperations(vd);
 
     for (UINT i = 0; i < bd->numFramesInFlight; i++)

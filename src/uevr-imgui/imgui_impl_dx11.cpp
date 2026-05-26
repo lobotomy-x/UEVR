@@ -844,26 +844,55 @@ static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport) {
 static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    // Defensive null checks — pump_secondary_viewport_messages() can dispatch a
+    // WM_SIZE for a popup HWND in the same frame that the viewport was just
+    // created (or moments before it's about to be destroyed), so SetWindowSize
+    // can land before Renderer_CreateWindow has allocated the ViewportData or
+    // after Renderer_DestroyWindow has freed the swap chain. Both situations
+    // crashed with a 0x0 deref at the ResizeBuffers / GetBuffer line.
+    if (vd == nullptr || bd == nullptr) {
+        return;
+    }
     if (vd->RTView) {
         vd->RTView->Release();
         vd->RTView = nullptr;
     }
-    if (vd->SwapChain) {
-        ID3D11Texture2D* pBackBuffer = nullptr;
-        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
-        vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-        if (pBackBuffer == nullptr) {
-            fprintf(stderr, "ImGui_ImplDX11_SetWindowSize() failed creating buffers.\n");
-            return;
-        }
-        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
-        pBackBuffer->Release();
+    if (vd->SwapChain == nullptr) {
+        return;
     }
+    if (size.x <= 0.0f || size.y <= 0.0f) {
+        // ResizeBuffers(0, 0, 0, ...) is legal (auto-detect from window)
+        // but a partially-initialised viewport sometimes feeds negative or
+        // zero sizes during the resize-while-creating race. Skip rather
+        // than gamble.
+        return;
+    }
+    ID3D11Texture2D* pBackBuffer = nullptr;
+    vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
+    vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+    if (pBackBuffer == nullptr) {
+        fprintf(stderr, "ImGui_ImplDX11_SetWindowSize() failed creating buffers.\n");
+        return;
+    }
+    if (bd->pd3dDevice != nullptr) {
+        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
+    }
+    pBackBuffer->Release();
 }
 
 static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*) {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
+    // Defensive null checks — when a popup is minimised the SetWindowSize
+    // path above skips the buffer-reallocate (size 0x0 is invalid for
+    // ResizeBuffers and the result would be a 1×1 black quad anyway).
+    // That leaves vd->RTView null until the user restores the window;
+    // dereffing here would crash the render thread. Same story for the
+    // first frame after CreateWindow before SetWindowSize has fired.
+    if (vd == nullptr || bd == nullptr || vd->RTView == nullptr ||
+        bd->pd3dDeviceContext == nullptr) {
+        return;
+    }
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     bd->pd3dDeviceContext->OMSetRenderTargets(1, &vd->RTView, nullptr);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
@@ -873,8 +902,13 @@ static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*) {
 
 static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*) {
     ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
-    if (vd->SwapChain)
-        vd->SwapChain->Present(0, 0); // Present without vsync
+    // Skip Present on a minimised / freshly-created popup — Present on a
+    // swap chain whose back-buffer we never bound has caused intermittent
+    // device-removed errors on some drivers.
+    if (vd == nullptr || vd->SwapChain == nullptr || vd->RTView == nullptr) {
+        return;
+    }
+    vd->SwapChain->Present(0, 0); // Present without vsync
 }
 
 static void ImGui_ImplDX11_InitMultiViewportSupport() {

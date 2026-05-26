@@ -455,6 +455,23 @@ void Framework::clear_main_dockspace_id() {
     s_main_dockspace_id = 0;
 }
 
+// Window-reset broadcast — set by the PageUp keybind and the menu
+// just-opened path in draw_ui, consumed by every other window-rendering
+// site that wants to recenter / un-dock / un-collapse this frame
+// (UObjectHook Class Browser + Function Caller, mod sidebars, etc.).
+// One-frame pulse: cleared at end of run_imgui_frame.
+static std::atomic<bool> s_force_reset_windows{false};
+
+bool Framework::consume_force_reset_windows() {
+    return s_force_reset_windows.exchange(false);
+}
+void Framework::request_force_reset_windows() {
+    s_force_reset_windows.store(true);
+}
+bool Framework::is_force_reset_windows() {
+    return s_force_reset_windows.load();
+}
+
 void Framework::setup_main_dockspace() {
     // Docking only makes sense when the user has DockingEnable; the host
     // window itself would render an empty fullscreen panel without it.
@@ -524,6 +541,16 @@ void Framework::setup_main_dockspace() {
 // This is a no-op when ViewportsEnable is off (the viewports list only
 // contains the main one) and when called with no popups yet open.
 static void pump_secondary_viewport_messages() {
+    // Serialise with Framework::on_message (game thread). Both sites end up
+    // inside ImGui_ImplWin32_WndProcHandlerEx, which mutates shared backend
+    // state (bd->MouseHwnd / MouseTrackedArea / MouseButtonsDown) plus the
+    // ImGuiIO event queue. Concurrent unprotected calls caused sticky/lost
+    // mouse events when the cursor crossed between game window and popup.
+    if (g_framework == nullptr) {
+        return;
+    }
+    std::scoped_lock _guard{g_framework->get_imgui_mtx()};
+
     auto& platform_io = ImGui::GetPlatformIO();
     for (int i = 1; i < platform_io.Viewports.Size; ++i) {
         const HWND hwnd = (HWND)platform_io.Viewports[i]->PlatformHandle;
@@ -590,6 +617,11 @@ void Framework::run_imgui_frame(bool from_present) {
 
     draw_ui();
     m_last_draw_ui = m_draw_ui;
+
+    // Consume the reset flag once per frame after every mod has had a
+    // chance to see it. Subsequent frames see is_force_reset_windows()==false
+    // until the user presses PageUp again.
+    (void)Framework::consume_force_reset_windows();
 
     ImGui::EndFrame();
     ImGui::Render();
@@ -1057,6 +1089,20 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
             set_draw_ui(!m_draw_ui, true);
             return false;
         }
+        // PageUp: hard reset every UEVR ImGui window back to its default
+        // dock/position state. Useful when a panel has drifted off-screen,
+        // got swallowed by a popped-out viewport, or just feels stuck.
+        // The actual reset happens next frame in run_imgui_frame so it
+        // executes on the imgui thread with the imgui mutex held.
+        if (w_param == VK_PRIOR /* PageUp */) {
+            Framework::request_force_reset_windows();
+            // Also pop the menu on if it's off — otherwise the reset is
+            // invisible to the user.
+            if (!m_draw_ui) {
+                set_draw_ui(true, false);
+            }
+            return false;
+        }
         break;
     case WM_KEYUP:
     case WM_SYSKEYUP:
@@ -1102,7 +1148,17 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         break;
     }
 
-    ImGui_ImplWin32_WndProcHandler(wnd, message, w_param, l_param);
+    // Serialise with pump_secondary_viewport_messages — the popup-HWND
+    // pump runs on the present thread and ALSO calls into
+    // ImGui_ImplWin32_WndProcHandlerEx, which mutates shared backend
+    // state (bd->MouseHwnd, MouseTrackedArea, MouseButtonsDown) and
+    // shared io.AddMouse* event queues. Without this mutex the two
+    // threads race and you get sticky/lost mouse events when the cursor
+    // crosses between the game window and a popped-out ImGui viewport.
+    {
+        std::scoped_lock _imgui_guard{m_imgui_mtx};
+        ImGui_ImplWin32_WndProcHandler(wnd, message, w_param, l_param);
+    }
 
     {
         // If the user is interacting with the UI we block the message from going to the game.
@@ -1462,11 +1518,23 @@ void Framework::draw_ui() {
     const auto centered_x = (rt_size.x / 2) - (window_w / 2);
     const auto centered_y = (rt_size.y / 2) - (window_h / 2);
 
-    // Always re-center the UI upon open if VR is active
-    if (is_vr_active && !m_last_draw_ui) {
-        ImGui::SetNextWindowPos(ImVec2(centered_x, centered_y), ImGuiCond_Always);
-    } else {
-        ImGui::SetNextWindowPos(ImVec2(centered_x, centered_y), ImGuiCond_Once);
+    // Force the main UEVR window back to centered + visible + frontmost
+    // whenever the menu toggles from hidden → shown (or PageUp was hit).
+    // Previously the SetNextWindowPos call used Cond_Once outside of the
+    // VR-active branch, which meant the window could drift off-screen /
+    // get sucked behind a popped-out viewport and never come back into
+    // view after re-opening the menu.
+    const bool just_opened = !m_last_draw_ui;
+    // is_* (peek-only) instead of consume_*, because dockable child windows
+    // drawn from other mods this same frame also need to see the flag. The
+    // single consume happens at the end of run_imgui_frame.
+    const bool want_reset  = Framework::is_force_reset_windows();
+
+    const auto pos_cond = (just_opened || want_reset) ? ImGuiCond_Always : ImGuiCond_Once;
+    ImGui::SetNextWindowPos(ImVec2(centered_x, centered_y), pos_cond);
+    // Force visible (not collapsed/minimised) on the same conditions.
+    if (just_opened || want_reset) {
+        ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
     }
     ImGui::PushFont(m_default_font, m_font_size);
     if (!m_last_draw_ui || m_cursor_state_changed) {
@@ -1475,10 +1543,16 @@ void Framework::draw_ui() {
 
     static const auto UEVR_NAME = std::format("UEVR [{}+{}-{:.8}]", UEVR_TAG, UEVR_COMMITS_PAST_TAG, UEVR_COMMIT_HASH);
 
-
-
-    ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiCond_::ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(window_w, window_h),
+        (just_opened || want_reset) ? ImGuiCond_Always : ImGuiCond_Once);
     ImGui::Begin(UEVR_NAME.c_str(), &m_draw_ui);
+    // Bring the main UEVR window to the FRONT on open / reset so it can't
+    // be hidden behind a popped-out viewport, a Class Browser tab the user
+    // forgot about, etc. SetWindowFocus() targets the current window when
+    // called between Begin/End.
+    if (just_opened || want_reset) {
+        ImGui::SetWindowFocus();
+    }
     static auto editstyle = false;
 
     ImGui::BeginGroup();

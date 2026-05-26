@@ -2980,10 +2980,28 @@ void UObjectHook::on_frame() {
     }
 }
 
-// Helper: docks the next window into the main UEVR dockspace on first use.
+// Helper: docks the next window into the main UEVR dockspace on first use
+// (when the host is enabled) AND honours the PageUp "reset all windows"
+// pulse by forcing position/collapse back to default on those frames.
 static void uobjecthook_dock_into_host_once() {
     if (auto host = Framework::get_main_dockspace_id(); host != 0) {
         ImGui::SetNextWindowDockID(host, ImGuiCond_FirstUseEver);
+    }
+    if (Framework::is_force_reset_windows()) {
+        // Park near the centre when the user hits PageUp, in case the
+        // window had drifted offscreen / been dragged into a stale popup
+        // viewport. Cond_Always overrides any persisted .ini position.
+        ImGuiViewport* vp = ImGui::GetMainViewport();
+        if (vp != nullptr) {
+            ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.25f,
+                                          vp->WorkPos.y + vp->WorkSize.y * 0.25f),
+                                    ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(vp->WorkSize.x * 0.5f,
+                                            vp->WorkSize.y * 0.5f),
+                                    ImGuiCond_Always);
+        }
+        ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
+        ImGui::SetNextWindowFocus();
     }
 }
 
