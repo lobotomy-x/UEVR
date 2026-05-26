@@ -87,7 +87,39 @@ void bind_transform_struct(sol::state_view& lua) {
                 t.scale3d.x, t.scale3d.y, t.scale3d.z);
             },
 
-        sol::meta_function::construct, sol::constructors<Transformf(Vector3f, Quaternionf, Vector3f)>());
+        sol::meta_function::construct, sol::constructors<Transformf(), Transformf(Vector3f, Quaternionf, Vector3f)>());
+
+    // Static factory with permissive coercion. The strict typed constructor
+    // requires Vector3f + Quaternionf + Vector3f userdata; if any arg is
+    // passed as Vector3d, a Quaterniond, or a {x,y,z} table the call falls
+    // through with sol's "no matching function call" message. The script
+    // ecosystem mixes precisions freely (especially since Quaternionf.from_euler
+    // returns the matching glm precision based on the input vec), so handling
+    // the cross-precision case here saves callers from constant manual casts.
+    {
+        auto coerce_vec3f = [](const sol::object& o) -> Vector3f {
+            if (o.is<Vector3f>()) return o.as<Vector3f>();
+            if (o.is<Vector3d>()) { auto v = o.as<Vector3d>(); return Vector3f{(float)v.x, (float)v.y, (float)v.z}; }
+            if (o.is<sol::lua_table>()) {
+                auto t = o.as<sol::lua_table>();
+                auto get = [&](const char* k, int i) -> float {
+                    sol::object x = t[k];
+                    if (!x.valid() || x.is<sol::lua_nil_t>()) x = t[i];
+                    return x.is<float>() ? x.as<float>() : (x.is<double>() ? (float)x.as<double>() : 0.0f);
+                };
+                return Vector3f{get("x", 1), get("y", 2), get("z", 3)};
+            }
+            throw sol::error("Transformf factory: vec3 arg must be Vector3f, Vector3d, or {x,y,z} table");
+        };
+        auto coerce_quat = [](const sol::object& o) -> Quaternionf {
+            if (o.is<Quaternionf>()) return o.as<Quaternionf>();
+            if (o.is<Quaterniond>()) { auto q = o.as<Quaterniond>(); return Quaternionf{(float)q.w, (float)q.x, (float)q.y, (float)q.z}; }
+            throw sol::error("Transformf factory: quat arg must be Quaternionf or Quaterniond");
+        };
+        lua["Transformf"]["compose"] = [coerce_vec3f, coerce_quat](sol::object t, sol::object r, sol::object s) -> Transformf {
+            return Transformf(coerce_vec3f(t), coerce_quat(r), coerce_vec3f(s));
+        };
+    }
 
     lua.new_usertype<Transformd>("Transformd",
         "set", [](sol::object o, const Vector3d& trans, const Quaterniond& rot, const Vector3d& scale) -> sol::object {
@@ -150,7 +182,33 @@ void bind_transform_struct(sol::state_view& lua) {
             Transformd t = Transformd(translation, rotation, scale);
             return t;
         },
-        sol::meta_function::construct, sol::constructors<Transformd(Vector3d, Quaterniond, Vector3d)>());
+        sol::meta_function::construct, sol::constructors<Transformd(), Transformd(Vector3d, Quaterniond, Vector3d)>());
+
+    // Permissive compose factory for Transformd, mirrors the Transformf one.
+    {
+        auto coerce_vec3d = [](const sol::object& o) -> Vector3d {
+            if (o.is<Vector3d>()) return o.as<Vector3d>();
+            if (o.is<Vector3f>()) { auto v = o.as<Vector3f>(); return Vector3d{(double)v.x, (double)v.y, (double)v.z}; }
+            if (o.is<sol::lua_table>()) {
+                auto t = o.as<sol::lua_table>();
+                auto get = [&](const char* k, int i) -> double {
+                    sol::object x = t[k];
+                    if (!x.valid() || x.is<sol::lua_nil_t>()) x = t[i];
+                    return x.is<double>() ? x.as<double>() : (x.is<float>() ? (double)x.as<float>() : 0.0);
+                };
+                return Vector3d{get("x", 1), get("y", 2), get("z", 3)};
+            }
+            throw sol::error("Transformd factory: vec3 arg must be Vector3d, Vector3f, or {x,y,z} table");
+        };
+        auto coerce_quatd = [](const sol::object& o) -> Quaterniond {
+            if (o.is<Quaterniond>()) return o.as<Quaterniond>();
+            if (o.is<Quaternionf>()) { auto q = o.as<Quaternionf>(); return Quaterniond{(double)q.w, (double)q.x, (double)q.y, (double)q.z}; }
+            throw sol::error("Transformd factory: quat arg must be Quaterniond or Quaternionf");
+        };
+        lua["Transformd"]["compose"] = [coerce_vec3d, coerce_quatd](sol::object t, sol::object r, sol::object s) -> Transformd {
+            return Transformd(coerce_vec3d(t), coerce_quatd(r), coerce_vec3d(s));
+        };
+    }
 }
 
 }
