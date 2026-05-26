@@ -719,6 +719,18 @@ void Framework::on_frame_d3d11() {
     }
 
     if (!ImGui::GetIO().BackendRendererUserData) {
+        // Same pattern as on_reset (Framework.cpp:991): tear down popup
+        // HWNDs before deinit_d3d11 so the per-viewport RendererUserData
+        // doesn't get freed out from under live popups. Also pulse the
+        // m_in_reset flag so pump_secondary_viewport_messages bails for
+        // the duration of the renderer rebuild.
+        m_in_reset.store(true);
+        utility::ScopeGuard reset_guard{[this]() { m_in_reset.store(false); }};
+        try {
+            ImGui::DestroyPlatformWindows();
+        } catch (...) {
+            spdlog::error("[on_frame_d3d11 recover] DestroyPlatformWindows threw");
+        }
         deinit_d3d11();
         init_d3d11();
     }
