@@ -23,7 +23,29 @@ void FrameworkConfig::draw_main() {
     ImGui::Separator();
     if (m_log_level->draw("Log Level")) {
         if (m_log_level->value() >= 0 && m_log_level->value() <= spdlog::level::level_enum::n_levels) {
-            spdlog::set_level((spdlog::level::level_enum)m_log_level->value());   
+            spdlog::set_level((spdlog::level::level_enum)m_log_level->value());
+        }
+    }
+
+    ImGui::Separator();
+    // Multiviewport toggle is persisted via ModToggle (lives in config.txt).
+    // Disabled by default — when off, ImGui windows are clamped to the game
+    // window the same way stock ImGui (single-viewport mode) behaves. Enabling
+    // it lets users drag panels out into their own OS windows.
+    m_use_multiviewport->draw("Enable ImGui Multi-Viewport (popped-out windows)");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("OFF (default): every ImGui window stays inside the game window.\n"
+                          "ON: dragging a window outside the game converts it to a top-level OS popup.\n"
+                          "Safe to toggle at runtime — ImGui re-absorbs popups on the next frame.");
+    }
+    // Runtime-only metrics window toggle — not persisted. Sits right beside
+    // the multiviewport toggle because this is the developer-facing block.
+    if (g_framework != nullptr) {
+        ImGui::Checkbox("Show ImGui Metrics / Debugger Window", &g_framework->m_show_imgui_metrics);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Opens ImGui::ShowMetricsWindow — frame stats, window stack inspector,\n"
+                              "active draw calls, dock node tree, etc. Useful for diagnosing\n"
+                              "missing End()/TreePop() and other ImGui-state issues.");
         }
     }
 }

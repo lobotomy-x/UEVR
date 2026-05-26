@@ -23,6 +23,7 @@ public:
             *m_always_show_cursor,
             *m_font_size,
             *m_input_passthrough_key,
+            *m_use_multiviewport,
         };
     }
 
@@ -97,6 +98,13 @@ public:
         return m_font_size->value();
     }
 
+    bool is_use_multiviewport() const {
+        return m_use_multiviewport->value();
+    }
+    void set_use_multiviewport(bool v) {
+        m_use_multiviewport->value() = v;
+    }
+
     spdlog::level::level_enum get_log_level() const {
         return (spdlog::level::level_enum)m_log_level->value();
     }
@@ -132,5 +140,12 @@ private:
     ModKey::Ptr m_show_cursor_key{ ModKey::create(generate_name("ShowCursorKey")) };
     ModInt32::Ptr m_font_size{ModInt32::create(generate_name("FontSize"), 16)};
     ModKey::Ptr m_input_passthrough_key { ModKey::create(generate_name("InputPassthroughKey"), VK_LCONTROL, false) };
+    // ImGui multi-viewport: when ON, ImGui windows dragged outside the game
+    // window become top-level OS popups. When OFF (default), every ImGui
+    // window is clamped to the main game viewport — matches stock ImGui
+    // behaviour and avoids the popup-z-order / cross-window-input edge cases.
+    // Toggling at runtime is safe; ImGui re-absorbs existing popups on the
+    // next frame after the flag is cleared.
+    ModToggle::Ptr m_use_multiviewport{ ModToggle::create(generate_name("UseMultiviewport"), false) };
 
 };

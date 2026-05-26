@@ -50,7 +50,7 @@ using namespace std::literals;
 #define IMGUICONFIGFLAGS                                                                                                \
     ImGuiConfigFlags_DockingEnable |\
         ImGuiConfigFlags_DpiEnableScaleFonts | ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | \
-        ImGuiConfigFlags_NavEnableSetMousePos | ImGuiConfigFlags_ViewportsEnable
+        ImGuiConfigFlags_NavEnableSetMousePos	/* | ImGuiConfigFlags_ViewportsEnable*/
 
 std::unique_ptr<Framework> g_framework{};
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -631,6 +631,13 @@ void Framework::run_imgui_frame(bool from_present) {
 
     draw_ui();
     m_last_draw_ui = m_draw_ui;
+
+    // ImGui::ShowMetricsWindow checkbox lives in FrameworkConfig::draw_main
+    // and flips m_show_imgui_metrics directly. Rendering it here (after
+    // draw_ui + mod windows) keeps it on top of the rest of the UEVR overlay.
+    if (m_show_imgui_metrics) {
+        ImGui::ShowMetricsWindow(&m_show_imgui_metrics);
+    }
 
     // Consume the reset flag once per frame after every mod has had a
     // chance to see it. Subsequent frames see is_force_reset_windows()==false
@@ -1469,7 +1476,15 @@ void Framework::draw_ui() {
     }
 
     ImGui::GetIO().MouseDrawCursor = m_draw_ui || FrameworkConfig::get()->is_always_show_cursor();
-    ImGui::GetIO().ConfigFlags = IMGUICONFIGFLAGS | ImGuiConfigFlags_NoMouseCursorChange; // causes bugs with the cursor
+    // Base flag set; we then OR in ViewportsEnable if the user has the
+    // FrameworkConfig toggle on. Toggling at runtime is safe — clearing the
+    // flag makes ImGui re-absorb any popped-out windows back into the main
+    // viewport on the next frame.
+    auto& cf = ImGui::GetIO().ConfigFlags;
+    cf = IMGUICONFIGFLAGS | ImGuiConfigFlags_NoMouseCursorChange; // causes bugs with the cursor
+    if (FrameworkConfig::get()->is_use_multiviewport()) {
+        cf |= ImGuiConfigFlags_ViewportsEnable;
+    }
 
     if (!m_draw_ui) {
         // remove SetCursorPos patch

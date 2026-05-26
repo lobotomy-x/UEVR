@@ -112,6 +112,12 @@ public:
     // setup_main_dockspace() comment in Framework.cpp.
     bool m_use_main_dockspace{false};
 
+    // Toggle for ImGui::ShowMetricsWindow (the built-in ImGui debugger /
+    // window-stack / draw-call inspector). Public so the checkbox in
+    // FrameworkConfig::draw_main can flip it. Not persisted to config —
+    // strictly a debug visualisation.
+    bool m_show_imgui_metrics{false};
+
     // One-frame "reset every window to its default position / collapse /
     // focus state" pulse. Set by the PageUp keybind (Framework::on_message)
     // and by the menu just-opened path in draw_ui. Consumed at the end of
