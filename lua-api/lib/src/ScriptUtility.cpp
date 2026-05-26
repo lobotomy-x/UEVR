@@ -12,7 +12,12 @@
 #include <datatypes/Vector.hpp>
 
 namespace lua::utility {
-extern struct UE_ProxyPtr;
+// Forward declaration of UE_ProxyPtr (defined in ScriptContext.cpp). The old
+// `extern struct UE_ProxyPtr;` fired MSVC C4091 ("'extern' ignored on left of
+// 'X' when no variable is declared") because extern + a struct-name with no
+// variable / function being declared is meaningless. Pure forward decl does
+// the job — anything in this TU that needs UE_ProxyPtr by name picks it up.
+struct UE_ProxyPtr;
 
 // Best-effort human-readable description of a sol::object's runtime type.
 // Used to enrich "Invalid argument type for X" errors below so the caller
