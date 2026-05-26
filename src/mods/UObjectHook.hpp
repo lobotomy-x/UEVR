@@ -95,6 +95,13 @@ protected:
     // own (it previously depended on the user opening Objects-by-Class
     // first). Throttled internally via m_last_sort_time.
     void pump_class_sort_task();
+    // Dedicated dockable inspector window per UClass. Clicking a class row
+    // in the Class Browser appends to m_open_class_inspectors; the X on the
+    // window removes it. Multiple inspectors can be open side by side for
+    // comparing classes. Window title includes the class address to keep
+    // ImGui IDs unique even when two classes share short names.
+    void draw_class_inspector_window(sdk::UClass* cls);
+    std::vector<sdk::UClass*> m_open_class_inspectors{};
     bool m_show_class_browser{false};
     bool m_show_function_caller{false};
     // Filter buffer for the class browser (shared across tabs)
