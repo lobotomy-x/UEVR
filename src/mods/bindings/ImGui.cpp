@@ -550,25 +550,58 @@ sol::variadic_results drag_float2(sol::this_state s, const char* label, Vector2f
     return results;
 }
 
-sol::variadic_results drag_float3(sol::this_state s, const char* label, Vector3f v, float v_speed, float v_min, float v_max,
+// Accept any of: Vector3f, Vector3d, or a {x=,y=,z=} / {[1]=,[2]=,[3]=} table.
+// Original signature required Vector3f strictly, which broke user wrappers
+// that pass Vector3d.new(...) — and even worse, the OLD wrapper definition
+// stuck in the Lua state across script reloads because the global imgui table
+// retained the bound closure. Making the C++ side type-tolerant means those
+// stale wrappers stop throwing. Returns (changed, Vector3f) so the caller
+// always gets the same shape back regardless of input.
+sol::variadic_results drag_float3(sol::this_state s, const char* label, sol::object v_obj, float v_speed, float v_min, float v_max,
     const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
     ImGuiSliderFlags flags = 0;
-
     if (flags_object.is<int>()) {
         flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    // Coerce v_obj into a Vector3f the ImGui call can edit in place. We keep
+    // the input precision in mind for the return (Vector3d input → Vector3d
+    // result so caller's `nv.x` doesn't lose precision in pure passthrough).
+    Vector3f v{};
+    bool input_was_double = false;
+    if (v_obj.is<Vector3f>()) {
+        v = v_obj.as<Vector3f>();
+    } else if (v_obj.is<Vector3d>()) {
+        auto vd = v_obj.as<Vector3d>();
+        v = Vector3f{(float)vd.x, (float)vd.y, (float)vd.z};
+        input_was_double = true;
+    } else if (v_obj.is<sol::lua_table>()) {
+        auto t = v_obj.as<sol::lua_table>();
+        // Support either named keys (x/y/z) or positional 1/2/3.
+        auto coerce = [&](const char* key, int idx) -> float {
+            sol::object o = t[key];
+            if (!o.valid() || o.is<sol::lua_nil_t>()) o = t[idx];
+            return o.is<float>() ? o.as<float>() : (o.is<double>() ? (float)o.as<double>() : 0.0f);
+        };
+        v = Vector3f{coerce("x", 1), coerce("y", 2), coerce("z", 3)};
+    } else {
+        // Unknown shape — bail with a clearer error than sol's overload mismatch.
+        throw sol::error("imgui.drag_float3: v must be Vector3f, Vector3d, or {x,y,z} table");
     }
 
     auto changed = ImGui::DragFloat3(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
-
     results.push_back(sol::make_object(s, changed));
-    results.push_back(sol::make_object(s, v));
-
+    if (input_was_double) {
+        results.push_back(sol::make_object(s, Vector3d{(double)v.x, (double)v.y, (double)v.z}));
+    } else {
+        results.push_back(sol::make_object(s, v));
+    }
     return results;
 }
 

@@ -972,7 +972,35 @@ int ScriptContext::setup_bindings() {
     create_uobject_ptr_gc((API::UGameViewportClient*)nullptr);
 
     m_lua.new_usertype<uevr::API::FConsoleManager>(
-        "UEVR_FConsoleManager", "get_console_objects", &uevr::API::FConsoleManager::get_console_objects, "find_object",
+        "UEVR_FConsoleManager",
+        // get_console_objects used to return the raw TArray<ConsoleObjectElement>
+        // as sol userdata. That works for slot access but `for k, v in pairs(arr)`
+        // / `ipairs(arr)` failed with "not recognized as a container" because we
+        // never registered iterator metamethods for that TArray specialisation.
+        // Easier than wiring per-TArray metatables: pack into a Lua table with
+        // {key=wstring, value=IConsoleObject*} entries — ipairs Just Works and
+        // string keys are accessible. The wide string `key` is narrowed to a
+        // utf8 std::string so Lua doesn't have to deal with wchar_t pointers.
+        "get_console_objects", [](sol::this_state s, uevr::API::FConsoleManager& self) {
+            auto& arr = self.get_console_objects();
+            sol::state_view lua{s};
+            auto out = lua.create_table((int)arr.count, 0);
+            for (int32_t i = 0; i < arr.count; ++i) {
+                const auto& e = arr.data[i];
+                auto entry = lua.create_table(0, 2);
+                if (e.key != nullptr) {
+                    // Trim past first NUL just in case the storage is uninitialised tail bytes.
+                    std::wstring key{e.key};
+                    entry["key"] = ::utility::narrow(key);
+                } else {
+                    entry["key"] = std::string{};
+                }
+                entry["value"] = e.value;
+                out[i + 1] = entry; // 1-based for ipairs
+            }
+            return out;
+        },
+        "find_object",
         [](uevr::API::FConsoleManager& self, const std::wstring& name) { return self.find_object(name); }, "find_variable",
         [](uevr::API::FConsoleManager& self, const std::wstring& name) { return self.find_variable(name); }, "find_command",
         [](uevr::API::FConsoleManager& self, const std::wstring& name) { return self.find_command(name); });
