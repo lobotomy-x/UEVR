@@ -1026,6 +1026,23 @@ void text_disabled(const char* text) {
     ImGui::TextDisabled("%s", text);
 }
 
+// The "(?)" help-marker idiom from ImGui's demo (imgui_demo.cpp's HelpMarker).
+// Common enough in script-built panels that it's worth one binding instead
+// of every panel inlining the same SameLine + TextDisabled + IsItemHovered
+// + BeginTooltip dance. Call site: imgui.help_marker("tooltip text").
+void help_marker(const char* text) {
+    if (text == nullptr) text = "";
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        if (ImGui::BeginTooltip()) {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(text);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
+}
+
 //
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
@@ -2855,6 +2872,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["text_colored"] = api::imgui::text_colored;
     imgui["text_wrapped"] = api::imgui::text_wrapped;
     imgui["text_disabled"] = api::imgui::text_disabled;
+    imgui["help_marker"] = api::imgui::help_marker;
     imgui["tree_node"] = api::imgui::tree_node;
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
