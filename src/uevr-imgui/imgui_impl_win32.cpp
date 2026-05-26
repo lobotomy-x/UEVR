@@ -1405,7 +1405,13 @@ static void ImGui_ImplWin32_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos) {
     if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
         ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport); // Not our window, poll style before using
     ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
-    ::SetWindowPos(vd->Hwnd, nullptr, rect.left, rect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+    // UEVR-local: pass HWND_TOPMOST (not nullptr+SWP_NOZORDER) so we re-assert
+    // the topmost z-order group every frame the popup moves. Without this, ANY
+    // SetForegroundWindow() / SetWindowPos() the GAME runs against its own
+    // HWND can drop our popup behind it — even though the popup still carries
+    // the WS_EX_TOPMOST style flag, Win32 z-order is a separate dimension and
+    // can be lost. ImGui calls this every drag frame, so re-asserting is cheap.
+    ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, rect.left, rect.top, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 static ImVec2 ImGui_ImplWin32_GetWindowSize(ImGuiViewport* viewport) {
@@ -1423,12 +1429,17 @@ static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) 
     if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
         ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport);       // Not our window, poll style before using
     ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
-    ::SetWindowPos(vd->Hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
+    // UEVR-local: HWND_TOPMOST — see SetWindowPos for rationale.
+    ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOACTIVATE);
 }
 
 static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
+    // UEVR-local: re-assert HWND_TOPMOST in addition to BringWindowToTop. The
+    // latter only re-orders within the window's z-order group, so it does
+    // NOT help if the popup got demoted out of the topmost group earlier.
+    ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     ::BringWindowToTop(vd->Hwnd);
     ::SetForegroundWindow(vd->Hwnd);
     ::SetFocus(vd->Hwnd);
