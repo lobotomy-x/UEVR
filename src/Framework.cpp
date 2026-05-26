@@ -613,10 +613,11 @@ void Framework::run_imgui_frame(bool from_present) {
         if (!m_draw_ui) {
             set_draw_ui(true, false);
         }
-        // Reclaim foreground for the game HWND so subsequent keystrokes go
-        // to the game (or to UEVR's main overlay rendered inside the game
-        // window). Matches the on_message path's behaviour.
-        activate_window();
+        // NOTE: previously called activate_window() here too. That created
+        // a focus war with WS_EX_TOPMOST popups (multiviewport mode) — the
+        // overlay flickered intensely and then crashed. Removed; better
+        // focus-reclaim mechanism is TBD. For now PageUp just resets window
+        // state without yanking foreground.
     }
 
     // Host dockspace is intentionally disabled by default — turning it on
@@ -1141,13 +1142,19 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         if (w_param == VK_INSERT ||
             w_param == FrameworkConfig::get()->get_menu_key()->value())
         {
-            set_draw_ui(!m_draw_ui, true);
-            // Bring the game window back to foreground regardless of menu
-            // direction. With multiviewport on, focus often gets stuck on a
-            // popped-out ImGui popup; reclaiming foreground here means the
-            // menu toggle key always returns control to the game (or the
-            // main UEVR overlay rendered inside the game HWND).
-            activate_window();
+            // Auto-repeat guard: bit 30 of lParam is "previous key state" —
+            // 1 means the key was already down before this WM_KEYDOWN
+            // (Windows auto-repeating). Without this, holding Insert for
+            // even a moment fires set_draw_ui dozens of times. Previously
+            // also triggered an activate_window() on every repeat which
+            // caused a focus war with WS_EX_TOPMOST popups in multiviewport
+            // mode — intense overlay flicker followed by crash. activate
+            // is gone now; the auto-repeat guard stays because it's good
+            // hygiene either way.
+            const bool was_down = (l_param & 0x40000000) != 0;
+            if (!was_down) {
+                set_draw_ui(!m_draw_ui, true);
+            }
             return false;
         }
         // PageUp: hard reset every UEVR ImGui window back to its default
@@ -1156,14 +1163,15 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         // The actual reset happens next frame in run_imgui_frame so it
         // executes on the imgui thread with the imgui mutex held.
         if (w_param == VK_PRIOR /* PageUp */) {
-            Framework::request_force_reset_windows();
-            // Also pop the menu on if it's off — otherwise the reset is
-            // invisible to the user.
-            if (!m_draw_ui) {
-                set_draw_ui(true, false);
+            const bool was_down = (l_param & 0x40000000) != 0;
+            if (!was_down) {
+                Framework::request_force_reset_windows();
+                // Also pop the menu on if it's off — otherwise the reset is
+                // invisible to the user.
+                if (!m_draw_ui) {
+                    set_draw_ui(true, false);
+                }
             }
-            // Same focus-reclaim story as Insert above.
-            activate_window();
             return false;
         }
         break;
