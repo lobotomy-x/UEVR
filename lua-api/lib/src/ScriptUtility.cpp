@@ -14,6 +14,46 @@
 namespace lua::utility {
 extern struct UE_ProxyPtr;
 
+// Best-effort human-readable description of a sol::object's runtime type.
+// Used to enrich "Invalid argument type for X" errors below so the caller
+// can see what Lua actually passed instead of guessing. For userdata we
+// dig into the metatable's __name slot (sol2 puts the registered usertype
+// name there); falls back to "userdata" if the lookup throws or is empty.
+static std::string describe_sol_type(const sol::object& v) {
+    if (!v.valid()) {
+        return "<invalid>";
+    }
+    switch (v.get_type()) {
+    case sol::type::lua_nil:        return "nil";
+    case sol::type::boolean:        return "boolean";
+    case sol::type::lightuserdata:  return "lightuserdata";
+    case sol::type::number:         return "number";
+    case sol::type::string:         return "string";
+    case sol::type::table:          return "table";
+    case sol::type::function:       return "function";
+    case sol::type::thread:         return "thread";
+    case sol::type::none:           return "none";
+    case sol::type::userdata: {
+        try {
+            // The metatable's __name field is sol2's registered usertype
+            // identifier — e.g. "UEVR_Vector3f", "lua::datatypes::StructObject".
+            sol::table mt = v.as<sol::userdata>()[sol::metatable_key];
+            if (mt.valid()) {
+                sol::optional<std::string> name = mt["__name"];
+                if (name.has_value() && !name->empty()) {
+                    return std::string{"userdata("} + *name + ")";
+                }
+            }
+        } catch (...) {
+            // Fall through to bare "userdata"
+        }
+        return "userdata";
+    }
+    default:
+        return "?";
+    }
+}
+
 using Vector2f = lua::datatypes::Vector2f;
 using Vector2d = lua::datatypes::Vector2d;
 using Vector3f = lua::datatypes::Vector3f;
@@ -1012,7 +1052,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
             const auto arg = value.as<uevr::API::FName>();
             *(uevr::API::FName*)((uintptr_t)self + offset) = arg;
         } else {
-            throw sol::error("Invalid argument type for FName");
+            throw sol::error(std::format("Invalid argument type for FName (got {})", describe_sol_type(value)));
         }
 
         return;
@@ -1224,7 +1264,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 // Use FMalloc (TODO)
             }
         } else {
-            throw sol::error("Invalid argument type for FString");
+            throw sol::error(std::format("Invalid argument type for FString (got {})", describe_sol_type(value)));
         }
 
         return;
@@ -1346,7 +1386,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                     *(lua::datatypes::Vector3f*)((uintptr_t)self + offset) = arg;
                 }
             } else {
-                throw sol::error("Invalid argument type for FVector");
+                throw sol::error(std::format("Invalid argument type for FVector (got {})", describe_sol_type(value)));
             }
 
         }
@@ -1465,12 +1505,21 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                     *(lua::datatypes::Quaternionf*)((uintptr_t)self + offset) = arg;
                 }
             } else {
-                throw sol::error("Invalid argument type for quat");
+                throw sol::error(std::format("Invalid argument type for quat (got {})", describe_sol_type(value)));
             }
         }
 
         else {
-            throw sol::error("Invalid argument type for struct property");
+            // Include both the destination struct name and the actual value
+            // type the caller passed. Critical for diagnosing the "passing
+            // wrong struct" case we hit on Statics:check_output where
+            // view_info.result was an unrecognised wrapper.
+            std::string struct_name;
+            try { struct_name = ::utility::narrow(struct_desc->get_fname()->to_string()); }
+            catch (...) { struct_name = "<unknown>"; }
+            throw sol::error(std::format(
+                "Invalid argument type for struct property '{}' (got {})",
+                struct_name, describe_sol_type(value)));
         }
 
         return;
@@ -1597,7 +1646,7 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
 
                 dynamic_strings.push_back(std::move(buffer));
             } else {
-                throw sol::error("Invalid argument type for FString");
+                throw sol::error(std::format("Invalid argument type for FString (got {})", describe_sol_type(arg_obj)));
             }
         } else if (arg_hash == L"ArrayProperty"_fnv) {
             const auto inner_prop = ((uevr::API::FArrayProperty*)prop_desc)->get_inner();
