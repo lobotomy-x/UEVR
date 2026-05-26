@@ -132,6 +132,13 @@ public:
     // any other site outside this class can serialise with on_message.
     std::recursive_mutex& get_imgui_mtx() { return m_imgui_mtx; }
 
+    // True while on_reset → deinit_d3d* → init_d3d* is in flight. The
+    // present-thread popup pump (pump_secondary_viewport_messages) checks
+    // this and skips pumping during reset, so it can't dispatch WM_* events
+    // to popup HWNDs whose RendererUserData has already been torn down.
+    // Atomic so the cross-thread read is safe without taking m_imgui_mtx.
+    bool is_in_reset() const { return m_in_reset.load(); }
+
     void on_frame_d3d11();
     void on_post_present_d3d11();
     void on_frame_d3d12();
@@ -314,6 +321,10 @@ private:
     std::atomic<bool> m_terminating{false};
     std::atomic<bool> m_game_data_initialized{false};
     std::atomic<bool> m_mods_fully_initialized{false};
+    // Set true at the top of on_reset, cleared right before it returns. The
+    // popup pump checks is_in_reset() and bails so we can't dispatch popup
+    // window-messages mid-renderer-teardown.
+    std::atomic<bool> m_in_reset{false};
     
     // UI
     bool m_has_frame{false};

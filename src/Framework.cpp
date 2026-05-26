@@ -549,6 +549,13 @@ static void pump_secondary_viewport_messages() {
     if (g_framework == nullptr) {
         return;
     }
+    // Skip while a renderer reset is in flight. on_reset destroys all
+    // platform windows + tears down the backend; dispatching window-messages
+    // to the popup HWNDs during that window can hand WM_* to viewport
+    // wndprocs whose RendererUserData is already freed, which hangs.
+    if (g_framework->is_in_reset()) {
+        return;
+    }
     std::scoped_lock _guard{g_framework->get_imgui_mtx()};
 
     auto& platform_io = ImGui::GetPlatformIO();
@@ -606,6 +613,10 @@ void Framework::run_imgui_frame(bool from_present) {
         if (!m_draw_ui) {
             set_draw_ui(true, false);
         }
+        // Reclaim foreground for the game HWND so subsequent keystrokes go
+        // to the game (or to UEVR's main overlay rendered inside the game
+        // window). Matches the on_message path's behaviour.
+        activate_window();
     }
 
     // Host dockspace is intentionally disabled by default — turning it on
@@ -993,9 +1004,32 @@ void Framework::on_reset(uint32_t w, uint32_t h) {
 
     spdlog::info("Reset! {} {}", w, h);
 
+    // Block the popup pump from dispatching messages while we tear down +
+    // re-build the renderer. Without this, pump_secondary_viewport_messages
+    // can deliver WM_* events to popup HWNDs whose RendererUserData has
+    // already been freed by ImGui_ImplDX11_Shutdown, leading to a hang
+    // (observed when alt-tab caused a tiny-dimension swapchain reset right
+    // after a popup gained focus on a second monitor — log went silent at
+    // "Initializing ImGui D3D11..." with no further entries).
+    m_in_reset.store(true);
+    utility::ScopeGuard reset_guard{[this]() { m_in_reset.store(false); }};
+
     if (m_initialized) {
         // fixes text boxes not being able to receive input
  /*       imgui::reset_keystates();*/
+    }
+
+    // Destroy every secondary platform window BEFORE we tear down the
+    // renderer. ImGui_ImplDX11_Shutdown frees the per-viewport
+    // RendererUserData; if the popup HWNDs survived they'd still have
+    // ImGui_ImplDX11_ViewportData* pointers into freed memory, and the
+    // next ImGui::UpdatePlatformWindows would dereference them. Calling
+    // this before deinit makes the next init a clean slate. Safe to call
+    // unconditionally — no-op when no popups exist (single-viewport mode).
+    try {
+        ImGui::DestroyPlatformWindows();
+    } catch (...) {
+        spdlog::error("[on_reset] DestroyPlatformWindows threw");
     }
 
     // Crashes if we don't release it at this point.
@@ -1108,6 +1142,12 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
             w_param == FrameworkConfig::get()->get_menu_key()->value())
         {
             set_draw_ui(!m_draw_ui, true);
+            // Bring the game window back to foreground regardless of menu
+            // direction. With multiviewport on, focus often gets stuck on a
+            // popped-out ImGui popup; reclaiming foreground here means the
+            // menu toggle key always returns control to the game (or the
+            // main UEVR overlay rendered inside the game HWND).
+            activate_window();
             return false;
         }
         // PageUp: hard reset every UEVR ImGui window back to its default
@@ -1122,6 +1162,8 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
             if (!m_draw_ui) {
                 set_draw_ui(true, false);
             }
+            // Same focus-reclaim story as Insert above.
+            activate_window();
             return false;
         }
         break;
