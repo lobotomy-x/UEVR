@@ -985,6 +985,14 @@ void text_wrapped(const char* text) {
     ImGui::TextWrapped(text);
 }
 
+// Mirrors ImGui::TextDisabled — same as text() but rendered in the style's
+// disabled colour. Scripts (mine + user) reach for this naturally; without
+// the binding they got "attempt to call a nil value (field 'text_disabled')"
+// every frame, which then aborted the entire panel.
+void text_disabled(const char* text) {
+    ImGui::TextDisabled("%s", text);
+}
+
 //
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
@@ -2813,6 +2821,7 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["text"] = api::imgui::text;
     imgui["text_colored"] = api::imgui::text_colored;
     imgui["text_wrapped"] = api::imgui::text_wrapped;
+    imgui["text_disabled"] = api::imgui::text_disabled;
     imgui["tree_node"] = api::imgui::tree_node;
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
