@@ -1043,6 +1043,32 @@ void help_marker(const char* text) {
     }
 }
 
+// Focus a window by name (nullptr = current). Useful for scripts that build
+// dynamic panels and need to bring one to the front programmatically — e.g.
+// after a button click that should jump the user to a different tab.
+void set_window_focus(sol::object name_obj) {
+    if (name_obj.is<const char*>()) {
+        ImGui::SetWindowFocus(name_obj.as<const char*>());
+    } else if (name_obj.is<std::string>()) {
+        ImGui::SetWindowFocus(name_obj.as<std::string>().c_str());
+    } else {
+        // Nil or unknown → focus current window
+        ImGui::SetWindowFocus();
+    }
+}
+
+// ImGui::ShowAboutWindow exposes the about dialog. Pass nil/no-arg to open
+// (it manages its own state). Useful as a sibling to the existing
+// show_demo_window binding for verifying the build version.
+void show_about_window(sol::object open_obj) {
+    if (open_obj.is<bool>()) {
+        bool open = open_obj.as<bool>();
+        ImGui::ShowAboutWindow(&open);
+    } else {
+        ImGui::ShowAboutWindow();
+    }
+}
+
 //
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
@@ -2873,6 +2899,8 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["text_wrapped"] = api::imgui::text_wrapped;
     imgui["text_disabled"] = api::imgui::text_disabled;
     imgui["help_marker"] = api::imgui::help_marker;
+    imgui["set_window_focus"] = api::imgui::set_window_focus;
+    imgui["show_about_window"] = api::imgui::show_about_window;
     imgui["tree_node"] = api::imgui::tree_node;
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
