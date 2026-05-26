@@ -55,6 +55,26 @@ void bind_quaternions(sol::state_view& lua) {
     qd["to_quatf"] = [](const Quaterniond& q) {
         return Quaternionf{(float)q.w, (float)q.x, (float)q.y, (float)q.z};
     };
+
+    // Static factory aliases. `quaternion` and `identity` are registered by
+    // the macro as USERTYPE METHODS — sol stores them in the type's metatable
+    // __index, which means they're only reachable via `instance:method(...)`.
+    // Calling `Quaternionf.quaternion(vec3)` (dot-style, no self) fails with
+    // "no matching function call" because sol tries to bind the Vector3 to
+    // the implicit Quaternionf& self. Assigning here puts the same functions
+    // directly on the type table so dot-style calls work — `Quaternionf.from_euler`
+    // and `Quaternionf.identity` are now both static factories that take only
+    // their actual args. The original member bindings stay intact for any
+    // script that already happened to be using colon syntax.
+    qf["from_euler"] = [](const Vector3f& r) -> Quaternionf {
+        return glm::tquat<float>(glm::radians(Vector3f{-r.z, -r.y, -r.x}));
+    };
+    qf["identity"] = []() { return glm::identity<Quaternionf>(); };
+
+    qd["from_euler"] = [](const Vector3d& r) -> Quaterniond {
+        return glm::tquat<double>(glm::radians(Vector3d{-r.z, -r.y, -r.x}));
+    };
+    qd["identity"] = []() { return glm::identity<Quaterniond>(); };
 }
 
 }
