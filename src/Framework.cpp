@@ -449,6 +449,12 @@ ImGuiID Framework::get_main_dockspace_id() {
     return s_main_dockspace_id;
 }
 
+// Called from run_imgui_frame when the host is disabled, so any binding
+// that snapshot the ID in a previous frame stops trying to dock into it.
+void Framework::clear_main_dockspace_id() {
+    s_main_dockspace_id = 0;
+}
+
 void Framework::setup_main_dockspace() {
     // Docking only makes sense when the user has DockingEnable; the host
     // window itself would render an empty fullscreen panel without it.
@@ -561,13 +567,22 @@ void Framework::run_imgui_frame(bool from_present) {
 
     ImGui::NewFrame();
 
-    // Create the always-on host dockspace that covers the entire game window.
-    // Any window opened with `imgui.begin_window(name)` from a script gets
-    // SetNextWindowDockID'd to this host on first use, so panels auto-attach
-    // to the host workspace and the user only sees a floating/separate
-    // window when they explicitly drag one out. PassthruCentralNode means
-    // the central area is see-through to the game underneath.
-    setup_main_dockspace();
+    // Host dockspace is intentionally disabled by default — turning it on
+    // broke every interaction with the UEVR sidebar because the full-viewport
+    // host window was claiming hover/click ahead of the floating sidebar
+    // window. setup_main_dockspace() still exists and still publishes the
+    // dockspace ID via get_main_dockspace_id() — it's just guarded behind
+    // m_use_main_dockspace which defaults to false until the input-routing
+    // interaction is sorted out. When off, get_main_dockspace_id() returns 0
+    // and imgui.begin_window() falls back to ImGui's normal float-by-default
+    // behaviour.
+    if (m_use_main_dockspace) {
+        setup_main_dockspace();
+    } else {
+        // Make sure the cached ID is cleared so begin_window doesn't try to
+        // dock into a stale node from a previous frame.
+        clear_main_dockspace_id();
+    }
 
     if (!from_present) {
         call_on_frame();

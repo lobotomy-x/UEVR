@@ -105,6 +105,12 @@ public:
     void run_imgui_frame(bool from_present);
     void setup_main_dockspace();
     static ImGuiID get_main_dockspace_id();
+    static void clear_main_dockspace_id();
+
+    // Whether run_imgui_frame opens the full-viewport dockspace host that
+    // imgui.begin_window() auto-docks into. Off by default — see the
+    // setup_main_dockspace() comment in Framework.cpp.
+    bool m_use_main_dockspace{false};
 
     void on_frame_d3d11();
     void on_post_present_d3d11();
