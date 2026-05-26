@@ -594,6 +594,20 @@ void Framework::run_imgui_frame(bool from_present) {
 
     ImGui::NewFrame();
 
+    // PageUp keybind fallback: when focus is on a popped-out viewport (any
+    // secondary HWND), WM_KEYDOWN goes to that window's wndproc, NOT to the
+    // game's wndproc that Framework::on_message is hooked into. The pump still
+    // delivers the key into ImGui's IO via WndProcHandlerEx, so we can pick it
+    // up here regardless of which viewport has focus. Game-window path also
+    // hits this — request_force_reset_windows() is idempotent within a frame.
+    if (ImGui::IsKeyPressed(ImGuiKey_PageUp, false)) {
+        request_force_reset_windows();
+        // Pop the menu open if it was hidden so the reset is visible.
+        if (!m_draw_ui) {
+            set_draw_ui(true, false);
+        }
+    }
+
     // Host dockspace is intentionally disabled by default — turning it on
     // broke every interaction with the UEVR sidebar because the full-viewport
     // host window was claiming hover/click ahead of the floating sidebar
