@@ -13,10 +13,11 @@ tasks have their own sibling clones at the same level:
 
 ```
 I:/code/lobotomy-x/
-    UEVR/             ← main luavrlib branch (this repo)
-    uevrlib/          ← jbusfield/uevrlib clone, side-task #1
-    uevr-mcp/         ← elliotttate/uevr-mcp clone, side-task #2
-    REFramework/      ← NOT cloned yet; reference only (see #3)
+    UEVR/                   ← main luavrlib branch (this repo)
+    uevrlib/                ← jbusfield/uevrlib clone, side-task #1
+    uevr-mcp/               ← elliotttate/uevr-mcp clone, side-task #2
+    REFramework/            ← NOT cloned yet; reference only (see #3)
+    uevr-example-project/   ← in-house UE 5.x test project, side-task #4
 ```
 
 Keeping the side-task work in sibling repos (rather than inside `UEVR/`) means:
@@ -32,6 +33,7 @@ Keeping the side-task work in sibling repos (rather than inside `UEVR/`) means:
 | 1 | `uevrlib-rework.md`            | Strip + rework `jbusfield/uevrlib` | 30 Lua modules + a TArray helper DLL. Roughly half of it duplicates what we now have natively (`uevr.api_fast`, GLM, TArray, multistate). The other half is real VR feature code (attachments, IK, gunstock, reticule, etc.) worth keeping. |
 | 2 | `uevr-mcp-fork.md`             | Fork `elliotttate/uevr-mcp`, teach it our new APIs | C# .NET MCP server + C++ UEVR plugin. The plugin needs to expose `uevr.api_fast`, `uevr.spawn_worker`, `uevr.log_*`, the new TArray paths, and the function-caller surface. The MCP server side needs corresponding tool definitions. |
 | 3 | `reframework-cross-pollination.md` | What to lift from praydog/REFramework | REFramework has a more mature MCP / C# tooling stack. Use it as a reference for patterns we are missing in `uevr-mcp`. |
+| 4 | `uevr-example-project.md`        | In-house UE 5.x test project (`UEVRExample`) | A minimal UE5 project + `UEVRTestSurface` plugin defining `AUEVRTestActor` with one UPROPERTY for every FProperty type the luavrlib branch handles, plus UFUNCTIONs covering every call shape. Paired Lua driver script in the project's `Scripts/`. Project skeleton is written but the editor work (compile, place actor, package) hasn't run yet — never opened in UE Editor. |
 
 ## Working style for new sessions
 
