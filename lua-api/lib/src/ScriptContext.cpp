@@ -18,6 +18,19 @@
 #include "ScriptContext.hpp"
 #include "ScriptUtility.hpp"
 
+// Function-pointer hooks the main UEVR backend can install to provide ImGui
+// state recovery around Lua draw callbacks (see on_frame / on_draw_ui below).
+// luavrlib intentionally doesn't link imgui — example plugins like LuaVR
+// link luavrlib without imgui too — so we can't call ImGui::* directly here.
+// Main backend installs concrete implementations via
+// ScriptContext::set_imgui_recovery_hooks() at startup. When the hooks are
+// nullptr (LuaVR example, or pre-init), the catch blocks just log and move on
+// without recovery, which matches the pre-fix behaviour exactly.
+namespace uevr {
+ScriptContext::ImGuiRecoveryStoreFn   ScriptContext::s_imgui_recovery_store   = nullptr;
+ScriptContext::ImGuiRecoveryRestoreFn ScriptContext::s_imgui_recovery_restore = nullptr;
+}
+
 namespace uevr {
 
 class ScriptContexts {
@@ -1746,14 +1759,33 @@ void ScriptContext::on_frame() {
     g_contexts.for_each([=](auto ctx) {
         std::scoped_lock _{ctx->m_mtx};
 
-        for (auto& fn : ctx->m_on_frame_callbacks)
+        for (auto& fn : ctx->m_on_frame_callbacks) {
+            // Snapshot ImGui's per-stack sizes BEFORE each callback so an
+            // unbalanced Begin/End or PushID/PopID inside one script doesn't
+            // leak into the next callback (or the rest of the UEVR overlay).
+            // Hook is installed by the main UEVR backend; LuaVR-example /
+            // pre-init paths leave the hook null and skip recovery. Without
+            // this, a single `begin_window` without a matching `end_window`
+            // triggered ImGui's "Missing End()" assert popup once per frame
+            // forever after the throwing script ran.
+            void* recovery_token = nullptr;
+            if (s_imgui_recovery_store != nullptr) {
+                recovery_token = s_imgui_recovery_store();
+            }
             try {
                 ctx->handle_protected_result(fn());
             } catch (const std::exception& e) {
                 ctx->log_error("Exception in on_frame: " + std::string(e.what()));
+                if (s_imgui_recovery_restore != nullptr) {
+                    s_imgui_recovery_restore(recovery_token);
+                }
             } catch (...) {
                 ctx->log_error("Unknown exception in on_frame");
+                if (s_imgui_recovery_restore != nullptr) {
+                    s_imgui_recovery_restore(recovery_token);
+                }
             }
+        }
     });
 }
 
@@ -1761,14 +1793,25 @@ void ScriptContext::on_draw_ui() {
     g_contexts.for_each([=](auto ctx) {
         std::scoped_lock _{ctx->m_mtx};
 
-        for (auto& fn : ctx->m_on_draw_ui_callbacks)
+        for (auto& fn : ctx->m_on_draw_ui_callbacks) {
+            void* recovery_token = nullptr;
+            if (s_imgui_recovery_store != nullptr) {
+                recovery_token = s_imgui_recovery_store();
+            }
             try {
                 ctx->handle_protected_result(fn());
             } catch (const std::exception& e) {
                 ctx->log_error("Exception in on_draw_ui: " + std::string(e.what()));
+                if (s_imgui_recovery_restore != nullptr) {
+                    s_imgui_recovery_restore(recovery_token);
+                }
             } catch (...) {
                 ctx->log_error("Unknown exception in on_draw_ui");
+                if (s_imgui_recovery_restore != nullptr) {
+                    s_imgui_recovery_restore(recovery_token);
+                }
             }
+        }
     });
 }
 
