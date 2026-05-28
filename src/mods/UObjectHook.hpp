@@ -89,12 +89,6 @@ protected:
     // main dockspace host on first show.
     void draw_class_browser_window();
     void draw_function_caller_window();
-    // Refresh m_sorted_classes by relaunching the async sort if needed and
-    // harvesting any completed task. Called by both the Objects-by-Class
-    // view and the Class Browser so the Class Browser populates on its
-    // own (it previously depended on the user opening Objects-by-Class
-    // first). Throttled internally via m_last_sort_time.
-    void pump_class_sort_task();
     bool m_show_class_browser{false};
     bool m_show_function_caller{false};
     // Filter buffer for the class browser (shared across tabs)

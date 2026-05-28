@@ -3005,62 +3005,6 @@ static void uobjecthook_dock_into_host_once() {
     }
 }
 
-// Build/refresh m_sorted_classes by either harvesting a completed async sort
-// or kicking off a new one. Idempotent and safe to call every frame from
-// multiple views (Class Browser + Objects-by-Class). Throttled to ~2s between
-// relaunches so we don't pin a worker thread with the same work over and over.
-void UObjectHook::pump_class_sort_task() {
-    // Harvest any completed task first.
-    if (m_sorting_task.valid()) {
-        if (m_sorting_task.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-            m_sorted_classes = m_sorting_task.get();
-        } else {
-            // Still running — don't queue another one on top.
-            return;
-        }
-    }
-
-    // Throttle relaunches: the class universe doesn't change every frame, and
-    // the sort itself can take noticeable CPU on games with tens of thousands
-    // of classes. 2s feels like a reasonable freshness vs cost tradeoff.
-    const auto now = std::chrono::steady_clock::now();
-    if (m_last_sort_time != std::chrono::steady_clock::time_point{} &&
-        (now - m_last_sort_time) < std::chrono::seconds(2)) {
-        return;
-    }
-
-    auto sort_classes = [this](std::vector<sdk::UClass*> classes) {
-        std::sort(classes.begin(), classes.end(), [this](sdk::UClass* a, sdk::UClass* b) {
-            std::shared_lock _{m_mutex};
-            // find() not operator[] — m_meta_objects is a unique_ptr map; [] would
-            // silently default-insert null entries under shared_lock and deref null.
-            auto ita = m_meta_objects.find(a);
-            auto itb = m_meta_objects.find(b);
-            const bool a_ok = ita != m_meta_objects.end() && ita->second != nullptr;
-            const bool b_ok = itb != m_meta_objects.end() && itb->second != nullptr;
-            if (!a_ok || !b_ok) {
-                // Stable fallback ordering by pointer when meta is missing
-                // (unordered_map iterators aren't <-comparable).
-                return (uintptr_t)a < (uintptr_t)b;
-            }
-            return ita->second->full_name < itb->second->full_name;
-        });
-        return classes;
-    };
-
-    auto unsorted_classes = std::vector<sdk::UClass*>{};
-    {
-        std::shared_lock _{m_mutex};
-        unsorted_classes.reserve(m_objects_by_class.size());
-        for (auto& [c, set] : m_objects_by_class) {
-            unsorted_classes.push_back(c);
-        }
-    }
-
-    m_sorting_task = std::async(std::launch::async, sort_classes, unsorted_classes);
-    m_last_sort_time = now;
-}
-
 void UObjectHook::draw_class_browser_window() {
     uobjecthook_dock_into_host_once();
     if (!ImGui::Begin("UEVR Class Browser", &m_show_class_browser)) {
@@ -3069,13 +3013,8 @@ void UObjectHook::draw_class_browser_window() {
     }
     utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
 
-    // Independent of Objects-by-Class — the user shouldn't have to open that
-    // view first to get the class list to populate. Same task, just called
-    // from both surfaces.
-    pump_class_sort_task();
-
     // Filter input shared across tabs. The class iteration uses
-    // m_sorted_classes (built by pump_class_sort_task above), which is
+    // m_sorted_classes (built by the Objects-by-class sort task), which is
     // typically a large list (~thousands), so we always filter even if the
     // filter buffer is empty — narrowing happens substring on full name.
     std::array<char, 256> filter_buf{};
@@ -3095,63 +3034,32 @@ void UObjectHook::draw_class_browser_window() {
 
     // ---- Classes tab -------------------------------------------------------
     if (ImGui::BeginTabItem("Classes")) {
-        ImGui::TextDisabled("%zu classes total — drag into a Class slot or click to inspect",
-            m_sorted_classes.size());
-
-        // Native vs Blueprint split:
-        //   Native:    full name contains "/Script/"   (engine + game C++ modules)
-        //   Blueprint: anything else                   (typically /Game/... assets)
-        // We render the *same* m_sorted_classes through this lambda twice with
-        // opposite predicates so we don't have to keep two sorted lists.
-        auto render_class_list = [&](const char* child_id, bool want_native) {
-            if (ImGui::BeginChild(child_id, ImVec2(0, 0), ImGuiChildFlags_Borders)) {
-                std::shared_lock _{m_mutex};
-                int shown = 0;
-                for (auto* uclass : m_sorted_classes) {
-                    if (uclass == nullptr) continue;
-                    auto it = m_meta_objects.find(uclass);
-                    if (it == m_meta_objects.end() || it->second == nullptr) continue;
-                    const auto& full = it->second->full_name;
-                    const bool is_native = full.find(L"/Script/") != std::wstring::npos;
-                    if (is_native != want_native) continue;
-                    if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
-                    const auto narrow = utility::narrow(full);
-                    ImGui::PushID(uclass);
-                    ImGui::Selectable(narrow.c_str());
-                    // Drag source for the UEVR_UClass payload that the function
-                    // caller's Class drop targets accept.
-                    if (ImGui::BeginDragDropSource()) {
-                        ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
-                        ImGui::Text("UClass: %s", narrow.c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                    ImGui::PopID();
-                    ++shown;
+        ImGui::TextDisabled("%zu classes — drag a row into a Class slot, or click to inspect", m_sorted_classes.size());
+        if (ImGui::BeginChild("class_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            std::shared_lock _{m_mutex};
+            // Linear iteration over the (already-sorted) class list; with
+            // any filter active the visible count is small enough that
+            // an ImGuiListClipper isn't worth the bookkeeping.
+            for (auto* uclass : m_sorted_classes) {
+                if (uclass == nullptr) continue;
+                auto it = m_meta_objects.find(uclass);
+                if (it == m_meta_objects.end() || it->second == nullptr) continue;
+                const auto& full = it->second->full_name;
+                if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                const auto narrow = utility::narrow(full);
+                ImGui::PushID(uclass);
+                ImGui::Selectable(narrow.c_str());
+                // Drag source for the UEVR_UClass payload that the function
+                // caller's Class drop targets accept.
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
+                    ImGui::Text("UClass: %s", narrow.c_str());
+                    ImGui::EndDragDropSource();
                 }
-                if (shown == 0) {
-                    if (m_sorted_classes.empty()) {
-                        ImGui::TextDisabled("class list not yet populated — sort task may still be running...");
-                    } else if (has_filter) {
-                        ImGui::TextDisabled("no matches for filter");
-                    } else {
-                        ImGui::TextDisabled("no %s classes", want_native ? "native" : "Blueprint");
-                    }
-                }
+                ImGui::PopID();
             }
-            ImGui::EndChild();
-        };
-
-        if (ImGui::BeginTabBar("ClassesSubTabs")) {
-            if (ImGui::BeginTabItem("Native (/Script/...)")) {
-                render_class_list("native_class_list", true);
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Blueprints (/Game/...)")) {
-                render_class_list("bp_class_list", false);
-                ImGui::EndTabItem();
-            }
-            ImGui::EndTabBar();
         }
+        ImGui::EndChild();
         ImGui::EndTabItem();
     }
 
@@ -3819,8 +3727,58 @@ void UObjectHook::draw_main() {
 
         const bool filter_empty = std::string_view{filter}.empty();
 
-        // Shared with the Class Browser — it kicks off the same task. Idempotent.
-        pump_class_sort_task();
+        const auto now = std::chrono::steady_clock::now();
+        bool needs_sort = true;
+
+        if (m_sorting_task.valid()) {
+            // Check if the sorting task is finished
+            if (m_sorting_task.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+                // Do something if needed when sorting is done
+                m_sorted_classes = m_sorting_task.get();
+                needs_sort = true;
+            } else {
+                needs_sort = false;
+            }
+        } else {
+            needs_sort = true;
+        }
+
+        if (needs_sort) {
+            auto sort_classes = [this](std::vector<sdk::UClass*> classes) {
+                std::sort(classes.begin(), classes.end(), [this](sdk::UClass* a, sdk::UClass* b) {
+                    std::shared_lock _{m_mutex};
+                    // Use find() rather than operator[] — `m_meta_objects` is
+                    // a unique_ptr map and operator[] silently inserts a null
+                    // unique_ptr under shared_lock when the key is missing,
+                    // which then dereferences null on the next line. (The old
+                    // m_objects.contains() guard is on a *different* set than
+                    // m_meta_objects and could diverge during concurrent
+                    // add/remove from the UObjectBase hook.)
+                    auto ita = m_meta_objects.find(a);
+                    auto itb = m_meta_objects.find(b);
+                    const bool a_ok = ita != m_meta_objects.end() && ita->second != nullptr;
+                    const bool b_ok = itb != m_meta_objects.end() && itb->second != nullptr;
+                    if (!a_ok || !b_ok) {
+                        // Stable fallback ordering by pointer when meta is missing
+                        // (unordered_map iterators aren't <-comparable).
+                        return (uintptr_t)a < (uintptr_t)b;
+                    }
+                    return ita->second->full_name < itb->second->full_name;
+                });
+
+                return classes;
+            };
+
+            auto unsorted_classes = std::vector<sdk::UClass*>{};
+
+            for (auto& [c, set]: m_objects_by_class) {
+                unsorted_classes.push_back(c);
+            }
+
+            // Launch sorting in a separate thread
+            m_sorting_task = std::async(std::launch::async, sort_classes, unsorted_classes);
+            m_last_sort_time = now;
+        }
 
         const auto wide_filter = utility::widen(filter);
         const bool made_child = ImGui::BeginChild("Objects by class entries", ImVec2(0, 0),  ImGuiChildFlags_Borders);
