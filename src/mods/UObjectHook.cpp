@@ -3564,66 +3564,6 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
         ImGui::EndTabItem();
     }
 
-    // ---- Instances tab ----------------------------------------------------
-    // Live UObjects of this class, pulled from m_objects_by_class (the same
-    // map Objects-by-Class iterates). Each row is a drag source for the
-    // generic UEVR_UObject payload — drop into a Function Caller slot, the
-    // motion-controller attach widget, anywhere else that accepts an object.
-    // Selecting also pops the address into the picker_text_buffer so the
-    // text-input lookups elsewhere can refer to it.
-    if (ImGui::BeginTabItem("Instances")) {
-        std::shared_lock _{m_mutex};
-        auto it = m_objects_by_class.find(cls);
-        if (it == m_objects_by_class.end() || it->second.empty()) {
-            ImGui::TextDisabled("(no live instances tracked for this class)");
-            ImGui::TextDisabled("Note: only objects created after the UObjectHook attached are listed.");
-        } else {
-            const auto& set = it->second;
-            ImGui::TextDisabled("%zu live instances — drag into a UObject slot to use", set.size());
-            if (ImGui::BeginChild("instance_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
-                // Snapshot pointers into a vector for stable indexing — the
-                // set itself can be mutated by the UObjectBase hook on any
-                // thread, even with shared_lock held (since the hook takes
-                // unique_lock and waits).
-                std::vector<sdk::UObjectBase*> snapshot;
-                snapshot.reserve(set.size());
-                for (auto* obj : set) snapshot.push_back(obj);
-                int shown = 0;
-                const int kCap = 5000;
-                for (auto* base_obj : snapshot) {
-                    if (base_obj == nullptr) continue;
-                    if (shown >= kCap) {
-                        ImGui::TextDisabled("(truncated at %d — narrow by class)", kCap);
-                        break;
-                    }
-                    auto* obj = (sdk::UObject*)base_obj;
-                    std::string name;
-                    auto meta_it = m_meta_objects.find(base_obj);
-                    if (meta_it != m_meta_objects.end() && meta_it->second != nullptr) {
-                        name = utility::narrow(meta_it->second->full_name);
-                    } else {
-                        try { name = utility::narrow(obj->get_full_name()); }
-                        catch (...) { continue; }
-                    }
-                    ImGui::PushID((void*)obj);
-                    ImGui::Selectable(name.c_str());
-                    if (ImGui::BeginDragDropSource()) {
-                        // Same payload type the Objects-by-Class tree uses,
-                        // so existing Object drop targets accept these
-                        // without changes.
-                        ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
-                        ImGui::Text("UObject: %s", name.c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                    ImGui::PopID();
-                    ++shown;
-                }
-            }
-            ImGui::EndChild();
-        }
-        ImGui::EndTabItem();
-    }
-
     // ---- Raw inspect tab (full ui_handle_object) --------------------------
     if (ImGui::BeginTabItem("Raw")) {
         // ui_handle_object on a UClass shows the Default Object subtree,
