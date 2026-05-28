@@ -15,43 +15,8 @@
 #include "bindings/Json.hpp"
 #include "bindings/SDKFast.hpp"
 
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <ScriptContext.hpp>
-
-// One-time installer for the ImGui error-recovery hooks luavrlib uses to
-// roll back stack state after a throwing Lua draw callback. Wrapped in a
-// guard so it only runs once even if multiple LuaLoader instances exist.
-// thread_local recovery state because on_frame and on_draw_ui both call
-// the store hook; if they ran from different threads (they don't today,
-// but might if the renderer ever moves) we'd want per-thread state to
-// avoid clobbering.
-static void install_lua_imgui_recovery_hooks_once() {
-    static bool installed = false;
-    if (installed) return;
-    installed = true;
-
-    uevr::ScriptContext::set_imgui_recovery_hooks(
-        []() -> void* {
-            // We only need one recovery slot per thread; using a static
-            // makes the token a marker rather than a real pointer the
-            // caller has to free. ImGui's recovery state is plain old data
-            // (sizes of stacks) so safe to keep statically.
-            static thread_local ImGuiErrorRecoveryState s_state{};
-            ImGui::ErrorRecoveryStoreState(&s_state);
-            return (void*)&s_state;
-        },
-        [](void* token) {
-            if (token == nullptr) return;
-            ImGui::ErrorRecoveryTryToRecoverState((const ImGuiErrorRecoveryState*)token);
-        });
-}
-
 std::shared_ptr<LuaLoader>& LuaLoader::get() {
     static auto instance = std::make_shared<LuaLoader>();
-    // Hooks need to be installed before the first script runs. Calling here
-    // is idempotent and runs the first time the singleton accessor fires.
-    install_lua_imgui_recovery_hooks_once();
     return instance;
 }
 

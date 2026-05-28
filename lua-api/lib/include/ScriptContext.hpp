@@ -58,26 +58,6 @@ public:
         m_last_script_error_state.t = std::chrono::system_clock::now();
     }
 
-    // ImGui recovery hooks. The main UEVR backend installs these at startup
-    // so on_frame / on_draw_ui can roll back any ImGui stack state a Lua
-    // script left dangling (missing End, missing TreePop, etc.) when its
-    // callback threw. We don't link imgui from luavrlib so the actual
-    // ImGui::ErrorRecoveryStoreState / TryToRecoverState calls live in
-    // the main backend; here we just hold typed function pointers.
-    //
-    // store_fn returns an opaque token that's later passed to restore_fn.
-    // Either may be null (LuaVR example plugin, pre-init); in that case
-    // the catch blocks fall through to the original behaviour (log only,
-    // no recovery).
-    using ImGuiRecoveryStoreFn   = void* (*)();
-    using ImGuiRecoveryRestoreFn = void  (*)(void* token);
-    static ImGuiRecoveryStoreFn   s_imgui_recovery_store;
-    static ImGuiRecoveryRestoreFn s_imgui_recovery_restore;
-    static void set_imgui_recovery_hooks(ImGuiRecoveryStoreFn store, ImGuiRecoveryRestoreFn restore) {
-        s_imgui_recovery_store = store;
-        s_imgui_recovery_restore = restore;
-    }
-
     template <typename T1, typename T2> void add_callback(T1&& adder, T2&& cb) {
         std::scoped_lock _{m_mtx};
 
