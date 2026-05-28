@@ -6194,132 +6194,70 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
     // vertex buffers) and iterating tens of thousands of ImGui::BulletText
     // calls would tank the frame. 1024 is plenty for inspection; anything
     // bigger should go through Lua / file dump.
-    // Scalar arrays now use inline DragXxx/InputXxx editors that mutate
-    // a.data[i] directly. ImGui's standard width sizing makes the
-    // editors stay narrow per row. PushID(i) keeps each row's input
-    // state independent (otherwise clicking row 0 carries focus to row 1
-    // if their labels are identical "##").
     case L"FloatProperty"_fnv: {
-        auto& a = *(sdk::TArray<float>*)((uintptr_t)addr + prop->get_offset());
+        const auto& a = *(sdk::TArray<float>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<float> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(180.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::DragFloat(label, &a.data[i], 0.1f);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %.6g", i, a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"DoubleProperty"_fnv: {
-        auto& a = *(sdk::TArray<double>*)((uintptr_t)addr + prop->get_offset());
+        const auto& a = *(sdk::TArray<double>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<double> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(220.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::DragScalar(label, ImGuiDataType_Double, &a.data[i], 0.1f);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %.10g", i, a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"IntProperty"_fnv:
     case L"UInt32Property"_fnv: {
-        auto& a = *(sdk::TArray<int32_t>*)((uintptr_t)addr + prop->get_offset());
+        const auto& a = *(sdk::TArray<int32_t>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<int32> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(140.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::InputInt(label, &a.data[i]);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %d (0x%08x)", i, a.data[i], (uint32_t)a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"Int64Property"_fnv:
     case L"UInt64Property"_fnv: {
-        auto& a = *(sdk::TArray<int64_t>*)((uintptr_t)addr + prop->get_offset());
+        const auto& a = *(sdk::TArray<int64_t>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<int64> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(220.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::InputScalar(label, ImGuiDataType_S64, &a.data[i]);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %lld", i, (long long)a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"Int16Property"_fnv:
     case L"UInt16Property"_fnv: {
-        auto& a = *(sdk::TArray<int16_t>*)((uintptr_t)addr + prop->get_offset());
+        const auto& a = *(sdk::TArray<int16_t>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<int16> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(120.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::InputScalar(label, ImGuiDataType_S16, &a.data[i]);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %d", i, (int)a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"ByteProperty"_fnv:
     case L"Int8Property"_fnv: {
-        // 1-byte inner — could be a packed enum, color channel, etc.
-        // (BoolProperty in UE serialises as a bit inside a byte per-instance,
-        // not as a standalone byte array, so we leave that to the
-        // BoolProperty case.)
-        auto& a = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
+        // 1-byte inner — could be a packed enum, color channel, etc. Show
+        // both decimal and hex so the user can spot bit patterns. (BoolProperty
+        // in UE serialises as a bit inside a byte per-instance, not as a
+        // standalone byte array, so we leave that to the BoolProperty case.)
+        const auto& a = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<byte> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        ImGui::PushItemWidth(120.0f);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            ImGui::InputScalar(label, ImGuiDataType_U8, &a.data[i]);
-            ImGui::PopID();
-        }
-        ImGui::PopItemWidth();
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %u (0x%02x)", i, (unsigned)a.data[i], a.data[i]);
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
     case L"BoolProperty"_fnv: {
         // TArray<bool> in UE is actually TArray<uint8_t> with 0/non-zero
         // values (it's NOT bit-packed at the array level — that's reserved
-        // for non-array bool members). Checkbox writes 0/1 to the byte.
-        auto& a = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
+        // for non-array bool members).
+        const auto& a = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
         ImGui::Text("TArray<bool> count=%d capacity=%d", a.count, a.capacity);
         const int32_t cap = std::min(a.count, (int32_t)1024);
-        for (int32_t i = 0; i < cap; ++i) {
-            ImGui::PushID(i);
-            char label[16];
-            std::snprintf(label, sizeof(label), "[%d]", i);
-            bool v = a.data[i] != 0;
-            if (ImGui::Checkbox(label, &v)) {
-                a.data[i] = v ? 1 : 0;
-            }
-            ImGui::PopID();
-        }
+        for (int32_t i = 0; i < cap; ++i) ImGui::BulletText("[%d] %s", i, a.data[i] ? "true" : "false");
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
     }
