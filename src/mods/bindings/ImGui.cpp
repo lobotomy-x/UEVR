@@ -1069,15 +1069,6 @@ void show_about_window(sol::object open_obj) {
     }
 }
 
-// Clickable text styled as a hyperlink. Returns true on the frame it's
-// clicked. Doesn't navigate anywhere — the caller decides what to do (open
-// a panel, run a function, etc.). Mirrors ImGui::TextLink. Pairs naturally
-// with imgui.help_marker for "click for more" affordances.
-bool text_link(const char* label) {
-    if (label == nullptr) label = "";
-    return ImGui::TextLink(label);
-}
-
 //
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
@@ -2910,7 +2901,6 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["help_marker"] = api::imgui::help_marker;
     imgui["set_window_focus"] = api::imgui::set_window_focus;
     imgui["show_about_window"] = api::imgui::show_about_window;
-    imgui["text_link"] = api::imgui::text_link;
     imgui["tree_node"] = api::imgui::tree_node;
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
