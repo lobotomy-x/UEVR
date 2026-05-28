@@ -1315,28 +1315,6 @@ int ScriptContext::setup_bindings() {
     out["params"] = m_plugin_initialize_param;
     out["api"] = uevr::API::get().get();
 
-    // Convenience: uevr.is_luavrlib() returns true if this UEVR was built
-    // from the `luavrlib` branch (extended C++ features) vs upstream
-    // `master`. Otherwise scripts have to chain
-    // uevr.params.functions:get_branch() == "luavrlib", which is verbose
-    // and breaks on builds where get_branch is missing entirely (older
-    // UEVR plugins, third-party forks). pcall-style internally so it can't
-    // throw — returns false if the branch string isn't available.
-    out["is_luavrlib"] = [this]() -> bool {
-        if (m_plugin_initialize_param == nullptr || m_plugin_initialize_param->functions == nullptr) {
-            return false;
-        }
-        const auto fn = m_plugin_initialize_param->functions->get_branch;
-        if (fn == nullptr) {
-            return false;
-        }
-        const char* branch = fn();
-        if (branch == nullptr) {
-            return false;
-        }
-        return std::string_view{branch} == "luavrlib";
-    };
-
     // Top-level inline-hook helpers (live under uevr.hook_create_mid / uevr.hook_remove_mid).
     out["hook_create_mid"] = [this](sol::this_state s, uintptr_t target, sol::protected_function cb) -> sol::object {
         auto hook = create_mid_hook(target, std::move(cb));
