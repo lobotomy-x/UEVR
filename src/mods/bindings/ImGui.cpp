@@ -1078,64 +1078,6 @@ bool text_link(const char* label) {
     return ImGui::TextLink(label);
 }
 
-// --- Common missing wrappers ------------------------------------------------
-// These all mirror their ImGui::XxxYyy counterparts 1:1 with default flag
-// values. None of them were bound previously, but scripts reach for them
-// constantly (Class Browser-style panels, modal dialogs, search inputs).
-
-bool is_window_focused(sol::object flags_obj) {
-    int flags = 0;
-    if (flags_obj.is<int>()) flags = flags_obj.as<int>();
-    return ImGui::IsWindowFocused(flags);
-}
-bool is_window_hovered(sol::object flags_obj) {
-    int flags = 0;
-    if (flags_obj.is<int>()) flags = flags_obj.as<int>();
-    return ImGui::IsWindowHovered(flags);
-}
-
-// Forces the next item (or item `offset` from the current cursor) to be
-// keyboard-focused. Useful for "auto-focus the search box when a panel
-// opens" — call right before the InputText.
-void set_keyboard_focus_here(sol::object offset_obj) {
-    int offset = 0;
-    if (offset_obj.is<int>()) offset = offset_obj.as<int>();
-    ImGui::SetKeyboardFocusHere(offset);
-}
-
-// Clipboard text accessors. SetClipboardText takes a const char*; we accept
-// both std::string and const char* for convenience. GetClipboardText
-// returns the current clipboard contents or an empty string. ImGui owns
-// the returned buffer, so we copy into a std::string for Lua.
-void set_clipboard_text(const char* text) {
-    if (text == nullptr) text = "";
-    ImGui::SetClipboardText(text);
-}
-std::string get_clipboard_text() {
-    const char* t = ImGui::GetClipboardText();
-    return t ? std::string{t} : std::string{};
-}
-
-// BeginCombo / EndCombo — for building combo boxes manually (mostly used
-// when the combo items need per-item rendering, not just a flat string
-// list). Pair with the existing imgui.selectable / end_combo.
-bool begin_combo(const char* label, const char* preview_value, sol::object flags_obj) {
-    if (label == nullptr) label = "";
-    if (preview_value == nullptr) preview_value = "";
-    int flags = 0;
-    if (flags_obj.is<int>()) flags = flags_obj.as<int>();
-    return ImGui::BeginCombo(label, preview_value, flags);
-}
-void end_combo() { ImGui::EndCombo(); }
-
-// Mouse position in screen coordinates. Useful for custom popup positioning,
-// tooltip placement, etc. Returns a Vector2f so it composes with the rest
-// of the math API.
-Vector2f get_mouse_pos() {
-    const auto p = ImGui::GetMousePos();
-    return Vector2f{p.x, p.y};
-}
-
 //
 //  // This is more or less equivalent to:
 ////   if (IsItemHovered() || IsItemActive())
@@ -2969,14 +2911,6 @@ void bindings::open_imgui(sol::state_view& lua) {
     imgui["set_window_focus"] = api::imgui::set_window_focus;
     imgui["show_about_window"] = api::imgui::show_about_window;
     imgui["text_link"] = api::imgui::text_link;
-    imgui["is_window_focused"] = api::imgui::is_window_focused;
-    imgui["is_window_hovered"] = api::imgui::is_window_hovered;
-    imgui["set_keyboard_focus_here"] = api::imgui::set_keyboard_focus_here;
-    imgui["set_clipboard_text"] = api::imgui::set_clipboard_text;
-    imgui["get_clipboard_text"] = api::imgui::get_clipboard_text;
-    imgui["begin_combo"] = api::imgui::begin_combo;
-    imgui["end_combo"] = api::imgui::end_combo;
-    imgui["get_mouse_pos"] = api::imgui::get_mouse_pos;
     imgui["tree_node"] = api::imgui::tree_node;
     imgui["tree_node_ptr_id"] = api::imgui::tree_node_ptr_id;
     imgui["tree_node_str_id"] = api::imgui::tree_node_str_id;
