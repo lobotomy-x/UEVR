@@ -16,26 +16,11 @@ local ok, branch = pcall(function()
     return uevr.params.functions:get_branch()
 end)
 M.branch = (ok and branch) or "unknown"
--- Prefer native uevr.is_luavrlib() shortcut when available (6ed1ec6+);
--- falls back to branch-string compare otherwise.
-if uevr and type(uevr.is_luavrlib) == "function" then
-    local ok2, native = pcall(uevr.is_luavrlib)
-    M.is_luavrlib = ok2 and native or (M.branch == "luavrlib")
-else
-    M.is_luavrlib = (M.branch == "luavrlib")
-end
+M.is_luavrlib = (M.branch == "luavrlib")
 M.is_stock    = not M.is_luavrlib
 function M.if_stock(fn)    if M.is_stock    then return fn() end end
 function M.if_luavrlib(fn) if M.is_luavrlib then return fn() end end
 return M
-```
-
-### Quick one-liner check (no module)
-
-If you only need the boolean and want to avoid the module:
-
-```lua
-local is_luavrlib = (type(uevr.is_luavrlib) == "function") and uevr.is_luavrlib() or false
 ```
 
 ## Pattern: guard a Lua polyfill
@@ -65,9 +50,7 @@ uevr.sdk.callbacks.on_draw_ui(function() ... end)
 
 | Native feature (luavrlib) | Lua polyfill to skip on luavrlib |
 |---|---|
-| `imgui.text_disabled` (35b1b29) | any user `function imgui.text_disabled(s) ... end` |
-| `imgui.help_marker(text)` (6ed1ec6) | the SameLine+TextDisabled+IsItemHovered+BeginTooltip "(?)" idiom |
-| `uevr.is_luavrlib()` (6ed1ec6) | manual `uevr.params.functions:get_branch() == "luavrlib"` chains |
+| `imgui.text_disabled` (cbd034d / 35b1b29) | any user `function imgui.text_disabled(s) ... end` |
 | `imgui.drag_float3` Vector3f/Vector3d/{x,y,z} coerce (cbd034d) | wrappers that convert vec types before calling old `drag_float3` |
 | `Quaternionf.from_euler(vec3)` / `Quaterniond.from_euler(vec3)` (697aa8c) | manual `glm.radians`-based euler→quat factories |
 | `Transformf.compose(t,r,s)` / `Transformd.compose(t,r,s)` (49b4f7c) | typed-fragile `Transformf.new(Vector3f, Quaternionf, Vector3f)` callers |
