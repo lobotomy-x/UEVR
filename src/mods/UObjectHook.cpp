@@ -2978,20 +2978,6 @@ void UObjectHook::on_frame() {
         catch (const std::exception& e) { spdlog::error("[UObjectHook] function caller window threw: {}", e.what()); }
         catch (...)                     { spdlog::error("[UObjectHook] function caller window threw (unknown)"); }
     }
-    // Class Inspector windows: one per entry in m_open_class_inspectors.
-    // Iterate by index because the inspector's X-close path removes from the
-    // list, and we can't mutate while iterating. Copy the snapshot up front so
-    // any inspector that itself opens another inspector (e.g. clicking the
-    // parent class link) doesn't reenter the loop mid-iteration.
-    {
-        auto snapshot = m_open_class_inspectors;
-        for (auto* cls : snapshot) {
-            if (cls == nullptr) continue;
-            try { draw_class_inspector_window(cls); }
-            catch (const std::exception& e) { spdlog::error("[UObjectHook] class inspector threw: {}", e.what()); }
-            catch (...)                     { spdlog::error("[UObjectHook] class inspector threw (unknown)"); }
-        }
-    }
 }
 
 // Helper: docks the next window into the main UEVR dockspace on first use
@@ -3131,16 +3117,7 @@ void UObjectHook::draw_class_browser_window() {
                     if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
                     const auto narrow = utility::narrow(full);
                     ImGui::PushID(uclass);
-                    // Click → open dedicated Class Inspector window for this
-                    // class. We don't deduplicate (clicking the same class
-                    // twice just brings the existing window to focus next
-                    // frame because ImGui keys the window by ###addr).
-                    if (ImGui::Selectable(narrow.c_str())) {
-                        if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), uclass)
-                                == m_open_class_inspectors.end()) {
-                            m_open_class_inspectors.push_back(uclass);
-                        }
-                    }
+                    ImGui::Selectable(narrow.c_str());
                     // Drag source for the UEVR_UClass payload that the function
                     // caller's Class drop targets accept.
                     if (ImGui::BeginDragDropSource()) {
@@ -3290,170 +3267,6 @@ void UObjectHook::draw_class_browser_window() {
         }
         ImGui::EndChild();
         ImGui::EndTabItem();
-    }
-}
-
-// Dedicated dockable inspector window for one UClass. The Class Browser
-// pushes a class onto m_open_class_inspectors when the user clicks a row;
-// on_frame iterates the list and calls this for each. Closing the window
-// (clicking the X) removes the class from the list at the end of the
-// function so the window vanishes next frame.
-//
-// Layout:
-//   - title: class full name (truncated) + ###ptr for ImGui ID uniqueness
-//   - top bar: parent class chain (clickable links spawn more inspectors)
-//   - tab bar: Default Object | Properties | Functions | Raw
-// The Default / Properties / Functions tabs reuse the existing ui_handle_*
-// helpers so behaviour matches what Objects-by-Class shows for the CDO.
-void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
-    if (cls == nullptr) return;
-
-    uobjecthook_dock_into_host_once();
-
-    // Resolve display name + window ID. The ###ptr suffix is what ImGui
-    // actually keys the window on, so two classes with identical short names
-    // (e.g. multiple "Default__SomethingPostProcess_C") still get distinct
-    // windows + dock slots.
-    std::string title;
-    {
-        std::shared_lock _{m_mutex};
-        auto it = m_meta_objects.find(cls);
-        if (it != m_meta_objects.end() && it->second != nullptr) {
-            title = utility::narrow(it->second->full_name);
-        } else {
-            // Meta missing (class showed up after sort, or was evicted). Fall
-            // back to a raw name lookup so the inspector still renders.
-            try { title = utility::narrow(cls->get_full_name()); }
-            catch (...) { title = "<invalid class>"; }
-        }
-    }
-    char id_buf[256]{};
-    std::snprintf(id_buf, sizeof(id_buf), "Class Inspector: %s###cls_insp_%p",
-        title.c_str(), (void*)cls);
-
-    bool open = true;
-    if (!ImGui::Begin(id_buf, &open)) {
-        ImGui::End();
-        if (!open) {
-            std::erase(m_open_class_inspectors, cls);
-        }
-        return;
-    }
-    utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
-
-    // Header: full name + parent class chain. Each parent is a clickable
-    // Selectable that opens another inspector — lets the user walk up the
-    // hierarchy without going back to the Class Browser.
-    ImGui::TextUnformatted(title.c_str());
-    ImGui::Separator();
-    {
-        ImGui::TextDisabled("parent chain:");
-        ImGui::SameLine();
-        bool any = false;
-        for (auto super = cls->get_super_struct(); super != nullptr; super = super->get_super_struct()) {
-            std::string sname;
-            {
-                std::shared_lock _{m_mutex};
-                auto sit = m_meta_objects.find(super);
-                if (sit != m_meta_objects.end() && sit->second != nullptr) {
-                    sname = utility::narrow(sit->second->full_name);
-                }
-            }
-            if (sname.empty()) {
-                try { sname = utility::narrow(super->get_full_name()); } catch (...) { continue; }
-            }
-            // Show just the short tail to keep the chain line readable.
-            const auto dot = sname.find_last_of('.');
-            const auto short_name = (dot != std::string::npos) ? sname.substr(dot + 1) : sname;
-            if (any) { ImGui::SameLine(); ImGui::TextUnformatted("→"); ImGui::SameLine(); }
-            any = true;
-            ImGui::PushID((void*)super);
-            // Only UClass* supers should be openable as inspectors. We can't
-            // safely cast every UStruct to UClass — UScriptStruct supers
-            // would be wrong — so we test class identity first.
-            static const auto class_class = sdk::UClass::static_class();
-            const bool is_uclass = super->get_class() != nullptr && super->get_class()->is_a(class_class);
-            if (is_uclass) {
-                if (ImGui::SmallButton(short_name.c_str())) {
-                    auto* super_class = (sdk::UClass*)super;
-                    if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), super_class)
-                            == m_open_class_inspectors.end()) {
-                        m_open_class_inspectors.push_back(super_class);
-                    }
-                }
-            } else {
-                ImGui::TextUnformatted(short_name.c_str());
-            }
-            ImGui::PopID();
-        }
-        if (!any) {
-            ImGui::TextDisabled("(none)");
-        }
-    }
-    ImGui::Separator();
-
-    if (!ImGui::BeginTabBar("ClassInspectorTabs")) {
-        if (!open) std::erase(m_open_class_inspectors, cls);
-        return;
-    }
-    utility::ScopeGuard tab_guard{[]() { ImGui::EndTabBar(); }};
-
-    // ---- Default Object tab -----------------------------------------------
-    if (ImGui::BeginTabItem("Default Object")) {
-        auto cdo = cls->get_class_default_object();
-        if (cdo == nullptr) {
-            ImGui::TextDisabled("class has no CDO");
-        } else {
-            // ui_handle_properties iterates the super chain and renders each
-            // property with the editor / drop targets the rest of UObjectHook
-            // already uses. Pass the CDO as the object so reads see real
-            // default values instead of zero-initialized memory.
-            ui_handle_properties(cdo, cls);
-        }
-        ImGui::EndTabItem();
-    }
-
-    // ---- Properties tab (structural, no CDO read) -------------------------
-    if (ImGui::BeginTabItem("Properties")) {
-        ImGui::TextDisabled("structural FProperty list (no live values)");
-        int count = 0;
-        for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
-            for (auto field = super->get_child_properties(); field != nullptr; field = field->get_next()) {
-                auto pclass = field->get_class();
-                if (pclass == nullptr) continue;
-                const auto type_name = utility::narrow(pclass->get_name().to_string());
-                if (!type_name.contains("Property")) continue;
-                const auto field_name = utility::narrow(field->get_field_name().to_string());
-                ImGui::BulletText("%s %s", type_name.c_str(), field_name.c_str());
-                ++count;
-            }
-        }
-        if (count == 0) {
-            ImGui::TextDisabled("(no FProperties)");
-        }
-        ImGui::EndTabItem();
-    }
-
-    // ---- Functions tab ----------------------------------------------------
-    if (ImGui::BeginTabItem("Functions")) {
-        // Pass nullptr as object so ui_handle_functions only shows signatures
-        // (the Call UI is gated on is_real_object). To actually invoke, the
-        // user drags a target into Function Caller.
-        ui_handle_functions(nullptr, cls);
-        ImGui::EndTabItem();
-    }
-
-    // ---- Raw inspect tab (full ui_handle_object) --------------------------
-    if (ImGui::BeginTabItem("Raw")) {
-        // ui_handle_object on a UClass shows the Default Object subtree,
-        // Outer, plus any specialised handlers (material, widget component
-        // patcher, etc.). Useful as an "everything-else" fallback.
-        ui_handle_object((sdk::UObject*)cls);
-        ImGui::EndTabItem();
-    }
-
-    if (!open) {
-        std::erase(m_open_class_inspectors, cls);
     }
 }
 
