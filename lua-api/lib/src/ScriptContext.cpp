@@ -567,8 +567,21 @@ int ScriptContext::setup_bindings() {
     m_lua.new_usertype<UEVR_PluginVersion>("UEVR_PluginVersion", "major", &UEVR_PluginVersion::major, "minor", &UEVR_PluginVersion::minor,
         "patch", &UEVR_PluginVersion::patch);
 
-    m_lua.new_usertype<UEVR_PluginFunctions>("UEVR_PluginFunctions", "log_error", &UEVR_PluginFunctions::log_error, "log_warn",
-        &UEVR_PluginFunctions::log_warn, "log_info", &UEVR_PluginFunctions::log_info, "is_drawing_ui", &UEVR_PluginFunctions::is_drawing_ui,
+    m_lua.new_usertype<UEVR_PluginFunctions>("UEVR_PluginFunctions",
+        // Lua-SAFE log wrappers. Binding the raw variadic C functions
+        // (UEVR_PluginFunctions::log_*  ->  void(const char* fmt, ...)) directly
+        // to sol2 is unsafe: a Lua call with a nil/missing argument passes a NULL
+        // format pointer to vsnprintf, and any '%' in the string makes vsnprintf
+        // read C varargs that Lua never supplied -- both trigger
+        // _invalid_parameter -> __fastfail(FAST_FAIL_INVALID_ARG), an unrecoverable
+        // hard crash (this was crashing games during Lua script load). Instead take
+        // a single std::string (sol2 rejects non-strings with a recoverable Lua
+        // error) and log it with a literal "%s" format. Scripts that want
+        // formatting use Lua's string.format and pass the result.
+        "log_error", [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_error) self.log_error("%s", msg.c_str()); },
+        "log_warn",  [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_warn)  self.log_warn("%s", msg.c_str()); },
+        "log_info",  [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_info)  self.log_info("%s", msg.c_str()); },
+        "is_drawing_ui", &UEVR_PluginFunctions::is_drawing_ui,
 
         "get_commit_hash", &UEVR_PluginFunctions::get_commit_hash, "get_tag", &UEVR_PluginFunctions::get_tag, "get_tag_long",
         &UEVR_PluginFunctions::get_tag_long, "get_branch", &UEVR_PluginFunctions::get_branch, "get_build_date",
