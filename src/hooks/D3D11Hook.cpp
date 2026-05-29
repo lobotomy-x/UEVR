@@ -234,6 +234,22 @@ HRESULT WINAPI D3D11Hook::resize_buffers(
         return resize_buffers_fn(swap_chain, buffer_count, width, height, new_format, swap_chain_flags);
     }
 
+    // Multiviewport guard: only the MAIN game-window swapchain may drive the
+    // framework reset. ImGui multi-viewport creates a separate secondary
+    // swapchain for every popped-out window, each on its own HWND. When one of
+    // those resizes (e.g. the user drags/resizes a 700x700 popout), DXGI calls
+    // this same hooked ResizeBuffers — and without this guard it fell through to
+    // on_reset() below, which tears down + rebuilds the MAIN renderer
+    // (deinit_d3d11 + m_mods->on_device_reset). That produced the "Reset! 700
+    // 700" -> access-violation crash observed with multiviewport enabled. The
+    // secondary swapchains are owned by ImGui's DX11 backend; let their resize
+    // pass straight through to the original. Guard is skipped when m_wnd isn't
+    // known yet (very early), preserving original behaviour.
+    const auto main_wnd = g_framework->get_window();
+    if (main_wnd != nullptr && swap_desc.OutputWindow != main_wnd) {
+        return resize_buffers_fn(swap_chain, buffer_count, width, height, new_format, swap_chain_flags);
+    }
+
     d3d11->m_swap_chain = swap_chain;
     d3d11->m_swapchain_0 = nullptr;
     d3d11->m_swapchain_1 = nullptr;
