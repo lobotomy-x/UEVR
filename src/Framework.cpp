@@ -718,6 +718,18 @@ void Framework::on_frame_d3d11() {
         return;
     }
 
+    // CRITICAL — D3D11 parity with on_frame_d3d12 (and the pre-multiviewport
+    // baseline). first_frame_initialize() is what runs the d3d-thread mod init
+    // and sets m_mods_fully_initialized = true, which call_on_frame() REQUIRES
+    // before it will run ANY mod's on_frame(). on_frame_d3d12 calls this; the
+    // multiviewport-era rewrite of on_frame_d3d11 dropped it. On a D3D11 game,
+    // on_frame_d3d12 never runs (D3D12 gets unhooked when DX11 is detected), so
+    // without this call m_mods_fully_initialized stayed false forever and NO mod
+    // frame work executed on D3D11 — cvar resolution, UObjectHook activation,
+    // class-browser population, and Lua script driving were all dead, while D3D12
+    // worked fine. Idempotent: no-ops after the first successful frame.
+    first_frame_initialize();
+
     if (!ImGui::GetIO().BackendRendererUserData) {
         deinit_d3d11();
         init_d3d11();
