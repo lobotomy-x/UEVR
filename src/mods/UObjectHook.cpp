@@ -79,6 +79,9 @@ struct ParamEditState {
     // so each ObjectProperty has its own buffer that survives frames.
     std::unordered_map<std::string, std::string>     obj_text;
     std::unordered_map<std::string, std::string>     cls_text;
+    // Search-filter text inside the "pick..." popup for UObject params, keyed
+    // by prop name so each slot remembers its filter while open.
+    std::unordered_map<std::string, std::string>     picker_filter;
     std::string return_repr{"<no call yet>"};
     std::string error_repr{};
     // If the last call returned an Object/Interface/Class property, also
@@ -396,6 +399,97 @@ sdk::UClass* render_class_text_input(const char* id, std::string& buf) {
     return nullptr;
 }
 
+// Popup picker for UObject-typed function parameter slots. Walks FUObjectArray
+// for any object whose class IsChildOf `expected_class`, filters by the user's
+// substring search, and shows them in a ListBox. Selecting a row returns it;
+// otherwise returns nullptr.
+//
+// `popup_id` must be the popup label OpenPopup() was called with. `filter_buf`
+// is the per-slot search string from ParamEditState::picker_filter, so the
+// filter persists across frames while the popup is open. `expected_class` may
+// be null (untyped UObject param) — in that case we list all live UObjects.
+//
+// We walk FUObjectArray directly rather than reaching into UObjectHook's
+// m_objects map so this stays a free helper. The 5000-row cap keeps the popup
+// responsive on games with very large object tables — if a typed filter is
+// active we lean more permissive (we already have a class filter cutting the
+// list down significantly).
+sdk::UObject* render_object_picker_popup(const char* popup_id,
+                                         std::string& filter_buf,
+                                         sdk::UClass* expected_class) {
+    sdk::UObject* picked = nullptr;
+    if (!ImGui::BeginPopup(popup_id)) {
+        return nullptr;
+    }
+    utility::ScopeGuard pop_guard{[]() { ImGui::EndPopup(); }};
+
+    // Header: show what we're filtering against so the user understands the
+    // smaller-than-expected list.
+    if (expected_class != nullptr) {
+        std::string cls_name;
+        try { cls_name = utility::narrow(expected_class->get_full_name()); }
+        catch (...) { cls_name = "<unknown>"; }
+        ImGui::TextDisabled("matches IsA(%s)", cls_name.c_str());
+    } else {
+        ImGui::TextDisabled("untyped — all live UObjects");
+    }
+
+    // Search filter input
+    std::array<char, 256> raw{};
+    const auto copy_n = std::min(filter_buf.size(), raw.size() - 1);
+    std::memcpy(raw.data(), filter_buf.data(), copy_n);
+    ImGui::SetNextItemWidth(360.0f);
+    if (ImGui::InputTextWithHint("##picker_filter", "substring filter",
+                                 raw.data(), raw.size())) {
+        filter_buf.assign(raw.data());
+    }
+    const auto wfilter = utility::widen(filter_buf);
+    const bool has_filter = !wfilter.empty();
+
+    if (ImGui::BeginListBox("##picker_list", ImVec2(420.0f, 280.0f))) {
+        auto arr = sdk::FUObjectArray::get();
+        const auto count = arr ? arr->get_object_count() : 0;
+        int shown = 0;
+        // Cap: more permissive when a substring filter is active because we
+        // expect that to thin the list. Without any filter we want to fail
+        // fast on huge object tables so the popup doesn't lock up.
+        const int kCap = has_filter ? 5000 : 1500;
+        for (int32_t i = 0; i < count && shown < kCap; ++i) {
+            auto item = arr->get_object(i);
+            if (item == nullptr || item->object == nullptr) continue;
+            auto obj = (sdk::UObject*)item->object;
+            if (expected_class != nullptr) {
+                auto cls = obj->get_class();
+                if (cls == nullptr || !cls->is_a(expected_class)) continue;
+            }
+            std::wstring full;
+            try { full = obj->get_full_name(); } catch (...) { continue; }
+            if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+            const auto narrow = utility::narrow(full);
+            ImGui::PushID((void*)obj);
+            if (ImGui::Selectable(narrow.c_str())) {
+                picked = obj;
+            }
+            ImGui::PopID();
+            ++shown;
+            if (picked != nullptr) break; // stop early once the user clicked one
+        }
+        if (shown == 0) {
+            ImGui::TextDisabled("(no matches)");
+        } else if (shown == kCap) {
+            ImGui::TextDisabled("(truncated at %d — narrow your filter)", kCap);
+        }
+        ImGui::EndListBox();
+    }
+
+    if (picked != nullptr) {
+        // Reset the filter for next open + close the popup.
+        filter_buf.clear();
+        ImGui::CloseCurrentPopup();
+    }
+    return picked;
+}
+
 // Render a single parameter editor; returns nothing — state is stashed inside
 // `s`. `prop_name_narrow` and `name_hash` are precomputed by the caller to
 // avoid hashing/converting twice per frame.
@@ -485,6 +579,33 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
                                                      s.obj_text[prop_name_narrow]);
             resolved != nullptr) {
             slot = resolved;
+        }
+        // Pick-by-type popup: "pick..." button opens a searchable list of
+        // every live UObject IsA(expected_class). Sole alternative to drag-
+        // and-drop when the user has no idea what to look for. The popup ID
+        // is unique per prop so multiple slots in the same window can each
+        // have their picker open.
+        ImGui::SameLine();
+        {
+            sdk::UClass* expected_class = nullptr;
+            // Soft / weak / lazy object props all derive from FObjectPropertyBase
+            // which carries get_property_class(); FObjectProperty itself does too.
+            // FInterfaceProperty has get_interface_class — not the same vtable
+            // slot. Skip the expected_class hint for interface and let the
+            // picker show all UObjects.
+            if (name_hash != L"InterfaceProperty"_fnv) {
+                expected_class = ((sdk::FObjectProperty*)prop)->get_property_class();
+            }
+            const auto popup_id = "objpicker_" + prop_name_narrow;
+            if (ImGui::SmallButton("pick...")) {
+                ImGui::OpenPopup(popup_id.c_str());
+            }
+            if (auto picked = render_object_picker_popup(popup_id.c_str(),
+                                                         s.picker_filter[prop_name_narrow],
+                                                         expected_class);
+                picked != nullptr) {
+                slot = picked;
+            }
         }
         break;
     }
