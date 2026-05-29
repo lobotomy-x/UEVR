@@ -728,7 +728,7 @@ void Framework::on_frame_d3d11() {
     // frame work executed on D3D11 — cvar resolution, UObjectHook activation,
     // class-browser population, and Lua script driving were all dead, while D3D12
     // worked fine. Idempotent: no-ops after the first successful frame.
-    first_frame_initialize();
+    const bool is_init_ok = first_frame_initialize();
 
     if (!ImGui::GetIO().BackendRendererUserData) {
         deinit_d3d11();
@@ -739,6 +739,19 @@ void Framework::on_frame_d3d11() {
     // hooks don't run until after initialization, so we just render the imgui window while initalizing.
     if (!m_has_engine_thread) {
         run_imgui_frame(false);
+    }
+
+    // CRITICAL — present in upstream praydog on_frame_d3d11 + on_frame_d3d12, but
+    // dropped by the multiviewport-era rewrite of THIS function. m_mods->on_present()
+    // is what drives VR::on_present() -> m_fake_stereo_hook->on_frame(), which is the
+    // call that ENGAGES the engine hooks (UGameEngine::Tick, stereo, etc.). Without it
+    // on a D3D11 game (where on_frame_d3d12 never runs because D3D12 is unhooked) the
+    // engine Tick hook never installs, so on_pre_engine_tick never fires: UObjectBase
+    // is never hooked, the game-thread worker never runs (Lua scripts never auto-load),
+    // and cvars never resolve against the live console. D3D12 kept this call, which is
+    // exactly why D3D11 broke but D3D12 worked.
+    if (is_init_ok) {
+        m_mods->on_present();
     }
 
     // The render path here used to declare `context` without initializing it, then immediately
@@ -782,7 +795,11 @@ void Framework::on_frame_d3d11() {
         ImGui::RenderPlatformWindowsDefault();
     }
 
-    m_mods->on_post_frame();
+    // Gated on is_init_ok to match upstream praydog + on_frame_d3d12 (the
+    // multiviewport rewrite called this unconditionally).
+    if (is_init_ok) {
+        m_mods->on_post_frame();
+    }
 }
         /*
         m_d3d11_hook->get_device()->GetImmediateContext(&context);
