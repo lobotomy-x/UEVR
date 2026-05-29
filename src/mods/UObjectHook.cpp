@@ -3209,6 +3209,22 @@ void UObjectHook::draw_class_browser_window() {
     // from both surfaces.
     pump_class_sort_task();
 
+    // Refresh / status row. The sort task is async and throttled to ~2s
+    // between launches, so newly-spawned classes (level transitions,
+    // bp.spawn calls from Lua, etc.) won't show up immediately. The Refresh
+    // button bumps m_last_sort_time back to epoch which lets pump kick off
+    // a fresh sort on the next call without waiting out the throttle.
+    if (ImGui::SmallButton("Refresh")) {
+        m_last_sort_time = std::chrono::steady_clock::time_point{};
+        pump_class_sort_task(); // launch immediately this frame
+    }
+    ImGui::SameLine();
+    if (m_sorting_task.valid()) {
+        ImGui::TextDisabled("(sorting...)");
+    } else {
+        ImGui::TextDisabled("%zu classes", m_sorted_classes.size());
+    }
+
     // Filter input shared across tabs. The class iteration uses
     // m_sorted_classes (built by pump_class_sort_task above), which is
     // typically a large list (~thousands), so we always filter even if the
