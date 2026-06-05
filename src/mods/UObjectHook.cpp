@@ -10,6 +10,7 @@
 #include <sdk/FField.hpp>
 #include <sdk/FProperty.hpp>
 #include <sdk/FEnumProperty.hpp>
+#include <sdk/UEnum.hpp>
 #include <sdk/UFunction.hpp>
 #include <sdk/AActor.hpp>
 #include <sdk/threading/GameThreadWorker.hpp>
@@ -24,6 +25,8 @@
 #include <sdk/FBoolProperty.hpp>
 #include <sdk/FObjectProperty.hpp>
 #include <sdk/FArrayProperty.hpp>
+#include <sdk/FMapProperty.hpp>
+#include <sdk/FSetProperty.hpp>
 #include <sdk/UMotionControllerComponent.hpp>
    
 #include <imgui_internal.h>
@@ -206,12 +209,40 @@ sdk::UObject* resolve_object_query(std::string_view query_raw) {
         return reinterpret_cast<sdk::UObject*>(sdk::find_uobject(utility::widen(q)));
     }
 
-    // Short-name fallback — linear scan. O(N) but find_uobject already does
-    // a wider linear scan internally for full-name misses, so this is no
-    // worse and we're inside a debug menu anyway.
+    const auto wq = utility::widen(q);
+
+    // Fast path: short-name -> UClass cache. Classes are stable (never GC'd), so
+    // caching them is safe and avoids the O(N) FUObjectArray scan (a get_fname
+    // per object) on every keystroke-resolve of a class name.
+    {
+        static std::unordered_map<std::wstring, sdk::UObject*> s_class_name_cache;
+        static bool s_class_cache_built = false;
+        if (!s_class_cache_built) {
+            s_class_cache_built = true;
+            static const auto uclass_t = sdk::UClass::static_class();
+            if (auto carr = sdk::FUObjectArray::get(); carr != nullptr) {
+                const auto ccount = carr->get_object_count();
+                for (int32_t i = 0; i < ccount; ++i) {
+                    auto item = carr->get_object(i);
+                    if (item == nullptr || item->object == nullptr) continue;
+                    auto obj = reinterpret_cast<sdk::UObject*>(item->object);
+                    try {
+                        if (auto c = obj->get_class(); c != nullptr && c->is_a(uclass_t)) {
+                            s_class_name_cache.emplace(obj->get_fname().to_string(), obj);
+                        }
+                    } catch (...) {}
+                }
+            }
+        }
+        if (auto it = s_class_name_cache.find(wq); it != s_class_name_cache.end()) {
+            return it->second;
+        }
+    }
+
+    // Short-name fallback — linear scan over live objects (non-class objects and
+    // any class created after the cache was built).
     auto arr = sdk::FUObjectArray::get();
     if (arr == nullptr) return nullptr;
-    const auto wq = utility::widen(q);
     const auto count = arr->get_object_count();
     for (int32_t i = 0; i < count; ++i) {
         auto item = arr->get_object(i);
@@ -323,6 +354,43 @@ void render_live_caller_slots() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Resolve")) want_resolve = true;
+
+        // Searchable picker: list the target's class functions (filtered by the typed
+        // text) so the name can be clicked instead of typed exactly.
+        if (slot.target != nullptr && ImGui::BeginCombo("pick", "functions...", ImGuiComboFlags_HeightLargest)) {
+            if (auto* cls = slot.target->get_class(); cls != nullptr) {
+                static const auto ufunction_t = sdk::UFunction::static_class();
+                std::vector<sdk::UFunction*> funcs{};
+                for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
+                    for (auto child = super->get_children(); child != nullptr; child = child->get_next()) {
+                        if (child->get_class()->is_a(ufunction_t)) {
+                            funcs.push_back((sdk::UFunction*)child);
+                        }
+                    }
+                }
+                std::sort(funcs.begin(), funcs.end(), [](sdk::UFunction* a, sdk::UFunction* b) {
+                    return a->get_fname().to_string() < b->get_fname().to_string();
+                });
+                std::string needle = slot.fn_name;
+                for (auto& ch : needle) ch = (char)std::tolower((unsigned char)ch);
+                for (auto* fn : funcs) {
+                    auto name = utility::narrow(fn->get_fname().to_string());
+                    std::string lname = name;
+                    for (auto& ch : lname) ch = (char)std::tolower((unsigned char)ch);
+                    if (!needle.empty() && lname.find(needle) == std::string::npos) {
+                        continue;
+                    }
+                    if (ImGui::Selectable(name.c_str())) {
+                        slot.fn_name = name;
+                        slot.resolved = fn;
+                        slot.resolved_label = utility::narrow(fn->get_full_name());
+                        slot.resolve_error.clear();
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+
         if (want_resolve) {
             slot.resolved = nullptr;
             slot.resolved_label.clear();
@@ -504,14 +572,46 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
         ImGui::Checkbox(prop_name_narrow.c_str(), &b);
         break;
     }
+    case L"EnumProperty"_fnv: {
+        int& v = s.ints[prop_name_narrow];
+        sdk::UEnum* uenum = nullptr;
+        try { uenum = ((sdk::FEnumProperty*)prop)->get_enum(); } catch (...) {}
+        if (uenum != nullptr) {
+            // get_names() does ~512 process_event calls — cache per UEnum.
+            static std::unordered_map<sdk::UEnum*, std::vector<std::pair<std::string, int64_t>>> s_param_enum_cache;
+            auto it = s_param_enum_cache.find(uenum);
+            if (it == s_param_enum_cache.end()) {
+                std::vector<std::pair<std::string, int64_t>> names{};
+                try { names = uenum->get_names(); } catch (...) {}
+                it = s_param_enum_cache.emplace(uenum, std::move(names)).first;
+            }
+            if (!it->second.empty()) {
+                const char* cur_label = "(custom)";
+                for (const auto& [n, val] : it->second) { if ((int)val == v) { cur_label = n.c_str(); break; } }
+                if (ImGui::BeginCombo(prop_name_narrow.c_str(), cur_label)) {
+                    for (const auto& [n, val] : it->second) {
+                        if (ImGui::Selectable((n + " = " + std::to_string(val)).c_str(), (int)val == v)) {
+                            v = (int)val;
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(110.0f);
+                ImGui::InputInt(("##rawenum_" + prop_name_narrow).c_str(), &v);
+                break;
+            }
+        }
+        ImGui::InputInt(prop_name_narrow.c_str(), &v);
+        break;
+    }
     case L"ByteProperty"_fnv:
     case L"UInt16Property"_fnv:
     case L"Int16Property"_fnv:
     case L"Int8Property"_fnv:
     case L"IntProperty"_fnv:
     case L"UInt32Property"_fnv:
-    case L"UIntProperty"_fnv:
-    case L"EnumProperty"_fnv: {
+    case L"UIntProperty"_fnv: {
         int& v = s.ints[prop_name_narrow];
         ImGui::InputInt(prop_name_narrow.c_str(), &v);
         break;
@@ -823,6 +923,16 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
 
 // Render `prop` after a call to provide a read-out of the value it holds.
 // Used for return values and out parameters.
+std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, size_t params_size);
+
+// Read up to `cap` live entries from an FScriptMap/FScriptSet at `base`.
+// Returns the slot count (FScriptArray.ArrayNum), or -1 if `base` is unreadable.
+// `out` is filled ONLY when the container is safely traversable (sane layout +
+// no removed-slot holes); otherwise it's left empty and the caller shows the
+// slot count alone. Defined below format_return_value (it formats key/value via it).
+int read_map_entries(sdk::FMapProperty* mp, const uint8_t* base, int cap, std::vector<std::pair<std::string, std::string>>& out);
+int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap, std::vector<std::string>& out);
+
 std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, size_t /*params_size*/) {
     const auto pc = prop->get_class();
     if (pc == nullptr) return "<no class>";
@@ -840,8 +950,26 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
     case L"Int8Property"_fnv:        return std::to_string(*(int8_t*)in);
     case L"Int16Property"_fnv:       return std::to_string(*(int16_t*)in);
     case L"UInt16Property"_fnv:      return std::to_string(*(uint16_t*)in);
-    case L"IntProperty"_fnv:
-    case L"EnumProperty"_fnv:        return std::to_string(*(int32_t*)in);
+    case L"IntProperty"_fnv:         return std::to_string(*(int32_t*)in);
+    case L"EnumProperty"_fnv: {
+        const auto val = (int64_t)*(int32_t*)in;
+        sdk::UEnum* uenum = nullptr;
+        try { uenum = ((sdk::FEnumProperty*)prop)->get_enum(); } catch (...) {}
+        if (uenum != nullptr) {
+            // get_names() does ~512 process_event calls — cache per UEnum.
+            static std::unordered_map<sdk::UEnum*, std::vector<std::pair<std::string, int64_t>>> s_ret_enum_cache;
+            auto it = s_ret_enum_cache.find(uenum);
+            if (it == s_ret_enum_cache.end()) {
+                std::vector<std::pair<std::string, int64_t>> names;
+                try { names = uenum->get_names(); } catch (...) {}
+                it = s_ret_enum_cache.emplace(uenum, std::move(names)).first;
+            }
+            for (const auto& [n, v] : it->second) {
+                if (v == val) return std::format("{} ({})", n, val);
+            }
+        }
+        return std::to_string(val);
+    }
     case L"UInt32Property"_fnv:
     case L"UIntProperty"_fnv:        return std::to_string(*(uint32_t*)in);
     case L"Int64Property"_fnv:       return std::to_string(*(int64_t*)in);
@@ -931,15 +1059,86 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
         }
         return std::string{"<soft: "} + utility::narrow(path) + ">";
     }
+    case L"ArrayProperty"_fnv: {
+        // Snapshot the result NOW — the TArray heap data is freed after the
+        // call returns, so persisting a pointer would dangle. Scalar/name/
+        // object inner types are formatted inline; struct/other inners get a
+        // count summary (use the property-view array handler for full detail).
+        const auto inner = ((sdk::FArrayProperty*)prop)->get_inner();
+        if (inner == nullptr) return "<array: no inner>";
+        const auto ic = inner->get_class();
+        if (ic == nullptr) return "<array: no inner class>";
+        const auto& arr = *(const sdk::TArrayLite<uint8_t>*)in;
+        if (arr.data == nullptr || arr.count <= 0) return "[] (0)";
+        const auto ihash = ::utility::hash(ic->get_name().to_string());
+        size_t stride = 0;
+        std::function<std::string(const uint8_t*)> fmt;
+        switch (ihash) {
+        case L"BoolProperty"_fnv:   stride = 1; fmt = [](const uint8_t* p) { return *p ? std::string{"true"} : std::string{"false"}; }; break;
+        case L"ByteProperty"_fnv:   stride = 1; fmt = [](const uint8_t* p) { return std::to_string(*p); }; break;
+        case L"Int8Property"_fnv:   stride = 1; fmt = [](const uint8_t* p) { return std::to_string(*(int8_t*)p); }; break;
+        case L"Int16Property"_fnv:  stride = 2; fmt = [](const uint8_t* p) { return std::to_string(*(int16_t*)p); }; break;
+        case L"UInt16Property"_fnv: stride = 2; fmt = [](const uint8_t* p) { return std::to_string(*(uint16_t*)p); }; break;
+        case L"IntProperty"_fnv:    stride = 4; fmt = [](const uint8_t* p) { return std::to_string(*(int32_t*)p); }; break;
+        case L"UInt32Property"_fnv: stride = 4; fmt = [](const uint8_t* p) { return std::to_string(*(uint32_t*)p); }; break;
+        case L"FloatProperty"_fnv:  stride = 4; fmt = [](const uint8_t* p) { return std::format("{:.3f}", *(float*)p); }; break;
+        case L"Int64Property"_fnv:  stride = 8; fmt = [](const uint8_t* p) { return std::to_string(*(int64_t*)p); }; break;
+        case L"UInt64Property"_fnv: stride = 8; fmt = [](const uint8_t* p) { return std::to_string(*(uint64_t*)p); }; break;
+        case L"DoubleProperty"_fnv: stride = 8; fmt = [](const uint8_t* p) { return std::format("{:.3f}", *(double*)p); }; break;
+        case L"NameProperty"_fnv:   stride = sizeof(sdk::FName); fmt = [](const uint8_t* p) { try { return utility::narrow(((sdk::FName*)p)->to_string()); } catch (...) { return std::string{"<name?>"}; } }; break;
+        case L"InterfaceProperty"_fnv:
+        case L"ObjectProperty"_fnv:
+        case L"ClassProperty"_fnv:  stride = sizeof(void*); fmt = [](const uint8_t* p) { auto o = *(sdk::UObject**)p; if (o == nullptr) return std::string{"nullptr"}; try { return std::string{"["} + std::to_string((uintptr_t)o) + "] " + utility::narrow(o->get_full_name()); } catch (...) { return std::string{"["} + std::to_string((uintptr_t)o) + "]"; } }; break;
+        case L"StrProperty"_fnv:    stride = sizeof(sdk::TArrayLite<wchar_t>); fmt = [](const uint8_t* p) { const auto& s = *(const sdk::TArrayLite<wchar_t>*)p; if (s.data == nullptr || s.count <= 0) return std::string{"\"\""}; return std::string{"\""} + utility::narrow(std::wstring{s.data, (size_t)s.count}) + "\""; }; break;
+        default: break;
+        }
+        if (stride == 0 || !fmt) {
+            return std::format("[{}] <array of {}, expand in property view>", arr.count, utility::narrow(ic->get_name().to_string()));
+        }
+        constexpr int cap = 32;
+        const int n = arr.count < cap ? arr.count : cap;
+        std::string out = std::format("[{}] {{", arr.count);
+        for (int i = 0; i < n; ++i) {
+            if (i != 0) out += ", ";
+            out += fmt(arr.data + (size_t)i * stride);
+        }
+        if (arr.count > cap) out += std::format(", ...(+{} more)", arr.count - cap);
+        out += "}";
+        return out;
+    }
     case L"DelegateProperty"_fnv:
     case L"MulticastDelegateProperty"_fnv:
     case L"MulticastInlineDelegateProperty"_fnv:
     case L"MulticastSparseDelegateProperty"_fnv:
         return "<delegate>";
-    case L"MapProperty"_fnv:
-        return "<TMap: read not implemented>";
-    case L"SetProperty"_fnv:
-        return "<TSet: read not implemented>";
+    case L"MapProperty"_fnv: {
+        std::vector<std::pair<std::string, std::string>> entries;
+        const int num = read_map_entries((sdk::FMapProperty*)prop, in, 16, entries);
+        if (num <= 0) return num == 0 ? "<TMap: empty>" : "<TMap: unreadable>";
+        if (entries.empty()) return std::format("<TMap: {} slots>", num); // not safely traversable
+        std::string out = "{";
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (i != 0) out += ", ";
+            out += entries[i].first + " => " + entries[i].second;
+        }
+        if (num > (int)entries.size()) out += std::format(", ...(+{} more)", num - (int)entries.size());
+        out += "}";
+        return out;
+    }
+    case L"SetProperty"_fnv: {
+        std::vector<std::string> entries;
+        const int num = read_set_entries((sdk::FSetProperty*)prop, in, 16, entries);
+        if (num <= 0) return num == 0 ? "<TSet: empty>" : "<TSet: unreadable>";
+        if (entries.empty()) return std::format("<TSet: {} slots>", num);
+        std::string out = "{";
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (i != 0) out += ", ";
+            out += entries[i];
+        }
+        if (num > (int)entries.size()) out += std::format(", ...(+{} more)", num - (int)entries.size());
+        out += "}";
+        return out;
+    }
     case L"StructProperty"_fnv: {
         // Best-effort: dump well-known small POD structs in human-readable
         // form. Falls back to "<struct unsupported>" for anything else.
@@ -972,6 +1171,122 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
     default:
         return std::string{"<"} + utility::narrow(pc->get_name().to_string()) + " unsupported>";
     }
+}
+
+// --- FScriptMap / FScriptSet live readers (forward-declared above). ---
+// FScriptMap and FScriptSet both begin with an FScriptSparseArray:
+//   +0  FScriptArray { void* Data; int32 ArrayNum; int32 ArrayMax; }
+//   +16 FScriptBitArray AllocationFlags (32 bytes)
+//   +48 int32 FirstFreeIndex
+//   +52 int32 NumFreeIndices
+// We only traverse when NumFreeIndices == 0 (no removed-slot holes) so the
+// allocation bitmask is never consulted — every slot in [0, ArrayNum) is live.
+// Every read is IsBadReadPtr-guarded and every layout value is sanity-gated, so
+// a miscalibration leaves `out` empty (caller shows the slot count) rather than
+// dereferencing garbage.
+namespace {
+constexpr int kSparseNumFreeOffset = 52;
+
+bool script_sparse_no_holes(const uint8_t* base, int32_t& out_num, const uint8_t*& out_data) {
+    if (base == nullptr || IsBadReadPtr((void*)base, 16)) {
+        return false;
+    }
+    const auto data = *(const uint8_t* const*)(base + 0);
+    const auto num = *(const int32_t*)(base + 8);
+    if (num < 0 || num > (1 << 20)) {
+        return false;
+    }
+    if (num == 0) { out_num = 0; out_data = nullptr; return true; }
+    if (data == nullptr || IsBadReadPtr((void*)data, 1)) {
+        return false;
+    }
+    if (IsBadReadPtr((void*)(base + kSparseNumFreeOffset), sizeof(int32_t))) {
+        return false;
+    }
+    if (*(const int32_t*)(base + kSparseNumFreeOffset) != 0) {
+        return false; // has holes — would need the allocation bitmask to skip them
+    }
+    out_num = num;
+    out_data = data;
+    return true;
+}
+} // namespace
+
+int read_map_entries(sdk::FMapProperty* mp, const uint8_t* base, int cap, std::vector<std::pair<std::string, std::string>>& out) {
+    if (mp == nullptr || base == nullptr || IsBadReadPtr((void*)base, 16)) {
+        return -1;
+    }
+    const int32_t arr_num = *(const int32_t*)(base + 8);
+    int32_t num = 0;
+    const uint8_t* data = nullptr;
+    if (!script_sparse_no_holes(base, num, data)) {
+        return arr_num >= 0 ? arr_num : -1; // count-only fallback
+    }
+    if (num == 0) {
+        return 0;
+    }
+
+    auto kp = mp->get_key_prop();
+    auto vp = mp->get_value_prop();
+    const int32_t stride = mp->get_element_stride();
+    const int32_t koff = mp->get_key_offset();
+    const int32_t voff = mp->get_value_offset();
+    if (kp == nullptr || vp == nullptr || stride <= 0 || stride > 4096 ||
+        koff < 0 || koff >= stride || voff < 0 || voff >= stride) {
+        return num; // layout failed sanity — count only
+    }
+
+    const int n = num < cap ? num : cap;
+    for (int i = 0; i < n; ++i) {
+        const uint8_t* elem = data + (size_t)i * stride;
+        if (IsBadReadPtr((void*)elem, stride)) {
+            break;
+        }
+        try {
+            auto kstr = format_return_value(kp, elem + koff - kp->get_offset(), 0);
+            auto vstr = format_return_value(vp, elem + voff - vp->get_offset(), 0);
+            out.emplace_back(std::move(kstr), std::move(vstr));
+        } catch (...) {
+            out.emplace_back("<key error>", "<value error>");
+        }
+    }
+    return num;
+}
+
+int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap, std::vector<std::string>& out) {
+    if (sp == nullptr || base == nullptr || IsBadReadPtr((void*)base, 16)) {
+        return -1;
+    }
+    const int32_t arr_num = *(const int32_t*)(base + 8);
+    int32_t num = 0;
+    const uint8_t* data = nullptr;
+    if (!script_sparse_no_holes(base, num, data)) {
+        return arr_num >= 0 ? arr_num : -1;
+    }
+    if (num == 0) {
+        return 0;
+    }
+
+    auto ep = sp->get_element_prop();
+    const int32_t stride = sp->get_element_stride();
+    const int32_t eoff = sp->get_element_offset();
+    if (ep == nullptr || stride <= 0 || stride > 4096 || eoff < 0 || eoff >= stride) {
+        return num;
+    }
+
+    const int n = num < cap ? num : cap;
+    for (int i = 0; i < n; ++i) {
+        const uint8_t* elem = data + (size_t)i * stride;
+        if (IsBadReadPtr((void*)elem, stride)) {
+            break;
+        }
+        try {
+            out.emplace_back(format_return_value(ep, elem + eoff - ep->get_offset(), 0));
+        } catch (...) {
+            out.emplace_back("<element error>");
+        }
+    }
+    return num;
 }
 
 // Render the interactive caller widget for a single (object, function) pair.
@@ -3084,6 +3399,14 @@ void UObjectHook::on_frame() {
         set_disabled(!is_disabled());
     }
 
+    // Quick-access keybind: F2 toggles the Class Browser window whenever the
+    // overlay is open (and not typing into a field), so it is reachable without
+    // navigating to the UObjectHook sidebar page.
+    if (g_framework->is_drawing_ui() && !ImGui::GetIO().WantTextInput &&
+        ImGui::IsKeyPressed(ImGuiKey_F2, false)) {
+        m_show_class_browser = !m_show_class_browser;
+    }
+
     // Dockable pop-out windows live OUTSIDE the sidebar tree (which only
     // renders when the user has UObjectHook focused as a sidebar entry).
     // We draw them every imgui frame instead, gated on their toggle bools.
@@ -3378,11 +3701,32 @@ void UObjectHook::draw_class_browser_window() {
                     if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
                     const auto narrow = utility::narrow(full);
                     ImGui::PushID(obj);
-                    ImGui::Selectable(narrow.c_str());
+                    const bool node_open = ImGui::TreeNode(narrow.c_str());
                     if (ImGui::BeginDragDropSource()) {
                         ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
                         ImGui::Text("UEnum: %s", narrow.c_str());
                         ImGui::EndDragDropSource();
+                    }
+                    if (node_open) {
+                        // Resolve enumerator names lazily on first expand and cache
+                        // them — get_names() does up to ~512 process_event calls, far
+                        // too expensive to run every frame.
+                        static std::unordered_map<sdk::UEnum*, std::vector<std::pair<std::string, int64_t>>> s_enum_name_cache;
+                        auto uenum = (sdk::UEnum*)obj;
+                        auto cached = s_enum_name_cache.find(uenum);
+                        if (cached == s_enum_name_cache.end()) {
+                            std::vector<std::pair<std::string, int64_t>> names{};
+                            try { names = uenum->get_names(); } catch (...) {}
+                            cached = s_enum_name_cache.emplace(uenum, std::move(names)).first;
+                        }
+                        if (cached->second.empty()) {
+                            ImGui::TextDisabled("(no enumerator names resolved)");
+                        } else {
+                            for (const auto& [n, v] : cached->second) {
+                                ImGui::Text("%s = %lld", n.c_str(), (long long)v);
+                            }
+                        }
+                        ImGui::TreePop();
                     }
                     ImGui::PopID();
                     ++shown;
@@ -3622,14 +3966,17 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
                         catch (...) { continue; }
                     }
                     ImGui::PushID((void*)obj);
-                    ImGui::Selectable(name.c_str());
+                    // Expand a live instance into its own full editor (properties +
+                    // function calling on THIS object, not the class default).
+                    const bool node_open = ImGui::TreeNode(name.c_str());
                     if (ImGui::BeginDragDropSource()) {
-                        // Same payload type the Objects-by-Class tree uses,
-                        // so existing Object drop targets accept these
-                        // without changes.
                         ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
                         ImGui::Text("UObject: %s", name.c_str());
                         ImGui::EndDragDropSource();
+                    }
+                    if (node_open) {
+                        ui_handle_object(obj);
+                        ImGui::TreePop();
                     }
                     ImGui::PopID();
                     ++shown;
@@ -4095,10 +4442,8 @@ void UObjectHook::draw_main() {
 
         ImGui::TreePop();
     }
-    ImGuiID CommonID = ImGui::GetID("Common Objects");
     // Display common objects like things related to the player
     if (ImGui::TreeNode("Common Objects")) {
-        ImGui::TreeNodeSetOpen(ImGui::GetID("Objects By class"), false);
         auto engine = sdk::UGameEngine::get();
         auto world = engine != nullptr ? engine->get_world() : nullptr;
         static sdk::UObject* mesh;
@@ -4196,7 +4541,6 @@ void UObjectHook::draw_main() {
         }
     }};
     if (objects_by_class_open) {
-        ImGui::TreeNodeSetOpen(CommonID, false);
         ImGui::Checkbox("Hide Default Classes", &m_hide_default_classes);
         static char filter[256]{};
         ImGui::InputText("Filter", filter, sizeof(filter));
@@ -4454,35 +4798,6 @@ void UObjectHook::ui_standard_object_context_menu(sdk::UObjectBase* object) {
         if (ImGui::Button("Copy Address")) {
             const auto hex = (std::stringstream{} << std::hex << (uintptr_t)object).str();
             sc(hex);
-        }
-        if (ImGui::Button("Test lua")) {
-
-                      const auto hex = (std::stringstream{} << std::hex << (uintptr_t)object).str();
-       
-
-
-                std::string_view lua_text = "local obj =  uevr.api:to_uobject(tonumber(" + hex + "), 16)); print(tostring(obj))";
-                         //"local obj =  uevr.api:to_uobject(" + hex + ")"+
-                         //   R"(
-                         //       local root = obj.GetRootComponent and obj:GetRootComponent()
-                         //       if root then 
-                         //           for i = 1, root:GetNumChildrenComponents() do
-                         //                  local comp = root:GetChildComponent(i)
-                         //                  if comp then comp:K2_DetachFromComponent(1,1,1, true)
-                         //                   comp:K2_DestroyComponent()
-                         //                   end
-                         //            end
-                         //            root:K2_DestroyComponent()
-                         //            obj:K2_DestroyActor()
-                         //       elseif obj.K2_DestroyComponent then
-                         //           obj:K2_DestroyComponent()
-                         //        end                                 
-
-                         //       )";
-                         //  
-                PluginLoader::get()->do_lua_string(lua_text.data(), "destroy");
-                    
-               
         }
 
         ImGui::EndPopup();
@@ -4798,66 +5113,6 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
             }
 
-            ImGui::SameLine();
-            //static sdk::FName* attach_socket{};
-            //static std::vector<std::wstring> socket_combo={L"None"};
-            //if (socket_combo.size() == 1) {
-            //
-
-            if (ImGui::Button("Attach Camera to head")) {
-                
-            auto head_socket = L"None";
-            auto neck_socket = L"None";
-            for (auto& n : comp->get_all_socket_names()) {
-                const auto& name = n;
-                if (name.to_string().contains(L"head")) {
-                    head_socket = name.to_string().c_str();
-                } else if (name.to_string().contains(L"neck")) {
-                    neck_socket = name.to_string().c_str();
-                }
-            }
-
-            void* addr = (void*)((uintptr_t)comp);
-            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
-            static std::string_view text = "_G.uobjecthook_cache = _G.uobjecthook_cache or {}\n local function attach_to_head()\nlocal comp = uevr.api:to_uobject(" + hex + ")" +
-                     "\nlocal head_socket_name = \"" +
-                                           utility::narrow(head_socket) +
-                                           "\"" + 
-                "\nlocal neck_socket_name = \"" +
-                                           utility::narrow(neck_socket) + "\"" +
-                     R"(
-                            local ukismetmath = uevr.api:find_uobject("Class /Script/Engine.KismetMathLibrary"):get_class_default_object()
-                            local pc = uevr.api:get_player_controller(0)
-                            local spring = uevr.api:add_component_by_class(pc, uevr.api:find_uobject("Class /Script/Engine.SpringArmComponent"), false)
-                            local cam_actor = uevr.api:spawn_object(uevr.api:find_uobject("Class /Script/Engine.CameraActor"), pc)
-                            spring:K2_AttachToComponent(comp, neck_socket_name, 2, 2, 2, true)
-                            spring.TargetArmLength = 12
-                            spring.SocketOffset = Vector3f.new(0, 0, 0)
-                            spring.TargetOffset = comp:GetSocketTransform(head_socket_name, 1).Translation -  comp:GetSocketTransform(neck_socket_name, 1).Translation
-                            spring.bDoCollisionTest = true
-                            spring.ProbeSize = 12.001
-                            spring.bUsePawnControlRotation = true
-                            spring.bEnableCameraLag = false
-                            spring.bEnableCameraRotationLag = true
-                            spring.CameraRotationLagSpeed = 55.0
-                            local new_cam_comp = cam_actor.CameraComponent
-                            new_cam_comp:K2_AttachToComponent(spring,
-                                ("SpringEndpoint"), 2, 0, 2, true)
-                            new_cam_comp.bUsePawnControlRotation = true
-                            new_cam_comp.bShouldSnapRotationWhenAttached = true
-                            new_cam_comp.bShouldBeAttached = true
-                            new_cam_comp.RelativeLocation.Z = 10.5
-                        pc:ClientSetViewTarget(cam_actor, {})
-                        end
-                        print("from c++")
-                        attach_to_head()
-                    )";
-
-                //m_camera_attach.object = comp;
-                //m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
-                PluginLoader::get()->do_lua_string(text.data(), "attach_vt");
-
-            }
 
             ImGui::SameLine();
 
@@ -5436,6 +5691,27 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
         }
 
         if (ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data())) {
+            if (ImGui::TreeNode("Function flags")) {
+                static const std::pair<const char*, uint32_t> kFuncFlags[] = {
+                    {"Final", 0x1u}, {"RequiredAPI", 0x2u}, {"BlueprintAuthorityOnly", 0x4u}, {"BlueprintCosmetic", 0x8u},
+                    {"Net", 0x40u}, {"NetReliable", 0x80u}, {"NetRequest", 0x100u}, {"Exec", 0x200u}, {"Native", 0x400u},
+                    {"Event", 0x800u}, {"NetResponse", 0x1000u}, {"Static", 0x2000u}, {"NetMulticast", 0x4000u},
+                    {"UbergraphFunction", 0x8000u}, {"MulticastDelegate", 0x10000u}, {"Public", 0x20000u},
+                    {"Private", 0x40000u}, {"Protected", 0x80000u}, {"Delegate", 0x100000u}, {"NetServer", 0x200000u},
+                    {"HasOutParms", 0x400000u}, {"HasDefaults", 0x800000u}, {"NetClient", 0x1000000u}, {"DLLImport", 0x2000000u},
+                    {"BlueprintCallable", 0x4000000u}, {"BlueprintEvent", 0x8000000u}, {"BlueprintPure", 0x10000000u},
+                    {"EditorOnly", 0x20000000u}, {"Const", 0x40000000u}, {"NetValidate", 0x80000000u},
+                };
+                auto& flags = func->get_function_flags();
+                for (auto& [fname, bit] : kFuncFlags) {
+                    bool set = (flags & bit) != 0;
+                    if (ImGui::Checkbox(fname, &set)) {
+                        if (set) { flags |= bit; } else { flags &= ~bit; }
+                    }
+                }
+                ImGui::TreePop();
+            }
+
             if (is_real_object) {
                 // Show parameter signature (type + name + [Out]/[struct-name]) so
                 // the user can tell what the editors below will be writing into.
@@ -5804,7 +6080,10 @@ const auto check_flags = [](uint64_t flags){
                     auto scope2 = m_path.enter(prop_name);
                     ui_handle_object(value);
                     if (ImGui::BeginPopupContextItem()) {
-                        edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                        if (ImGui::BeginMenu("Edit flags")) {
+                            edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                            ImGui::EndMenu();
+                        }
                         ImGui::EndPopup();
                     }
                     ImGui::TreePop();
@@ -5897,16 +6176,48 @@ const auto check_flags = [](uint64_t flags){
             ImGui::SameLine(0.0f, 0.0f);
             ImGui::TextDisabled("<delegate>");
             break;
-        case L"MapProperty"_fnv:
-            ImGui::Text("%s: ", prop_name.data());
-            ImGui::SameLine(0.0f, 0.0f);
-            ImGui::TextDisabled("<TMap (display TODO)>");
+        case L"MapProperty"_fnv: {
+            const auto base = (const uint8_t*)((uintptr_t)object + fprop->get_offset());
+            std::vector<std::pair<std::string, std::string>> entries;
+            const int num = read_map_entries((sdk::FMapProperty*)fprop, base, 64, entries);
+            if (entries.empty()) {
+                ImGui::Text("%s: ", prop_name.data());
+                ImGui::SameLine(0.0f, 0.0f);
+                if (num == 0) ImGui::TextDisabled("<TMap: empty>");
+                else if (num < 0) ImGui::TextDisabled("<TMap: unreadable>");
+                else ImGui::TextDisabled("<TMap: %d slots>", num);
+            } else if (ImGui::TreeNode((void*)fprop, "%s (TMap, %d)", prop_name.data(), num)) {
+                for (auto& [k, v] : entries) {
+                    ImGui::BulletText("%s => %s", k.c_str(), v.c_str());
+                }
+                if (num > (int)entries.size()) {
+                    ImGui::TextDisabled("...(+%d more)", num - (int)entries.size());
+                }
+                ImGui::TreePop();
+            }
             break;
-        case L"SetProperty"_fnv:
-            ImGui::Text("%s: ", prop_name.data());
-            ImGui::SameLine(0.0f, 0.0f);
-            ImGui::TextDisabled("<TSet (display TODO)>");
+        }
+        case L"SetProperty"_fnv: {
+            const auto base = (const uint8_t*)((uintptr_t)object + fprop->get_offset());
+            std::vector<std::string> entries;
+            const int num = read_set_entries((sdk::FSetProperty*)fprop, base, 64, entries);
+            if (entries.empty()) {
+                ImGui::Text("%s: ", prop_name.data());
+                ImGui::SameLine(0.0f, 0.0f);
+                if (num == 0) ImGui::TextDisabled("<TSet: empty>");
+                else if (num < 0) ImGui::TextDisabled("<TSet: unreadable>");
+                else ImGui::TextDisabled("<TSet: %d slots>", num);
+            } else if (ImGui::TreeNode((void*)fprop, "%s (TSet, %d)", prop_name.data(), num)) {
+                for (auto& e : entries) {
+                    ImGui::BulletText("%s", e.c_str());
+                }
+                if (num > (int)entries.size()) {
+                    ImGui::TextDisabled("...(+%d more)", num - (int)entries.size());
+                }
+                ImGui::TreePop();
+            }
             break;
+        }
         case L"StructProperty"_fnv:
             {
                 void* addr = (void*)((uintptr_t)object + fprop->get_offset());
@@ -5925,7 +6236,10 @@ const auto check_flags = [](uint64_t flags){
                             CloseClipboard();
                         }
                     }
-                    edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                    if (ImGui::BeginMenu("Edit flags")) {
+                        edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                        ImGui::EndMenu();
+                    }
                     ImGui::EndPopup();
                 }
 
@@ -5985,9 +6299,12 @@ const auto check_flags = [](uint64_t flags){
             break;
         };
         std::string prop_name_edit = prop_name + "EditFlags";                                            
-        if (ImGui::TreeNode(prop_name_edit.c_str())){
-                edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
-                ImGui::TreePop();    
+        if (ImGui::BeginPopupContextItem(prop_name_edit.c_str())){
+                if (ImGui::BeginMenu("Edit flags")) {
+                    edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                    ImGui::EndMenu();
+                }
+                ImGui::EndPopup();
         }
     }
 }
