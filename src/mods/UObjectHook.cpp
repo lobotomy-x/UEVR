@@ -1215,12 +1215,19 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
             }
             return std::format("({:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4));
         };
-        auto fmt4 = [in]() {
+        auto fmt4f = [in]() {
+            return std::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4), *(float*)(in+8), *(float*)(in+12));
+        };
+        auto fmt4 = [in, is_ue5_vec]() {
+            if (is_ue5_vec) {
+                return std::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", *(double*)(in+0), *(double*)(in+8), *(double*)(in+16), *(double*)(in+24));
+            }
             return std::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", *(float*)(in+0), *(float*)(in+4), *(float*)(in+8), *(float*)(in+12));
         };
         if (sname == "Vector" || sname == "Rotator") return "[" + sname + "] " + fmt3();
         if (sname == "Vector2D")                     return "[Vector2D] " + fmt2();
-        if (sname == "Vector4" || sname == "Quat" || sname == "LinearColor") return "[" + sname + "] " + fmt4();
+        if (sname == "LinearColor")                  return "[LinearColor] " + fmt4f();
+        if (sname == "Vector4" || sname == "Quat")   return "[" + sname + "] " + fmt4();
         // Generic: dump reflected members (handles Transform etc.). A member's
         // offset is relative to the struct start, which is exactly what
         // format_return_value reads against `in`, so pass `in` as the base — the
