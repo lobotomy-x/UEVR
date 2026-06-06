@@ -337,80 +337,51 @@ void render_live_caller_slots() {
             slot.target = resolved;
         }
 
-        // Function name + Resolve. Enter triggers Resolve.
-        std::array<char, 256> name_buf{};
-        const auto copy_n = std::min(slot.fn_name.size(), name_buf.size() - 1);
-        std::memcpy(name_buf.data(), slot.fn_name.data(), copy_n);
-        bool want_resolve = false;
-        if (ImGui::InputText("function name", name_buf.data(), name_buf.size(),
-                             ImGuiInputTextFlags_EnterReturnsTrue)) {
-            slot.fn_name.assign(name_buf.data());
-            want_resolve = true;
-        } else if (std::strcmp(name_buf.data(), slot.fn_name.c_str()) != 0) {
-            slot.fn_name.assign(name_buf.data());
-            slot.resolved = nullptr;
-            slot.resolved_label.clear();
-            slot.resolve_error.clear();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Resolve")) want_resolve = true;
+        // Function picker: ONE combo. Preview = the selected function; open it
+        // for a filter box + the target's functions. Clicking one selects AND
+        // resolves it — no separate text field or Resolve step.
+        if (slot.target == nullptr) {
+            ImGui::TextDisabled("(drop or type a target above, then pick a function)");
+        } else {
+            const char* preview = slot.fn_name.empty() ? "select function..." : slot.fn_name.c_str();
+            static char s_fn_filter[kLiveCallerSlotCount][128]{};
+            if (ImGui::BeginCombo("function", preview, ImGuiComboFlags_HeightLargest)) {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                ImGui::InputTextWithHint("##fnfilter", "filter...", s_fn_filter[i], sizeof(s_fn_filter[i]));
+                std::string needle = s_fn_filter[i];
+                for (auto& ch : needle) ch = (char)std::tolower((unsigned char)ch);
 
-        // Searchable picker: list the target's class functions (filtered by the typed
-        // text) so the name can be clicked instead of typed exactly.
-        if (slot.target != nullptr && ImGui::BeginCombo("pick", "functions...", ImGuiComboFlags_HeightLargest)) {
-            if (auto* cls = slot.target->get_class(); cls != nullptr) {
-                static const auto ufunction_t = sdk::UFunction::static_class();
-                std::vector<sdk::UFunction*> funcs{};
-                for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
-                    for (auto child = super->get_children(); child != nullptr; child = child->get_next()) {
-                        if (child->get_class()->is_a(ufunction_t)) {
-                            funcs.push_back((sdk::UFunction*)child);
+                if (auto* cls = slot.target->get_class(); cls != nullptr) {
+                    static const auto ufunction_t = sdk::UFunction::static_class();
+                    std::vector<sdk::UFunction*> funcs{};
+                    for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
+                        for (auto child = super->get_children(); child != nullptr; child = child->get_next()) {
+                            if (child->get_class()->is_a(ufunction_t)) {
+                                funcs.push_back((sdk::UFunction*)child);
+                            }
+                        }
+                    }
+                    std::sort(funcs.begin(), funcs.end(), [](sdk::UFunction* a, sdk::UFunction* b) {
+                        return a->get_fname().to_string() < b->get_fname().to_string();
+                    });
+                    for (auto* fn : funcs) {
+                        auto name = utility::narrow(fn->get_fname().to_string());
+                        if (!needle.empty()) {
+                            std::string lname = name;
+                            for (auto& ch : lname) ch = (char)std::tolower((unsigned char)ch);
+                            if (lname.find(needle) == std::string::npos) {
+                                continue;
+                            }
+                        }
+                        if (ImGui::Selectable(name.c_str(), slot.fn_name == name)) {
+                            slot.fn_name = name;
+                            slot.resolved = fn;
+                            slot.resolved_label = utility::narrow(fn->get_full_name());
+                            slot.resolve_error.clear();
                         }
                     }
                 }
-                std::sort(funcs.begin(), funcs.end(), [](sdk::UFunction* a, sdk::UFunction* b) {
-                    return a->get_fname().to_string() < b->get_fname().to_string();
-                });
-                std::string needle = slot.fn_name;
-                for (auto& ch : needle) ch = (char)std::tolower((unsigned char)ch);
-                for (auto* fn : funcs) {
-                    auto name = utility::narrow(fn->get_fname().to_string());
-                    std::string lname = name;
-                    for (auto& ch : lname) ch = (char)std::tolower((unsigned char)ch);
-                    if (!needle.empty() && lname.find(needle) == std::string::npos) {
-                        continue;
-                    }
-                    if (ImGui::Selectable(name.c_str())) {
-                        slot.fn_name = name;
-                        slot.resolved = fn;
-                        slot.resolved_label = utility::narrow(fn->get_full_name());
-                        slot.resolve_error.clear();
-                    }
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        if (want_resolve) {
-            slot.resolved = nullptr;
-            slot.resolved_label.clear();
-            slot.resolve_error.clear();
-            if (slot.target == nullptr) {
-                slot.resolve_error = "no target";
-            } else if (slot.fn_name.empty()) {
-                slot.resolve_error = "empty name";
-            } else {
-                const auto wname = utility::widen(slot.fn_name);
-                sdk::UFunction* fn = nullptr;
-                if (auto* cls = slot.target->get_class(); cls != nullptr) {
-                    fn = cls->find_function(wname.c_str());
-                }
-                if (fn == nullptr) {
-                    slot.resolve_error = "no function with that name on the target's class";
-                } else {
-                    slot.resolved = fn;
-                    slot.resolved_label = utility::narrow(fn->get_full_name());
-                }
+                ImGui::EndCombo();
             }
         }
 
