@@ -7000,7 +7000,7 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
                 // FString is null-terminated; trim the trailing wchar before narrowing.
                 const size_t len = (size_t)s.count - (s.data[s.count - 1] == L'\0' ? 1 : 0);
                 std::wstring w(s.data, len);
-                ImGui::BulletText("[%d] \"%s\"", i, utility::narrow(w).c_str());
+                ImGui::Bullet(); ImGui::TextWrapped("[%d] \"%s\"", i, utility::narrow(w).c_str());
             }
         }
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
@@ -7018,7 +7018,7 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             if (obj == nullptr) { ImGui::BulletText("[%d] nullptr", i); continue; }
             std::wstring full;
             try { full = obj->get_full_name(); } catch (...) { full = L"<unreadable>"; }
-            ImGui::BulletText("[%d] %s", i, utility::narrow(full).c_str());
+            ImGui::Bullet(); ImGui::TextWrapped("[%d] %s", i, utility::narrow(full).c_str());
         }
         if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
         break;
