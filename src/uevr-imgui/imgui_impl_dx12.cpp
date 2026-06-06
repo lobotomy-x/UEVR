@@ -942,8 +942,13 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info) {
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;  // We can honor ImGuiPlatformIO::Textures[] requests during render.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports; // We can create multi-viewports on the Renderer side (optional)
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX12_InitMultiViewportSupport();
+    // Unconditional: ImGui_ImplDX12_Init runs at D3D12-hook init when ConfigFlags
+    // has ViewportsEnable cleared (IMGUICONFIGFLAGS comments it out), so a gated
+    // call would never register the MV renderer callbacks. draw_ui toggles
+    // ViewportsEnable on later for flat D3D12 — too late to register. Registering
+    // here is safe in VR: the Framework gate keeps ViewportsEnable off while the
+    // HMD is active, so no platform windows are created and these stay dormant.
+    ImGui_ImplDX12_InitMultiViewportSupport();
 
     // Create a dummy ImGui_ImplDX12_ViewportData holder for the main viewport,
     // Since this is created and managed by the application, we will only use the ->Resources[] fields.

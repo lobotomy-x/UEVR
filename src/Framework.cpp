@@ -621,6 +621,9 @@ void Framework::run_imgui_frame(bool from_present) {
     // dereferences it (GetWindowMinimized/Focus/DpiScale -> null vd -> AV). Force
     // it back into existence before NewFrame. Idempotent (no-op when already set).
     ImGui_ImplWin32_EnsureMainViewportPlatformData();
+    // In VR the controller-quad intersection drives io.MousePos (OverlayComponent);
+    // suppress the win32 OS-cursor mouse path so it doesn't clobber that in NewFrame.
+    ImGui_ImplWin32_SetSuppressOsMouse(VR::get()->is_hmd_active());
     ImGui_ImplWin32_NewFrame();
 
     // from_present is so we don't accidentally
@@ -2320,7 +2323,6 @@ void Framework::call_on_frame() {
         // Run mod frame callbacks.
         m_frame_worker->execute();
         m_mods->on_frame();
-        ImGui::PushFont(m_default_font, m_font_size);
     }
 }
 

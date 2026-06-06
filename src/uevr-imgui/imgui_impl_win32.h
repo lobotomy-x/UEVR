@@ -30,6 +30,9 @@ IMGUI_IMPL_API void ImGui_ImplWin32_NewFrame();
 // Recreate the main viewport's platform data if a DestroyPlatformWindows() torn
 // it down (call before NewFrame to avoid null-deref in the viewport refresh).
 IMGUI_IMPL_API void ImGui_ImplWin32_EnsureMainViewportPlatformData();
+// Suppress the win32 OS-cursor mouse path (set true while the VR HMD is active so
+// UEVR's controller-intersect drives io.MousePos instead of the desktop cursor).
+IMGUI_IMPL_API void ImGui_ImplWin32_SetSuppressOsMouse(bool suppress);
 
 // Win32 message handler your application need to call.
 // - Intentionally commented out in a '#if 0' block to avoid dragging dependencies on <windows.h> from this helper.

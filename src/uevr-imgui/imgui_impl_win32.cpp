@@ -359,7 +359,20 @@ static ImGuiViewport* ImGui_ImplWin32_FindViewportByPlatformHandle(ImGuiPlatform
 
 // This code supports multi-viewports (multiple OS Windows mapped into different Dear ImGui viewports)
 // Because of that, it is a little more complicated than your typical single-viewport binding code!
+// When the VR HMD is active, UEVR drives io.MousePos from the controller-quad
+// intersection (OverlayComponent). The OS cursor is meaningless there, and the
+// win32 AddMousePosEvent below would clobber the VR-injected position inside
+// NewFrame. Framework sets this each frame so the win32 mouse path stands down
+// in VR and lets UEVR own the cursor. (Flat: stays false, normal behavior.)
+static bool g_imgui_impl_win32_suppress_os_mouse = false;
+void ImGui_ImplWin32_SetSuppressOsMouse(bool suppress) {
+    g_imgui_impl_win32_suppress_os_mouse = suppress;
+}
+
 static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io, ImGuiPlatformIO& platform_io) {
+    if (g_imgui_impl_win32_suppress_os_mouse) {
+        return;
+    }
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     IM_ASSERT(bd->hWnd != 0);
 
