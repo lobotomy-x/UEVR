@@ -5736,6 +5736,45 @@ void set_func_blocked(sdk::UFunction* fn, bool blocked) {
         g_blocked_funcs.erase(fn);
     }
 }
+
+// Per-function call monitor: a post-hook counts invocations for any monitored
+// function. Same persistent-hook pattern as the blocker — unmonitoring just
+// removes it from the set. Counts are read on the render thread, incremented on
+// the game thread, so the map is mutex-guarded.
+std::unordered_set<sdk::UFunction*> g_monitored_funcs{};
+std::unordered_map<sdk::UFunction*, uint64_t> g_func_call_counts{};
+std::mutex g_monitor_mtx{};
+
+bool uobjecthook_monitor_post(UEVR_UFunctionHandle fn, UEVR_UObjectHandle, void*, void*) {
+    std::scoped_lock _{g_monitor_mtx};
+    auto f = (sdk::UFunction*)fn;
+    if (g_monitored_funcs.find(f) != g_monitored_funcs.end()) {
+        ++g_func_call_counts[f];
+    }
+    return true;
+}
+
+bool is_func_monitored(sdk::UFunction* fn) {
+    std::scoped_lock _{g_monitor_mtx};
+    return g_monitored_funcs.find(fn) != g_monitored_funcs.end();
+}
+
+uint64_t func_call_count(sdk::UFunction* fn) {
+    std::scoped_lock _{g_monitor_mtx};
+    auto it = g_func_call_counts.find(fn);
+    return it != g_func_call_counts.end() ? it->second : 0;
+}
+
+void set_func_monitored(sdk::UFunction* fn, bool on) {
+    if (on) {
+        PluginLoader::get()->hook_ufunction_ptr((UEVR_UFunctionHandle)fn, nullptr, &uobjecthook_monitor_post);
+        std::scoped_lock _{g_monitor_mtx};
+        g_monitored_funcs.insert(fn);
+    } else {
+        std::scoped_lock _{g_monitor_mtx};
+        g_monitored_funcs.erase(fn);
+    }
+}
 } // namespace
 
 void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
@@ -5805,6 +5844,15 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
                 if (blocked) {
                     ImGui::SameLine();
                     ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "(no-op'd)");
+                }
+
+                bool monitored = is_func_monitored(func);
+                if (ImGui::Checkbox("Monitor calls", &monitored)) {
+                    set_func_monitored(func, monitored);
+                }
+                if (monitored) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "%llu calls", (unsigned long long)func_call_count(func));
                 }
             }
 
