@@ -5706,6 +5706,38 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
     }
 }
 
+namespace {
+// User-blocked UFunctions. The pre-hook below returns false for any function in
+// this set, which makes PluginLoader::ufunction_hook_intermediary skip the
+// original call (the function becomes a no-op). The hook stays installed when a
+// function is unblocked — it simply returns true again — so toggling needs no
+// unhook path.
+std::unordered_set<sdk::UFunction*> g_blocked_funcs{};
+std::mutex g_blocked_funcs_mtx{};
+
+bool uobjecthook_block_pre(UEVR_UFunctionHandle fn, UEVR_UObjectHandle, void*, void*) {
+    std::scoped_lock _{g_blocked_funcs_mtx};
+    return g_blocked_funcs.find((sdk::UFunction*)fn) == g_blocked_funcs.end();
+}
+
+bool is_func_blocked(sdk::UFunction* fn) {
+    std::scoped_lock _{g_blocked_funcs_mtx};
+    return g_blocked_funcs.find(fn) != g_blocked_funcs.end();
+}
+
+void set_func_blocked(sdk::UFunction* fn, bool blocked) {
+    if (blocked) {
+        // hook_ufunction_ptr dedups the same pre-fn pointer, so this is idempotent.
+        PluginLoader::get()->hook_ufunction_ptr((UEVR_UFunctionHandle)fn, &uobjecthook_block_pre, nullptr);
+        std::scoped_lock _{g_blocked_funcs_mtx};
+        g_blocked_funcs.insert(fn);
+    } else {
+        std::scoped_lock _{g_blocked_funcs_mtx};
+        g_blocked_funcs.erase(fn);
+    }
+}
+} // namespace
+
 void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     if (uclass == nullptr) {
         return;
@@ -5763,6 +5795,17 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
                     }
                 }
                 ImGui::TreePop();
+            }
+
+            {
+                bool blocked = is_func_blocked(func);
+                if (ImGui::Checkbox("Block execution", &blocked)) {
+                    set_func_blocked(func, blocked);
+                }
+                if (blocked) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "(no-op'd)");
+                }
             }
 
             if (is_real_object) {
