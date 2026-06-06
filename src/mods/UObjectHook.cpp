@@ -3626,11 +3626,40 @@ void UObjectHook::draw_class_browser_window() {
         ImGui::TextDisabled("%zu classes total — drag into a Class slot or click to inspect",
             m_sorted_classes.size());
 
+        // Shared per-class row: click opens a dedicated Class Inspector window
+        // (not deduplicated — clicking the same class refocuses the existing
+        // window since ImGui keys it by ###addr); drag publishes a UEVR_UClass
+        // payload the function caller's Class drop targets accept.
+        auto render_class_row = [&](sdk::UClass* uclass, const std::wstring& full) {
+            const auto narrow = utility::narrow(full);
+            ImGui::PushID(uclass);
+            if (ImGui::Selectable(narrow.c_str())) {
+                if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), uclass)
+                        == m_open_class_inspectors.end()) {
+                    m_open_class_inspectors.push_back(uclass);
+                }
+            }
+            if (ImGui::BeginDragDropSource()) {
+                ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
+                ImGui::Text("UClass: %s", narrow.c_str());
+                ImGui::EndDragDropSource();
+            }
+            ImGui::PopID();
+        };
+
+        // Package path = the segment between the type prefix and the first '.'
+        // of the object path, e.g. "Class /Script/Engine.Actor" -> "/Script/Engine".
+        auto package_of = [](const std::wstring& full) -> std::wstring {
+            const auto sp = full.find(L' ');
+            const std::wstring path = (sp == std::wstring::npos) ? full : full.substr(sp + 1);
+            const auto dot = path.find(L'.');
+            return (dot == std::wstring::npos) ? path : path.substr(0, dot);
+        };
+
         // Native vs Blueprint split:
         //   Native:    full name contains "/Script/"   (engine + game C++ modules)
         //   Blueprint: anything else                   (typically /Game/... assets)
-        // We render the *same* m_sorted_classes through this lambda twice with
-        // opposite predicates so we don't have to keep two sorted lists.
+        // The same m_sorted_classes is rendered twice with opposite predicates.
         auto render_class_list = [&](const char* child_id, bool want_native) {
             if (ImGui::BeginChild(child_id, ImVec2(0, 0), ImGuiChildFlags_Borders)) {
                 std::shared_lock _{m_mutex};
@@ -3643,26 +3672,7 @@ void UObjectHook::draw_class_browser_window() {
                     const bool is_native = full.find(L"/Script/") != std::wstring::npos;
                     if (is_native != want_native) continue;
                     if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
-                    const auto narrow = utility::narrow(full);
-                    ImGui::PushID(uclass);
-                    // Click → open dedicated Class Inspector window for this
-                    // class. We don't deduplicate (clicking the same class
-                    // twice just brings the existing window to focus next
-                    // frame because ImGui keys the window by ###addr).
-                    if (ImGui::Selectable(narrow.c_str())) {
-                        if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), uclass)
-                                == m_open_class_inspectors.end()) {
-                            m_open_class_inspectors.push_back(uclass);
-                        }
-                    }
-                    // Drag source for the UEVR_UClass payload that the function
-                    // caller's Class drop targets accept.
-                    if (ImGui::BeginDragDropSource()) {
-                        ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
-                        ImGui::Text("UClass: %s", narrow.c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                    ImGui::PopID();
+                    render_class_row(uclass, full);
                     ++shown;
                 }
                 if (shown == 0) {
@@ -3678,6 +3688,40 @@ void UObjectHook::draw_class_browser_window() {
             ImGui::EndChild();
         };
 
+        // Grouped view: classes nested under collapsible package headers. The
+        // std::map keeps packages alphabetical; collapsed headers keep per-frame
+        // render cost to the (cheap) grouping pass since rows only draw when open.
+        auto render_by_package = [&]() {
+            if (ImGui::BeginChild("by_package_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                std::shared_lock _{m_mutex};
+                std::map<std::wstring, std::vector<std::pair<sdk::UClass*, const std::wstring*>>> groups;
+                for (auto* uclass : m_sorted_classes) {
+                    if (uclass == nullptr) continue;
+                    auto it = m_meta_objects.find(uclass);
+                    if (it == m_meta_objects.end() || it->second == nullptr) continue;
+                    const auto& full = it->second->full_name;
+                    if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                    groups[package_of(full)].emplace_back(uclass, &full);
+                }
+                if (groups.empty()) {
+                    ImGui::TextDisabled(m_sorted_classes.empty()
+                        ? "class list not yet populated — sort task may still be running..."
+                        : "no matches for filter");
+                } else {
+                    for (auto& [pkg, classes] : groups) {
+                        const auto header = utility::narrow(pkg) + " (" + std::to_string(classes.size()) + ")";
+                        if (ImGui::TreeNode(header.c_str())) {
+                            for (auto& [uclass, full] : classes) {
+                                render_class_row(uclass, *full);
+                            }
+                            ImGui::TreePop();
+                        }
+                    }
+                }
+            }
+            ImGui::EndChild();
+        };
+
         if (ImGui::BeginTabBar("ClassesSubTabs")) {
             if (ImGui::BeginTabItem("Native (/Script/...)")) {
                 render_class_list("native_class_list", true);
@@ -3685,6 +3729,10 @@ void UObjectHook::draw_class_browser_window() {
             }
             if (ImGui::BeginTabItem("Blueprints (/Game/...)")) {
                 render_class_list("bp_class_list", false);
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("By Package")) {
+                render_by_package();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
