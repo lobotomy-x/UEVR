@@ -3761,8 +3761,14 @@ void UObjectHook::draw_class_browser_window() {
                     try { full = obj->get_full_name(); } catch (...) { continue; }
                     if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
                     const auto narrow = utility::narrow(full);
+                    // Short label (tail after the last '.') keeps the row compact;
+                    // the full path follows dimmed for context.
+                    const auto sp = narrow.find(' ');
+                    const auto path = (sp != std::string::npos) ? narrow.substr(sp + 1) : narrow;
+                    const auto dot = path.find_last_of('.');
+                    const auto short_nm = (dot != std::string::npos) ? path.substr(dot + 1) : path;
                     ImGui::PushID(obj);
-                    ImGui::Selectable(narrow.c_str());
+                    const bool node_open = ImGui::TreeNode((void*)obj, "%s", short_nm.c_str());
                     if (ImGui::BeginDragDropSource()) {
                         // UScriptStruct is a UObject, publish as UObject so
                         // generic Object drop targets accept it. Specialised
@@ -3770,6 +3776,11 @@ void UObjectHook::draw_class_browser_window() {
                         ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
                         ImGui::Text("UScriptStruct: %s", narrow.c_str());
                         ImGui::EndDragDropSource();
+                    }
+                    if (node_open) {
+                        try { ui_handle_struct(nullptr, (sdk::UStruct*)obj); }
+                        catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display struct>"); }
+                        ImGui::TreePop();
                     }
                     ImGui::PopID();
                     ++shown;
@@ -3981,21 +3992,6 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
     }
     utility::ScopeGuard tab_guard{[]() { ImGui::EndTabBar(); }};
 
-    // ---- Default Object tab -----------------------------------------------
-    if (ImGui::BeginTabItem("Default Object")) {
-        auto cdo = cls->get_class_default_object();
-        if (cdo == nullptr) {
-            ImGui::TextDisabled("class has no CDO");
-        } else {
-            // ui_handle_properties iterates the super chain and renders each
-            // property with the editor / drop targets the rest of UObjectHook
-            // already uses. Pass the CDO as the object so reads see real
-            // default values instead of zero-initialized memory.
-            ui_handle_properties(cdo, cls);
-        }
-        ImGui::EndTabItem();
-    }
-
     // ---- Properties tab (structural, no CDO read) -------------------------
     if (ImGui::BeginTabItem("Properties")) {
         ImGui::TextDisabled("structural FProperty list (no live values)");
@@ -4086,15 +4082,6 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
             }
             ImGui::EndChild();
         }
-        ImGui::EndTabItem();
-    }
-
-    // ---- Raw inspect tab (full ui_handle_object) --------------------------
-    if (ImGui::BeginTabItem("Raw")) {
-        // ui_handle_object on a UClass shows the Default Object subtree,
-        // Outer, plus any specialised handlers (material, widget component
-        // patcher, etc.). Useful as an "everything-else" fallback.
-        ui_handle_object((sdk::UObject*)cls);
         ImGui::EndTabItem();
     }
 
@@ -4418,21 +4405,6 @@ void UObjectHook::draw_main() {
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::Separator();
 
-    // Live Function Caller — pinned workbench-style widget that sits ABOVE the
-    // deep object tree so the user does not have to drill through
-    // Objects-by-class → SomeUClass → SomeObject → Functions → fn each time
-    // they want to invoke a function. Same slot state (s_live_slots in the
-    // anonymous namespace) is shared with the dockable pop-out window, so
-    // changes made in either surface stay in sync.
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once); // open on first show for discoverability
-    if (ImGui::TreeNode("Live Function Caller (inline)")) {
-        ImGui::TextDisabled("Drop a UObject / type a name or 0xADDR; type the function name; Enter or Resolve.");
-        ImGui::TextDisabled("State is shared with the pop-out 'Function Caller window' above.");
-        ImGui::Separator();
-        render_live_caller_slots();
-        ImGui::TreePop();
-    }
-
     if (!m_motion_controller_attached_components.empty()) {
 
         if (ImGui::TreeNode("Attached Components")) {
@@ -4569,12 +4541,6 @@ void UObjectHook::draw_main() {
             }
         }
 
-        ImGui::TreePop();
-    }
-    // Central list of every function the user has blocked or is monitoring, so
-    // they can be toggled off without hunting for the original class/function.
-    if (ImGui::TreeNode("Active function hooks")) {
-        draw_active_function_hooks();
         ImGui::TreePop();
     }
     // Display common objects like things related to the player
@@ -7127,7 +7093,10 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
         if (is_int) {
             ImGui::DragScalarN(label.c_str(), ImGuiDataType_S32, addr, comps, 1.0f);
         } else {
-            ImGui::DragScalarN(label.c_str(), wide ? ImGuiDataType_Double : ImGuiDataType_Float, addr, comps, 0.1f);
+            // "%.4g" keeps it compact — trims trailing zeros / caps sig-figs so a
+            // Vector reads "1.5, 0, -42.7" instead of "1.500, 0.000, -42.700".
+            ImGui::DragScalarN(label.c_str(), wide ? ImGuiDataType_Double : ImGuiDataType_Float, addr, comps, 0.1f,
+                nullptr, nullptr, "%.4g");
         }
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[%s]", sname.c_str());
