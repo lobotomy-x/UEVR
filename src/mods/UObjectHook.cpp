@@ -4118,28 +4118,23 @@ void UObjectHook::draw_function_caller_window() {
     }
     utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
 
-    if (ImGui::BeginTabBar("##function_hooks_tabs")) {
-        if (ImGui::BeginTabItem("Caller")) {
-            ImGui::TextDisabled("Same slots as the inline caller in UObjectHook -> Main.");
-            ImGui::TextDisabled("State is shared; drop UObjects from the Class Browser, the in-tree views, or type names.");
-            ImGui::Separator();
-            render_live_caller_slots();
-            ImGui::EndTabItem();
-        }
+    // Collapsing regions instead of tabs so the caller and the hooks/events
+    // monitor can be seen at once.
+    if (ImGui::CollapsingHeader("Function Caller", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::TextDisabled("Drop/type a target + pick a function. Shared with the per-object callers.");
+        ImGui::Separator();
+        render_live_caller_slots();
+    }
 
-        if (ImGui::BeginTabItem("Active hooks")) {
-            ImGui::TextDisabled("Functions flagged via the right-click menu (Block execution / Monitor calls).");
-            ImGui::Separator();
-            draw_active_function_hooks();
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("ProcessEvent")) {
-            draw_process_event_monitor();
-            ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+    // Active hooks (the flagged set: Block/Monitor) and the ProcessEvent monitor
+    // are merged — flagged functions are the same set the PE "Flagged only" mode
+    // records, so they belong together.
+    if (ImGui::CollapsingHeader("Hooks & Events", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SeparatorText("Flagged functions (right-click a function -> Block / Monitor)");
+        draw_active_function_hooks();
+        ImGui::Dummy(ImVec2(0.0f, 6.0f));
+        ImGui::SeparatorText("ProcessEvent monitor");
+        draw_process_event_monitor();
     }
 }
 
