@@ -1632,14 +1632,23 @@ void UObjectHook::hook_process_event() {
     }
 }
 
+namespace { bool is_func_monitored(sdk::UFunction* fn); }
+
 void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, void* params, void* r9) {
     auto& hook = UObjectHook::get();
 
     bool do_heavy_data_once = false;
 
-    if (hook->m_process_event_listening) {
+    // "Flagged only" mode restricts recording to the functions the user has
+    // flagged via Monitor calls (the shared g_monitored_funcs set), so the
+    // global ProcessEvent hook can act as a focused per-function monitor
+    // instead of recording every call in the game.
+    const bool record = hook->m_process_event_listening
+        && (!hook->m_process_event_flagged_only || is_func_monitored(func));
+
+    if (record) {
         std::scoped_lock _{hook->m_function_mutex};
-        
+
         auto& data = hook->m_called_functions[func];
         ++data.call_count;
 
@@ -1652,7 +1661,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
 
     auto result = hook->m_process_event_hook.unsafe_call<void*>(obj, func, params, r9);
 
-    if (hook->m_process_event_listening) {
+    if (record) {
         std::scoped_lock _{hook->m_function_mutex};
 
         auto& data = hook->m_called_functions[func];
@@ -4048,16 +4057,35 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
 
 void UObjectHook::draw_function_caller_window() {
     uobjecthook_dock_into_host_once();
-    if (!ImGui::Begin("UEVR Function Caller", &m_show_function_caller)) {
+    if (!ImGui::Begin("UEVR Function Hooks", &m_show_function_caller)) {
         ImGui::End();
         return;
     }
     utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
 
-    ImGui::TextDisabled("Same slots as the inline caller in UObjectHook → Main.");
-    ImGui::TextDisabled("State is shared; drop UObjects from the Class Browser, the in-tree views, or type names.");
-    ImGui::Separator();
-    render_live_caller_slots();
+    if (ImGui::BeginTabBar("##function_hooks_tabs")) {
+        if (ImGui::BeginTabItem("Caller")) {
+            ImGui::TextDisabled("Same slots as the inline caller in UObjectHook -> Main.");
+            ImGui::TextDisabled("State is shared; drop UObjects from the Class Browser, the in-tree views, or type names.");
+            ImGui::Separator();
+            render_live_caller_slots();
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Active hooks")) {
+            ImGui::TextDisabled("Functions flagged via the right-click menu (Block execution / Monitor calls).");
+            ImGui::Separator();
+            draw_active_function_hooks();
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("ProcessEvent")) {
+            draw_process_event_monitor();
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
 }
 
 void UObjectHook::on_draw_ui() {
@@ -4128,6 +4156,33 @@ void UObjectHook::draw_developer() {
     ImGui::Text("Destructor calls: %llu", m_debug.destructor_calls);
 
     ImGui::Separator();
+    draw_process_event_monitor();
+
+    ImGui::Separator();
+
+    static std::array<char, 512> address_buffer{};
+    ImGui::InputText("Address Lookup", address_buffer.data(), address_buffer.size());
+
+    // Try-catch block around this because it's possible the user could enter invalid input
+    // also hex->int conversion can throw
+    try {
+        auto obj = (sdk::UObject*)std::stoull(address_buffer.data(), nullptr, 16);
+
+        if (obj != nullptr && this->exists(obj)) {
+            ImGui::PushID(obj);
+            if (ImGui::TreeNode(utility::narrow(obj->get_full_name()).c_str())) {
+                ui_handle_object(obj);
+                ImGui::TreePop();
+            }
+
+            ImGui::PopID();
+        }
+    } catch (...) {
+        // ignore
+    }
+}
+
+void UObjectHook::draw_process_event_monitor() {
     if (!m_attempted_hook_process_event) {
         if (ImGui::Button("Create ProcessEvent hook")) {
             GameThreadWorker::get().enqueue([this]() {
@@ -4136,7 +4191,11 @@ void UObjectHook::draw_developer() {
         }
     } else if (m_hooked_process_event) {
         ImGui::Checkbox("ProcessEvent Listener", &m_process_event_listening);
-        
+        ImGui::SameLine();
+        ImGui::Checkbox("Flagged only", &m_process_event_flagged_only);
+        if (m_process_event_flagged_only) {
+            ImGui::TextDisabled("Recording only functions flagged via Monitor calls (right-click a function).");
+        }
 
         if (m_process_event_listening) {
           
@@ -4289,29 +4348,6 @@ void UObjectHook::draw_developer() {
     } else {
         ImGui::Text("Failed to hook ProcessEvent!");
     }
-
-    ImGui::Separator();
-
-    static std::array<char, 512> address_buffer{};
-    ImGui::InputText("Address Lookup", address_buffer.data(), address_buffer.size());
-
-    // Try-catch block around this because it's possible the user could enter invalid input
-    // also hex->int conversion can throw
-    try {
-        auto obj = (sdk::UObject*)std::stoull(address_buffer.data(), nullptr, 16);
-
-        if (obj != nullptr && this->exists(obj)) {
-            ImGui::PushID(obj);
-            if (ImGui::TreeNode(utility::narrow(obj->get_full_name()).c_str())) {
-                ui_handle_object(obj);
-                ImGui::TreePop();
-            }
-
-            ImGui::PopID();
-        }
-    } catch (...) {
-        // ignore
-    }
 }
 
 void UObjectHook::draw_main() {
@@ -4331,7 +4367,7 @@ void UObjectHook::draw_main() {
     // simultaneously and dock anywhere via the host dockspace.
     ImGui::Checkbox("Class Browser window", &m_show_class_browser);
     ImGui::SameLine();
-    ImGui::Checkbox("Function Caller window", &m_show_function_caller);
+    ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::Separator();
 
     // Live Function Caller — pinned workbench-style widget that sits ABOVE the

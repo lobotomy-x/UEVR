@@ -522,6 +522,7 @@ private:
 
     safetyhook::InlineHook m_process_event_hook{};
     bool m_process_event_listening{true};
+    bool m_process_event_flagged_only{false};
     bool m_attempted_hook_process_event{false};
     bool m_hooked_process_event{false};
 
@@ -529,6 +530,7 @@ private:
 public:
     void hook_process_event();
     static void* process_event_hook(sdk::UObject* obj, sdk::UFunction* func, void* params, void* r9);
+    void draw_process_event_monitor();
 
 private:
     std::recursive_mutex m_function_mutex{};
