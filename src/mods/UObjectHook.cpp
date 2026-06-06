@@ -5763,25 +5763,39 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
         auto scope = m_path.enter("Components");
         auto components = actor->get_all_components();
 
+        // Drop null/stale entries before sorting so the comparator can't deref a bad ptr.
+        std::erase_if(components, [this](sdk::UObject* c) { return c == nullptr || !this->exists_unsafe(c); });
+
         std::sort(components.begin(), components.end(), [](sdk::UObject* a, sdk::UObject* b) {
-            return a->get_full_name() < b->get_full_name();
+            std::wstring an, bn;
+            try { an = a->get_full_name(); } catch (...) {}
+            try { bn = b->get_full_name(); } catch (...) {}
+            return an < bn;
         });
 
         for (auto comp : components) {
             auto comp_obj = (sdk::UObject*)comp;
 
             ImGui::PushID(comp_obj);
+            utility::ScopeGuard id_guard{[]() { ImGui::PopID(); }};
             // not using full_name because its HUGE
-            std::wstring comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
-            const auto made = ImGui::TreeNode(utility::narrow(comp_name).data());
+            std::wstring comp_name;
+            try {
+                const auto cls = comp->get_class();
+                comp_name = (cls != nullptr ? cls->get_fname().to_string() : std::wstring{L"<no class>"})
+                          + L" " + comp->get_fname().to_string();
+            } catch (...) {
+                comp_name = L"<unreadable component>";
+            }
+            const auto narrow = utility::narrow(comp_name);
+            const bool made = ImGui::TreeNode(narrow.data());
+            utility::ScopeGuard tree_guard{[made]() { if (made) ImGui::TreePop(); }};
 
             if (made) {
-                auto scope2 = m_path.enter(utility::narrow(comp_name));
-                ui_handle_object(comp_obj);
-                ImGui::TreePop();
+                auto scope2 = m_path.enter(narrow);
+                try { ui_handle_object(comp_obj); }
+                catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display component>"); }
             }
-
-            ImGui::PopID();
         }
 
         ImGui::TreePop();
