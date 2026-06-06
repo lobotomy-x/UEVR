@@ -6426,6 +6426,11 @@ const auto check_flags = [](uint64_t flags){
         case L"StructProperty"_fnv:
             {
                 void* addr = (void*)((uintptr_t)object + fprop->get_offset());
+                const auto strukt = ((sdk::FStructProperty*)prop)->get_struct();
+
+                if (ui_try_known_struct(prop_name, addr, strukt)) {
+                    break;
+                }
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::Button("Copy Address")) {
@@ -6681,6 +6686,10 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
                 continue;
             }
 
+            if (ui_try_known_struct(std::string("Element ") + std::to_string(i), element, strukt)) {
+                continue;
+            }
+
             const bool element_node_open = ImGui::TreeNode((void*)element, "Element %d", i);
             // RAII guard so TreePop always runs even if ui_handle_struct
             // throws — without this the previous `try { TreeNode ... TreePop }
@@ -6844,6 +6853,106 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
         }
         break;
     };
+}
+
+bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition) {
+    if (addr == nullptr || definition == nullptr) {
+        return false;
+    }
+
+    std::string sname;
+    try {
+        sname = utility::narrow(definition->get_fname().to_string());
+    } catch (...) {
+        return false;
+    }
+
+    const ImVec4 tag_color{78.0f / 255.0f, 201.0f / 255.0f, 176.0f / 255.0f, 1.0f};
+    const auto base = (uintptr_t)addr;
+    const int32_t total = definition->get_properties_size();
+
+    ImGui::PushID(addr);
+    utility::ScopeGuard id_guard{[]() { ImGui::PopID(); }};
+
+    if (sname == "Color") {
+        if (IsBadReadPtr(addr, 4)) {
+            ImGui::Text("%s: <unreadable>", label.c_str());
+            return true;
+        }
+        const auto bytes = (uint8_t*)addr;
+        float rgba[4] = {bytes[2] / 255.0f, bytes[1] / 255.0f, bytes[0] / 255.0f, bytes[3] / 255.0f};
+        if (ImGui::ColorEdit4(label.c_str(), rgba, ImGuiColorEditFlags_NoInputs)) {
+            bytes[2] = (uint8_t)(rgba[0] * 255.0f);
+            bytes[1] = (uint8_t)(rgba[1] * 255.0f);
+            bytes[0] = (uint8_t)(rgba[2] * 255.0f);
+            bytes[3] = (uint8_t)(rgba[3] * 255.0f);
+        }
+        ImGui::SameLine();
+        ImGui::TextColored(tag_color, "[Color]");
+        return true;
+    }
+
+    int comps = 0;
+    bool force_float = false;
+    bool is_int = false;
+    if (sname == "Vector2D" || sname == "Vector2f" || sname == "Vector2d") {
+        comps = 2;
+    } else if (sname == "IntPoint") {
+        comps = 2; is_int = true;
+    } else if (sname == "Vector" || sname == "Vector3f" || sname == "Vector3d" || sname == "Rotator") {
+        comps = 3;
+    } else if (sname == "IntVector") {
+        comps = 3; is_int = true;
+    } else if (sname == "Quat" || sname == "Vector4" || sname == "Vector4f" || sname == "Vector4d") {
+        comps = 4;
+    } else if (sname == "LinearColor") {
+        comps = 4; force_float = true;
+    }
+
+    if (comps > 0) {
+        if (IsBadReadPtr(addr, (size_t)comps * 8)) {
+            ImGui::Text("%s: <unreadable>", label.c_str());
+            return true;
+        }
+        if (is_int) {
+            ImGui::DragScalarN(label.c_str(), ImGuiDataType_S32, addr, comps, 1.0f);
+        } else {
+            const bool wide = !force_float && total >= comps * 8;
+            ImGui::DragScalarN(label.c_str(), wide ? ImGuiDataType_Double : ImGuiDataType_Float, addr, comps, 0.1f);
+        }
+        ImGui::SameLine();
+        ImGui::TextColored(tag_color, "[%s]", sname.c_str());
+        return true;
+    }
+
+    if (sname == "Transform" || sname == "Transform3f" || sname == "Transform3d") {
+        const bool open = ImGui::TreeNode(label.c_str());
+        ImGui::SameLine();
+        ImGui::TextColored(tag_color, "[Transform]");
+        if (open) {
+            for (auto field = definition->get_child_properties(); field != nullptr; field = field->get_next()) {
+                std::string fcname;
+                try { fcname = utility::narrow(field->get_class()->get_name().to_string()); } catch (...) { continue; }
+                if (fcname != "StructProperty") {
+                    continue;
+                }
+                const auto member_struct = ((sdk::FStructProperty*)field)->get_struct();
+                const auto member_off = ((sdk::FProperty*)field)->get_offset();
+                std::string fname;
+                try { fname = utility::narrow(field->get_field_name().to_string()); } catch (...) { fname = "?"; }
+                if (!ui_try_known_struct(fname, (void*)(base + member_off), member_struct)) {
+                    if (ImGui::TreeNode(fname.c_str())) {
+                        ui_handle_struct((void*)(base + member_off), member_struct);
+                        ImGui::TreePop();
+                    }
+                }
+            }
+            ImGui::TreePop();
+        }
+        return true;
+    }
+
+    return false;
 }
 
 void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {

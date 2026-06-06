@@ -214,6 +214,7 @@ private:
     void ui_handle_functions(void* object, sdk::UStruct* definition);
     void draw_active_function_hooks();
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
+    bool ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition);
 
     void ui_handle_scene_component(sdk::USceneComponent* component);
     void ui_handle_material_interface(sdk::UObject* object);
