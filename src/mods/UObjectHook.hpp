@@ -212,6 +212,7 @@ private:
     void ui_handle_properties(void* object, sdk::UStruct* definition);
     void ui_handle_array_property(void* object, sdk::FArrayProperty* definition);
     void ui_handle_functions(void* object, sdk::UStruct* definition);
+    void draw_active_function_hooks();
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
 
     void ui_handle_scene_component(sdk::USceneComponent* component);

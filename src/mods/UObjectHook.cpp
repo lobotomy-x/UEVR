@@ -4495,6 +4495,12 @@ void UObjectHook::draw_main() {
 
         ImGui::TreePop();
     }
+    // Central list of every function the user has blocked or is monitoring, so
+    // they can be toggled off without hunting for the original class/function.
+    if (ImGui::TreeNode("Active function hooks")) {
+        draw_active_function_hooks();
+        ImGui::TreePop();
+    }
     // Display common objects like things related to the player
     if (ImGui::TreeNode("Common Objects")) {
         auto engine = sdk::UGameEngine::get();
@@ -5776,6 +5782,64 @@ void set_func_monitored(sdk::UFunction* fn, bool on) {
     }
 }
 } // namespace
+
+void UObjectHook::draw_active_function_hooks() {
+    // Snapshot under the locks, then render (don't hold a lock across ImGui).
+    std::vector<sdk::UFunction*> blocked;
+    std::vector<std::pair<sdk::UFunction*, uint64_t>> monitored;
+    {
+        std::scoped_lock _{g_blocked_funcs_mtx};
+        blocked.assign(g_blocked_funcs.begin(), g_blocked_funcs.end());
+    }
+    {
+        std::scoped_lock _{g_monitor_mtx};
+        for (auto* f : g_monitored_funcs) {
+            auto it = g_func_call_counts.find(f);
+            monitored.emplace_back(f, it != g_func_call_counts.end() ? it->second : 0);
+        }
+    }
+
+    if (blocked.empty() && monitored.empty()) {
+        ImGui::TextDisabled("No blocked or monitored functions.");
+        return;
+    }
+
+    const auto name_of = [](sdk::UFunction* f) -> std::string {
+        try { return utility::narrow(f->get_full_name()); } catch (...) { return std::format("[{:#x}]", (uintptr_t)f); }
+    };
+
+    if (!blocked.empty()) {
+        ImGui::SeparatorText("Blocked (no-op'd)");
+        for (auto* f : blocked) {
+            ImGui::PushID((void*)f);
+            if (ImGui::SmallButton("Unblock")) {
+                set_func_blocked(f, false);
+            }
+            ImGui::SameLine();
+            ImGui::TextUnformatted(name_of(f).c_str());
+            ImGui::PopID();
+        }
+    }
+
+    if (!monitored.empty()) {
+        ImGui::SeparatorText("Monitored");
+        if (ImGui::SmallButton("Reset all counts")) {
+            std::scoped_lock _{g_monitor_mtx};
+            g_func_call_counts.clear();
+        }
+        for (auto& [f, count] : monitored) {
+            ImGui::PushID((void*)f);
+            if (ImGui::SmallButton("Stop")) {
+                set_func_monitored(f, false);
+            }
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "%llu", (unsigned long long)count);
+            ImGui::SameLine();
+            ImGui::TextUnformatted(name_of(f).c_str());
+            ImGui::PopID();
+        }
+    }
+}
 
 void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     if (uclass == nullptr) {
