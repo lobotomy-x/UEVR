@@ -5865,11 +5865,25 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     std::sort(sorted_functions.begin(), sorted_functions.end(),
         [](sdk::UFunction* a, sdk::UFunction* b) { return a->get_fname().to_string() < b->get_fname().to_string(); });
 
+    // Name filter — function lists are often huge; let the user narrow them
+    // (case-insensitive substring) to find the function they want to call/hook.
+    static char s_func_filter[64] = "";
+    ImGui::InputTextWithHint("##func_filter", "filter functions by name...", s_func_filter, sizeof(s_func_filter));
+    std::string filter_lc = s_func_filter;
+    std::transform(filter_lc.begin(), filter_lc.end(), filter_lc.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+
     for (auto func : sorted_functions) {
         ImGui::PushID((void*)func);
 
         utility::ScopeGuard pop_guard{[]() { ImGui::PopID(); }};
 
+        if (!filter_lc.empty()) {
+            auto nm = utility::narrow(func->get_fname().to_string());
+            std::transform(nm.begin(), nm.end(), nm.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+            if (nm.find(filter_lc) == std::string::npos) {
+                continue;
+            }
+        }
 
         ui_standard_object_context_menu(func);
 
