@@ -119,6 +119,10 @@ private:
  
     const ModSlider::Ptr m_framework_distance{ ModSlider::create("UI_Framework_Distance", 0.5f, 10.0f, 1.75f) };
     const ModSlider::Ptr m_framework_size{ ModSlider::create("UI_Framework_Size", 0.5f, 10.0f, 2.0f) };
+    // Curve the framework menu overlay around the viewer (OpenVR SetOverlayCurvature,
+    // 0 = flat quad, 1 = full cylinder wrap) so it can reach into the periphery
+    // instead of being a flat square dead-ahead.
+    const ModSlider::Ptr m_framework_curvature{ ModSlider::create("UI_Framework_Curvature", 0.0f, 1.0f, 0.0f) };
     const ModToggle::Ptr m_framework_ui_follows_view{ ModToggle::create("UI_Framework_FollowView", false) };
     const ModToggle::Ptr m_framework_wrist_ui{ ModToggle::create("UI_Framework_WristUI", false) };
     const ModToggle::Ptr m_framework_mouse_emulation{ ModToggle::create("UI_Framework_MouseEmulation", true) };
@@ -138,6 +142,7 @@ public:
             *m_ui_invert_alpha,
             *m_framework_distance,
             *m_framework_size,
+            *m_framework_curvature,
             *m_framework_ui_follows_view,
             *m_framework_wrist_ui,
             *m_framework_mouse_emulation,

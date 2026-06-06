@@ -1458,13 +1458,19 @@ static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport) {
 
 static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    IM_ASSERT(vd->Hwnd != 0);
+    // Main viewport has no win32 platform window when multiviewport is off (VR);
+    // NewFrame still polls this. IM_ASSERT is compiled out in release, so guard.
+    if (vd == nullptr || vd->Hwnd == nullptr) {
+        return false;
+    }
     return ::GetForegroundWindow() == vd->Hwnd;
 }
 
 static bool ImGui_ImplWin32_GetWindowMinimized(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    IM_ASSERT(vd->Hwnd != 0);
+    if (vd == nullptr || vd->Hwnd == nullptr) {
+        return false; // no platform window => treat as not-minimized (keep rendering)
+    }
     return ::IsIconic(vd->Hwnd) != 0;
 }
 
@@ -1500,7 +1506,12 @@ static void ImGui_ImplWin32_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
 
 static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
-    IM_ASSERT(vd->Hwnd != 0);
+    // With multiviewport disabled (e.g. in VR) the main viewport has no win32
+    // platform data, but NewFrame's DPI path still calls this getter. IM_ASSERT
+    // is compiled out in release, so guard for real: no platform window => 1.0.
+    if (vd == nullptr || vd->Hwnd == nullptr) {
+        return 1.0f;
+    }
     return ImGui_ImplWin32_GetDpiScaleForHwnd(vd->Hwnd);
 }
 
@@ -1627,6 +1638,27 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc) {
     vd->Hwnd = bd->hWnd;
     vd->HwndOwned = false;
     main_viewport->PlatformUserData = vd;
+}
+
+// Re-establish the main viewport's platform data when it has been torn down by
+// ImGui::DestroyPlatformWindows() (which runs on our reset/deinit paths) and not
+// recreated — NewFrame's per-viewport refresh still dereferences it. The vd
+// struct and bd->hWnd are file-local, so this must live inside this TU; it's
+// exported so Framework can call it each frame before NewFrame. Idempotent.
+void ImGui_ImplWin32_EnsureMainViewportPlatformData() {
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    if (bd == nullptr || bd->hWnd == nullptr) {
+        return;
+    }
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    if (main_viewport == nullptr || main_viewport->PlatformUserData != nullptr) {
+        return;
+    }
+    ImGui_ImplWin32_ViewportData* vd = IM_NEW(ImGui_ImplWin32_ViewportData)();
+    vd->Hwnd = bd->hWnd;
+    vd->HwndOwned = false;
+    main_viewport->PlatformUserData = vd;
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->hWnd;
 }
 
 static void ImGui_ImplWin32_ShutdownMultiViewportSupport() {

@@ -237,6 +237,9 @@ void OverlayComponent::on_draw_ui() {
      
         m_framework_distance->draw("Framework Distance");
         m_framework_size->draw("Framework Size");
+        if (VR::get()->get_runtime()->is_openvr()) {
+            m_framework_curvature->draw("Framework Curvature");
+        }
         m_framework_ui_follows_view->draw("Framework Follows View");
         if (VR::get()->get_runtime()->is_openvr()) {
             ImGui::SameLine();
@@ -749,6 +752,9 @@ void OverlayComponent::update_overlay_openvr() {
         const auto height_meters = adjusted_size_meters;
 
         vr::VROverlay()->SetOverlayWidthInMeters(m_overlay_handle, width_meters);
+        // Curve the menu around the viewer when drawing the framework UI so it can
+        // reach the periphery; flat (0) for the game-slate pass.
+        vr::VROverlay()->SetOverlayCurvature(m_overlay_handle, g_framework->is_drawing_ui() ? m_framework_curvature->value() : 0.0f);
 
         if (is_d3d11) {
             vr::Texture_t imgui_tex{(void*)g_framework->get_rendertarget_d3d11().Get(), vr::TextureType_DirectX, vr::ColorSpace_Auto};

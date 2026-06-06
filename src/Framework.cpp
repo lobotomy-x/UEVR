@@ -615,10 +615,12 @@ void Framework::run_imgui_frame(bool from_present) {
 
     consume_input();
     update_fonts();
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    // Force the platform to acknowledge the window is valid
-    if (main_viewport->PlatformUserData) {
-    }
+    // The main viewport's win32 platform data is created at init but destroyed
+    // by ImGui::DestroyPlatformWindows() (reset/deinit paths) and never recreated
+    // while multiviewport is off — yet NewFrame's per-viewport refresh still
+    // dereferences it (GetWindowMinimized/Focus/DpiScale -> null vd -> AV). Force
+    // it back into existence before NewFrame. Idempotent (no-op when already set).
+    ImGui_ImplWin32_EnsureMainViewportPlatformData();
     ImGui_ImplWin32_NewFrame();
 
     // from_present is so we don't accidentally
@@ -717,8 +719,6 @@ void Framework::on_frame_d3d11() {
 
     std::scoped_lock _{m_imgui_mtx};
 
-    spdlog::debug("on_frame (D3D11)");
-
     m_renderer_type = RendererType::D3D11;
 
     if (!m_initialized) {
@@ -801,38 +801,6 @@ void Framework::on_frame_d3d11() {
     // Set the back buffer to be the render target.
     context->OMSetRenderTargets(1, m_d3d11.bb_rtv.GetAddressOf(), nullptr);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-    // RENDER PROBE (overlay-disappear diag): when the menu is up and the RT size
-    // changed (windowed<->fullscreen), log which swapchain we're rendering the
-    // overlay into and whether its OutputWindow still matches the game window.
-    // If m_swap_chain's HWND != m_wnd after a fullscreen transition, bb_rtv was
-    // built from the wrong/stale backbuffer => overlay renders nowhere.
-    {
-        static uint32_t s_rp_w = 0, s_rp_h = 0;
-        const uint32_t cw = m_d3d11.rt_width, ch = m_d3d11.rt_height;
-        if (m_draw_ui && (cw != s_rp_w || ch != s_rp_h)) {
-            HWND sc_hwnd = nullptr;
-            uint32_t bbw = 0, bbh = 0;
-            auto* sc = m_d3d11_hook != nullptr ? m_d3d11_hook->get_swap_chain() : nullptr;
-            if (sc != nullptr) {
-                DXGI_SWAP_CHAIN_DESC d{};
-                if (SUCCEEDED(sc->GetDesc(&d))) {
-                    sc_hwnd = d.OutputWindow;
-                    bbw = d.BufferDesc.Width;
-                    bbh = d.BufferDesc.Height;
-                }
-            }
-            RECT cr{};
-            GetClientRect(m_wnd, &cr);
-            const auto& io = ImGui::GetIO();
-            auto* dd = ImGui::GetDrawData();
-            spdlog::info("[render-probe] rt={}x{} bb={}x{} disp={:.0f}x{:.0f} client={}x{} bb_rtv={} vtx={} sc={:#x} match={}", cw, ch, bbw,
-                bbh, io.DisplaySize.x, io.DisplaySize.y, (int)(cr.right - cr.left), (int)(cr.bottom - cr.top),
-                (m_d3d11.bb_rtv.Get() != nullptr), (dd ? dd->TotalVtxCount : -1), (uintptr_t)sc, (sc_hwnd == m_wnd));
-            s_rp_w = cw;
-            s_rp_h = ch;
-        }
-    }
 
     // Drive secondary viewports on the present thread (same thread as the main RenderDrawData
     // above). ImGui::Render() already built per-viewport DrawData during run_imgui_frame on the
@@ -2647,7 +2615,10 @@ void Framework::deinit_d3d12() {
     // descriptor heaps / command lists the GPU is still executing causes
     // DXGI_ERROR_DEVICE_REMOVED — frequent under the resolution-change churn at
     // startup, where on_reset (ResizeBuffers + ResizeTarget) fires repeatedly.
-    if (m_d3d12_hook != nullptr) {
+    // Skipped in VR: the VR compositor owns the queue's GPU sync, and doing our
+    // own Signal/Wait on it during the VR-init deinit churn crashes the device
+    // (the baseline deinit, without this, runs fine in VR).
+    if (!VR::get()->is_hmd_active() && m_d3d12_hook != nullptr) {
         auto* device = m_d3d12_hook->get_device();
         auto* queue = m_d3d12_hook->get_command_queue();
         if (device != nullptr && queue != nullptr) {
@@ -2670,7 +2641,9 @@ void Framework::deinit_d3d12() {
     // command lists / swapchains on the next UpdatePlatformWindows. D3D11's
     // on_reset already does this — D3D12 needs it on EVERY deinit, incl. the
     // init_d3d12 -> deinit_d3d12 re-init churn at startup (a frequent crash).
-    if (ImGui::GetCurrentContext() != nullptr) {
+    // Skipped in VR (MV is off there, so there are no secondaries to destroy,
+    // and touching platform windows during VR-init deinit is part of the crash).
+    if (!VR::get()->is_hmd_active() && ImGui::GetCurrentContext() != nullptr) {
         try { ImGui::DestroyPlatformWindows(); } catch (...) {}
     }
 
