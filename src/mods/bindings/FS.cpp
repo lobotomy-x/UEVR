@@ -270,7 +270,7 @@ void bindings::open_fs(sol::state_view& lua) {
         return sol::make_object(l, sol::nil);
     };*/
 
-    io["popen"] = sol::make_object(lua, sol::nil); // on second thought, I don't want to allow this. If someone really wants this functionality, they can just make a C++ plugin and use the C++ API.
+//    io["popen"] = sol::make_object(lua, sol::nil); // on second thought, I don't want to allow this. If someone really wants this functionality, they can just make a C++ plugin and use the C++ API.
 
     // These functions can take nil as the first argument and they will return the default filehandle associated with stdin, stdout, or stderr.
     // So they should be safe in that respect.

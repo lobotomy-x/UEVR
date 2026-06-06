@@ -1436,13 +1436,24 @@ static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) 
 static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport) {
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
-    // UEVR-local: re-assert HWND_TOPMOST in addition to BringWindowToTop. The
-    // latter only re-orders within the window's z-order group, so it does
-    // NOT help if the popup got demoted out of the topmost group earlier.
-    ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    ::BringWindowToTop(vd->Hwnd);
-    ::SetForegroundWindow(vd->Hwnd);
-    ::SetFocus(vd->Hwnd);
+
+    // DEADLOCK GUARD (confirmed via cdb, twice): UEVR runs ImGui::NewFrame on the
+    // engine/present thread, which is NOT the thread that owns the popup HWNDs.
+    // ImGui's own nav (Ctrl+Tab, focus-on-appear) calls this from NewFrame, and
+    // BringWindowToTop/SetForegroundWindow/SetFocus are BLOCKING cross-thread
+    // calls — they wait on the owning thread's message pump. When that pump is
+    // busy (e.g. a windowed<->fullscreen resize) the engine thread hangs forever.
+    // Only do the blocking focus calls when we're actually on the window's owning
+    // thread; cross-thread, do an async z-order bump only (never blocks).
+    const DWORD wnd_tid = ::GetWindowThreadProcessId(vd->Hwnd, nullptr);
+    if (wnd_tid == ::GetCurrentThreadId()) {
+        ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        ::BringWindowToTop(vd->Hwnd);
+        ::SetForegroundWindow(vd->Hwnd);
+        ::SetFocus(vd->Hwnd);
+    } else {
+        ::SetWindowPos(vd->Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
+    }
 }
 
 static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport) {

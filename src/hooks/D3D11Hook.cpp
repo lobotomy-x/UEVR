@@ -77,12 +77,15 @@ bool D3D11Hook::hook() {
     try {
         m_present_hook.reset();
         m_resize_buffers_hook.reset();
+        m_resize_target_hook.reset();
 
         auto& present_fn = (*(void***)swap_chain)[8];
         auto& resize_buffers_fn = (*(void***)swap_chain)[13];
+        auto& resize_target_fn = (*(void***)swap_chain)[14];
 
         m_present_hook = std::make_unique<PointerHook>(&present_fn, (void*)&D3D11Hook::present);
         m_resize_buffers_hook = std::make_unique<PointerHook>(&resize_buffers_fn, (void*)&D3D11Hook::resize_buffers);
+        m_resize_target_hook = std::make_unique<PointerHook>(&resize_target_fn, (void*)&D3D11Hook::resize_target);
 
         m_hooked = true;
     } catch (const std::exception& e) {
@@ -103,7 +106,7 @@ bool D3D11Hook::unhook() {
 
     spdlog::info("Unhooking D3D11");
 
-    if (m_present_hook->remove() && m_resize_buffers_hook->remove()) {
+    if (m_present_hook->remove() && m_resize_buffers_hook->remove() && (m_resize_target_hook == nullptr || m_resize_target_hook->remove())) {
         m_hooked = false;
         return true;
     }
@@ -234,17 +237,8 @@ HRESULT WINAPI D3D11Hook::resize_buffers(
         return resize_buffers_fn(swap_chain, buffer_count, width, height, new_format, swap_chain_flags);
     }
 
-    // Multiviewport guard: only the MAIN game-window swapchain may drive the
-    // framework reset. ImGui multi-viewport creates a separate secondary
-    // swapchain for every popped-out window, each on its own HWND. When one of
-    // those resizes (e.g. the user drags/resizes a 700x700 popout), DXGI calls
-    // this same hooked ResizeBuffers — and without this guard it fell through to
-    // on_reset() below, which tears down + rebuilds the MAIN renderer
-    // (deinit_d3d11 + m_mods->on_device_reset). That produced the "Reset! 700
-    // 700" -> access-violation crash observed with multiviewport enabled. The
-    // secondary swapchains are owned by ImGui's DX11 backend; let their resize
-    // pass straight through to the original. Guard is skipped when m_wnd isn't
-    // known yet (very early), preserving original behaviour.
+    // Only the main game-window swapchain drives the framework reset; let
+    // secondary (popped-out) swapchains resize straight through to the original.
     const auto main_wnd = g_framework->get_window();
     if (main_wnd != nullptr && swap_desc.OutputWindow != main_wnd) {
         return resize_buffers_fn(swap_chain, buffer_count, width, height, new_format, swap_chain_flags);
@@ -280,6 +274,38 @@ HRESULT WINAPI D3D11Hook::resize_buffers(
     g_inside_d3d11_resize_buffers = false;
 
     return last_d3d11_resize_buffers_result;
+}
+
+HRESULT WINAPI D3D11Hook::resize_target(IDXGISwapChain* swap_chain, const DXGI_MODE_DESC* new_target_parameters) {
+    std::scoped_lock _{g_framework->get_hook_monitor_mutex()};
+
+    auto d3d11 = g_d3d11_hook;
+    auto resize_target_fn = d3d11->m_resize_target_hook->get_original<decltype(D3D11Hook::resize_target)*>();
+
+    DXGI_SWAP_CHAIN_DESC swap_desc{};
+    swap_chain->GetDesc(&swap_desc);
+
+    if (WindowFilter::get().is_filtered(swap_desc.OutputWindow)) {
+        return resize_target_fn(swap_chain, new_target_parameters);
+    }
+
+    // Only the main game-window swapchain drives the framework reset; secondary
+    // (popped-out) swapchains pass through. Mirrors resize_buffers. ResizeTarget
+    // is the display-mode change (e.g. windowed<->exclusive fullscreen) that
+    // ResizeBuffers does NOT always cover — D3D12Hook already hooks both.
+    const auto main_wnd = g_framework->get_window();
+    if (main_wnd != nullptr && swap_desc.OutputWindow != main_wnd) {
+        return resize_target_fn(swap_chain, new_target_parameters);
+    }
+
+    d3d11->m_swap_chain = swap_chain;
+
+    if (d3d11->m_on_resize_target != nullptr && new_target_parameters != nullptr
+        && new_target_parameters->Width > 0 && new_target_parameters->Height > 0) {
+        d3d11->m_on_resize_target(*d3d11, new_target_parameters->Width, new_target_parameters->Height);
+    }
+
+    return resize_target_fn(swap_chain, new_target_parameters);
 }
 
 void WINAPI D3D11Hook::set_render_targets(

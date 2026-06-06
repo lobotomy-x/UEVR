@@ -55,6 +55,7 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 #include <dxgi.h>
+#include <dxgi1_2.h>
 #include <dxgiformat.h>
 #include <string.h>
 #include <d3dcommon.h>
@@ -62,6 +63,8 @@
 #include <cstddef>
 #include <cstdio>
 #include "uevr_imconfig.hpp"
+#include <spdlog/spdlog.h>
+#include "imgui_internal.h"
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
@@ -713,6 +716,10 @@ bool ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_conte
     // times for any secondary viewport, the IM_ASSERT(SUCCEEDED(hr)) fires (or asserts disabled,
     // the next RenderWindow call dereferences a null SwapChain). Mirrors the upstream behavior:
     // host apps can override via ImGui_ImplDX11_SetSwapChainDescs.
+    // BitBlt fallback template for secondary viewports — used only when the
+    // flip-model path (IDXGIFactory2::CreateSwapChainForHwnd in
+    // ImGui_ImplDX11_CreateWindow) is unavailable. At least one template must
+    // exist or the create loop runs zero times.
     DXGI_SWAP_CHAIN_DESC default_sd{};
     default_sd.BufferCount = 1;
     default_sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -803,31 +810,63 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport) {
     IM_ASSERT(hwnd != 0);
     IM_ASSERT(vd->SwapChain == nullptr && vd->RTView == nullptr);
 
-    // Create swap chain
+    // Create swap chain. Prefer the flip model via IDXGIFactory2::CreateSwapChainForHwnd
+    // (DWM-composited, the same path the D3D12 secondary viewports take). The legacy
+    // IDXGIFactory::CreateSwapChain cannot create flip-model swap chains, so the BitBlt
+    // template is kept only as a fallback for that path.
     HRESULT hr = DXGI_ERROR_UNSUPPORTED;
-    for (const DXGI_SWAP_CHAIN_DESC& sd_template : bd->SwapChainDescsForViewports) {
-        IM_ASSERT(sd_template.BufferDesc.Width == 0 && sd_template.BufferDesc.Height == 0 && sd_template.OutputWindow == nullptr);
-        DXGI_SWAP_CHAIN_DESC sd = sd_template;
-        sd.BufferDesc.Width = (UINT)viewport->Size.x;
-        sd.BufferDesc.Height = (UINT)viewport->Size.y;
-        sd.OutputWindow = hwnd;
-        hr = bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
-        if (SUCCEEDED(hr))
-            break;
+    bool used_flip = false;
+    {
+        IDXGIFactory2* factory2 = nullptr;
+        if (SUCCEEDED(bd->pFactory->QueryInterface(IID_PPV_ARGS(&factory2))) && factory2 != nullptr) {
+            DXGI_SWAP_CHAIN_DESC1 sd1{};
+            sd1.Width = (UINT)viewport->Size.x;
+            sd1.Height = (UINT)viewport->Size.y;
+            sd1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            sd1.SampleDesc.Count = 1;
+            sd1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            sd1.BufferCount = 2;
+            sd1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+            sd1.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            IDXGISwapChain1* sc1 = nullptr;
+            hr = factory2->CreateSwapChainForHwnd(bd->pd3dDevice, hwnd, &sd1, nullptr, nullptr, &sc1);
+            if (SUCCEEDED(hr) && sc1 != nullptr) {
+                vd->SwapChain = sc1;
+                used_flip = true;
+            }
+            factory2->Release();
+        }
     }
-    IM_ASSERT(SUCCEEDED(hr));
+    if (vd->SwapChain == nullptr) {
+        for (const DXGI_SWAP_CHAIN_DESC& sd_template : bd->SwapChainDescsForViewports) {
+            DXGI_SWAP_CHAIN_DESC sd = sd_template;
+            sd.BufferDesc.Width = (UINT)viewport->Size.x;
+            sd.BufferDesc.Height = (UINT)viewport->Size.y;
+            sd.OutputWindow = hwnd;
+            hr = bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
+            if (SUCCEEDED(hr))
+                break;
+        }
+    }
     bd->pFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
 
     // Create the render target
     if (vd->SwapChain != nullptr) {
-        ID3D11Texture2D* pBackBuffer;
+        ID3D11Texture2D* pBackBuffer = nullptr;
         vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-        bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
-        pBackBuffer->Release();
+        if (pBackBuffer != nullptr) {
+            bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
+            pBackBuffer->Release();
+        }
     }
+
+    spdlog::info("[MV-dx11] CreateWindow vp={} hwnd={:#x} size={}x{} sc={} rtv={} flip={} hr={:#x}", (void*)viewport, (uintptr_t)hwnd,
+        (int)viewport->Size.x, (int)viewport->Size.y, (void*)vd->SwapChain, (void*)vd->RTView, used_flip, (uint32_t)hr);
 }
 
 static void ImGui_ImplDX11_DestroyWindow(ImGuiViewport* viewport) {
+    spdlog::info("[MV-dx11] DestroyWindow vp={} rtv={}", (void*)viewport,
+        viewport->RendererUserData != nullptr ? (void*)((ImGui_ImplDX11_ViewportData*)viewport->RendererUserData)->RTView : nullptr);
     // The main viewport (owned by the application) will always have RendererUserData == nullptr since we didn't create the data for it.
     if (ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData) {
         if (vd->SwapChain)
@@ -878,6 +917,9 @@ static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) {
         bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
     }
     pBackBuffer->Release();
+
+    spdlog::info("[MV-dx11] SetWindowSize vp={} size={}x{} sc={} rtv={}", (void*)viewport, (int)size.x, (int)size.y,
+        (void*)vd->SwapChain, (void*)vd->RTView);
 }
 
 static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*) {
@@ -889,8 +931,12 @@ static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*) {
     // That leaves vd->RTView null until the user restores the window;
     // dereffing here would crash the render thread. Same story for the
     // first frame after CreateWindow before SetWindowSize has fired.
+    const auto* vpi = (ImGuiViewportP*)viewport;
+    const char* vpwin = (vpi->Window != nullptr) ? vpi->Window->Name : "<host>";
     if (vd == nullptr || bd == nullptr || vd->RTView == nullptr ||
         bd->pd3dDeviceContext == nullptr) {
+        spdlog::info("[MV-dx11] RenderWindow SKIP id={:#x} win='{}' vd={} rtv={} ctx={}", viewport->ID, vpwin, (void*)vd,
+            vd != nullptr ? (void*)vd->RTView : nullptr, bd != nullptr ? (void*)bd->pd3dDeviceContext : nullptr);
         return;
     }
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -898,6 +944,14 @@ static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*) {
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
         bd->pd3dDeviceContext->ClearRenderTargetView(vd->RTView, (float*)&clear_color);
     ImGui_ImplDX11_RenderDrawData(viewport->DrawData);
+    static uint32_t s_rw_log = 0;
+    if ((s_rw_log++ % 120) == 0) {
+        const auto* dd = viewport->DrawData;
+        spdlog::info("[MV-dx11] RenderWindow ok id={:#x} win='{}' vp=({:.0f},{:.0f} {:.0f}x{:.0f}) dd=({:.0f},{:.0f} {:.0f}x{:.0f}) rtv={} vtx={}",
+            viewport->ID, vpwin, viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, dd ? dd->DisplayPos.x : 0.0f,
+            dd ? dd->DisplayPos.y : 0.0f, dd ? dd->DisplaySize.x : 0.0f, dd ? dd->DisplaySize.y : 0.0f, (void*)vd->RTView,
+            dd != nullptr ? dd->TotalVtxCount : -1);
+    }
 }
 
 static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*) {
@@ -908,7 +962,11 @@ static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*) {
     if (vd == nullptr || vd->SwapChain == nullptr || vd->RTView == nullptr) {
         return;
     }
-    vd->SwapChain->Present(0, 0); // Present without vsync
+    const HRESULT present_hr = vd->SwapChain->Present(0, 0); // Present without vsync
+    static uint32_t s_sb_log = 0;
+    if (FAILED(present_hr) || (s_sb_log++ % 120) == 0) {
+        spdlog::info("[MV-dx11] SwapBuffers vp={} present_hr={:#x}", (void*)viewport, (uint32_t)present_hr);
+    }
 }
 
 static void ImGui_ImplDX11_InitMultiViewportSupport() {

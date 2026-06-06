@@ -143,7 +143,7 @@ public:
     void on_post_present_d3d11();
     void on_frame_d3d12();
     void on_post_present_d3d12();
-    
+
     void on_reset(uint32_t w, uint32_t h);
 
     void activate_window();
@@ -181,7 +181,7 @@ public:
         D3D11,
         D3D12
     };
-    
+
     auto get_renderer_type() const { return m_renderer_type; }
     auto& get_d3d11_hook() const { return m_d3d11_hook; }
     auto& get_d3d12_hook() const { return m_d3d12_hook; }
@@ -202,7 +202,7 @@ public:
         return m_hook_monitor_mutex;
     }
 
-    void set_font_size(int size) { 
+    void set_font_size(int size) {
         if (m_font_size != size) {
             m_font_size = size;
            // m_fonts_need_updating = true;
@@ -223,7 +223,7 @@ public:
         if (index >= 0 && index < m_additional_fonts.size()) {
             return m_additional_fonts[index].font;
         }
-        
+
         return nullptr;
     }
 
@@ -285,7 +285,7 @@ public:
         DEFAULT_LIGHT,
         HIGH_CONTRAST,
     };
-    
+
     ImGuiThemes get_imgui_theme_value() const;
 
 private:
@@ -295,6 +295,7 @@ private:
 
 private:
     void draw_ui();
+    void draw_ui_impl();
     void draw_about();
 
     bool hook_d3d11();
@@ -325,18 +326,19 @@ private:
     // popup pump checks is_in_reset() and bails so we can't dispatch popup
     // window-messages mid-renderer-teardown.
     std::atomic<bool> m_in_reset{false};
-    
+
     // UI
     bool m_has_frame{false};
     bool m_wants_device_object_cleanup{false};
     bool m_draw_ui{true};
+
     bool m_last_draw_ui{m_draw_ui};
     bool m_is_ui_focused{false};
     bool m_cursor_state{false};
     bool m_cursor_state_changed{true};
     bool m_ui_option_transparent{true};
     bool m_ui_passthrough{false};
-    
+
     ImVec2 m_last_window_pos{};
     ImVec2 m_last_window_size{};
     Vector2f m_last_rt_size{1920, 1080};
@@ -495,7 +497,7 @@ private: // D3D12 members
         }
 
         uint32_t rt_width{};
-        uint32_t rt_height{};                                                                                                      
+        uint32_t rt_height{};
 
         std::array<void*, 2> imgui_backend_datas{};
     } m_d3d12{};

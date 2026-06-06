@@ -933,6 +933,57 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
 int read_map_entries(sdk::FMapProperty* mp, const uint8_t* base, int cap, std::vector<std::pair<std::string, std::string>>& out);
 int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap, std::vector<std::string>& out);
 
+// Format a single FScriptDelegate { int32 ObjectIndex; int32 SerialNumber;
+// FName FunctionName; } (16 bytes) as "Object.Full.Name::FunctionName". Layout
+// is stable across UE4/5; every read is guarded so a bad ptr degrades to text.
+std::string format_script_delegate(const uint8_t* d) {
+    if (d == nullptr || IsBadReadPtr((void*)d, 16)) {
+        return "<unreadable>";
+    }
+    const auto obj_index = *(const int32_t*)(d + 0);
+    std::string fn;
+    try {
+        fn = utility::narrow(((const sdk::FName*)(d + 8))->to_string());
+    } catch (...) {
+        fn = "?";
+    }
+    if (obj_index <= 0) {
+        return (fn.empty() || fn == "None") ? "<unbound>" : "<unbound>::" + fn;
+    }
+    auto item = sdk::FUObjectArray::get()->get_object(obj_index);
+    if (item == nullptr || item->object == nullptr) {
+        return std::format("<stale idx={}>::{}", obj_index, fn);
+    }
+    try {
+        return utility::narrow(((sdk::UObject*)item->object)->get_full_name()) + "::" + fn;
+    } catch (...) {
+        return std::format("[{:#x}]::{}", (uintptr_t)item->object, fn);
+    }
+}
+
+// Inline/regular multicast: FMulticastScriptDelegate { TArray<FScriptDelegate>
+// InvocationList; }. Lists each binding; sparse multicast has a different
+// layout and is handled separately by the caller.
+std::string format_multicast_delegate(const uint8_t* in) {
+    const auto& arr = *(const sdk::TArrayLite<uint8_t>*)in;
+    if (arr.data == nullptr || arr.count <= 0) {
+        return "<no bindings>";
+    }
+    if (arr.count > 4096 || IsBadReadPtr(arr.data, 16)) {
+        return "<delegate: unreadable>";
+    }
+    constexpr int cap = 8;
+    const int n = arr.count < cap ? arr.count : cap;
+    std::string out = std::format("[{}] {{", arr.count);
+    for (int i = 0; i < n; ++i) {
+        if (i != 0) out += ", ";
+        out += format_script_delegate(arr.data + (size_t)i * 16);
+    }
+    if (arr.count > cap) out += std::format(", ...(+{} more)", arr.count - cap);
+    out += "}";
+    return out;
+}
+
 std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, size_t /*params_size*/) {
     const auto pc = prop->get_class();
     if (pc == nullptr) return "<no class>";
@@ -1107,10 +1158,12 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
         return out;
     }
     case L"DelegateProperty"_fnv:
+        return format_script_delegate(in);
+    case L"MulticastSparseDelegateProperty"_fnv:
+        return "<sparse multicast delegate>";
     case L"MulticastDelegateProperty"_fnv:
     case L"MulticastInlineDelegateProperty"_fnv:
-    case L"MulticastSparseDelegateProperty"_fnv:
-        return "<delegate>";
+        return format_multicast_delegate(in);
     case L"MapProperty"_fnv: {
         std::vector<std::pair<std::string, std::string>> entries;
         const int num = read_map_entries((sdk::FMapProperty*)prop, in, 16, entries);
@@ -6168,14 +6221,26 @@ const auto check_flags = [](uint64_t flags){
                 }
             }
             break;
-        case L"DelegateProperty"_fnv:
-        case L"MulticastDelegateProperty"_fnv:
-        case L"MulticastInlineDelegateProperty"_fnv:
+        case L"DelegateProperty"_fnv: {
+            const auto d = (const uint8_t*)((uintptr_t)object + fprop->get_offset());
+            ImGui::Text("%s: ", prop_name.data());
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::TextWrapped("%s", format_script_delegate(d).c_str());
+            break;
+        }
         case L"MulticastSparseDelegateProperty"_fnv:
             ImGui::Text("%s: ", prop_name.data());
             ImGui::SameLine(0.0f, 0.0f);
-            ImGui::TextDisabled("<delegate>");
+            ImGui::TextDisabled("<sparse multicast delegate>");
             break;
+        case L"MulticastDelegateProperty"_fnv:
+        case L"MulticastInlineDelegateProperty"_fnv: {
+            const auto d = (const uint8_t*)((uintptr_t)object + fprop->get_offset());
+            ImGui::Text("%s: ", prop_name.data());
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::TextWrapped("%s", format_multicast_delegate(d).c_str());
+            break;
+        }
         case L"MapProperty"_fnv: {
             const auto base = (const uint8_t*)((uintptr_t)object + fprop->get_offset());
             std::vector<std::pair<std::string, std::string>> entries;

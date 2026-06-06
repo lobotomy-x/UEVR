@@ -10,10 +10,44 @@
 #include <lstate.h> // weird include order because of sol
 #include <lgc.h>
 
+#include <imgui.h>
+#include <imgui_internal.h>
+
 #include "bindings/ImGui.hpp"
 #include "bindings/FS.hpp"
 #include "bindings/Json.hpp"
 #include "bindings/SDKFast.hpp"
+
+namespace {
+// A Lua callback that calls imgui.begin_window() and then errors (e.g. a bad
+// world_to_screen result) never reaches its imgui.end_window(): the error
+// unwinds Lua but ImGui's C++ window stack is left unbalanced. The leaked
+// window then swallows everything drawn after it that frame — including the
+// framework's own overlay and other scripts' windows ("Canvas never ends").
+// pcall on the Lua side can't fix this because the imbalance is in C++ state.
+// Snapshot the ImGui window-stack depth before a Lua callback and pop back to
+// it afterward, so one misbehaving script can't corrupt the rest of the frame.
+struct ImGuiWindowStackBalancer {
+    int baseline{0};
+    ImGuiWindowStackBalancer() {
+        if (auto* ctx = ImGui::GetCurrentContext(); ctx != nullptr && ctx->WithinFrameScope) {
+            baseline = ctx->CurrentWindowStack.Size;
+        } else {
+            baseline = -1; // not inside a frame; nothing to balance
+        }
+    }
+    ~ImGuiWindowStackBalancer() {
+        auto* ctx = ImGui::GetCurrentContext();
+        if (ctx == nullptr || baseline < 0 || !ctx->WithinFrameScope) {
+            return;
+        }
+        // Never pop below 1 (the implicit/Debug window ImGui keeps on the stack).
+        while (ctx->CurrentWindowStack.Size > baseline && ctx->CurrentWindowStack.Size > 1) {
+            ImGui::End();
+        }
+    }
+};
+} // namespace
 
 std::shared_ptr<LuaLoader>& LuaLoader::get() {
     static auto instance = std::make_shared<LuaLoader>();
@@ -104,6 +138,7 @@ void LuaLoader::on_frame() {
     }
 
     for (auto &state : m_states) {
+        ImGuiWindowStackBalancer _balance{}; // un-leak windows if a script errors mid-begin_window
         state->on_frame();
     }
 
@@ -490,6 +525,7 @@ void LuaLoader::on_draw_sidebar_entry(std::string_view in_entry) {
         }
 
         for (auto& state : m_states) {
+            ImGuiWindowStackBalancer _balance{}; // un-leak windows if a script errors mid-begin_window
             state->on_draw_ui();
         }
     }

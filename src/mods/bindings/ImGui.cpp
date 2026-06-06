@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef LUA_DEBUG
 #define LUA_DEBUG 1 // Fixed: removed '=' from define
 #endif
-#include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <unordered_map>
@@ -37,33 +37,36 @@ SOFTWARE.
 // Add sol2 include before using sol types
 #include <sol/sol.hpp>
 
-#include "../LuaLoader.hpp"
-//#include "../dependencies/submodules/ImGuizmo/ImGuizmo.h"
-//#include "../dependencies/submodules/ImGuizmo/ImSequencer.h"
+// #include "../dependencies/submodules/ImGuizmo/ImGuizmo.h"
+// #include "../dependencies/submodules/ImGuizmo/ImSequencer.h"
 
-//#include "../dependencies/submodules/imnodes/imnodes.h"
+// #include "../dependencies/submodules/imnodes/imnodes.h"
+#include "../LuaLoader.hpp"
 #include "Framework.hpp"
 #include "utility/ImGui.hpp"
-
 #include "ImGui.hpp"
-
-
+#include <cmath>
+#include <filesystem>
+#include <iterator>
+#include <stdexcept>
+#include <string>
+#include <sdk/Math.hpp>
+#include <uevr/API.h>
+#include <uevr/API.hpp>
 
 // set the imgui texture pointer to our own data format
 #define ImTextureID uint64_t
 
 namespace {
 
-
-
-            
 // Storage for drag-drop payloads from Lua
 static std::unordered_map<uint64_t, sol::object> g_drag_drop_payloads{};
- static uint64_t g_next_payload_id = 1;
+static uint64_t g_next_payload_id = 1;
 
 // Cleanup old payloads (call this periodically, e.g., in NewFrame or EndFrame binding)
 static void cleanup_old_payloads() {
-     if (g_drag_drop_payloads.empty()) return;
+    if (g_drag_drop_payloads.empty())
+        return;
     // Keep only the last 100 payloads to prevent memory leaks
     if (g_drag_drop_payloads.size() > 100) {
         auto it = g_drag_drop_payloads.begin();
@@ -87,7 +90,8 @@ void cleanup() {
 
 ImVec2 create_imvec2(sol::object obj) {
     ImVec2 out{0.0f, 0.0f};
-    if (!obj) return out;
+    if (!obj)
+        return out;
     if (obj.is<Vector2f>()) {
         auto vec = obj.as<Vector2f>();
         out.x = vec.x;
@@ -211,7 +215,6 @@ unsigned int convert_vec4_to_u32(const ImVec4 in) {
     return ImGui::ColorConvertFloat4ToU32(in);
 }
 
-
 void draw_scene_texture(sol::object size_obj) {
     UEVR_FRHITexture2DHandle Handle = uevr::API::get()->param()->sdk->stereo_hook->get_scene_render_target();
     void* native = uevr::API::get()->param()->sdk->frhitexture2d->get_native_resource(Handle);
@@ -220,10 +223,6 @@ void draw_scene_texture(sol::object size_obj) {
         ()
     }*/
 }
-
-
-
-#include "../dependencies/submodules/cimgui/cimgui.h"
 
 // Use buttonex to allow passing flags, e.g. hold to repeat
 bool button(const char* label, sol::object size_object, sol::object flags_object) {
@@ -333,12 +332,9 @@ bool begin_drag_drop_source(sol::object flags_object) {
 
     if (flags_object.is<int>()) {
         flags = (ImGuiDragDropFlags)(flags_object.as<int>());
-
     }
     return ImGui::BeginDragDropSource(flags);
 }
-
-
 
 void end_drag_drop_source() {
     ImGui::EndDragDropSource();
@@ -528,25 +524,52 @@ sol::variadic_results drag_float(sol::this_state s, const char* label, float v, 
     return results;
 }
 
-sol::variadic_results drag_float2(sol::this_state s, const char* label, Vector2f v, float v_speed, float v_min, float v_max,
+sol::variadic_results drag_float2(sol::this_state s, const char* label, sol::object v_obj, float v_speed, float v_min, float v_max,
     const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
     ImGuiSliderFlags flags = 0;
-
     if (flags_object.is<int>()) {
         flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    // Coerce v_obj into a Vector3f the ImGui call can edit in place. We keep
+    // the input precision in mind for the return (Vector3d input → Vector3d
+    // result so caller's `nv.x` doesn't lose precision in pure passthrough).
+    Vector2f v{};
+    bool input_was_double = false;
+    if (v_obj.is<Vector2f>()) {
+        v = v_obj.as<Vector2f>();
+    } else if (v_obj.is<Vector2d>()) {
+        auto vd = v_obj.as<Vector2d>();
+        v = Vector2f{(float)vd.x, (float)vd.y};
+        input_was_double = true;
+    } else if (v_obj.is<sol::lua_table>()) {
+        auto t = v_obj.as<sol::lua_table>();
+        // Support either named keys (x/y) or positional 1/2.
+        auto coerce = [&](const char* key, int idx) -> float {
+            sol::object o = t[key];
+            if (!o.valid() || o.is<sol::lua_nil_t>())
+                o = t[idx];
+            return o.is<float>() ? o.as<float>() : (o.is<double>() ? (float)o.as<double>() : 0.0f);
+        };
+        v = Vector2f{coerce("x", 1), coerce("y", 2)};
+    } else {
+        // Unknown shape — bail with a clearer error than sol's overload mismatch.
+        throw sol::error("imgui.drag_float2: v must be Vector2f, Vector2d, or {x,y} table");
     }
 
     auto changed = ImGui::DragFloat2(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
-
     results.push_back(sol::make_object(s, changed));
-    results.push_back(sol::make_object(s, v));
-
+    if (input_was_double) {
+        results.push_back(sol::make_object(s, Vector2d{(double)v.x, (double)v.y}));
+    } else {
+        results.push_back(sol::make_object(s, v));
+    }
     return results;
 }
 
@@ -584,7 +607,8 @@ sol::variadic_results drag_float3(sol::this_state s, const char* label, sol::obj
         // Support either named keys (x/y/z) or positional 1/2/3.
         auto coerce = [&](const char* key, int idx) -> float {
             sol::object o = t[key];
-            if (!o.valid() || o.is<sol::lua_nil_t>()) o = t[idx];
+            if (!o.valid() || o.is<sol::lua_nil_t>())
+                o = t[idx];
             return o.is<float>() ? o.as<float>() : (o.is<double>() ? (float)o.as<double>() : 0.0f);
         };
         v = Vector3f{coerce("x", 1), coerce("y", 2), coerce("z", 3)};
@@ -605,25 +629,49 @@ sol::variadic_results drag_float3(sol::this_state s, const char* label, sol::obj
     return results;
 }
 
-sol::variadic_results drag_float4(sol::this_state s, const char* label, Vector4f v, float v_speed, float v_min, float v_max,
+sol::variadic_results drag_float4(sol::this_state s, const char* label, sol::object v_obj, float v_speed, float v_min, float v_max,
     const char* display_format = "%.3f", sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
 
     ImGuiSliderFlags flags = 0;
-
     if (flags_object.is<int>()) {
         flags = (ImGuiSliderFlags)(flags_object.as<int>());
+    }
+
+    // Same flexible input as drag_float2/3: accept Vector4f, Vector4d, or {x,y,z,w}
+    // table, and preserve double precision in the returned value.
+    Vector4f v{};
+    bool input_was_double = false;
+    if (v_obj.is<Vector4f>()) {
+        v = v_obj.as<Vector4f>();
+    } else if (v_obj.is<Vector4d>()) {
+        auto vd = v_obj.as<Vector4d>();
+        v = Vector4f{(float)vd.x, (float)vd.y, (float)vd.z, (float)vd.w};
+        input_was_double = true;
+    } else if (v_obj.is<sol::lua_table>()) {
+        auto t = v_obj.as<sol::lua_table>();
+        auto coerce = [&](const char* key, int idx) -> float {
+            sol::object o = t[key];
+            if (!o.valid() || o.is<sol::lua_nil_t>())
+                o = t[idx];
+            return o.is<float>() ? o.as<float>() : (o.is<double>() ? (float)o.as<double>() : 0.0f);
+        };
+        v = Vector4f{coerce("x", 1), coerce("y", 2), coerce("z", 3), coerce("w", 4)};
+    } else {
+        throw sol::error("imgui.drag_float4: v must be Vector4f, Vector4d, or {x,y,z,w} table");
     }
 
     auto changed = ImGui::DragFloat4(label, (float*)&v, v_speed, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
-
     results.push_back(sol::make_object(s, changed));
-    results.push_back(sol::make_object(s, v));
-
+    if (input_was_double) {
+        results.push_back(sol::make_object(s, Vector4d{(double)v.x, (double)v.y, (double)v.z, (double)v.w}));
+    } else {
+        results.push_back(sol::make_object(s, v));
+    }
     return results;
 }
 
@@ -693,7 +741,6 @@ sol::variadic_results slider_int(
     return results;
 }
 
-
 sol::variadic_results vslider_float(sol::this_state s, const char* label, float v, float v_min, float v_max,
     const char* display_format = "%.3f", sol::object size_object = nullptr, sol::object flags_object = 0) {
     if (label == nullptr) {
@@ -706,7 +753,7 @@ sol::variadic_results vslider_float(sol::this_state s, const char* label, float 
         flags = (ImGuiSliderFlags)(flags_object.as<int>());
     }
 
-    auto changed = ImGui::VSliderFloat(label, create_imvec2(size_object),  & v, v_min, v_max, display_format, flags);
+    auto changed = ImGui::VSliderFloat(label, create_imvec2(size_object), &v, v_min, v_max, display_format, flags);
 
     sol::variadic_results results{};
 
@@ -716,8 +763,8 @@ sol::variadic_results vslider_float(sol::this_state s, const char* label, float 
     return results;
 }
 // putting size out of order compared to the actual functions to make it easier to just add a v to existing slider clode
-sol::variadic_results vslider_int(sol::this_state s, const char* label,  int v, int v_min, int v_max,
-    const char* display_format = "%.3f", sol::object size_object = nullptr, sol::object flags_object = 0) {
+sol::variadic_results vslider_int(sol::this_state s, const char* label, int v, int v_min, int v_max, const char* display_format = "%.3f",
+    sol::object size_object = nullptr, sol::object flags_object = 0) {
     if (label == nullptr) {
         label = "";
     }
@@ -846,7 +893,7 @@ bool tree_node(const char* label, sol::object flags_object) {
     }
 
     auto tree = ImGui::TreeNodeEx(label, flags);
-    //ImGui::PushID(label);
+    // ImGui::PushID(label);
     return tree;
 }
 bool begin_multi_select(sol::object flags_object, int selection_size, int items_count) {
@@ -877,12 +924,11 @@ bool tree_node_ptr_id(const void* id, const char* label, sol::object flags_objec
     }
 
     auto tree = ImGui::TreeNodeEx(label, flags);
- //   ImGui::PushID(label);
+    //   ImGui::PushID(label);
     return tree;
 }
-                                      
 
-void push_override_id(sol::object id){
+void push_override_id(sol::object id) {
     ImGuiID ID{};
     if (id.is<int>()) {
         ID = id.as<ImGuiID>();
@@ -894,7 +940,6 @@ void push_override_id(sol::object id){
         throw sol::error("Type must be int, const char* or void*");
     }
 
-
     ImGui::PushOverrideID(ID);
 }
 
@@ -902,7 +947,7 @@ ImGuiID get_id_from_pos(sol::object pos) {
     return ImGui::GetCurrentWindow()->GetIDFromPos(create_imvec2(pos));
 }
 
- bool tree_node_str_id(const char* id, const char* label, sol::object flags_object) {
+bool tree_node_str_id(const char* id, const char* label, sol::object flags_object) {
     if (label == nullptr) {
         label = "";
     }
@@ -911,14 +956,14 @@ ImGuiID get_id_from_pos(sol::object pos) {
     if (flags_object.is<int>()) {
         flags = (ImGuiTreeNodeFlags)(flags_object.as<int>());
     }
-    
+
     auto tree = ImGui::TreeNodeEx(label, flags);
- //   ImGui::PushID(label);
+    //   ImGui::PushID(label);
     return tree;
- }
+}
 
 void tree_pop() {
-  //  ImGui::PopID();
+    //  ImGui::PopID();
     ImGui::TreePop();
 }
 
@@ -932,7 +977,6 @@ bool is_item_hovered(sol::object flags_obj) {
     if (flags_obj.is<int>()) {
         flags = (ImGuiHoveredFlags)flags_obj.as<int>();
     }
-
 
     return ImGui::IsItemHovered(flags);
 }
@@ -989,12 +1033,12 @@ void destroy_context(ImGuiContext* ctx) {
     ImGui::DestroyContext(ctx);
 }
 
-ImGuiContext*  get_current_context() {
+ImGuiContext* get_current_context() {
     return ImGui::GetCurrentContext();
 }
 
 void begin_viewport_sidebar(const char* name, sol::object dir, sol::object size, sol::object flags_object = 0) {
-    ImGuiViewport* vp  = ImGui::GetMainViewport();
+    ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::BeginViewportSideBar(name, vp, (ImGuiDir)dir.as<int>(), (float)size.as<float>(), (ImGuiWindowFlags)flags_object.as<int>());
 }
 void platform_create_window(sol::object vp) {
@@ -1006,13 +1050,13 @@ void platform_create_window(sol::object vp) {
     io.Platform_CreateWindow(viewport);
 }
 
-//bool set_shortcut_routing(sol::object key_chord, sol::object input_flags, sol::object owner_id) {
-//    ImGuiID OwnerID = get_id(owner_id);
-//    if (key_chord.is<sol::lua_table>()) {
-//    }
-//}
-//ImGui::SetShortcutRouting(.)
-//}
+// bool set_shortcut_routing(sol::object key_chord, sol::object input_flags, sol::object owner_id) {
+//     ImGuiID OwnerID = get_id(owner_id);
+//     if (key_chord.is<sol::lua_table>()) {
+//     }
+// }
+// ImGui::SetShortcutRouting(.)
+// }
 
 void text_wrapped(const char* text) {
     ImGui::TextWrapped(text);
@@ -1031,9 +1075,9 @@ void text_disabled(const char* text) {
 ////   if (IsItemHovered() || IsItemActive())
 ////       SetKeyOwner(key, GetItemID());
 //// Extensive uses of that (e.g. many calls for a single item) may want to manually perform the tests once and then call SetKeyOwner()
-///multiple times. / More advanced usage scenarios may want to call SetKeyOwner() manually based on different condition. / Worth noting is
-///that only one item can be hovered and only one item can be active, therefore this usage pattern doesn't need to bother with routing and
-///priority.
+/// multiple times. / More advanced usage scenarios may want to call SetKeyOwner() manually based on different condition. / Worth noting is
+/// that only one item can be hovered and only one item can be active, therefore this usage pattern doesn't need to bother with routing and
+/// priority.
 // void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
 //{
 //     ImGuiContext& g = *GImGui;
@@ -1117,10 +1161,12 @@ void set_next_window_dock_id(sol::object dockid, sol::object condition_obj) {
     }
 }
 
-bool begin_window(const char* name, sol::object open_obj, ImGuiWindowFlags flags = 0) {
+bool begin_window(const char* name, sol::object open_obj, sol::object flags_obj) {
     if (name == nullptr) {
         name = "";
     }
+
+    const ImGuiWindowFlags flags = flags_obj.is<sol::nil_t>() ? 0 : (ImGuiWindowFlags)flags_obj.as<int>();
 
     bool open = true;
     bool* open_p = nullptr;
@@ -1143,6 +1189,18 @@ bool begin_window(const char* name, sol::object open_obj, ImGuiWindowFlags flags
         ImGui::SetNextWindowDockID(host, ImGuiCond_FirstUseEver);
     }
 
+    // Force any "Canvas" overlay (name contains "Canvas", e.g. "###Canvas") to
+    // cover the host viewport at 1:1 size so it overlays the game window. NOTE:
+    // do NOT SetNextWindowViewport-pin it — pinning the main overlay under D3D11
+    // multiviewport caused it to build correctly but never reach the backbuffer
+    // (see Framework.cpp overlay-probe). Setting pos/size to the main viewport
+    // rect keeps the canvas in place without that pin.
+    if (std::strstr(name, "Canvas") != nullptr) {
+        const auto* mv = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(mv->Pos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(mv->Size, ImGuiCond_Always);
+    }
+
     ImGui::Begin(name, open_p, flags);
 
     return open;
@@ -1152,11 +1210,12 @@ void end_window() {
     ImGui::End();
 }
 
-bool begin_child_window(const char* name, sol::object size_obj, sol::object border_obj, ImGuiWindowFlags flags = 0) {
+bool begin_child_window(const char* name, sol::object size_obj, sol::object border_obj, sol::object flags_obj) {
     if (name == nullptr) {
         name = "";
     }
 
+    const ImGuiWindowFlags flags = flags_obj.is<sol::nil_t>() ? 0 : (ImGuiWindowFlags)flags_obj.as<int>();
     const auto size = create_imvec2(size_obj);
     bool border{false};
 
@@ -2236,8 +2295,8 @@ int table_get_row_index() {
     return ImGui::TableGetRowIndex();
 }
 
-const char* table_get_column_name(int column = -1) {
-    return ImGui::TableGetColumnName(column);
+const char* table_get_column_name(sol::object column_obj) {
+    return ImGui::TableGetColumnName(column_obj.is<int>() ? column_obj.as<int>() : -1);
 }
 
 ImGuiTableColumnFlags table_get_column_flags(sol::object column) {
@@ -2326,20 +2385,20 @@ float get_scroll_max_y() {
     return ImGui::GetScrollMaxY();
 }
 
-void set_scroll_here_x(float center_x_ratio = 0.5f) {
-    ImGui::SetScrollHereX(center_x_ratio);
+void set_scroll_here_x(sol::object ratio_obj) {
+    ImGui::SetScrollHereX(ratio_obj.is<sol::nil_t>() ? 0.5f : ratio_obj.as<float>());
 }
 
-void set_scroll_here_y(float center_y_ratio = 0.5f) {
-    ImGui::SetScrollHereY(center_y_ratio);
+void set_scroll_here_y(sol::object ratio_obj) {
+    ImGui::SetScrollHereY(ratio_obj.is<sol::nil_t>() ? 0.5f : ratio_obj.as<float>());
 }
 
-void set_scroll_from_pos_x(float local_x, float center_x_ratio = 0.5f) {
-    ImGui::SetScrollFromPosX(local_x, center_x_ratio);
+void set_scroll_from_pos_x(float local_x, sol::object ratio_obj) {
+    ImGui::SetScrollFromPosX(local_x, ratio_obj.is<sol::nil_t>() ? 0.5f : ratio_obj.as<float>());
 }
 
-void set_scroll_from_pos_y(float local_y, float center_y_ratio = 0.5f) {
-    ImGui::SetScrollFromPosY(local_y, center_y_ratio);
+void set_scroll_from_pos_y(float local_y, sol::object ratio_obj) {
+    ImGui::SetScrollFromPosY(local_y, ratio_obj.is<sol::nil_t>() ? 0.5f : ratio_obj.as<float>());
 }
 } // namespace api::imgui
 
@@ -2886,193 +2945,190 @@ void bindings::open_imgui(sol::state_view& lua) {
         "IndentDisable", ImGuiTableColumnFlags_IndentDisable, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsVisible",
         ImGuiTableColumnFlags_IsVisible, "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsHovered", ImGuiTableColumnFlags_IsHovered);
     imgui.new_enum("BackendFlags", "HasGamepad", ImGuiBackendFlags_HasGamepad, "HasMouseCursors", ImGuiBackendFlags_HasMouseCursors,
-            "HasMouseHoveredViewport", ImGuiBackendFlags_HasMouseHoveredViewport, "HasParentViewport", ImGuiBackendFlags_HasParentViewport,
-            "HasSetMousePos", ImGuiBackendFlags_HasSetMousePos, "None", ImGuiBackendFlags_None, "PlatformHasViewports",
-            ImGuiBackendFlags_PlatformHasViewports, "RendererHasTextures", ImGuiBackendFlags_RendererHasTextures, "RendererHasViewports",
-            ImGuiBackendFlags_RendererHasViewports, "RendererHasVtxOffset", ImGuiBackendFlags_RendererHasVtxOffset);
+        "HasMouseHoveredViewport", ImGuiBackendFlags_HasMouseHoveredViewport, "HasParentViewport", ImGuiBackendFlags_HasParentViewport,
+        "HasSetMousePos", ImGuiBackendFlags_HasSetMousePos, "None", ImGuiBackendFlags_None, "PlatformHasViewports",
+        ImGuiBackendFlags_PlatformHasViewports, "RendererHasTextures", ImGuiBackendFlags_RendererHasTextures, "RendererHasViewports",
+        ImGuiBackendFlags_RendererHasViewports, "RendererHasVtxOffset", ImGuiBackendFlags_RendererHasVtxOffset);
 
-            imgui.new_enum("ButtonFlags", "EnableNav", ImGuiButtonFlags_EnableNav, "MouseButtonLeft", ImGuiButtonFlags_MouseButtonLeft,
-            "MouseButtonMask_", ImGuiButtonFlags_MouseButtonMask_, "MouseButtonMiddle", ImGuiButtonFlags_MouseButtonMiddle,
-            "MouseButtonRight", ImGuiButtonFlags_MouseButtonRight, "None", ImGuiButtonFlags_None);
+    imgui.new_enum("ButtonFlags", "EnableNav", ImGuiButtonFlags_EnableNav, "MouseButtonLeft", ImGuiButtonFlags_MouseButtonLeft,
+        "MouseButtonMask_", ImGuiButtonFlags_MouseButtonMask_, "MouseButtonMiddle", ImGuiButtonFlags_MouseButtonMiddle, "MouseButtonRight",
+        ImGuiButtonFlags_MouseButtonRight, "None", ImGuiButtonFlags_None);
 
-            imgui.new_enum("ChildFlags", "AlwaysAutoResize", ImGuiChildFlags_AlwaysAutoResize, "AlwaysUseWindowPadding",
-            ImGuiChildFlags_AlwaysUseWindowPadding, "AutoResizeX", ImGuiChildFlags_AutoResizeX, "AutoResizeY", ImGuiChildFlags_AutoResizeY,
-            "Borders", ImGuiChildFlags_Borders, "FrameStyle", ImGuiChildFlags_FrameStyle, "NavFlattened", ImGuiChildFlags_NavFlattened,
-            "None", ImGuiChildFlags_None, "ResizeX", ImGuiChildFlags_ResizeX, "ResizeY", ImGuiChildFlags_ResizeY);
+    imgui.new_enum("ChildFlags", "AlwaysAutoResize", ImGuiChildFlags_AlwaysAutoResize, "AlwaysUseWindowPadding",
+        ImGuiChildFlags_AlwaysUseWindowPadding, "AutoResizeX", ImGuiChildFlags_AutoResizeX, "AutoResizeY", ImGuiChildFlags_AutoResizeY,
+        "Borders", ImGuiChildFlags_Borders, "FrameStyle", ImGuiChildFlags_FrameStyle, "NavFlattened", ImGuiChildFlags_NavFlattened, "None",
+        ImGuiChildFlags_None, "ResizeX", ImGuiChildFlags_ResizeX, "ResizeY", ImGuiChildFlags_ResizeY);
 
-            imgui.new_enum("Col", "TreeLines", ImGuiCol_TreeLines);
+    imgui.new_enum("Col", "TreeLines", ImGuiCol_TreeLines);
 
-            imgui.new_enum("ColorEditFlags", "AlphaBar", ImGuiColorEditFlags_AlphaBar, "AlphaMask_", ImGuiColorEditFlags_AlphaMask_, "AlphaNoBg",
-            ImGuiColorEditFlags_AlphaNoBg, "AlphaOpaque", ImGuiColorEditFlags_AlphaOpaque, "AlphaPreview", ImGuiColorEditFlags_AlphaPreview,
-            "AlphaPreviewHalf", ImGuiColorEditFlags_AlphaPreviewHalf, "DataTypeMask_", ImGuiColorEditFlags_DataTypeMask_, "DefaultOptions_",
-            ImGuiColorEditFlags_DefaultOptions_, "DisplayHex", ImGuiColorEditFlags_DisplayHex, "DisplayHSV", ImGuiColorEditFlags_DisplayHSV,
-            "DisplayMask_", ImGuiColorEditFlags_DisplayMask_, "DisplayRGB", ImGuiColorEditFlags_DisplayRGB, "Float",
-            ImGuiColorEditFlags_Float, "HDR", ImGuiColorEditFlags_HDR, "InputHSV", ImGuiColorEditFlags_InputHSV, "InputMask_",
-            ImGuiColorEditFlags_InputMask_, "InputRGB", ImGuiColorEditFlags_InputRGB, "NoAlpha", ImGuiColorEditFlags_NoAlpha, "NoBorder",
-            ImGuiColorEditFlags_NoBorder, "NoDragDrop", ImGuiColorEditFlags_NoDragDrop, "NoInputs", ImGuiColorEditFlags_NoInputs, "NoLabel",
-            ImGuiColorEditFlags_NoLabel, "None", ImGuiColorEditFlags_None, "NoOptions", ImGuiColorEditFlags_NoOptions, "NoPicker",
-            ImGuiColorEditFlags_NoPicker, "NoSidePreview", ImGuiColorEditFlags_NoSidePreview, "NoSmallPreview",
-            ImGuiColorEditFlags_NoSmallPreview, "NoTooltip", ImGuiColorEditFlags_NoTooltip, "PickerHueBar",
-            ImGuiColorEditFlags_PickerHueBar, "PickerHueWheel", ImGuiColorEditFlags_PickerHueWheel, "PickerMask_",
-            ImGuiColorEditFlags_PickerMask_, "Uint8", ImGuiColorEditFlags_Uint8);
+    imgui.new_enum("ColorEditFlags", "AlphaBar", ImGuiColorEditFlags_AlphaBar, "AlphaMask_", ImGuiColorEditFlags_AlphaMask_, "AlphaNoBg",
+        ImGuiColorEditFlags_AlphaNoBg, "AlphaOpaque", ImGuiColorEditFlags_AlphaOpaque, "AlphaPreview", ImGuiColorEditFlags_AlphaPreview,
+        "AlphaPreviewHalf", ImGuiColorEditFlags_AlphaPreviewHalf, "DataTypeMask_", ImGuiColorEditFlags_DataTypeMask_, "DefaultOptions_",
+        ImGuiColorEditFlags_DefaultOptions_, "DisplayHex", ImGuiColorEditFlags_DisplayHex, "DisplayHSV", ImGuiColorEditFlags_DisplayHSV,
+        "DisplayMask_", ImGuiColorEditFlags_DisplayMask_, "DisplayRGB", ImGuiColorEditFlags_DisplayRGB, "Float", ImGuiColorEditFlags_Float,
+        "HDR", ImGuiColorEditFlags_HDR, "InputHSV", ImGuiColorEditFlags_InputHSV, "InputMask_", ImGuiColorEditFlags_InputMask_, "InputRGB",
+        ImGuiColorEditFlags_InputRGB, "NoAlpha", ImGuiColorEditFlags_NoAlpha, "NoBorder", ImGuiColorEditFlags_NoBorder, "NoDragDrop",
+        ImGuiColorEditFlags_NoDragDrop, "NoInputs", ImGuiColorEditFlags_NoInputs, "NoLabel", ImGuiColorEditFlags_NoLabel, "None",
+        ImGuiColorEditFlags_None, "NoOptions", ImGuiColorEditFlags_NoOptions, "NoPicker", ImGuiColorEditFlags_NoPicker, "NoSidePreview",
+        ImGuiColorEditFlags_NoSidePreview, "NoSmallPreview", ImGuiColorEditFlags_NoSmallPreview, "NoTooltip", ImGuiColorEditFlags_NoTooltip,
+        "PickerHueBar", ImGuiColorEditFlags_PickerHueBar, "PickerHueWheel", ImGuiColorEditFlags_PickerHueWheel, "PickerMask_",
+        ImGuiColorEditFlags_PickerMask_, "Uint8", ImGuiColorEditFlags_Uint8);
 
-            imgui.new_enum("ComboFlags", "HeightLarge", ImGuiComboFlags_HeightLarge, "HeightLargest", ImGuiComboFlags_HeightLargest, "HeightMask_",
-            ImGuiComboFlags_HeightMask_, "HeightRegular", ImGuiComboFlags_HeightRegular, "HeightSmall", ImGuiComboFlags_HeightSmall,
-            "NoArrowButton", ImGuiComboFlags_NoArrowButton, "None", ImGuiComboFlags_None, "NoPreview", ImGuiComboFlags_NoPreview,
-            "PopupAlignLeft", ImGuiComboFlags_PopupAlignLeft, "WidthFitPreview", ImGuiComboFlags_WidthFitPreview);
+    imgui.new_enum("ComboFlags", "HeightLarge", ImGuiComboFlags_HeightLarge, "HeightLargest", ImGuiComboFlags_HeightLargest, "HeightMask_",
+        ImGuiComboFlags_HeightMask_, "HeightRegular", ImGuiComboFlags_HeightRegular, "HeightSmall", ImGuiComboFlags_HeightSmall,
+        "NoArrowButton", ImGuiComboFlags_NoArrowButton, "None", ImGuiComboFlags_None, "NoPreview", ImGuiComboFlags_NoPreview,
+        "PopupAlignLeft", ImGuiComboFlags_PopupAlignLeft, "WidthFitPreview", ImGuiComboFlags_WidthFitPreview);
 
-            imgui.new_enum("ConfigFlags", "DockingEnable", ImGuiConfigFlags_DockingEnable, "DpiEnableScaleFonts",
-            ImGuiConfigFlags_DpiEnableScaleFonts, "DpiEnableScaleViewports", ImGuiConfigFlags_DpiEnableScaleViewports, "IsSRGB",
-            ImGuiConfigFlags_IsSRGB, "IsTouchScreen", ImGuiConfigFlags_IsTouchScreen, "NavEnableGamepad", ImGuiConfigFlags_NavEnableGamepad,
-            "NavEnableKeyboard", ImGuiConfigFlags_NavEnableKeyboard, "NavEnableSetMousePos", ImGuiConfigFlags_NavEnableSetMousePos,
-            "NavNoCaptureKeyboard", ImGuiConfigFlags_NavNoCaptureKeyboard, "NoKeyboard", ImGuiConfigFlags_NoKeyboard, "NoMouse",
-            ImGuiConfigFlags_NoMouse, "NoMouseCursorChange", ImGuiConfigFlags_NoMouseCursorChange, "None", ImGuiConfigFlags_None,
-            "ViewportsEnable", ImGuiConfigFlags_ViewportsEnable);
+    imgui.new_enum("ConfigFlags", "DockingEnable", ImGuiConfigFlags_DockingEnable, "DpiEnableScaleFonts",
+        ImGuiConfigFlags_DpiEnableScaleFonts, "DpiEnableScaleViewports", ImGuiConfigFlags_DpiEnableScaleViewports, "IsSRGB",
+        ImGuiConfigFlags_IsSRGB, "IsTouchScreen", ImGuiConfigFlags_IsTouchScreen, "NavEnableGamepad", ImGuiConfigFlags_NavEnableGamepad,
+        "NavEnableKeyboard", ImGuiConfigFlags_NavEnableKeyboard, "NavEnableSetMousePos", ImGuiConfigFlags_NavEnableSetMousePos,
+        "NavNoCaptureKeyboard", ImGuiConfigFlags_NavNoCaptureKeyboard, "NoKeyboard", ImGuiConfigFlags_NoKeyboard, "NoMouse",
+        ImGuiConfigFlags_NoMouse, "NoMouseCursorChange", ImGuiConfigFlags_NoMouseCursorChange, "None", ImGuiConfigFlags_None,
+        "ViewportsEnable", ImGuiConfigFlags_ViewportsEnable);
 
-            imgui.new_enum("DockNodeFlags", "AutoHideTabBar", ImGuiDockNodeFlags_AutoHideTabBar, "KeepAliveOnly", ImGuiDockNodeFlags_KeepAliveOnly,
-            "NoDockingInCentralNode", ImGuiDockNodeFlags_NoDockingInCentralNode, "NoDockingOverCentralNode",
-            ImGuiDockNodeFlags_NoDockingOverCentralNode, "NoDockingSplit", ImGuiDockNodeFlags_NoDockingSplit, "None",
-            ImGuiDockNodeFlags_None, "NoResize", ImGuiDockNodeFlags_NoResize, "NoSplit", ImGuiDockNodeFlags_NoSplit, "NoUndocking",
-            ImGuiDockNodeFlags_NoUndocking, "PassthruCentralNode", ImGuiDockNodeFlags_PassthruCentralNode);
+    imgui.new_enum("DockNodeFlags", "AutoHideTabBar", ImGuiDockNodeFlags_AutoHideTabBar, "KeepAliveOnly", ImGuiDockNodeFlags_KeepAliveOnly,
+        "NoDockingInCentralNode", ImGuiDockNodeFlags_NoDockingInCentralNode, "NoDockingOverCentralNode",
+        ImGuiDockNodeFlags_NoDockingOverCentralNode, "NoDockingSplit", ImGuiDockNodeFlags_NoDockingSplit, "None", ImGuiDockNodeFlags_None,
+        "NoResize", ImGuiDockNodeFlags_NoResize, "NoSplit", ImGuiDockNodeFlags_NoSplit, "NoUndocking", ImGuiDockNodeFlags_NoUndocking,
+        "PassthruCentralNode", ImGuiDockNodeFlags_PassthruCentralNode);
 
-            imgui.new_enum("DragDropFlags", "AcceptBeforeDelivery", ImGuiDragDropFlags_AcceptBeforeDelivery, "AcceptDrawAsHovered",
-            ImGuiDragDropFlags_AcceptDrawAsHovered, "AcceptNoDrawDefaultRect", ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
-            "AcceptNoPreviewTooltip", ImGuiDragDropFlags_AcceptNoPreviewTooltip, "AcceptPeekOnly", ImGuiDragDropFlags_AcceptPeekOnly,
-            "None", ImGuiDragDropFlags_None, "PayloadAutoExpire", ImGuiDragDropFlags_PayloadAutoExpire, "PayloadNoCrossContext",
-            ImGuiDragDropFlags_PayloadNoCrossContext, "PayloadNoCrossProcess", ImGuiDragDropFlags_PayloadNoCrossProcess,
-            "SourceAllowNullID", ImGuiDragDropFlags_SourceAllowNullID, "SourceAutoExpirePayload",
-            ImGuiDragDropFlags_SourceAutoExpirePayload, "SourceExtern", ImGuiDragDropFlags_SourceExtern, "SourceNoDisableHover",
-            ImGuiDragDropFlags_SourceNoDisableHover, "SourceNoHoldToOpenOthers", ImGuiDragDropFlags_SourceNoHoldToOpenOthers,
-            "SourceNoPreviewTooltip", ImGuiDragDropFlags_SourceNoPreviewTooltip);
+    imgui.new_enum("DragDropFlags", "AcceptBeforeDelivery", ImGuiDragDropFlags_AcceptBeforeDelivery, "AcceptDrawAsHovered",
+        ImGuiDragDropFlags_AcceptDrawAsHovered, "AcceptNoDrawDefaultRect", ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
+        "AcceptNoPreviewTooltip", ImGuiDragDropFlags_AcceptNoPreviewTooltip, "AcceptPeekOnly", ImGuiDragDropFlags_AcceptPeekOnly, "None",
+        ImGuiDragDropFlags_None, "PayloadAutoExpire", ImGuiDragDropFlags_PayloadAutoExpire, "PayloadNoCrossContext",
+        ImGuiDragDropFlags_PayloadNoCrossContext, "PayloadNoCrossProcess", ImGuiDragDropFlags_PayloadNoCrossProcess, "SourceAllowNullID",
+        ImGuiDragDropFlags_SourceAllowNullID, "SourceAutoExpirePayload", ImGuiDragDropFlags_SourceAutoExpirePayload, "SourceExtern",
+        ImGuiDragDropFlags_SourceExtern, "SourceNoDisableHover", ImGuiDragDropFlags_SourceNoDisableHover, "SourceNoHoldToOpenOthers",
+        ImGuiDragDropFlags_SourceNoHoldToOpenOthers, "SourceNoPreviewTooltip", ImGuiDragDropFlags_SourceNoPreviewTooltip);
 
-            imgui.new_enum("FocusedFlags", "AnyWindow", ImGuiFocusedFlags_AnyWindow, "ChildWindows", ImGuiFocusedFlags_ChildWindows, "DockHierarchy",
-            ImGuiFocusedFlags_DockHierarchy, "None", ImGuiFocusedFlags_None, "NoPopupHierarchy", ImGuiFocusedFlags_NoPopupHierarchy,
-            "RootAndChildWindows", ImGuiFocusedFlags_RootAndChildWindows, "RootWindow", ImGuiFocusedFlags_RootWindow);
+    imgui.new_enum("FocusedFlags", "AnyWindow", ImGuiFocusedFlags_AnyWindow, "ChildWindows", ImGuiFocusedFlags_ChildWindows,
+        "DockHierarchy", ImGuiFocusedFlags_DockHierarchy, "None", ImGuiFocusedFlags_None, "NoPopupHierarchy",
+        ImGuiFocusedFlags_NoPopupHierarchy, "RootAndChildWindows", ImGuiFocusedFlags_RootAndChildWindows, "RootWindow",
+        ImGuiFocusedFlags_RootWindow);
 
-            imgui.new_enum("HoveredFlags", "AllowWhenBlockedByActiveItem", ImGuiHoveredFlags_AllowWhenBlockedByActiveItem, "AllowWhenBlockedByPopup",
-            ImGuiHoveredFlags_AllowWhenBlockedByPopup, "AllowWhenDisabled", ImGuiHoveredFlags_AllowWhenDisabled, "AllowWhenOverlapped",
-            ImGuiHoveredFlags_AllowWhenOverlapped, "AllowWhenOverlappedByItem", ImGuiHoveredFlags_AllowWhenOverlappedByItem,
-            "AllowWhenOverlappedByWindow", ImGuiHoveredFlags_AllowWhenOverlappedByWindow, "AnyWindow", ImGuiHoveredFlags_AnyWindow,
-            "ChildWindows", ImGuiHoveredFlags_ChildWindows, "DelayNone", ImGuiHoveredFlags_DelayNone, "DelayNormal",
-            ImGuiHoveredFlags_DelayNormal, "DelayShort", ImGuiHoveredFlags_DelayShort, "DockHierarchy", ImGuiHoveredFlags_DockHierarchy,
-            "ForTooltip", ImGuiHoveredFlags_ForTooltip, "NoNavOverride", ImGuiHoveredFlags_NoNavOverride, "None", ImGuiHoveredFlags_None,
-            "NoPopupHierarchy", ImGuiHoveredFlags_NoPopupHierarchy, "NoSharedDelay", ImGuiHoveredFlags_NoSharedDelay, "RectOnly",
-            ImGuiHoveredFlags_RectOnly, "RootAndChildWindows", ImGuiHoveredFlags_RootAndChildWindows, "RootWindow",
-            ImGuiHoveredFlags_RootWindow, "Stationary", ImGuiHoveredFlags_Stationary);
+    imgui.new_enum("HoveredFlags", "AllowWhenBlockedByActiveItem", ImGuiHoveredFlags_AllowWhenBlockedByActiveItem,
+        "AllowWhenBlockedByPopup", ImGuiHoveredFlags_AllowWhenBlockedByPopup, "AllowWhenDisabled", ImGuiHoveredFlags_AllowWhenDisabled,
+        "AllowWhenOverlapped", ImGuiHoveredFlags_AllowWhenOverlapped, "AllowWhenOverlappedByItem",
+        ImGuiHoveredFlags_AllowWhenOverlappedByItem, "AllowWhenOverlappedByWindow", ImGuiHoveredFlags_AllowWhenOverlappedByWindow,
+        "AnyWindow", ImGuiHoveredFlags_AnyWindow, "ChildWindows", ImGuiHoveredFlags_ChildWindows, "DelayNone", ImGuiHoveredFlags_DelayNone,
+        "DelayNormal", ImGuiHoveredFlags_DelayNormal, "DelayShort", ImGuiHoveredFlags_DelayShort, "DockHierarchy",
+        ImGuiHoveredFlags_DockHierarchy, "ForTooltip", ImGuiHoveredFlags_ForTooltip, "NoNavOverride", ImGuiHoveredFlags_NoNavOverride,
+        "None", ImGuiHoveredFlags_None, "NoPopupHierarchy", ImGuiHoveredFlags_NoPopupHierarchy, "NoSharedDelay",
+        ImGuiHoveredFlags_NoSharedDelay, "RectOnly", ImGuiHoveredFlags_RectOnly, "RootAndChildWindows",
+        ImGuiHoveredFlags_RootAndChildWindows, "RootWindow", ImGuiHoveredFlags_RootWindow, "Stationary", ImGuiHoveredFlags_Stationary);
 
-            imgui.new_enum("InputFlags", "None", ImGuiInputFlags_None, "Repeat", ImGuiInputFlags_Repeat, "RouteActive", ImGuiInputFlags_RouteActive,
-            "RouteAlways", ImGuiInputFlags_RouteAlways, "RouteFocused", ImGuiInputFlags_RouteFocused, "RouteFromRootWindow",
-            ImGuiInputFlags_RouteFromRootWindow, "RouteGlobal", ImGuiInputFlags_RouteGlobal, "RouteOverActive",
-            ImGuiInputFlags_RouteOverActive, "RouteOverFocused", ImGuiInputFlags_RouteOverFocused, "RouteUnlessBgFocused",
-            ImGuiInputFlags_RouteUnlessBgFocused, "Tooltip", ImGuiInputFlags_Tooltip);
+    imgui.new_enum("InputFlags", "None", ImGuiInputFlags_None, "Repeat", ImGuiInputFlags_Repeat, "RouteActive", ImGuiInputFlags_RouteActive,
+        "RouteAlways", ImGuiInputFlags_RouteAlways, "RouteFocused", ImGuiInputFlags_RouteFocused, "RouteFromRootWindow",
+        ImGuiInputFlags_RouteFromRootWindow, "RouteGlobal", ImGuiInputFlags_RouteGlobal, "RouteOverActive", ImGuiInputFlags_RouteOverActive,
+        "RouteOverFocused", ImGuiInputFlags_RouteOverFocused, "RouteUnlessBgFocused", ImGuiInputFlags_RouteUnlessBgFocused, "Tooltip",
+        ImGuiInputFlags_Tooltip);
 
-            imgui.new_enum("InputTextFlags", "AllowTabInput", ImGuiInputTextFlags_AllowTabInput, "AlwaysOverwrite",
-            ImGuiInputTextFlags_AlwaysOverwrite, "AutoSelectAll", ImGuiInputTextFlags_AutoSelectAll, "CallbackAlways",
-            ImGuiInputTextFlags_CallbackAlways, "CallbackCharFilter", ImGuiInputTextFlags_CallbackCharFilter, "CallbackCompletion",
-            ImGuiInputTextFlags_CallbackCompletion, "CallbackEdit", ImGuiInputTextFlags_CallbackEdit, "CallbackHistory",
-            ImGuiInputTextFlags_CallbackHistory, "CallbackResize", ImGuiInputTextFlags_CallbackResize, "CharsDecimal",
-            ImGuiInputTextFlags_CharsDecimal, "CharsHexadecimal", ImGuiInputTextFlags_CharsHexadecimal, "CharsNoBlank",
-            ImGuiInputTextFlags_CharsNoBlank, "CharsScientific", ImGuiInputTextFlags_CharsScientific, "CharsUppercase",
-            ImGuiInputTextFlags_CharsUppercase, "CtrlEnterForNewLine", ImGuiInputTextFlags_CtrlEnterForNewLine, "DisplayEmptyRefVal",
-            ImGuiInputTextFlags_DisplayEmptyRefVal, "ElideLeft", ImGuiInputTextFlags_ElideLeft, "EnterReturnsTrue",
-            ImGuiInputTextFlags_EnterReturnsTrue, "EscapeClearsAll", ImGuiInputTextFlags_EscapeClearsAll, "NoHorizontalScroll",
-            ImGuiInputTextFlags_NoHorizontalScroll, "None", ImGuiInputTextFlags_None, "NoUndoRedo", ImGuiInputTextFlags_NoUndoRedo,
-            "ParseEmptyRefVal", ImGuiInputTextFlags_ParseEmptyRefVal, "Password", ImGuiInputTextFlags_Password, "ReadOnly",
-            ImGuiInputTextFlags_ReadOnly, "WordWrap", ImGuiInputTextFlags_WordWrap);
+    imgui.new_enum("InputTextFlags", "AllowTabInput", ImGuiInputTextFlags_AllowTabInput, "AlwaysOverwrite",
+        ImGuiInputTextFlags_AlwaysOverwrite, "AutoSelectAll", ImGuiInputTextFlags_AutoSelectAll, "CallbackAlways",
+        ImGuiInputTextFlags_CallbackAlways, "CallbackCharFilter", ImGuiInputTextFlags_CallbackCharFilter, "CallbackCompletion",
+        ImGuiInputTextFlags_CallbackCompletion, "CallbackEdit", ImGuiInputTextFlags_CallbackEdit, "CallbackHistory",
+        ImGuiInputTextFlags_CallbackHistory, "CallbackResize", ImGuiInputTextFlags_CallbackResize, "CharsDecimal",
+        ImGuiInputTextFlags_CharsDecimal, "CharsHexadecimal", ImGuiInputTextFlags_CharsHexadecimal, "CharsNoBlank",
+        ImGuiInputTextFlags_CharsNoBlank, "CharsScientific", ImGuiInputTextFlags_CharsScientific, "CharsUppercase",
+        ImGuiInputTextFlags_CharsUppercase, "CtrlEnterForNewLine", ImGuiInputTextFlags_CtrlEnterForNewLine, "DisplayEmptyRefVal",
+        ImGuiInputTextFlags_DisplayEmptyRefVal, "ElideLeft", ImGuiInputTextFlags_ElideLeft, "EnterReturnsTrue",
+        ImGuiInputTextFlags_EnterReturnsTrue, "EscapeClearsAll", ImGuiInputTextFlags_EscapeClearsAll, "NoHorizontalScroll",
+        ImGuiInputTextFlags_NoHorizontalScroll, "None", ImGuiInputTextFlags_None, "NoUndoRedo", ImGuiInputTextFlags_NoUndoRedo,
+        "ParseEmptyRefVal", ImGuiInputTextFlags_ParseEmptyRefVal, "Password", ImGuiInputTextFlags_Password, "ReadOnly",
+        ImGuiInputTextFlags_ReadOnly, "WordWrap", ImGuiInputTextFlags_WordWrap);
 
-            imgui.new_enum("ItemFlags", "AllowDuplicateId", ImGuiItemFlags_AllowDuplicateId, "AutoClosePopups", ImGuiItemFlags_AutoClosePopups,
-            "ButtonRepeat", ImGuiItemFlags_ButtonRepeat, "NoNav", ImGuiItemFlags_NoNav, "NoNavDefaultFocus",
-            ImGuiItemFlags_NoNavDefaultFocus, "None", ImGuiItemFlags_None, "NoTabStop", ImGuiItemFlags_NoTabStop);
+    imgui.new_enum("ItemFlags", "AllowDuplicateId", ImGuiItemFlags_AllowDuplicateId, "AutoClosePopups", ImGuiItemFlags_AutoClosePopups,
+        "ButtonRepeat", ImGuiItemFlags_ButtonRepeat, "NoNav", ImGuiItemFlags_NoNav, "NoNavDefaultFocus", ImGuiItemFlags_NoNavDefaultFocus,
+        "None", ImGuiItemFlags_None, "NoTabStop", ImGuiItemFlags_NoTabStop);
 
-            imgui.new_enum("PopupFlags", "AnyPopup", ImGuiPopupFlags_AnyPopup, "AnyPopupId", ImGuiPopupFlags_AnyPopupId, "AnyPopupLevel",
-            ImGuiPopupFlags_AnyPopupLevel, "MouseButtonDefault_", ImGuiPopupFlags_MouseButtonDefault_, "MouseButtonLeft",
-            ImGuiPopupFlags_MouseButtonLeft, "MouseButtonMask_", ImGuiPopupFlags_MouseButtonMask_, "MouseButtonMiddle",
-            ImGuiPopupFlags_MouseButtonMiddle, "MouseButtonRight", ImGuiPopupFlags_MouseButtonRight, "None", ImGuiPopupFlags_None,
-            "NoOpenOverExistingPopup", ImGuiPopupFlags_NoOpenOverExistingPopup, "NoOpenOverItems", ImGuiPopupFlags_NoOpenOverItems,
-            "NoReopen", ImGuiPopupFlags_NoReopen);
+    imgui.new_enum("PopupFlags", "AnyPopup", ImGuiPopupFlags_AnyPopup, "AnyPopupId", ImGuiPopupFlags_AnyPopupId, "AnyPopupLevel",
+        ImGuiPopupFlags_AnyPopupLevel, "MouseButtonDefault_", ImGuiPopupFlags_MouseButtonDefault_, "MouseButtonLeft",
+        ImGuiPopupFlags_MouseButtonLeft, "MouseButtonMask_", ImGuiPopupFlags_MouseButtonMask_, "MouseButtonMiddle",
+        ImGuiPopupFlags_MouseButtonMiddle, "MouseButtonRight", ImGuiPopupFlags_MouseButtonRight, "None", ImGuiPopupFlags_None,
+        "NoOpenOverExistingPopup", ImGuiPopupFlags_NoOpenOverExistingPopup, "NoOpenOverItems", ImGuiPopupFlags_NoOpenOverItems, "NoReopen",
+        ImGuiPopupFlags_NoReopen);
 
-            imgui.new_enum("SelectableFlags", "AllowDoubleClick", ImGuiSelectableFlags_AllowDoubleClick, "AllowOverlap",
-            ImGuiSelectableFlags_AllowOverlap, "Disabled", ImGuiSelectableFlags_Disabled, "DontClosePopups",
-            ImGuiSelectableFlags_DontClosePopups, "Highlight", ImGuiSelectableFlags_Highlight, "NoAutoClosePopups",
-            ImGuiSelectableFlags_NoAutoClosePopups, "None", ImGuiSelectableFlags_None, "SelectOnNav", ImGuiSelectableFlags_SelectOnNav,
-            "SpanAllColumns", ImGuiSelectableFlags_SpanAllColumns);
+    imgui.new_enum("SelectableFlags", "AllowDoubleClick", ImGuiSelectableFlags_AllowDoubleClick, "AllowOverlap",
+        ImGuiSelectableFlags_AllowOverlap, "Disabled", ImGuiSelectableFlags_Disabled, "DontClosePopups",
+        ImGuiSelectableFlags_DontClosePopups, "Highlight", ImGuiSelectableFlags_Highlight, "NoAutoClosePopups",
+        ImGuiSelectableFlags_NoAutoClosePopups, "None", ImGuiSelectableFlags_None, "SelectOnNav", ImGuiSelectableFlags_SelectOnNav,
+        "SpanAllColumns", ImGuiSelectableFlags_SpanAllColumns);
 
-            imgui.new_enum("SliderFlags", "AlwaysClamp", ImGuiSliderFlags_AlwaysClamp, "ClampOnInput", ImGuiSliderFlags_ClampOnInput,
-            "ClampZeroRange", ImGuiSliderFlags_ClampZeroRange, "InvalidMask_", ImGuiSliderFlags_InvalidMask_, "Logarithmic",
-            ImGuiSliderFlags_Logarithmic, "NoInput", ImGuiSliderFlags_NoInput, "None", ImGuiSliderFlags_None, "NoRoundToFormat",
-            ImGuiSliderFlags_NoRoundToFormat, "NoSpeedTweaks", ImGuiSliderFlags_NoSpeedTweaks, "WrapAround", ImGuiSliderFlags_WrapAround);
+    imgui.new_enum("SliderFlags", "AlwaysClamp", ImGuiSliderFlags_AlwaysClamp, "ClampOnInput", ImGuiSliderFlags_ClampOnInput,
+        "ClampZeroRange", ImGuiSliderFlags_ClampZeroRange, "InvalidMask_", ImGuiSliderFlags_InvalidMask_, "Logarithmic",
+        ImGuiSliderFlags_Logarithmic, "NoInput", ImGuiSliderFlags_NoInput, "None", ImGuiSliderFlags_None, "NoRoundToFormat",
+        ImGuiSliderFlags_NoRoundToFormat, "NoSpeedTweaks", ImGuiSliderFlags_NoSpeedTweaks, "WrapAround", ImGuiSliderFlags_WrapAround);
 
-            imgui.new_enum("TabBarFlags", "AutoSelectNewTabs", ImGuiTabBarFlags_AutoSelectNewTabs, "DrawSelectedOverline",
-            ImGuiTabBarFlags_DrawSelectedOverline, "FittingPolicyDefault_", ImGuiTabBarFlags_FittingPolicyDefault_, "FittingPolicyMask_",
-            ImGuiTabBarFlags_FittingPolicyMask_, "FittingPolicyMixed", ImGuiTabBarFlags_FittingPolicyMixed, "FittingPolicyResizeDown",
-            ImGuiTabBarFlags_FittingPolicyResizeDown, "FittingPolicyScroll", ImGuiTabBarFlags_FittingPolicyScroll, "FittingPolicyShrink",
-            ImGuiTabBarFlags_FittingPolicyShrink, "NoCloseWithMiddleMouseButton", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton, "None",
-            ImGuiTabBarFlags_None, "NoTabListScrollingButtons", ImGuiTabBarFlags_NoTabListScrollingButtons, "NoTooltip",
-            ImGuiTabBarFlags_NoTooltip, "Reorderable", ImGuiTabBarFlags_Reorderable, "TabListPopupButton",
-            ImGuiTabBarFlags_TabListPopupButton);
+    imgui.new_enum("TabBarFlags", "AutoSelectNewTabs", ImGuiTabBarFlags_AutoSelectNewTabs, "DrawSelectedOverline",
+        ImGuiTabBarFlags_DrawSelectedOverline, "FittingPolicyDefault_", ImGuiTabBarFlags_FittingPolicyDefault_, "FittingPolicyMask_",
+        ImGuiTabBarFlags_FittingPolicyMask_, "FittingPolicyMixed", ImGuiTabBarFlags_FittingPolicyMixed, "FittingPolicyResizeDown",
+        ImGuiTabBarFlags_FittingPolicyResizeDown, "FittingPolicyScroll", ImGuiTabBarFlags_FittingPolicyScroll, "FittingPolicyShrink",
+        ImGuiTabBarFlags_FittingPolicyShrink, "NoCloseWithMiddleMouseButton", ImGuiTabBarFlags_NoCloseWithMiddleMouseButton, "None",
+        ImGuiTabBarFlags_None, "NoTabListScrollingButtons", ImGuiTabBarFlags_NoTabListScrollingButtons, "NoTooltip",
+        ImGuiTabBarFlags_NoTooltip, "Reorderable", ImGuiTabBarFlags_Reorderable, "TabListPopupButton", ImGuiTabBarFlags_TabListPopupButton);
 
-            imgui.new_enum("TabItemFlags", "Leading", ImGuiTabItemFlags_Leading, "NoAssumedClosure", ImGuiTabItemFlags_NoAssumedClosure,
-            "NoCloseWithMiddleMouseButton", ImGuiTabItemFlags_NoCloseWithMiddleMouseButton, "None", ImGuiTabItemFlags_None, "NoPushId",
-            ImGuiTabItemFlags_NoPushId, "NoReorder", ImGuiTabItemFlags_NoReorder, "NoTooltip", ImGuiTabItemFlags_NoTooltip, "SetSelected",
-            ImGuiTabItemFlags_SetSelected, "Trailing", ImGuiTabItemFlags_Trailing, "UnsavedDocument", ImGuiTabItemFlags_UnsavedDocument);
+    imgui.new_enum("TabItemFlags", "Leading", ImGuiTabItemFlags_Leading, "NoAssumedClosure", ImGuiTabItemFlags_NoAssumedClosure,
+        "NoCloseWithMiddleMouseButton", ImGuiTabItemFlags_NoCloseWithMiddleMouseButton, "None", ImGuiTabItemFlags_None, "NoPushId",
+        ImGuiTabItemFlags_NoPushId, "NoReorder", ImGuiTabItemFlags_NoReorder, "NoTooltip", ImGuiTabItemFlags_NoTooltip, "SetSelected",
+        ImGuiTabItemFlags_SetSelected, "Trailing", ImGuiTabItemFlags_Trailing, "UnsavedDocument", ImGuiTabItemFlags_UnsavedDocument);
 
-            imgui.new_enum("TableColumnFlags", "AngledHeader", ImGuiTableColumnFlags_AngledHeader, "DefaultHide", ImGuiTableColumnFlags_DefaultHide,
-            "DefaultSort", ImGuiTableColumnFlags_DefaultSort, "Disabled", ImGuiTableColumnFlags_Disabled, "IndentDisable",
-            ImGuiTableColumnFlags_IndentDisable, "IndentEnable", ImGuiTableColumnFlags_IndentEnable, "IndentMask_",
-            ImGuiTableColumnFlags_IndentMask_, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsHovered", ImGuiTableColumnFlags_IsHovered,
-            "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsVisible", ImGuiTableColumnFlags_IsVisible, "NoClip",
-            ImGuiTableColumnFlags_NoClip, "NoDirectResize_", ImGuiTableColumnFlags_NoDirectResize_, "NoHeaderLabel",
-            ImGuiTableColumnFlags_NoHeaderLabel, "NoHeaderWidth", ImGuiTableColumnFlags_NoHeaderWidth, "NoHide",
-            ImGuiTableColumnFlags_NoHide, "None", ImGuiTableColumnFlags_None, "NoReorder", ImGuiTableColumnFlags_NoReorder, "NoResize",
-            ImGuiTableColumnFlags_NoResize, "NoSort", ImGuiTableColumnFlags_NoSort, "NoSortAscending",
-            ImGuiTableColumnFlags_NoSortAscending, "NoSortDescending", ImGuiTableColumnFlags_NoSortDescending, "PreferSortAscending",
-            ImGuiTableColumnFlags_PreferSortAscending, "PreferSortDescending", ImGuiTableColumnFlags_PreferSortDescending, "StatusMask_",
-            ImGuiTableColumnFlags_StatusMask_, "WidthFixed", ImGuiTableColumnFlags_WidthFixed, "WidthMask_",
-            ImGuiTableColumnFlags_WidthMask_, "WidthStretch", ImGuiTableColumnFlags_WidthStretch);
+    imgui.new_enum("TableColumnFlags", "AngledHeader", ImGuiTableColumnFlags_AngledHeader, "DefaultHide", ImGuiTableColumnFlags_DefaultHide,
+        "DefaultSort", ImGuiTableColumnFlags_DefaultSort, "Disabled", ImGuiTableColumnFlags_Disabled, "IndentDisable",
+        ImGuiTableColumnFlags_IndentDisable, "IndentEnable", ImGuiTableColumnFlags_IndentEnable, "IndentMask_",
+        ImGuiTableColumnFlags_IndentMask_, "IsEnabled", ImGuiTableColumnFlags_IsEnabled, "IsHovered", ImGuiTableColumnFlags_IsHovered,
+        "IsSorted", ImGuiTableColumnFlags_IsSorted, "IsVisible", ImGuiTableColumnFlags_IsVisible, "NoClip", ImGuiTableColumnFlags_NoClip,
+        "NoDirectResize_", ImGuiTableColumnFlags_NoDirectResize_, "NoHeaderLabel", ImGuiTableColumnFlags_NoHeaderLabel, "NoHeaderWidth",
+        ImGuiTableColumnFlags_NoHeaderWidth, "NoHide", ImGuiTableColumnFlags_NoHide, "None", ImGuiTableColumnFlags_None, "NoReorder",
+        ImGuiTableColumnFlags_NoReorder, "NoResize", ImGuiTableColumnFlags_NoResize, "NoSort", ImGuiTableColumnFlags_NoSort,
+        "NoSortAscending", ImGuiTableColumnFlags_NoSortAscending, "NoSortDescending", ImGuiTableColumnFlags_NoSortDescending,
+        "PreferSortAscending", ImGuiTableColumnFlags_PreferSortAscending, "PreferSortDescending",
+        ImGuiTableColumnFlags_PreferSortDescending, "StatusMask_", ImGuiTableColumnFlags_StatusMask_, "WidthFixed",
+        ImGuiTableColumnFlags_WidthFixed, "WidthMask_", ImGuiTableColumnFlags_WidthMask_, "WidthStretch",
+        ImGuiTableColumnFlags_WidthStretch);
 
-            imgui.new_enum("TableFlags", "Borders", ImGuiTableFlags_Borders, "BordersH", ImGuiTableFlags_BordersH, "BordersInner",
-            ImGuiTableFlags_BordersInner, "BordersInnerH", ImGuiTableFlags_BordersInnerH, "BordersInnerV", ImGuiTableFlags_BordersInnerV,
-            "BordersOuter", ImGuiTableFlags_BordersOuter, "BordersOuterH", ImGuiTableFlags_BordersOuterH, "BordersOuterV",
-            ImGuiTableFlags_BordersOuterV, "BordersV", ImGuiTableFlags_BordersV, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody,
-            "Hideable", ImGuiTableFlags_Hideable, "HighlightHoveredColumn", ImGuiTableFlags_HighlightHoveredColumn, "NoBordersInBody",
-            ImGuiTableFlags_NoBordersInBody, "NoBordersInBodyUntilResize", ImGuiTableFlags_NoBordersInBodyUntilResize, "NoClip",
-            ImGuiTableFlags_NoClip, "NoHostExtendX", ImGuiTableFlags_NoHostExtendX, "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
-            "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible, "None", ImGuiTableFlags_None, "NoPadInnerX",
-            ImGuiTableFlags_NoPadInnerX, "NoPadOuterX", ImGuiTableFlags_NoPadOuterX, "NoSavedSettings", ImGuiTableFlags_NoSavedSettings,
-            "PadOuterX", ImGuiTableFlags_PadOuterX, "PreciseWidths", ImGuiTableFlags_PreciseWidths, "Reorderable",
-            ImGuiTableFlags_Reorderable, "Resizable", ImGuiTableFlags_Resizable, "RowBg", ImGuiTableFlags_RowBg, "ScrollX",
-            ImGuiTableFlags_ScrollX, "ScrollY", ImGuiTableFlags_ScrollY, "SizingFixedFit", ImGuiTableFlags_SizingFixedFit,
-            "SizingFixedSame", ImGuiTableFlags_SizingFixedSame, "SizingMask_", ImGuiTableFlags_SizingMask_, "SizingStretchProp",
-            ImGuiTableFlags_SizingStretchProp, "SizingStretchSame", ImGuiTableFlags_SizingStretchSame, "Sortable", ImGuiTableFlags_Sortable,
-            "SortMulti", ImGuiTableFlags_SortMulti, "SortTristate", ImGuiTableFlags_SortTristate);
+    imgui.new_enum("TableFlags", "Borders", ImGuiTableFlags_Borders, "BordersH", ImGuiTableFlags_BordersH, "BordersInner",
+        ImGuiTableFlags_BordersInner, "BordersInnerH", ImGuiTableFlags_BordersInnerH, "BordersInnerV", ImGuiTableFlags_BordersInnerV,
+        "BordersOuter", ImGuiTableFlags_BordersOuter, "BordersOuterH", ImGuiTableFlags_BordersOuterH, "BordersOuterV",
+        ImGuiTableFlags_BordersOuterV, "BordersV", ImGuiTableFlags_BordersV, "ContextMenuInBody", ImGuiTableFlags_ContextMenuInBody,
+        "Hideable", ImGuiTableFlags_Hideable, "HighlightHoveredColumn", ImGuiTableFlags_HighlightHoveredColumn, "NoBordersInBody",
+        ImGuiTableFlags_NoBordersInBody, "NoBordersInBodyUntilResize", ImGuiTableFlags_NoBordersInBodyUntilResize, "NoClip",
+        ImGuiTableFlags_NoClip, "NoHostExtendX", ImGuiTableFlags_NoHostExtendX, "NoHostExtendY", ImGuiTableFlags_NoHostExtendY,
+        "NoKeepColumnsVisible", ImGuiTableFlags_NoKeepColumnsVisible, "None", ImGuiTableFlags_None, "NoPadInnerX",
+        ImGuiTableFlags_NoPadInnerX, "NoPadOuterX", ImGuiTableFlags_NoPadOuterX, "NoSavedSettings", ImGuiTableFlags_NoSavedSettings,
+        "PadOuterX", ImGuiTableFlags_PadOuterX, "PreciseWidths", ImGuiTableFlags_PreciseWidths, "Reorderable", ImGuiTableFlags_Reorderable,
+        "Resizable", ImGuiTableFlags_Resizable, "RowBg", ImGuiTableFlags_RowBg, "ScrollX", ImGuiTableFlags_ScrollX, "ScrollY",
+        ImGuiTableFlags_ScrollY, "SizingFixedFit", ImGuiTableFlags_SizingFixedFit, "SizingFixedSame", ImGuiTableFlags_SizingFixedSame,
+        "SizingMask_", ImGuiTableFlags_SizingMask_, "SizingStretchProp", ImGuiTableFlags_SizingStretchProp, "SizingStretchSame",
+        ImGuiTableFlags_SizingStretchSame, "Sortable", ImGuiTableFlags_Sortable, "SortMulti", ImGuiTableFlags_SortMulti, "SortTristate",
+        ImGuiTableFlags_SortTristate);
 
-            imgui.new_enum("TableRowFlags", "Headers", ImGuiTableRowFlags_Headers, "None", ImGuiTableRowFlags_None);
+    imgui.new_enum("TableRowFlags", "Headers", ImGuiTableRowFlags_Headers, "None", ImGuiTableRowFlags_None);
 
-            imgui.new_enum("TreeNodeFlags", "AllowOverlap", ImGuiTreeNodeFlags_AllowOverlap, "Bullet", ImGuiTreeNodeFlags_Bullet, "CollapsingHeader",
-            ImGuiTreeNodeFlags_CollapsingHeader, "DefaultOpen", ImGuiTreeNodeFlags_DefaultOpen, "DrawLinesFull",
-            ImGuiTreeNodeFlags_DrawLinesFull, "DrawLinesNone", ImGuiTreeNodeFlags_DrawLinesNone, "DrawLinesToNodes",
-            ImGuiTreeNodeFlags_DrawLinesToNodes, "Framed", ImGuiTreeNodeFlags_Framed, "FramePadding", ImGuiTreeNodeFlags_FramePadding,
-            "LabelSpanAllColumns", ImGuiTreeNodeFlags_LabelSpanAllColumns, "Leaf", ImGuiTreeNodeFlags_Leaf, "NavLeftJumpsBackHere",
-            ImGuiTreeNodeFlags_NavLeftJumpsBackHere, "NavLeftJumpsToParent", ImGuiTreeNodeFlags_NavLeftJumpsToParent, "NoAutoOpenOnLog",
-            ImGuiTreeNodeFlags_NoAutoOpenOnLog, "None", ImGuiTreeNodeFlags_None, "NoTreePushOnOpen", ImGuiTreeNodeFlags_NoTreePushOnOpen,
-            "OpenOnArrow", ImGuiTreeNodeFlags_OpenOnArrow, "OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick, "Selected",
-            ImGuiTreeNodeFlags_Selected, "SpanAllColumns", ImGuiTreeNodeFlags_SpanAllColumns, "SpanAvailWidth",
-            ImGuiTreeNodeFlags_SpanAvailWidth, "SpanFullWidth", ImGuiTreeNodeFlags_SpanFullWidth, "SpanLabelWidth",
-            ImGuiTreeNodeFlags_SpanLabelWidth, "SpanTextWidth", ImGuiTreeNodeFlags_SpanTextWidth);
+    imgui.new_enum("TreeNodeFlags", "AllowOverlap", ImGuiTreeNodeFlags_AllowOverlap, "Bullet", ImGuiTreeNodeFlags_Bullet,
+        "CollapsingHeader", ImGuiTreeNodeFlags_CollapsingHeader, "DefaultOpen", ImGuiTreeNodeFlags_DefaultOpen, "DrawLinesFull",
+        ImGuiTreeNodeFlags_DrawLinesFull, "DrawLinesNone", ImGuiTreeNodeFlags_DrawLinesNone, "DrawLinesToNodes",
+        ImGuiTreeNodeFlags_DrawLinesToNodes, "Framed", ImGuiTreeNodeFlags_Framed, "FramePadding", ImGuiTreeNodeFlags_FramePadding,
+        "LabelSpanAllColumns", ImGuiTreeNodeFlags_LabelSpanAllColumns, "Leaf", ImGuiTreeNodeFlags_Leaf, "NavLeftJumpsBackHere",
+        ImGuiTreeNodeFlags_NavLeftJumpsBackHere, "NavLeftJumpsToParent", ImGuiTreeNodeFlags_NavLeftJumpsToParent, "NoAutoOpenOnLog",
+        ImGuiTreeNodeFlags_NoAutoOpenOnLog, "None", ImGuiTreeNodeFlags_None, "NoTreePushOnOpen", ImGuiTreeNodeFlags_NoTreePushOnOpen,
+        "OpenOnArrow", ImGuiTreeNodeFlags_OpenOnArrow, "OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick, "Selected",
+        ImGuiTreeNodeFlags_Selected, "SpanAllColumns", ImGuiTreeNodeFlags_SpanAllColumns, "SpanAvailWidth",
+        ImGuiTreeNodeFlags_SpanAvailWidth, "SpanFullWidth", ImGuiTreeNodeFlags_SpanFullWidth, "SpanLabelWidth",
+        ImGuiTreeNodeFlags_SpanLabelWidth, "SpanTextWidth", ImGuiTreeNodeFlags_SpanTextWidth);
 
-            imgui.new_enum("WindowFlags", "AlwaysAutoResize", ImGuiWindowFlags_AlwaysAutoResize, "AlwaysHorizontalScrollbar",
-            ImGuiWindowFlags_AlwaysHorizontalScrollbar, "AlwaysVerticalScrollbar", ImGuiWindowFlags_AlwaysVerticalScrollbar, "ChildMenu",
-            ImGuiWindowFlags_ChildMenu, "ChildWindow", ImGuiWindowFlags_ChildWindow, "DockNodeHost", ImGuiWindowFlags_DockNodeHost,
-            "HorizontalScrollbar", ImGuiWindowFlags_HorizontalScrollbar, "MenuBar", ImGuiWindowFlags_MenuBar, "Modal",
-            ImGuiWindowFlags_Modal, "NoBackground", ImGuiWindowFlags_NoBackground, "NoBringToFrontOnFocus",
-            ImGuiWindowFlags_NoBringToFrontOnFocus, "NoCollapse", ImGuiWindowFlags_NoCollapse, "NoDecoration",
-            ImGuiWindowFlags_NoDecoration, "NoDocking", ImGuiWindowFlags_NoDocking, "NoFocusOnAppearing",
-            ImGuiWindowFlags_NoFocusOnAppearing, "NoInputs", ImGuiWindowFlags_NoInputs, "NoMouseInputs", ImGuiWindowFlags_NoMouseInputs,
-            "NoMove", ImGuiWindowFlags_NoMove, "NoNav", ImGuiWindowFlags_NoNav, "NoNavFocus", ImGuiWindowFlags_NoNavFocus, "NoNavInputs",
-            ImGuiWindowFlags_NoNavInputs, "None", ImGuiWindowFlags_None, "NoResize", ImGuiWindowFlags_NoResize, "NoSavedSettings",
-            ImGuiWindowFlags_NoSavedSettings, "NoScrollbar", ImGuiWindowFlags_NoScrollbar, "NoScrollWithMouse",
-            ImGuiWindowFlags_NoScrollWithMouse, "NoTitleBar", ImGuiWindowFlags_NoTitleBar, "Popup", ImGuiWindowFlags_Popup, "Tooltip",
-            ImGuiWindowFlags_Tooltip, "UnsavedDocument", ImGuiWindowFlags_UnsavedDocument);
+    imgui.new_enum("WindowFlags", "AlwaysAutoResize", ImGuiWindowFlags_AlwaysAutoResize, "AlwaysHorizontalScrollbar",
+        ImGuiWindowFlags_AlwaysHorizontalScrollbar, "AlwaysVerticalScrollbar", ImGuiWindowFlags_AlwaysVerticalScrollbar, "ChildMenu",
+        ImGuiWindowFlags_ChildMenu, "ChildWindow", ImGuiWindowFlags_ChildWindow, "DockNodeHost", ImGuiWindowFlags_DockNodeHost,
+        "HorizontalScrollbar", ImGuiWindowFlags_HorizontalScrollbar, "MenuBar", ImGuiWindowFlags_MenuBar, "Modal", ImGuiWindowFlags_Modal,
+        "NoBackground", ImGuiWindowFlags_NoBackground, "NoBringToFrontOnFocus", ImGuiWindowFlags_NoBringToFrontOnFocus, "NoCollapse",
+        ImGuiWindowFlags_NoCollapse, "NoDecoration", ImGuiWindowFlags_NoDecoration, "NoDocking", ImGuiWindowFlags_NoDocking,
+        "NoFocusOnAppearing", ImGuiWindowFlags_NoFocusOnAppearing, "NoInputs", ImGuiWindowFlags_NoInputs, "NoMouseInputs",
+        ImGuiWindowFlags_NoMouseInputs, "NoMove", ImGuiWindowFlags_NoMove, "NoNav", ImGuiWindowFlags_NoNav, "NoNavFocus",
+        ImGuiWindowFlags_NoNavFocus, "NoNavInputs", ImGuiWindowFlags_NoNavInputs, "None", ImGuiWindowFlags_None, "NoResize",
+        ImGuiWindowFlags_NoResize, "NoSavedSettings", ImGuiWindowFlags_NoSavedSettings, "NoScrollbar", ImGuiWindowFlags_NoScrollbar,
+        "NoScrollWithMouse", ImGuiWindowFlags_NoScrollWithMouse, "NoTitleBar", ImGuiWindowFlags_NoTitleBar, "Popup", ImGuiWindowFlags_Popup,
+        "Tooltip", ImGuiWindowFlags_Tooltip, "UnsavedDocument", ImGuiWindowFlags_UnsavedDocument);
 
     imgui.new_enum("ImGuiKey",
 
@@ -3243,12 +3299,12 @@ void bindings::open_imgui(sol::state_view& lua) {
         });
 
     lua["imgui"] = imgui;
-    //auto imguizmo = lua.create_table();
+    // auto imguizmo = lua.create_table();
 
-    //imguizmo["is_over"] = [] { return ImGuizmo::IsOver(); };
-    //imguizmo["is_using"] = [] { return ImGuizmo::IsUsing(); };
+    // imguizmo["is_over"] = [] { return ImGuizmo::IsOver(); };
+    // imguizmo["is_using"] = [] { return ImGuizmo::IsUsing(); };
 
-    //lua["imguizmo"] = imguizmo;
+    // lua["imguizmo"] = imguizmo;
 
     auto draw = lua.create_table();
 

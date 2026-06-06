@@ -2390,7 +2390,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
      //       ImGui::PopStyleColor();
         }
 
-        ImGui::Text((std::string{"Runtime Information ("} + get_runtime()->name().data() + ")").c_str());
+        ImGui::Text((std::string{"Runtime Information ("} + get_runtime()->name().data() + ") [" +
+            (g_framework->is_dx12() ? "D3D12" : "D3D11") + "]").c_str());
 
         m_desktop_fix->draw("Desktop Spectator View");
         ImGui::SameLine();
