@@ -7022,7 +7022,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
     ImGui::PushID(addr);
     utility::ScopeGuard id_guard{[]() { ImGui::PopID(); }};
 
-    if (sname == "Color") {
+    if (sname == "Color" && total == 4) {
         if (IsBadReadPtr(addr, 4)) {
             ImGui::Text("%s: <unreadable>", label.c_str());
             return true;
@@ -7058,14 +7058,24 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
     }
 
     if (comps > 0) {
-        if (IsBadReadPtr(addr, (size_t)comps * 8)) {
+        // Only treat as a core math struct when the reported size matches its
+        // scalar layout — float, or double for UE5. An unrelated game struct that
+        // merely shares a name like "Vector" fails this check and falls through to
+        // the generic struct view instead of being edited at the wrong offsets.
+        const int32_t fw = comps * 4;
+        const int32_t dw = comps * 8;
+        const bool size_ok = (is_int || force_float) ? (total == fw) : (total == fw || total == dw);
+        if (!size_ok) {
+            return false;
+        }
+        const bool wide = (total == dw);
+        if (IsBadReadPtr(addr, (size_t)total)) {
             ImGui::Text("%s: <unreadable>", label.c_str());
             return true;
         }
         if (is_int) {
             ImGui::DragScalarN(label.c_str(), ImGuiDataType_S32, addr, comps, 1.0f);
         } else {
-            const bool wide = !force_float && total >= comps * 8;
             ImGui::DragScalarN(label.c_str(), wide ? ImGuiDataType_Double : ImGuiDataType_Float, addr, comps, 0.1f);
         }
         ImGui::SameLine();
