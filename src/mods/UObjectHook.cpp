@@ -650,9 +650,19 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
         // the encode step below handles packing into the appropriate
         // (raw pointer / FWeakObjectPtr / FSoftObjectPtr) layout.
         sdk::UObject*& slot = s.objs[prop_name_narrow];
+        // WorldContext parameters auto-resolve to the world — the user never has
+        // to supply one (GetAllActorsOfClass and friends all take one). Re-fills
+        // when cleared; drop a different object to override.
+        const bool is_world_ctx = prop_name_narrow.find("WorldContext") != std::string::npos;
+        if (is_world_ctx && slot == nullptr) {
+            if (auto eng = sdk::UGameEngine::get(); eng != nullptr) {
+                slot = (sdk::UObject*)eng->get_world();
+            }
+        }
         const auto label = slot == nullptr
             ? std::string{"[drop UObject here] "} + prop_name_narrow
-            : std::string{"[obj "} + std::to_string((uintptr_t)slot) + "] " + prop_name_narrow;
+            : (is_world_ctx ? std::string{"[auto: World] "} + prop_name_narrow
+                            : std::string{"[obj "} + std::to_string((uintptr_t)slot) + "] " + prop_name_narrow);
         ImGui::Button(label.c_str(), ImVec2{0, 0});
         if (auto dropped = accept_object_drop(); dropped != nullptr) {
             slot = dropped;
@@ -1211,7 +1221,29 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
         if (sname == "Vector" || sname == "Rotator") return "[" + sname + "] " + fmt3();
         if (sname == "Vector2D")                     return "[Vector2D] " + fmt2();
         if (sname == "Vector4" || sname == "Quat" || sname == "LinearColor") return "[" + sname + "] " + fmt4();
-        return "<struct " + sname + ">";
+        // Generic: dump reflected members (handles Transform etc.). A member's
+        // offset is relative to the struct start, which is exactly what
+        // format_return_value reads against `in`, so pass `in` as the base — the
+        // composite layout (float UE4 / double UE5) comes from reflection, and
+        // leaf math members fall into the cases above.
+        {
+            std::string out = "[" + sname + "] {";
+            int shown = 0;
+            for (auto f = strukt->get_child_properties(); f != nullptr && shown < 16; f = f->get_next()) {
+                std::string fcname;
+                try { fcname = utility::narrow(f->get_class()->get_name().to_string()); } catch (...) { continue; }
+                if (!fcname.contains("Property")) continue;
+                std::string mn;
+                try { mn = utility::narrow(f->get_field_name().to_string()); } catch (...) { mn = "?"; }
+                std::string mv;
+                try { mv = format_return_value((sdk::FProperty*)f, in, 0); } catch (...) { mv = "<err>"; }
+                if (shown != 0) out += ", ";
+                out += mn + "=" + mv;
+                ++shown;
+            }
+            out += "}";
+            return shown == 0 ? ("<struct " + sname + ">") : out;
+        }
     }
     default:
         return std::string{"<"} + utility::narrow(pc->get_name().to_string()) + " unsupported>";
@@ -1367,7 +1399,7 @@ void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
             s.error_repr.clear();
         }
         if (!s.return_repr.empty()) {
-            ImGui::Text("→ %s", s.return_repr.c_str());
+            ImGui::TextWrapped("→ %s", s.return_repr.c_str());
         }
         if (!s.error_repr.empty()) {
             ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "err: %s", s.error_repr.c_str());
@@ -1436,7 +1468,7 @@ void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
     }
 
     if (!s.return_repr.empty()) {
-        ImGui::Text("→ %s", s.return_repr.c_str());
+        ImGui::TextWrapped("→ %s", s.return_repr.c_str());
     }
     // If the return value was a UObject* or UClass*, render a tiny drag
     // handle next to it so the caller can chain the return into another
