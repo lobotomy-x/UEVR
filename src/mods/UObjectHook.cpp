@@ -3955,6 +3955,19 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
     }
     utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
 
+    // Defend against a non-class pointer (stale/freed entry, or an instance that
+    // slipped in): rendering it as a UStruct iterates garbage child/super chains
+    // and can leave the ImGui ID stack unbalanced ("Missing PopID()"). Bail early.
+    static const auto class_class = sdk::UClass::static_class();
+    if (!this->exists_unsafe((sdk::UObject*)cls) || cls->get_class() == nullptr
+            || class_class == nullptr || !cls->get_class()->is_a(class_class)) {
+        ImGui::TextColored(ImVec4{1.0f, 0.4f, 0.4f, 1.0f}, "Not a valid UClass (stale or non-class entry) — close this window.");
+        if (!open) {
+            std::erase(m_open_class_inspectors, cls);
+        }
+        return;
+    }
+
     // Header: full name + parent class chain. Each parent is a clickable
     // Selectable that opens another inspector — lets the user walk up the
     // hierarchy without going back to the Class Browser.
