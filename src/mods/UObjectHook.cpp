@@ -405,6 +405,27 @@ void render_live_caller_slots() {
     }
 }
 
+void load_live_caller_slot(sdk::UObject* obj, sdk::UFunction* fn) {
+    if (obj == nullptr || fn == nullptr) {
+        return;
+    }
+
+    int idx = 0;
+    for (int i = 0; i < kLiveCallerSlotCount; ++i) {
+        if (s_live_slots[i].resolved == nullptr) {
+            idx = i;
+            break;
+        }
+    }
+
+    auto& slot = s_live_slots[idx];
+    slot.target = obj;
+    slot.resolved = fn;
+    try { slot.fn_name = utility::narrow(fn->get_fname().to_string()); } catch (...) { slot.fn_name.clear(); }
+    try { slot.resolved_label = utility::narrow(fn->get_full_name()); } catch (...) { slot.resolved_label.clear(); }
+    slot.resolve_error.clear();
+}
+
 // Helper widget: a small InputText next to a drop target that accepts the
 // same three forms above. Returns the resolved object if the user pressed
 // Enter and the parse succeeded, nullptr otherwise. The input buffer is
@@ -5812,6 +5833,79 @@ void UObjectHook::draw_active_function_hooks() {
     }
 }
 
+void UObjectHook::ui_function_context_menu(sdk::UFunction* func, void* object, bool is_real_object) {
+    if (func == nullptr || !ImGui::BeginPopupContextItem()) {
+        return;
+    }
+
+    const auto set_clipboard = [](const std::string& text) {
+        if (OpenClipboard(NULL)) {
+            EmptyClipboard();
+            HGLOBAL hcd = GlobalAlloc(GMEM_DDESHARE, text.size() + 1);
+            char* data = (char*)GlobalLock(hcd);
+            strcpy(data, text.c_str());
+            GlobalUnlock(hcd);
+            SetClipboardData(CF_TEXT, hcd);
+            CloseClipboard();
+        }
+    };
+
+    if (ImGui::MenuItem("Copy Name")) {
+        try { set_clipboard(utility::narrow(func->get_full_name())); } catch (...) {}
+    }
+    if (ImGui::MenuItem("Copy Address")) {
+        set_clipboard((std::stringstream{} << std::hex << (uintptr_t)func).str());
+    }
+
+    ImGui::Separator();
+
+    bool blocked = is_func_blocked(func);
+    if (ImGui::MenuItem("Block execution", nullptr, &blocked)) {
+        set_func_blocked(func, blocked);
+    }
+
+    bool monitored = is_func_monitored(func);
+    if (ImGui::MenuItem("Monitor calls", nullptr, &monitored)) {
+        set_func_monitored(func, monitored);
+    }
+    if (monitored) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "(%llu)", (unsigned long long)func_call_count(func));
+    }
+
+    if (is_real_object && object != nullptr) {
+        ImGui::Separator();
+        if (ImGui::MenuItem("Send to Function Caller")) {
+            load_live_caller_slot((sdk::UObject*)object, func);
+            m_show_function_caller = true;
+        }
+    }
+
+    ImGui::Separator();
+    if (ImGui::BeginMenu("Function flags")) {
+        static const std::pair<const char*, uint32_t> kFuncFlags[] = {
+            {"Final", 0x1u}, {"RequiredAPI", 0x2u}, {"BlueprintAuthorityOnly", 0x4u}, {"BlueprintCosmetic", 0x8u},
+            {"Net", 0x40u}, {"NetReliable", 0x80u}, {"NetRequest", 0x100u}, {"Exec", 0x200u}, {"Native", 0x400u},
+            {"Event", 0x800u}, {"NetResponse", 0x1000u}, {"Static", 0x2000u}, {"NetMulticast", 0x4000u},
+            {"UbergraphFunction", 0x8000u}, {"MulticastDelegate", 0x10000u}, {"Public", 0x20000u},
+            {"Private", 0x40000u}, {"Protected", 0x80000u}, {"Delegate", 0x100000u}, {"NetServer", 0x200000u},
+            {"HasOutParms", 0x400000u}, {"HasDefaults", 0x800000u}, {"NetClient", 0x1000000u}, {"DLLImport", 0x2000000u},
+            {"BlueprintCallable", 0x4000000u}, {"BlueprintEvent", 0x8000000u}, {"BlueprintPure", 0x10000000u},
+            {"EditorOnly", 0x20000000u}, {"Const", 0x40000000u}, {"NetValidate", 0x80000000u},
+        };
+        auto& flags = func->get_function_flags();
+        for (auto& [fname, bit] : kFuncFlags) {
+            bool set = (flags & bit) != 0;
+            if (ImGui::Checkbox(fname, &set)) {
+                if (set) { flags |= bit; } else { flags &= ~bit; }
+            }
+        }
+        ImGui::EndMenu();
+    }
+
+    ImGui::EndPopup();
+}
+
 void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     if (uclass == nullptr) {
         return;
@@ -5856,55 +5950,23 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
             }
         }
 
-        ui_standard_object_context_menu(func);
+        const bool node_open = ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data());
+        ui_function_context_menu(func, object, is_real_object);
 
         if (m_called_functions.contains(func)) {
             ImGui::SameLine();
             ImGui::TextColored(ImVec4{0.0f, 1.0f, 0.0f, 1.0f}, "[Called]");
         }
+        if (is_func_blocked(func)) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "[Blocked]");
+        }
+        if (is_func_monitored(func)) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "[Mon %llu]", (unsigned long long)func_call_count(func));
+        }
 
-        if (ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data())) {
-            if (ImGui::TreeNode("Function flags")) {
-                static const std::pair<const char*, uint32_t> kFuncFlags[] = {
-                    {"Final", 0x1u}, {"RequiredAPI", 0x2u}, {"BlueprintAuthorityOnly", 0x4u}, {"BlueprintCosmetic", 0x8u},
-                    {"Net", 0x40u}, {"NetReliable", 0x80u}, {"NetRequest", 0x100u}, {"Exec", 0x200u}, {"Native", 0x400u},
-                    {"Event", 0x800u}, {"NetResponse", 0x1000u}, {"Static", 0x2000u}, {"NetMulticast", 0x4000u},
-                    {"UbergraphFunction", 0x8000u}, {"MulticastDelegate", 0x10000u}, {"Public", 0x20000u},
-                    {"Private", 0x40000u}, {"Protected", 0x80000u}, {"Delegate", 0x100000u}, {"NetServer", 0x200000u},
-                    {"HasOutParms", 0x400000u}, {"HasDefaults", 0x800000u}, {"NetClient", 0x1000000u}, {"DLLImport", 0x2000000u},
-                    {"BlueprintCallable", 0x4000000u}, {"BlueprintEvent", 0x8000000u}, {"BlueprintPure", 0x10000000u},
-                    {"EditorOnly", 0x20000000u}, {"Const", 0x40000000u}, {"NetValidate", 0x80000000u},
-                };
-                auto& flags = func->get_function_flags();
-                for (auto& [fname, bit] : kFuncFlags) {
-                    bool set = (flags & bit) != 0;
-                    if (ImGui::Checkbox(fname, &set)) {
-                        if (set) { flags |= bit; } else { flags &= ~bit; }
-                    }
-                }
-                ImGui::TreePop();
-            }
-
-            {
-                bool blocked = is_func_blocked(func);
-                if (ImGui::Checkbox("Block execution", &blocked)) {
-                    set_func_blocked(func, blocked);
-                }
-                if (blocked) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "(no-op'd)");
-                }
-
-                bool monitored = is_func_monitored(func);
-                if (ImGui::Checkbox("Monitor calls", &monitored)) {
-                    set_func_monitored(func, monitored);
-                }
-                if (monitored) {
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "%llu calls", (unsigned long long)func_call_count(func));
-                }
-            }
-
+        if (node_open) {
             if (is_real_object) {
                 // Show parameter signature (type + name + [Out]/[struct-name]) so
                 // the user can tell what the editors below will be writing into.
@@ -5934,6 +5996,8 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
                 ImGui::Separator();
                 // Interactive editor + Call button + return-value display.
                 render_function_call(object_real, func);
+            } else {
+                ImGui::TextDisabled("Right-click for hooks / flags. Drop into a Function Caller slot to call.");
             }
 
             ImGui::TreePop();

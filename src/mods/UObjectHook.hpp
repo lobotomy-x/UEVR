@@ -212,6 +212,7 @@ private:
     void ui_handle_properties(void* object, sdk::UStruct* definition);
     void ui_handle_array_property(void* object, sdk::FArrayProperty* definition);
     void ui_handle_functions(void* object, sdk::UStruct* definition);
+    void ui_function_context_menu(sdk::UFunction* func, void* object, bool is_real_object);
     void draw_active_function_hooks();
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
     bool ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition);
