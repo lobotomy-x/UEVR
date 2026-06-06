@@ -6417,9 +6417,12 @@ const auto check_flags = [](uint64_t flags){
             {
                 auto& value = *(sdk::UObject**)((uintptr_t)object + fprop->get_offset());
 
-                if (ImGui::TreeNode(prop_name.data())) {
+                const bool open = ImGui::TreeNode(prop_name.data());
+                utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                if (open) {
                     auto scope2 = m_path.enter(prop_name);
-                    ui_handle_object(value);
+                    try { ui_handle_object(value); }
+                    catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
                     if (ImGui::BeginPopupContextItem()) {
                         if (ImGui::BeginMenu("Edit flags")) {
                             edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
@@ -6427,7 +6430,6 @@ const auto check_flags = [](uint64_t flags){
                         }
                         ImGui::EndPopup();
                     }
-                    ImGui::TreePop();
                 }
             }
             break;
@@ -6452,10 +6454,12 @@ const auto check_flags = [](uint64_t flags){
                     }
                 }
                 if (resolved != nullptr) {
-                    if (ImGui::TreeNode(prop_name.data())) {
+                    const bool open = ImGui::TreeNode(prop_name.data());
+                    utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                    if (open) {
                         auto scope2 = m_path.enter(prop_name);
-                        ui_handle_object(resolved);
-                        ImGui::TreePop();
+                        try { ui_handle_object(resolved); }
+                        catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
                     }
                 } else if (stale) {
                     ImGui::Text("%s: ", prop_name.data());
@@ -6485,10 +6489,12 @@ const auto check_flags = [](uint64_t flags){
                     }
                 }
                 if (resolved != nullptr) {
-                    if (ImGui::TreeNode(prop_name.data())) {
+                    const bool open = ImGui::TreeNode(prop_name.data());
+                    utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                    if (open) {
                         auto scope2 = m_path.enter(prop_name);
-                        ui_handle_object(resolved);
-                        ImGui::TreePop();
+                        try { ui_handle_object(resolved); }
+                        catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
                     }
                 } else {
                     // Not loaded — render the asset path so the user knows what
@@ -6601,22 +6607,31 @@ const auto check_flags = [](uint64_t flags){
                     ImGui::EndPopup();
                 }
 
-                if (ImGui::TreeNode(prop_name.data())) {
+                const bool open = ImGui::TreeNode(prop_name.data());
+                utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                if (open) {
                     auto scope2 = m_path.enter(utility::narrow(prop->get_field_name().to_string()));
                     ui_handle_struct(addr, ((sdk::FStructProperty*)prop)->get_struct());
-                    ImGui::TreePop();
                 }
             }
             break;
         case L"Function"_fnv:
             break;
         case L"ArrayProperty"_fnv:
-            if (ImGui::TreeNode(prop_name.data())) {
-                auto scope2 = m_path.enter(prop_name);
-                ui_handle_array_property(object, (sdk::FArrayProperty*)prop);
-                ImGui::TreePop();
+            {
+                const bool open = ImGui::TreeNode(prop_name.data());
+                utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                if (open) {
+                    auto scope2 = m_path.enter(prop_name);
+                    try {
+                        ui_handle_array_property(object, (sdk::FArrayProperty*)prop);
+                    } catch (const std::exception& e) {
+                        ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<array threw: %s>", e.what());
+                    } catch (...) {
+                        ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<array threw (unknown)>");
+                    }
+                }
             }
-
             break;
         case L"NameProperty"_fnv:
             {
@@ -6696,30 +6711,48 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
     const auto inner_c_type = utility::narrow(inner_c->get_name().to_string());
 
     switch (utility::hash(inner_c_type)) {
-    case L"NameProperty"_fnv: {  
-        const auto& array_obj = *(sdk::TArray<sdk::FName*>*)((uintptr_t)addr + prop->get_offset());
-
-        for (auto obj : array_obj) {
-        const auto wstr = obj->to_string();
-        const auto str = utility::narrow(wstr);
-
-        ImGui::Text("%s: ", str.data());
-    }
-     break;
+    case L"NameProperty"_fnv: {
+        // TArray<FName> by value (8 bytes each) — not an array of FName pointers.
+        const auto& a = *(sdk::TArray<sdk::FName>*)((uintptr_t)addr + prop->get_offset());
+        ImGui::Text("TArray<FName> count=%d capacity=%d", a.count, a.capacity);
+        const int32_t cap = std::min(a.count, (int32_t)1024);
+        for (int32_t i = 0; i < cap; ++i) {
+            std::wstring s;
+            try { s = a.data[i].to_string(); } catch (...) { s = L"<bad>"; }
+            ImGui::BulletText("[%d] %s", i, utility::narrow(s).c_str());
+        }
+        if (a.count > cap) ImGui::TextDisabled("(truncated at %d)", cap);
+        break;
     }
     case "InterfaceProperty"_fnv:
     case "ObjectProperty"_fnv:
     {
         const auto& array_obj = *(sdk::TArray<sdk::UObject*>*)((uintptr_t)addr + prop->get_offset());
 
+        int32_t i = -1;
         for (auto obj : array_obj) {
-            std::wstring name = obj->get_class()->get_fname().to_string() + L" " + obj->get_fname().to_string();
-            const auto narrow_name = utility::narrow(name);
-
-            if (ImGui::TreeNode(narrow_name.data())) {
+            ++i;
+            // Object arrays (e.g. OverrideMaterials) routinely contain null slots.
+            if (obj == nullptr) {
+                ImGui::BulletText("[%d] nullptr", i);
+                continue;
+            }
+            std::wstring name;
+            try {
+                const auto cls = obj->get_class();
+                name = (cls != nullptr ? cls->get_fname().to_string() : std::wstring{L"<no class>"})
+                     + L" " + obj->get_fname().to_string();
+            } catch (...) {
+                ImGui::BulletText("[%d] <unreadable %p>", i, (void*)obj);
+                continue;
+            }
+            const auto narrow_name = std::format("[{}] {}", i, utility::narrow(name));
+            const bool open = ImGui::TreeNode(narrow_name.c_str());
+            utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+            if (open) {
                 auto scope = m_path.enter(narrow_name);
-                ui_handle_object(obj);
-                ImGui::TreePop();
+                try { ui_handle_object(obj); }
+                catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display element %d>", i); }
             }
         }
 
@@ -6749,9 +6782,11 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             const auto label = std::format("[{}] {} {}", i,
                 utility::narrow(obj->get_class()->get_fname().to_string()),
                 utility::narrow(obj->get_fname().to_string()));
-            if (ImGui::TreeNode(label.c_str())) {
-                ui_handle_object(obj);
-                ImGui::TreePop();
+            const bool open = ImGui::TreeNode(label.c_str());
+            utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+            if (open) {
+                try { ui_handle_object(obj); }
+                catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
             }
         }
         break;
@@ -6778,9 +6813,11 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
                 const auto label = std::format("[{}] {} {} (soft, loaded)", i,
                     utility::narrow(resolved->get_class()->get_fname().to_string()),
                     utility::narrow(resolved->get_fname().to_string()));
-                if (ImGui::TreeNode(label.c_str())) {
-                    ui_handle_object(resolved);
-                    ImGui::TreePop();
+                const bool open = ImGui::TreeNode(label.c_str());
+                utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
+                if (open) {
+                    try { ui_handle_object(resolved); }
+                    catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
                 }
             } else {
                 auto* asset_name = (sdk::FName*)(base + 8);
