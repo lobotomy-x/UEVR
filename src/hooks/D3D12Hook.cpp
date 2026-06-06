@@ -6,6 +6,7 @@
 #include <utility/Thread.hpp>
 #include <utility/Module.hpp>
 #include <utility/RTTI.hpp>
+#include <utility/ScopeGuard.hpp>
 
 #include "WindowFilter.hpp"
 #include "Framework.hpp"
@@ -401,6 +402,19 @@ HRESULT D3D12Hook::present_internal(IDXGISwapChain3* swap_chain, UINT sync_inter
     } else {
         present_fn = d3d12->m_present1_hook->get_original<Present1Fn>();
     }
+
+    // Re-entrancy guard: a chained present hook (e.g. Steam's gameoverlayrenderer64)
+    // can call back into our present from within present_fn, looping
+    // present -> present_internal -> overlay -> present until the stack overflows.
+    // This sits ahead of the early pass-through returns below (which call present_fn)
+    // so it actually catches the re-entry; the outer present in flight completes the
+    // frame, so skip the nested call.
+    static thread_local bool s_in_present_internal = false;
+    if (s_in_present_internal) {
+        return S_OK;
+    }
+    s_in_present_internal = true;
+    utility::ScopeGuard reentry_guard{[]() { s_in_present_internal = false; }};
 
     if (d3d12->m_is_phase_1 && WindowFilter::get().is_filtered(swapchain_wnd)) {
         return present_fn(swap_chain, sync_interval, flags, params);
