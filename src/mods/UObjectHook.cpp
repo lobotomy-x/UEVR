@@ -60,6 +60,39 @@ namespace {
 constexpr const char* kDragPayloadUObject = "UEVR_UObject";
 constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
 
+// Touch-style middle-mouse drag-to-pan for the current scroll region. Call it
+// inside a BeginChild/BeginListBox scope (after the Begin, before the matching
+// End) so SetScroll* targets that child. Middle button is unbound elsewhere in
+// the overlay, so this never collides with the left-button drag-drop sources,
+// right-button context menus, window-move, or text selection. The active scroll
+// target is latched per-window via the seeded GetID, so a fast drag that pulls
+// the cursor outside the child bounds keeps scrolling until the button releases.
+// In VR the right thumbstick already drives io.MouseWheel (OverlayComponent), so
+// this is the desktop-pointer counterpart.
+inline void drag_scroll_current_window() {
+    auto& io = ImGui::GetIO();
+    const ImGuiID id = ImGui::GetID("##dragscroll");
+    static ImGuiID s_active = 0;
+
+    if (s_active == 0 && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+        s_active = id;
+    }
+
+    if (s_active == id) {
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
+            if (io.MouseDelta.x != 0.0f) {
+                ImGui::SetScrollX(ImGui::GetScrollX() - io.MouseDelta.x);
+            }
+            if (io.MouseDelta.y != 0.0f) {
+                ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
+            }
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+        } else {
+            s_active = 0;
+        }
+    }
+}
+
 // Per-slot state for the universal object picker widget (T63). One per
 // drop/text/pick slot so the text buffer, popup filter, and the two display
 // toggles survive across frames independently.
@@ -519,6 +552,7 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
     const bool has_filter = !wfilter.empty();
 
     if (ImGui::BeginListBox("##picker_list", ImVec2(420.0f, 280.0f))) {
+        drag_scroll_current_window();
         auto arr = sdk::FUObjectArray::get();
         const auto count = arr ? arr->get_object_count() : 0;
         int shown = 0;
@@ -3976,6 +4010,7 @@ void UObjectHook::draw_class_browser_window() {
         // Flat Native vs Blueprint lists (full path per row).
         auto render_class_list = [&](const char* child_id, bool want_native) {
             if (ImGui::BeginChild(child_id, ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                drag_scroll_current_window();
                 std::shared_lock _{m_mutex};
                 int shown = 0;
                 for (auto* uclass : m_sorted_classes) {
@@ -4010,6 +4045,7 @@ void UObjectHook::draw_class_browser_window() {
         // but only open nodes recurse.
         auto render_class_tree = [&]() {
             if (ImGui::BeginChild("class_tree", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                drag_scroll_current_window();
                 std::shared_lock _{m_mutex};
                 struct Node {
                     std::map<std::string, Node> children;
@@ -4093,6 +4129,7 @@ void UObjectHook::draw_class_browser_window() {
         static const auto script_struct_class = sdk::UScriptStruct::static_class();
         ImGui::TextDisabled("walks FUObjectArray looking for UScriptStruct instances");
         if (ImGui::BeginChild("ss_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            drag_scroll_current_window();
             if (script_struct_class == nullptr) {
                 ImGui::Text("UScriptStruct::static_class() returned null");
             } else {
@@ -4145,6 +4182,7 @@ void UObjectHook::draw_class_browser_window() {
         static const auto enum_class = sdk::find_uobject<sdk::UClass>(L"Class /Script/CoreUObject.Enum");
         ImGui::TextDisabled("walks FUObjectArray looking for UEnum instances");
         if (ImGui::BeginChild("enum_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            drag_scroll_current_window();
             if (enum_class == nullptr) {
                 ImGui::Text("CoreUObject.Enum not found");
             } else {
@@ -4204,6 +4242,7 @@ void UObjectHook::draw_class_browser_window() {
         static const auto func_class = sdk::UFunction::static_class();
         ImGui::TextDisabled("walks FUObjectArray looking for UFunction instances (very large; filter recommended)");
         if (ImGui::BeginChild("fn_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            drag_scroll_current_window();
             auto arr = sdk::FUObjectArray::get();
             const auto count = arr ? arr->get_object_count() : 0;
             int shown = 0;
@@ -4400,6 +4439,7 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
             const auto& set = it->second;
             ImGui::TextDisabled("%zu live instances — drag into a UObject slot to use", set.size());
             if (ImGui::BeginChild("instance_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                drag_scroll_current_window();
                 // Snapshot pointers into a vector for stable indexing — the
                 // set itself can be mutated by the UObjectBase hook on any
                 // thread, even with shared_lock held (since the hook takes
@@ -5017,6 +5057,8 @@ void UObjectHook::draw_main() {
                 ImGui::EndChild();
             //}
         }};
+
+        drag_scroll_current_window();
 
         // Defensive helper: look up an object's meta entry without mutating the
         // map (avoids the silent default-insert that operator[] does on
