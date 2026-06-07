@@ -633,8 +633,18 @@ void LuaLoader::reset_scripts() {
 				}
 
 				if (m_loaded_scripts_map[path.string()] == true) {
-					m_main_state->run_script(path.string());
-					m_loaded_scripts.emplace_back(path.string());
+					// run_script can let a Lua panic escape (e.g. its package.path
+					// restore runs unprotected after a script corrupts `package`),
+					// which surfaces as a C++ exception. Catch per-script so one bad
+					// script logs + skips instead of crashing the whole frame loop.
+					try {
+						m_main_state->run_script(path.string());
+						m_loaded_scripts.emplace_back(path.string());
+					} catch (const std::exception& e) {
+						spdlog::error("[LuaLoader] run_script threw for {}: {} — skipping", path.string(), e.what());
+					} catch (...) {
+						spdlog::error("[LuaLoader] run_script threw (unknown) for {} — skipping", path.string());
+					}
 				}
 
 				m_known_scripts.emplace_back(path.string());
