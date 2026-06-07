@@ -302,6 +302,7 @@ private:
 
     std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> m_motion_controller_attached_components{};
     std::unordered_set<sdk::USceneComponent*> m_gizmo_components{};
+    float m_gizmo_axis_len{50.0f}; // world units (UE cm) for the translate gizmo axes
     sdk::AActor* m_overlap_detection_actor{nullptr};
     sdk::AActor* m_overlap_detection_actor_left{nullptr};
 

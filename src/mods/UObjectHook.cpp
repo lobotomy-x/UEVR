@@ -3891,8 +3891,8 @@ void UObjectHook::draw_component_gizmos() {
         return;
     }
 
-    constexpr float kAxisLen = 50.0f;   // world units (UE = cm)
-    constexpr float kHitPx2  = 144.0f;  // 12px hit radius, squared
+    const float kAxisLen = m_gizmo_axis_len; // world units (UE = cm), user-tunable
+    constexpr float kHitPx2 = 144.0f;        // 12px hit radius, squared
 
     auto project = [&](const glm::vec3& wl, ImVec2& out) -> bool {
         glm::vec3 w = wl;
@@ -5607,6 +5607,11 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             } else {
                 m_gizmo_components.erase(comp);
             }
+        }
+        if (gizmo) {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(140.0f);
+            ImGui::SliderFloat("axis len##gizmo", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
         }
     }
 
