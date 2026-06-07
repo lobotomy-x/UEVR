@@ -84,6 +84,12 @@ protected:
     void draw_developer();
     void draw_main();
 
+    // Screen-space translate gizmo: projects each enabled component's origin +
+    // world X/Y/Z axis tips through the engine's own ProjectWorldToScreen and
+    // draws colored axis lines on the background draw list. Rendered per frame
+    // from on_frame for every component in m_gizmo_components.
+    void draw_component_gizmos();
+
     // Dockable pop-out windows (rendered from on_frame). Toggle via
     // checkboxes at the top of draw_main. Both auto-attach to the UEVR
     // main dockspace host on first show.
@@ -295,6 +301,7 @@ private:
     std::unordered_set<sdk::UObject*> m_motion_controller_attached_objects{};
 
     std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> m_motion_controller_attached_components{};
+    std::unordered_set<sdk::USceneComponent*> m_gizmo_components{};
     sdk::AActor* m_overlap_detection_actor{nullptr};
     sdk::AActor* m_overlap_detection_actor_left{nullptr};
 

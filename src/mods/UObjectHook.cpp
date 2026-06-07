@@ -3852,6 +3852,94 @@ void UObjectHook::on_frame() {
             catch (...)                     { spdlog::error("[UObjectHook] class inspector threw (unknown)"); }
         }
     }
+
+    try { draw_component_gizmos(); }
+    catch (const std::exception& e) { spdlog::error("[UObjectHook] gizmo draw threw: {}", e.what()); }
+    catch (...)                     { spdlog::error("[UObjectHook] gizmo draw threw (unknown)"); }
+}
+
+void UObjectHook::draw_component_gizmos() {
+    if (m_gizmo_components.empty()) {
+        return;
+    }
+
+    auto engine = sdk::UGameEngine::get();
+    auto world = engine != nullptr ? engine->get_world() : nullptr;
+    if (world == nullptr) {
+        return;
+    }
+
+    auto ugs = sdk::UGameplayStatics::get();
+    if (ugs == nullptr) {
+        return;
+    }
+
+    auto pc = ugs->get_player_controller(world, 0);
+    if (pc == nullptr) {
+        return;
+    }
+
+    auto* dl = ImGui::GetBackgroundDrawList();
+    if (dl == nullptr) {
+        return;
+    }
+
+    constexpr float kAxisLen = 50.0f; // world units (UE = cm)
+
+    auto project = [&](const glm::vec3& wl, ImVec2& out) -> bool {
+        glm::vec3 w = wl;
+        glm::vec2 sp{0.0f, 0.0f};
+        if (!ugs->world_to_screen(pc, w, &sp)) {
+            return false; // behind camera / off-screen
+        }
+        out = ImVec2{sp.x, sp.y};
+        return true;
+    };
+
+    struct Axis { glm::vec3 dir; ImU32 col; };
+    static const Axis axes[3] = {
+        { glm::vec3{1.0f, 0.0f, 0.0f}, IM_COL32(255,  60,  60, 255) }, // X red
+        { glm::vec3{0.0f, 1.0f, 0.0f}, IM_COL32( 60, 255,  60, 255) }, // Y green
+        { glm::vec3{0.0f, 0.0f, 1.0f}, IM_COL32( 80, 120, 255, 255) }, // Z blue
+    };
+
+    // Drop components that no longer exist; collect first so we don't mutate the
+    // set mid-iteration.
+    std::vector<sdk::USceneComponent*> dead{};
+
+    for (auto* comp : m_gizmo_components) {
+        if (comp == nullptr || !this->exists(comp)) {
+            dead.push_back(comp);
+            continue;
+        }
+
+        glm::vec3 origin{};
+        try {
+            origin = comp->get_world_location();
+        } catch (...) {
+            continue;
+        }
+
+        ImVec2 s_origin{};
+        if (!project(origin, s_origin)) {
+            continue;
+        }
+
+        for (const auto& ax : axes) {
+            ImVec2 s_tip{};
+            if (!project(origin + ax.dir * kAxisLen, s_tip)) {
+                continue;
+            }
+            dl->AddLine(s_origin, s_tip, ax.col, 2.0f);
+            dl->AddCircleFilled(s_tip, 4.0f, ax.col);
+        }
+
+        dl->AddCircleFilled(s_origin, 4.0f, IM_COL32(255, 255, 255, 255));
+    }
+
+    for (auto* d : dead) {
+        m_gizmo_components.erase(d);
+    }
 }
 
 // Helper: docks the next window into the main UEVR dockspace on first use
@@ -5422,6 +5510,17 @@ bool UObjectHook::object_from_path_or_address(std::string_view object, sdk::UObj
 void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
     if (comp == nullptr) {
         return;
+    }
+
+    {
+        bool gizmo = m_gizmo_components.contains(comp);
+        if (ImGui::Checkbox("Show gizmo", &gizmo)) {
+            if (gizmo) {
+                m_gizmo_components.insert(comp);
+            } else {
+                m_gizmo_components.erase(comp);
+            }
+        }
     }
 
     bool attached = m_motion_controller_attached_components.contains(comp);
