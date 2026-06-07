@@ -123,13 +123,4 @@ inline sol::object tarray_to_table(sol::this_state s, const uevr::API::TArray<El
     }
 
 
-    //template<typename T>
-    //inline uevr::API::TArray<T>* table_to_tarray(sol::this_state s, sol::table value, int32_t capacity, const std::wstring name_hash) {
-
-
-
-   
-    //}
-
-
 }

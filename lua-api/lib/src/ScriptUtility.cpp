@@ -172,82 +172,6 @@ uevr::API::UScriptStruct* get_matrix_struct() {
 }
 
 
-template <typename T>
-void SyncLuaTableToTArray(const sol::lua_table& lua_table, void* array_ptr, std::vector<std::vector<T>>& dynamic_storage) {
-    // 1. Cast the raw buffer to the UEVR TArray structure
-    auto& ue_arr = *(uevr::API::TArray<T>*)array_ptr;
-
-    // 2. Create a stable backing store for this specific call (prevent GC issues)
-    auto& backing_vec = dynamic_storage.emplace_back();
-    backing_vec.reserve(lua_table.size());
-
-    // 3. Populate from Lua (Note: Lua is 1-indexed)
-    for (size_t i = 1; i <= lua_table.size(); ++i) {
-        backing_vec.push_back(lua_table[i].get<T>());
-    }
-
-    // 4. Update the UE TArray headers to point to our new data
-    ue_arr.data = backing_vec.data();
-    ue_arr.count = (int32_t)backing_vec.size();
-    ue_arr.capacity = (int32_t)backing_vec.size();
-}
-sol::table TArrayToLuaTable(sol::state_view& lua, void* array_ptr, const std::string& type_name) {
-    sol::table out_table = lua.create_table();
-
-    auto& ue_arr = *(uevr::API::TArray<uevr::API::UObject*>*)array_ptr;
-
-    for (int32_t i = 0; i < ue_arr.count; ++i) {
-        // Lua index i+1
-        out_table[i + 1] = ue_arr.data[i];
-    }
-    return out_table;
-}
-template <typename T> void ProcessTArray(const sol::object& arg, void* params_ptr) {
-    if (arg.is<sol::lua_table>()) {
-        sol::lua_table tbl = arg.as<sol::lua_table>();
-        auto& ue_arr = *(uevr::API::TArray<T>*)params_ptr;
-
-        using StorageType = std::conditional_t<std::is_same_v<T, bool>, uint8_t, T>;
-
-        std::vector<StorageType> buffer;
-        buffer.clear();
-        buffer.reserve(tbl.size());
-
-        for (size_t i = 1; i <= tbl.size(); ++i) {
-            // Convert Lua value to T, then store in our compatible buffer
-            buffer.push_back((StorageType)tbl[i].get<T>());
-        }
-
-        // Now .data() will work because it's a vector<uint8_t>
-        ue_arr.data = (T*)buffer.data();
-        ue_arr.count = (int)buffer.size();
-        ue_arr.capacity = (int)buffer.size();
-    }
-}
-using DispatchFunc = void (*)(const sol::object&, void*);
-using FString = uevr::API::TArray<wchar_t>;
-const std::unordered_map<std::string_view, DispatchFunc> TypeDispatcher = {
-
-    {"FloatProperty", ProcessTArray<float>},
-    {"ObjectProperty", ProcessTArray<uevr::API::UObject*>},
-    {"BoolProperty", ProcessTArray<uint8_t>},
-    {"ByteProperty", ProcessTArray<uint8_t>},
-    {"DoubleProperty", ProcessTArray<double>},
-    {"NameProperty", ProcessTArray<uevr::API::FName*>},
-    {"StringProperty", ProcessTArray<FString*>},
-    {"Int8Property", ProcessTArray<int8_t>},
-    {"Int16Property", ProcessTArray<int16_t>},
-    {"UIntProperty", ProcessTArray<uint16_t>},
-    {"IntProperty", ProcessTArray<int32_t>},
-    {"UIntProperty", ProcessTArray<uint32_t>},
-    {"UInt32Property", ProcessTArray<uint32_t>},
-    {"UInt64Property", ProcessTArray<uint64_t>},
-    {"Int64Property", ProcessTArray<int64_t>},
-    {"InterfaceProperty", ProcessTArray<uevr::API::UObject*>},
-    {"ClassProperty", ProcessTArray<uevr::API::UClass*>},
-    {"StructProperty", ProcessTArray<uevr::API::UStruct*>},
-};
-
 // General overload that header declares. Forward to existing implementations when possible.
 sol::object prop_to_object(
     sol::this_state s, void* self, const int32_t offset, const size_t name_hash, uevr::API::FProperty* desc, bool is_self_temporary) {
@@ -1393,15 +1317,17 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
                 }
             }
         }
-        if (struct_desc == get_transform_struct()) {
+        // else if (NOT a fresh `if`): this used to start a second, independent
+        // if-chain. A value already handled by the first chain above (a generic
+        // StructObject memcpy, a table, or a vector) then fell through to here
+        // and, not being transform/matrix/quat, hit the final `else throw` —
+        // "Invalid argument type for struct property" was raised AFTER the value
+        // had already been set correctly. That broke passing ANY non-vec struct
+        // (e.g. FMinimalViewInfo to GetViewProjectionMatrix -> world_to_screen).
+        else if (struct_desc == get_transform_struct()) {
             static const auto quat_offset = struct_desc->find_property(L"Rotation")->get_offset();
             static const auto loc_offset = struct_desc->find_property(L"Translation")->get_offset();
             static const auto scale_offset = struct_desc->find_property(L"Scale3D")->get_offset();
-                Transformf t = Transformf();
-
-                t.rotation = *(Quaternionf*)((uintptr_t)self + offset + quat_offset);
-                t.translation = *(Vector3f*)((uintptr_t)self + offset + loc_offset);
-                t.scale3d = *(Vector3f*)((uintptr_t)self + offset + scale_offset);
             if (value.is<lua::datatypes::Transformf>()) {
                 auto val = value.as<lua::datatypes::Transformf>();
                 if (is_ue5()) {

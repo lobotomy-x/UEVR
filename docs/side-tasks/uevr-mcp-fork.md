@@ -201,6 +201,23 @@ need to either:
 
 _(append-only; new entries at the top with date and what landed)_
 
+- 2026-05-29 — **LOCAL INTEGRATION DONE** (no GitHub fork/push; no upstream
+  API changes yet). See `uevr-mcp-SETUP.md` for the full how-to. Summary:
+  - Built the C# MCP server: `dotnet build mcp-server -c Release` →
+    `mcp-server/bin/Release/net9.0/UevrMcpServer.dll`. Smoke-tested
+    (`dotnet <dll> wait-plugin 500` → clean `{"ok":false,...}` with no game).
+  - Built the C++ plugin: `cmake -S plugin -B plugin/build -A x64 && cmake
+    --build plugin/build --config Release` → `plugin/build/Release/uevr_mcp.dll`
+    (4.3 MB). NOTE: plugin source has grown past this doc's inventory
+    (event_bus, hook_registry, property_watch, discovery_routes, render_routes,
+    process_event_listener, …) — re-audit before the API-surface rework.
+  - Installed `uevr_mcp.dll` → global `%APPDATA%/UnrealVRMod/UEVR/plugins/`
+    (loads for every game) + `EM-Win64-Shipping/plugins/`.
+  - Registered the server in `UEVR/.mcp.json` (gitignored) as `uevr`
+    (`dotnet <built dll>`), project-scoped to the UEVR repo.
+  - The luavrlib-surface updates below ("What needs updating") are still TODO —
+    base reflection / `uevr_lua_exec` / search / chain work now; api_fast,
+    workers, log-subscribe do not yet have dedicated tools.
 - 2026-05-25 — initial hand-off doc written; sibling repo cloned at
   `I:/code/lobotomy-x/uevr-mcp/`. No code changes yet. User has not
   forked on GitHub yet.

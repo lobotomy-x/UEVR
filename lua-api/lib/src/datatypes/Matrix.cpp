@@ -38,6 +38,12 @@ namespace lua::datatypes {
             return vec3_t(m * vec4_t(p, (datatype)1)); }, \
         "transform_vector", [](const name& m, const vec3_t& v) -> vec3_t { \
             return vec3_t(m * vec4_t(v, (datatype)0)); }, \
+        /* Full vec4 transform: w=1 so translation is applied AND the resulting w
+           is preserved for the perspective divide (world->clip for w2s). */ \
+        "transform_vector4", [](const name& m, const vec3_t& v) -> vec4_t { \
+            return m * vec4_t(v, (datatype)1); }, \
+        "transform_vector4w", [](const name& m, const vec4_t& v) -> vec4_t { \
+            return m * v; }, \
         sol::meta_function::to_string, [](const name& m) { \
             std::string s = "{\n"; \
             for (int r = 0; r < 4; ++r) { \

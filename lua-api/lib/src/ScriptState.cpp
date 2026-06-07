@@ -7,10 +7,16 @@
 
 namespace api::ue {
 void msg(const char* text) {
-    // Could technically find the wrong process still but this way it won't just grab a random foreground window
-    // previously if you had high script load times and got an error while another process was open or even worse, while actively tabbing,
-    // you could totally lose your error message
-    MessageBoxA(nullptr, text, "LuaLoader Message", MB_ICONINFORMATION | MB_OK);
+    // Log script errors; do NOT use a modal MessageBoxA here. run_script() runs
+    // on the engine thread, and a modal box blocks its message pump, freezing
+    // the overlay + engine tick until dismissed.
+    if (text == nullptr) {
+        text = "(null script error)";
+    }
+    OutputDebugStringA((std::string("[LuaLoader] ") + text + "\n").c_str());
+    if (uevr::API::get() != nullptr) {
+        uevr::API::get()->log_error("%s", text);
+    }
 }
 } // namespace api::ue
 

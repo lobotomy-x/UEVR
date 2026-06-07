@@ -348,6 +348,54 @@ bool on_custom_event(UEVR_OnCustomEventCb cb) {
 
     return PluginLoader::get()->add_on_custom_event(cb);
 }
+
+// ----- Shims wiring the PluginLoader:: methods into UEVR_PluginFunctions -----
+static bool exec_lua_chunk_shim(const char* c, const char* l, char* o, unsigned int n) {
+    return PluginLoader::get()->exec_lua_chunk(c, l, o, n);
+}
+static bool get_global_string_shim(const char* name, char* out, unsigned int n) {
+    return PluginLoader::get()->get_global_string(name, out, n);
+}
+static void set_global_string_shim(const char* name, const char* value) {
+    PluginLoader::get()->set_global_string(name, value);
+}
+static void get_sol_state_view_shim(void** out) {
+    PluginLoader::get()->get_sol_state_view(out);
+}
+static void free_sol_object_shim(void* obj) {
+    PluginLoader::get()->free_sol_object(obj);
+}
+static void free_sol_state_view_shim(void* sv) {
+    PluginLoader::get()->free_sol_state_view(sv);
+}
+static void reset_lua_scripts_shim() {
+    if (auto ll = LuaLoader::get()) ll->reset_scripts();
+}
+static void reload_plugins_shim() {
+    PluginLoader::get()->reload_plugins();
+}
+static void attempt_unload_plugins_shim() {
+    PluginLoader::get()->attempt_unload_plugins();
+}
+static void lock_lua_shim() {
+    PluginLoader::get()->lock_lua();
+}
+static void unlock_lua_shim() {
+    PluginLoader::get()->unlock_lua();
+}
+static void on_lua_state_destroyed_shim(UEVR_LuaStateDestroyedCb cb) {
+    if (cb == nullptr) return;
+    PluginLoader::get()->add_on_lua_state_destroyed(cb);
+}
+static bool on_imgui_frame_shim(UEVR_OnImGuiFrameCb cb) {
+    if (cb == nullptr) return false;
+    return PluginLoader::get()->add_on_imgui_frame(cb);
+}
+// Best-effort: ignore the optional sol::state_view pointer and dispatch on the
+// main lua state. Callers that pass a custom state_view aren't supported yet.
+static void synchronize_lua_event_shim(void* /*state_view*/, const char* name, const char* data) {
+    if (auto ll = LuaLoader::get()) ll->dispatch_event(name ? name : "", data ? data : "");
+}
 }
 
 UEVR_PluginCallbacks g_plugin_callbacks {
@@ -374,12 +422,13 @@ UEVR_PluginFunctions g_plugin_functions {
     .load_lua_file = ::load_lua_file,
     .load_lua_string = ::load_lua_string,
     .get_lua_globals = ::get_lua_globals,
-/*    .get_sol_state_view = ::get_sol_state_view,
-    .free_sol_object = ::free_sol_object,
-    .free_sol_state_view = ::free_sol_state_view,
-    .exec_lua_chunk = ::exec_lua_chunk,
-    .get_global_string = ::get_global_string,
-    .set_global_string = ::set_global_string,*/
+    .get_sol_state_view = uevr::get_sol_state_view_shim,
+    .free_sol_object = uevr::free_sol_object_shim,
+    .free_sol_state_view = uevr::free_sol_state_view_shim,
+    .exec_lua_chunk = uevr::exec_lua_chunk_shim,
+    .get_global_string = uevr::get_global_string_shim,
+    .set_global_string = uevr::set_global_string_shim,
+    .synchronize_lua_event = uevr::synchronize_lua_event_shim,
 
     .get_commit_hash = []() -> const char* {
         return UEVR_COMMIT_HASH;
@@ -405,6 +454,13 @@ UEVR_PluginFunctions g_plugin_functions {
     .get_total_commits = []() -> unsigned int {
         return UEVR_TOTAL_COMMITS;
     },
+    .reload_plugins = uevr::reload_plugins_shim,
+    .attempt_unload_plugins = uevr::attempt_unload_plugins_shim,
+    .reset_lua_scripts = uevr::reset_lua_scripts_shim,
+    .on_lua_state_destroyed = uevr::on_lua_state_destroyed_shim,
+    .on_imgui_frame = uevr::on_imgui_frame_shim,
+    .lock_lua = uevr::lock_lua_shim,
+    .unlock_lua = uevr::unlock_lua_shim,
     .dispatch_custom_event = uevr::dispatch_custom_event
 };
 
@@ -583,6 +639,25 @@ UEVR_SDKFunctions g_sdk_functions {
     // add_component_by_class
     [](UEVR_UObjectHandle actor, UEVR_UClassHandle klass, bool deferred) -> UEVR_UObjectHandle {
         return (UEVR_UObjectHandle)((sdk::AActor*)actor)->add_component_by_class((sdk::UClass*)klass, deferred);
+    },
+    // get_or_add_component -- previously declared in API.h but never wired (null for C plugins)
+    [](UEVR_UObjectHandle actor, UEVR_UClassHandle klass) -> UEVR_UObjectHandle {
+        if (actor == nullptr || klass == nullptr) {
+            return nullptr;
+        }
+        auto a = (sdk::AActor*)actor;
+        if (auto existing = a->get_component_by_class((sdk::UClass*)klass); existing != nullptr) {
+            return (UEVR_UObjectHandle)existing;
+        }
+        return (UEVR_UObjectHandle)a->add_component_by_class((sdk::UClass*)klass, false);
+    },
+    // attach_to -- previously declared in API.h but never wired (null for C plugins)
+    [](UEVR_UObjectHandle child, UEVR_UObjectHandle parent) -> UEVR_UObjectHandle {
+        if (child == nullptr || parent == nullptr) {
+            return nullptr;
+        }
+        ((sdk::USceneComponent*)child)->attach_to((sdk::USceneComponent*)parent);
+        return child;
     }
 };
 
@@ -1530,6 +1605,17 @@ void get_eye_offset(UEVR_Eye eye, UEVR_Vector3f* out_offset) {
     out_offset->z = out.z;
 }
 
+// Previously declared in API.h (UEVR_VRData) but never wired -> null for C plugins.
+void get_angular_velocity(UEVR_TrackedDeviceIndex index, UEVR_Vector3f* out_velocity) {
+    if (out_velocity == nullptr) {
+        return;
+    }
+    const auto v = ::VR::get()->get_angular_velocity((uint32_t)index);
+    out_velocity->x = v.x;
+    out_velocity->y = v.y;
+    out_velocity->z = v.z;
+}
+
 void get_ue_projection_matrix(UEVR_Eye eye, UEVR_Matrix4x4f* out_projection) {
     const auto& projection = ::VR::get()->get_runtime()->projections[eye];
     memcpy(out_projection, &projection, sizeof(UEVR_Matrix4x4f));
@@ -1702,6 +1788,7 @@ UEVR_VRData g_vr_data {
     .get_aim_pose =     uevr::vr::get_aim_pose,
     .get_grip_transform =     uevr::vr::get_grip_transform,
     .get_aim_transform =     uevr::vr::get_aim_transform,
+    .get_angular_velocity =     uevr::vr::get_angular_velocity,
     .get_eye_offset =     uevr::vr::get_eye_offset,
     .get_ue_projection_matrix =     uevr::vr::get_ue_projection_matrix,
     .get_left_joystick_source =     uevr::vr::get_left_joystick_source,
@@ -2580,6 +2667,13 @@ bool PluginLoader::add_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
     std::unique_lock _{m_api_cb_mtx};
 
     m_on_lua_state_destroyed_cbs.push_back(cb);
+    return true;
+}
+
+bool PluginLoader::add_on_imgui_frame(UEVR_OnImGuiFrameCb cb) {
+    std::unique_lock _{m_api_cb_mtx};
+
+    m_on_imgui_frame_cbs.push_back(cb);
     return true;
 }
 

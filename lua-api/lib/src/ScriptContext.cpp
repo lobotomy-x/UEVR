@@ -104,17 +104,8 @@ ScriptContext::~ScriptContext() {
         }
     }
 
-    // TODO: this probably does not support multiple states
-    // Addendum: I decided this is not necessary, for now...
-    // because all of the functions are static
-    // and this sometimes introduces a deadlock
-    /*if (m_plugin_initialize_param != nullptr) {
-        for (auto& cb : m_callbacks_to_remove) {
-            m_plugin_initialize_param->functions->remove_callback(cb);
-        }
-
-        m_callbacks_to_remove.clear();
-    }*/
+    // Callback removal intentionally omitted: callbacks are static and removing
+    // them here could deadlock; not needed while states share static functions.
 }
 
 void ScriptContext::log(const std::string& message) {
@@ -495,8 +486,6 @@ __declspec(noinline) sol::object call_member_virtual(sol::this_state s, uevr::AP
     uintptr_t code_addr{};
     rt.add(&code_addr, &code);
 
-    OutputDebugStringA(std::format("Generated stub at {:x}", code_addr).c_str());
-
     auto stub = (Stub)code_addr;
     stubs[type_bits] = stub;
     auto result = stub(self, (*(void***)self)[index], args_converted.data());
@@ -568,19 +557,18 @@ int ScriptContext::setup_bindings() {
         "patch", &UEVR_PluginVersion::patch);
 
     m_lua.new_usertype<UEVR_PluginFunctions>("UEVR_PluginFunctions",
-        // Lua-SAFE log wrappers. Binding the raw variadic C functions
-        // (UEVR_PluginFunctions::log_*  ->  void(const char* fmt, ...)) directly
-        // to sol2 is unsafe: a Lua call with a nil/missing argument passes a NULL
-        // format pointer to vsnprintf, and any '%' in the string makes vsnprintf
-        // read C varargs that Lua never supplied -- both trigger
-        // _invalid_parameter -> __fastfail(FAST_FAIL_INVALID_ARG), an unrecoverable
-        // hard crash (this was crashing games during Lua script load). Instead take
-        // a single std::string (sol2 rejects non-strings with a recoverable Lua
-        // error) and log it with a literal "%s" format. Scripts that want
-        // formatting use Lua's string.format and pass the result.
-        "log_error", [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_error) self.log_error("%s", msg.c_str()); },
-        "log_warn",  [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_warn)  self.log_warn("%s", msg.c_str()); },
-        "log_info",  [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_info)  self.log_info("%s", msg.c_str()); },
+        // Loggers take a single std::string and format with a literal "%s" (never
+        // the raw variadic C functions, which crash on a '%' or nil arg). Overloaded
+        // so both colon (functions:log_info) and dot (functions.log_info) calls work.
+        "log_error", sol::overload(
+            [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_error) self.log_error("%s", msg.c_str()); },
+            [](const std::string& msg) { API::get()->log_error("%s", msg.c_str()); }),
+        "log_warn", sol::overload(
+            [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_warn) self.log_warn("%s", msg.c_str()); },
+            [](const std::string& msg) { API::get()->log_warn("%s", msg.c_str()); }),
+        "log_info", sol::overload(
+            [](UEVR_PluginFunctions& self, const std::string& msg) { if (self.log_info) self.log_info("%s", msg.c_str()); },
+            [](const std::string& msg) { API::get()->log_info("%s", msg.c_str()); }),
         "is_drawing_ui", &UEVR_PluginFunctions::is_drawing_ui,
 
         "get_commit_hash", &UEVR_PluginFunctions::get_commit_hash, "get_tag", &UEVR_PluginFunctions::get_tag, "get_tag_long",

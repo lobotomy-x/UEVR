@@ -14,7 +14,7 @@ void bind_transform_struct(sol::state_view& lua) {
             return o;
         }, 
         "identity", [](Transformf t) {
-            t.rotation =    Quaternionf(0.0f, 0.0f, 0.0f, 1.0f);
+            t.rotation =    Quaternionf(1.0f, 0.0f, 0.0f, 0.0f);  // glm::quat is (w,x,y,z); identity = w=1
             t.translation=  Vector3f(0.0f,0.0f,0.0f);
             t.scale3d = Vector3f(1.0f, 1.0f, 1.0f);
             return t;
@@ -131,7 +131,7 @@ void bind_transform_struct(sol::state_view& lua) {
         },
         "identity",
         [](Transformd t) {
-            t.rotation = Quaterniond(0.0f, 0.0f, 0.0f, 1.0f);
+            t.rotation = Quaterniond(1.0, 0.0, 0.0, 0.0);  // glm::dquat is (w,x,y,z); identity = w=1
             t.translation = Vector3d(0.0f, 0.0f, 0.0f);
             t.scale3d = Vector3d(1.0f, 1.0f, 1.0f);
             return t;

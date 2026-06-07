@@ -84,7 +84,7 @@ public:
     bool add_on_lua_state_created(UEVR_LuaStateCreatedCb cb);
     bool add_on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb);
     bool add_on_frame(UEVR_OnFrameCb cb);
-/*    bool add_on_imgui_frame(UEVR_OnImGuiFrameCb cb);*/
+    bool add_on_imgui_frame(UEVR_OnImGuiFrameCb cb);
     bool add_on_present(UEVR_OnPresentCb cb);
     bool add_on_device_reset(UEVR_OnDeviceResetCb cb);
     bool add_on_message(UEVR_OnMessageCb cb);

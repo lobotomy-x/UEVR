@@ -28,10 +28,37 @@
 #include <sdk/APlayerController.hpp>
 #include <sdk/UGameEngine.hpp>
 #include <sdk/KismetSystemLibrary.hpp>
+#include <sdk/ScriptVector.hpp>
 
 #include "SDKFast.hpp"
 
 namespace {
+
+
+
+// CLAUDE PLEASE READ
+
+    /*
+        Scan SDK for updates
+
+        Consider if we should add lua AActor and USceneComponent types uobject can cast to with as_
+
+        UNREAL ENGINE UNDER THE HOOD ONLY WORKS WITH SCENECOMPONENT TRANSFORMS AND ATTACHMENTS
+
+        ACTORS ARE JUST ACCESSORS, THIS DOES NOT MATTER FOR SPEED REALISTICALLY BUT ITS SIMPLER TO JUST WORK WITH SCENE COMPS
+
+        On engine tick we should build a fast map cache on a worker thread that gets transforms of any touched scenecomponents or actor->rootcomponents
+            any location or rotation reads can read from the cache or add the comp to the cache
+            limit reflection calls, reduce potential script conflicts, single unified accessor for all object transforms
+
+
+        We should add callbacks for the following
+                on level
+                on world
+                on
+
+    */
+
 
 // Best-effort cast from the public uevr::API::UObject* to an internal sdk type
 // T*. Both pointers refer to the same underlying UE memory; T must be one of
@@ -54,6 +81,10 @@ T* sdk_cast(uevr::API::UObject* obj) {
     return reinterpret_cast<T*>(sdk_obj);
 }
 
+// Actors are data accessors and organizers, scenecomponents are what actually matters for world transformations
+// Every attachment or transformation action happens to scenecomponents
+// And every call to a location or rotation function is actually just getting the transform and taking a single member
+
 sdk::USceneComponent* as_component(uevr::API::UObject* obj) {
     auto comp = sdk_cast<sdk::USceneComponent>(obj);
     if (comp == nullptr) {
@@ -63,87 +94,124 @@ sdk::USceneComponent* as_component(uevr::API::UObject* obj) {
     return comp;
 }
 
-glm::vec3 get_actor_location(uevr::API::UObject* obj) {
-    auto actor = sdk_cast<sdk::AActor>(obj);
-    if (actor == nullptr) {
-        return glm::vec3{0.0f, 0.0f, 0.0f};
-    }
-    return actor->get_actor_location();
+// UE5 uses double-precision FVector (struct size == sizeof(dvec3)). Cached once.
+static bool fast_is_ue5() {
+    static const bool v = [] {
+        auto sv = sdk::ScriptVector::static_struct();
+        return sv != nullptr && sv->get_struct_size() == sizeof(glm::dvec3);
+    }();
+    return v;
 }
 
-glm::vec3 get_actor_rotation(uevr::API::UObject* obj) {
-    auto actor = sdk_cast<sdk::AActor>(obj);
-    if (actor == nullptr) {
-        return glm::vec3{0.0f, 0.0f, 0.0f};
+// Read an FVector/FRotator-returning K2 getter and marshal to the engine-correct
+// lua type: Vector3d (glm::dvec3) on UE5, Vector3f (glm::vec3) on UE4. Keeps the
+// script-facing type identical to the reflection path (the Vector3 resolver), so
+// location()+forward() never mixes float/double. imgui Vector2f/4f stay float.
+static sol::object read_vec3_runtime(sol::state_view lua, sdk::UObject* obj, const wchar_t* fn_name) {
+    const bool ue5 = fast_is_ue5();
+    auto cls = obj != nullptr ? obj->get_class() : nullptr;
+    auto func = cls != nullptr ? cls->find_function(fn_name) : nullptr;
+    if (func == nullptr) {
+        return ue5 ? sol::make_object(lua, glm::dvec3{0.0, 0.0, 0.0})
+                   : sol::make_object(lua, glm::vec3{0.0f, 0.0f, 0.0f});
     }
-    return actor->get_actor_rotation();
+    // The return FVector/FRotator is the only param; buffer = its exact size.
+    if (ue5) {
+        glm::dvec3 out{0.0, 0.0, 0.0};
+        obj->process_event(func, &out);
+        return sol::make_object(lua, out);
+    }
+    glm::vec3 out{0.0f, 0.0f, 0.0f};
+    obj->process_event(func, &out);
+    return sol::make_object(lua, out);
 }
 
-bool set_actor_location(uevr::API::UObject* obj, const glm::vec3& loc, sol::optional<bool> sweep, sol::optional<bool> teleport) {
+sol::object get_actor_location(sol::this_state s, uevr::API::UObject* obj) {
+    sol::state_view lua{s};
+    return read_vec3_runtime(lua, reinterpret_cast<sdk::UObject*>(sdk_cast<sdk::AActor>(obj)), L"K2_GetActorLocation");
+}
+
+sol::object get_actor_rotation(sol::this_state s, uevr::API::UObject* obj) {
+    sol::state_view lua{s};
+    return read_vec3_runtime(lua, reinterpret_cast<sdk::UObject*>(sdk_cast<sdk::AActor>(obj)), L"K2_GetActorRotation");
+}
+
+// Accept either a Vector3f (glm::vec3) or a Vector3d (glm::dvec3) from Lua and
+// narrow to glm::vec3 for the SDK setters. Since the getters now return Vector3d
+// on UE5, scripts pass Vector3d straight back into the setters -- without this a
+// Vector3d arg would fail to marshal into a glm::vec3 param and throw. (Far-from-
+// origin precision on WRITE is preserved by routing through reflection K2_Set*
+// in APIUE; these fast setters are the float path.)
+static glm::vec3 obj_to_vec3(const sol::object& o) {
+    if (o.is<glm::dvec3>()) {
+        const auto d = o.as<glm::dvec3>();
+        return glm::vec3{(float)d.x, (float)d.y, (float)d.z};
+    }
+    if (o.is<glm::vec3>()) {
+        return o.as<glm::vec3>();
+    }
+    return glm::vec3{0.0f, 0.0f, 0.0f};
+}
+
+bool set_actor_location(uevr::API::UObject* obj, sol::object loc, sol::optional<bool> sweep, sol::optional<bool> teleport) {
     auto actor = sdk_cast<sdk::AActor>(obj);
     if (actor == nullptr) {
         return false;
     }
-    return actor->set_actor_location(loc, sweep.value_or(false), teleport.value_or(false));
+    return actor->set_actor_location(obj_to_vec3(loc), sweep.value_or(false), teleport.value_or(false));
 }
 
-bool set_actor_rotation(uevr::API::UObject* obj, const glm::vec3& rot, sol::optional<bool> teleport) {
+bool set_actor_rotation(uevr::API::UObject* obj, sol::object rot, sol::optional<bool> teleport) {
     auto actor = sdk_cast<sdk::AActor>(obj);
     if (actor == nullptr) {
         return false;
     }
-    return actor->set_actor_rotation(rot, teleport.value_or(false));
+    return actor->set_actor_rotation(obj_to_vec3(rot), teleport.value_or(false));
 }
 
-glm::vec3 get_world_location(uevr::API::UObject* obj) {
-    auto comp = as_component(obj);
-    if (comp == nullptr) {
-        return glm::vec3{0.0f, 0.0f, 0.0f};
-    }
-    return comp->get_world_location();
+sol::object get_world_location(sol::this_state s, uevr::API::UObject* obj) {
+    sol::state_view lua{s};
+    return read_vec3_runtime(lua, reinterpret_cast<sdk::UObject*>(as_component(obj)), L"K2_GetComponentLocation");
 }
 
-glm::vec3 get_world_rotation(uevr::API::UObject* obj) {
-    auto comp = as_component(obj);
-    if (comp == nullptr) {
-        return glm::vec3{0.0f, 0.0f, 0.0f};
-    }
-    return comp->get_world_rotation();
+sol::object get_world_rotation(sol::this_state s, uevr::API::UObject* obj) {
+    sol::state_view lua{s};
+    return read_vec3_runtime(lua, reinterpret_cast<sdk::UObject*>(as_component(obj)), L"K2_GetComponentRotation");
 }
 
-bool set_world_location(uevr::API::UObject* obj, const glm::vec3& loc, sol::optional<bool> sweep, sol::optional<bool> teleport) {
+bool set_world_location(uevr::API::UObject* obj, sol::object loc, sol::optional<bool> sweep, sol::optional<bool> teleport) {
     auto comp = as_component(obj);
     if (comp == nullptr) {
         return false;
     }
-    comp->set_world_location(loc, sweep.value_or(false), teleport.value_or(false));
+    comp->set_world_location(obj_to_vec3(loc), sweep.value_or(false), teleport.value_or(false));
     return true;
 }
 
-bool set_world_rotation(uevr::API::UObject* obj, const glm::vec3& rot, sol::optional<bool> sweep, sol::optional<bool> teleport) {
-    auto comp = sdk_cast<sdk::USceneComponent>(obj);
-    if (comp == nullptr) {
-        return false;
-    }
-    comp->set_world_rotation(rot, sweep.value_or(false), teleport.value_or(false));
-    return true;
-}
-
-bool add_world_offset(uevr::API::UObject* obj, const glm::vec3& offset, sol::optional<bool> sweep, sol::optional<bool> teleport) {
+bool set_world_rotation(uevr::API::UObject* obj, sol::object rot, sol::optional<bool> sweep, sol::optional<bool> teleport) {
     auto comp = as_component(obj);
     if (comp == nullptr) {
         return false;
     }
-    comp->add_world_offset(offset, sweep.value_or(false), teleport.value_or(false));
+    comp->set_world_rotation(obj_to_vec3(rot), sweep.value_or(false), teleport.value_or(false));
     return true;
 }
 
-bool add_world_rotation(uevr::API::UObject* obj, const glm::vec3& rot, sol::optional<bool> sweep, sol::optional<bool> teleport) {
+bool add_world_offset(uevr::API::UObject* obj, sol::object offset, sol::optional<bool> sweep, sol::optional<bool> teleport) {
     auto comp = as_component(obj);
     if (comp == nullptr) {
         return false;
     }
-    comp->add_world_rotation(rot, sweep.value_or(false), teleport.value_or(false));
+    comp->add_world_offset(obj_to_vec3(offset), sweep.value_or(false), teleport.value_or(false));
+    return true;
+}
+
+bool add_world_rotation(uevr::API::UObject* obj, sol::object rot, sol::optional<bool> sweep, sol::optional<bool> teleport) {
+    auto comp = as_component(obj);
+    if (comp == nullptr) {
+        return false;
+    }
+    comp->add_world_rotation(obj_to_vec3(rot), sweep.value_or(false), teleport.value_or(false));
     return true;
 }
 
@@ -192,6 +260,7 @@ uevr::API::UObject* get_root_component(uevr::API::UObject* obj) {
 
 uevr::API::UObject* get_component_by_class(uevr::API::UObject* obj, uevr::API::UClass* cls) {
     auto actor = sdk_cast<sdk::AActor>(obj);
+
     if (actor == nullptr || cls == nullptr) {
         return nullptr;
     }
@@ -295,6 +364,7 @@ void build_short_name_classes() {
         // On a short-name collision, disambiguate by prefixing the outer's short
         // name ("Engine.PlayerController") — mirrors the Lua behaviour so both
         // the bare and qualified names resolve.
+        // this is almost never going to actually occur though
         if (auto existing = g_short_name_classes.find(short_name); existing != g_short_name_classes.end()) {
             if (auto* outer = obj->get_outer(); outer != nullptr) {
                 if (auto* outer_fname = outer->get_fname(); outer_fname != nullptr) {
@@ -509,6 +579,244 @@ static uevr::API::UObject* get_local_player(sol::optional<int> index) {
     return reinterpret_cast<uevr::API::UObject*>(engine->get_localplayer(index.value_or(0)));
 }
 
+// --- Typed property get/set BY NAME (minimal-wrapping fast path). -------------
+// Reads/writes a reflected property directly at base+offset, typed by the
+// FProperty class name (same switch UObjectHook uses). Covers Bool (bitfield-
+// aware), all integer widths, Float/Double, Name (string), and Object (pointer).
+// Unsupported types (Str, Struct, Array, Map, Set, Enum) return nil / false --
+// use the reflection API for those. No process_event, no sol marshaling of a
+// StructObject: one find_property + one memory access per call.
+
+// FFieldClass::get_name() returns a wstring; property type names are ASCII.
+static std::string fprop_type_name(uevr::API::FProperty* prop) {
+    if (prop == nullptr) {
+        return {};
+    }
+    auto pc = prop->get_class();
+    if (pc == nullptr) {
+        return {};
+    }
+    const auto ws = pc->get_name();
+    return std::string(ws.begin(), ws.end());
+}
+
+static sol::object get_property(sol::this_state s, uevr::API::UObject* obj, const std::string& name) {
+    sol::state_view lua{s};
+    if (obj == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+    auto cls = obj->get_class();
+    if (cls == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+    const std::wstring wname(name.begin(), name.end());
+    auto prop = cls->find_property(wname);
+    if (prop == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+    const auto type = fprop_type_name(prop);
+    auto base = reinterpret_cast<uint8_t*>(obj);
+    auto at = base + prop->get_offset();
+
+    if (type == "BoolProperty") {
+        return sol::make_object(lua, reinterpret_cast<uevr::API::FBoolProperty*>(prop)->get_value_from_object(base));
+    }
+    if (type == "ByteProperty")   return sol::make_object(lua, (int)*reinterpret_cast<uint8_t*>(at));
+    if (type == "Int8Property")   return sol::make_object(lua, (int)*reinterpret_cast<int8_t*>(at));
+    if (type == "Int16Property")  return sol::make_object(lua, (int)*reinterpret_cast<int16_t*>(at));
+    if (type == "UInt16Property") return sol::make_object(lua, (int)*reinterpret_cast<uint16_t*>(at));
+    if (type == "IntProperty")    return sol::make_object(lua, (int)*reinterpret_cast<int32_t*>(at));
+    if (type == "UInt32Property") return sol::make_object(lua, (double)*reinterpret_cast<uint32_t*>(at));
+    if (type == "Int64Property")  return sol::make_object(lua, (double)*reinterpret_cast<int64_t*>(at));
+    if (type == "UInt64Property") return sol::make_object(lua, (double)*reinterpret_cast<uint64_t*>(at));
+    if (type == "FloatProperty")  return sol::make_object(lua, *reinterpret_cast<float*>(at));
+    if (type == "DoubleProperty") return sol::make_object(lua, *reinterpret_cast<double*>(at));
+    if (type == "NameProperty") {
+        const auto ws = reinterpret_cast<uevr::API::FName*>(at)->to_string();
+        return sol::make_object(lua, std::string(ws.begin(), ws.end()));
+    }
+    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+        return sol::make_object(lua, *reinterpret_cast<uevr::API::UObject**>(at));
+    }
+    if (type == "EnumProperty") {
+        // Underlying value as int. Width can be <4 bytes for some enums; mirrors
+        // UObjectHook's int32 read. Returns the raw value (round-trips with set).
+        return sol::make_object(lua, (int)*reinterpret_cast<int32_t*>(at));
+    }
+    if (type == "StrProperty") {
+        // FString = { wchar_t* data; int32 count; int32 max } at the offset.
+        auto data = *reinterpret_cast<wchar_t**>(at);
+        const auto count = *reinterpret_cast<int32_t*>(at + sizeof(void*));
+        if (data == nullptr || count <= 0 || count > (1 << 20)) {
+            return sol::make_object(lua, std::string());
+        }
+        const std::wstring ws(data, (size_t)count);
+        return sol::make_object(lua, std::string(ws.begin(), ws.end()));
+    }
+    return sol::make_object(lua, sol::nil);
+}
+
+static bool set_property(uevr::API::UObject* obj, const std::string& name, sol::object value) {
+    if (obj == nullptr) {
+        return false;
+    }
+    auto cls = obj->get_class();
+    if (cls == nullptr) {
+        return false;
+    }
+    const std::wstring wname(name.begin(), name.end());
+    auto prop = cls->find_property(wname);
+    if (prop == nullptr) {
+        return false;
+    }
+    const auto type = fprop_type_name(prop);
+    auto base = reinterpret_cast<uint8_t*>(obj);
+    auto at = base + prop->get_offset();
+
+    if (type == "BoolProperty") {
+        if (!value.is<bool>()) return false;
+        reinterpret_cast<uevr::API::FBoolProperty*>(prop)->set_value_in_object(base, value.as<bool>());
+        return true;
+    }
+    if (type == "ByteProperty")   { if (!value.is<double>()) return false; *reinterpret_cast<uint8_t*>(at)  = (uint8_t)value.as<int>();  return true; }
+    if (type == "Int8Property")   { if (!value.is<double>()) return false; *reinterpret_cast<int8_t*>(at)   = (int8_t)value.as<int>();   return true; }
+    if (type == "Int16Property")  { if (!value.is<double>()) return false; *reinterpret_cast<int16_t*>(at)  = (int16_t)value.as<int>();  return true; }
+    if (type == "UInt16Property") { if (!value.is<double>()) return false; *reinterpret_cast<uint16_t*>(at) = (uint16_t)value.as<int>(); return true; }
+    if (type == "IntProperty")    { if (!value.is<double>()) return false; *reinterpret_cast<int32_t*>(at)  = value.as<int32_t>();       return true; }
+    if (type == "UInt32Property") { if (!value.is<double>()) return false; *reinterpret_cast<uint32_t*>(at) = (uint32_t)value.as<double>(); return true; }
+    if (type == "Int64Property")  { if (!value.is<double>()) return false; *reinterpret_cast<int64_t*>(at)  = (int64_t)value.as<double>();  return true; }
+    if (type == "UInt64Property") { if (!value.is<double>()) return false; *reinterpret_cast<uint64_t*>(at) = (uint64_t)value.as<double>(); return true; }
+    if (type == "FloatProperty")  { if (!value.is<double>()) return false; *reinterpret_cast<float*>(at)    = (float)value.as<double>();   return true; }
+    if (type == "DoubleProperty") { if (!value.is<double>()) return false; *reinterpret_cast<double*>(at)   = value.as<double>();          return true; }
+    if (type == "NameProperty") {
+        if (!value.is<std::string>()) return false;
+        const auto sv = value.as<std::string>();
+        *reinterpret_cast<uevr::API::FName*>(at) = uevr::API::FName(std::wstring(sv.begin(), sv.end()));
+        return true;
+    }
+    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+        *reinterpret_cast<uevr::API::UObject**>(at) = value.is<uevr::API::UObject*>() ? value.as<uevr::API::UObject*>() : nullptr;
+        return true;
+    }
+    if (type == "EnumProperty") { if (!value.is<double>()) return false; *reinterpret_cast<int32_t*>(at) = value.as<int32_t>(); return true; }
+    // StrProperty SET intentionally unsupported: an FString owns a heap buffer;
+    // writing a transient Lua-string pointer would dangle. Use reflection for that.
+    return false;
+}
+
+// --- Fast UFunction call BY NAME (positional scalar args). -------------------
+// call_function(obj, "FuncName", arg1, arg2, ...) -> return value (or true on
+// void success, nil on failure). Builds the params buffer directly from the
+// UFunction's child FProperties, encodes positional args by type, process_event,
+// decodes the return param. Same type coverage as get/set_property (bool, ints,
+// float/double, name-string, object). Struct/array/out params unsupported --
+// args at those positions are left zeroed; use reflection for those signatures.
+
+// Encode one sol value into a params-buffer slot at `at` (propbase-relative, so
+// Bool uses the propbase bitfield variant). Returns false on type mismatch.
+static bool encode_param(uevr::API::FProperty* prop, uint8_t* at, sol::object v) {
+    const auto type = fprop_type_name(prop);
+    if (type == "BoolProperty") {
+        if (!v.is<bool>()) return false;
+        reinterpret_cast<uevr::API::FBoolProperty*>(prop)->set_value_in_propbase(at, v.as<bool>());
+        return true;
+    }
+    if (type == "ByteProperty")   { if (!v.is<double>()) return false; *reinterpret_cast<uint8_t*>(at)  = (uint8_t)v.as<int>();  return true; }
+    if (type == "Int8Property")   { if (!v.is<double>()) return false; *reinterpret_cast<int8_t*>(at)   = (int8_t)v.as<int>();   return true; }
+    if (type == "Int16Property")  { if (!v.is<double>()) return false; *reinterpret_cast<int16_t*>(at)  = (int16_t)v.as<int>();  return true; }
+    if (type == "UInt16Property") { if (!v.is<double>()) return false; *reinterpret_cast<uint16_t*>(at) = (uint16_t)v.as<int>(); return true; }
+    if (type == "IntProperty")    { if (!v.is<double>()) return false; *reinterpret_cast<int32_t*>(at)  = v.as<int32_t>();       return true; }
+    if (type == "UInt32Property") { if (!v.is<double>()) return false; *reinterpret_cast<uint32_t*>(at) = (uint32_t)v.as<double>(); return true; }
+    if (type == "Int64Property")  { if (!v.is<double>()) return false; *reinterpret_cast<int64_t*>(at)  = (int64_t)v.as<double>();  return true; }
+    if (type == "UInt64Property") { if (!v.is<double>()) return false; *reinterpret_cast<uint64_t*>(at) = (uint64_t)v.as<double>(); return true; }
+    if (type == "FloatProperty")  { if (!v.is<double>()) return false; *reinterpret_cast<float*>(at)    = (float)v.as<double>();   return true; }
+    if (type == "DoubleProperty") { if (!v.is<double>()) return false; *reinterpret_cast<double*>(at)   = v.as<double>();          return true; }
+    if (type == "NameProperty") {
+        if (!v.is<std::string>()) return false;
+        const auto sv = v.as<std::string>();
+        *reinterpret_cast<uevr::API::FName*>(at) = uevr::API::FName(std::wstring(sv.begin(), sv.end()));
+        return true;
+    }
+    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+        *reinterpret_cast<uevr::API::UObject**>(at) = v.is<uevr::API::UObject*>() ? v.as<uevr::API::UObject*>() : nullptr;
+        return true;
+    }
+    return false;
+}
+
+// Decode a params-buffer slot at `at` into a sol value (return/out param read).
+static sol::object decode_param(sol::state_view lua, uevr::API::FProperty* prop, uint8_t* at) {
+    const auto type = fprop_type_name(prop);
+    if (type == "BoolProperty")   return sol::make_object(lua, reinterpret_cast<uevr::API::FBoolProperty*>(prop)->get_value_from_propbase(at));
+    if (type == "ByteProperty")   return sol::make_object(lua, (int)*reinterpret_cast<uint8_t*>(at));
+    if (type == "Int8Property")   return sol::make_object(lua, (int)*reinterpret_cast<int8_t*>(at));
+    if (type == "Int16Property")  return sol::make_object(lua, (int)*reinterpret_cast<int16_t*>(at));
+    if (type == "UInt16Property") return sol::make_object(lua, (int)*reinterpret_cast<uint16_t*>(at));
+    if (type == "IntProperty")    return sol::make_object(lua, (int)*reinterpret_cast<int32_t*>(at));
+    if (type == "UInt32Property") return sol::make_object(lua, (double)*reinterpret_cast<uint32_t*>(at));
+    if (type == "Int64Property")  return sol::make_object(lua, (double)*reinterpret_cast<int64_t*>(at));
+    if (type == "UInt64Property") return sol::make_object(lua, (double)*reinterpret_cast<uint64_t*>(at));
+    if (type == "FloatProperty")  return sol::make_object(lua, *reinterpret_cast<float*>(at));
+    if (type == "DoubleProperty") return sol::make_object(lua, *reinterpret_cast<double*>(at));
+    if (type == "NameProperty") {
+        const auto ws = reinterpret_cast<uevr::API::FName*>(at)->to_string();
+        return sol::make_object(lua, std::string(ws.begin(), ws.end()));
+    }
+    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+        return sol::make_object(lua, *reinterpret_cast<uevr::API::UObject**>(at));
+    }
+    return sol::make_object(lua, sol::nil);
+}
+
+static sol::object call_function(sol::this_state s, uevr::API::UObject* obj, const std::string& name, sol::variadic_args va) {
+    sol::state_view lua{s};
+    if (obj == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+    auto cls = obj->get_class();
+    if (cls == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+    const std::wstring wname(name.begin(), name.end());
+    auto fn = cls->find_function(wname);
+    if (fn == nullptr) {
+        return sol::make_object(lua, sol::nil);
+    }
+
+    // Collect in-params (positional) + the single return param, in declaration order.
+    std::vector<uevr::API::FProperty*> in_params;
+    uevr::API::FProperty* return_prop = nullptr;
+    for (auto field = fn->get_child_properties(); field != nullptr; field = field->get_next()) {
+        auto pc = field->get_class();
+        if (pc == nullptr) continue;
+        const auto cn = pc->get_name();
+        if (std::wstring(cn).find(L"Property") == std::wstring::npos) continue;
+        auto prop = reinterpret_cast<uevr::API::FProperty*>(field);
+        if (prop->is_return_param()) { return_prop = prop; continue; }
+        if (prop->is_out_param() && !prop->is_reference_param()) continue; // pure out: skip
+        if (!prop->is_param()) continue;
+        in_params.push_back(prop);
+    }
+
+    const size_t params_size = std::max<size_t>(64, (size_t)fn->get_properties_size());
+    std::vector<uint8_t> params(params_size, 0);
+
+    size_t ai = 0;
+    for (auto prop : in_params) {
+        sol::object arg = (ai < va.size()) ? va[ai] : sol::object(sol::lua_nil);
+        if (!arg.valid() || arg == sol::lua_nil) { ai++; continue; } // leave zeroed
+        encode_param(prop, params.data() + prop->get_offset(), arg);
+        ai++;
+    }
+
+    fn->call(obj, params.data());
+
+    if (return_prop != nullptr) {
+        return decode_param(lua, return_prop, params.data() + return_prop->get_offset());
+    }
+    return sol::make_object(lua, true); // void success
+}
+
 void bindings::open_sdk_fast(sol::state_view& lua) {
     auto t = lua.create_table();
 
@@ -573,6 +881,14 @@ void bindings::open_sdk_fast(sol::state_view& lua) {
     t["get_world"]            = &get_world;
     t["get_local_pawn"]       = &get_local_pawn;
     t["get_local_player"]     = &get_local_player;
+
+    // Typed property get/set by name (no process_event, no StructObject wrap).
+    // Scalars/bool/name/object only; nil/false for struct/array/str/enum.
+    t["get_property"]         = &get_property;
+    t["set_property"]         = &set_property;
+
+    // Fast UFunction call by name with positional scalar args + return value.
+    t["call_function"]        = &call_function;
 
     // Surface under `uevr.api_fast`. Keeping it separate from `uevr.api` makes
     // intent explicit at call sites ("use the fast path") and avoids shadowing

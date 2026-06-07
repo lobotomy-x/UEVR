@@ -626,7 +626,6 @@ list(APPEND luavrlib_SOURCES
 	"lua-api/lib/src/datatypes/Transform.cpp"
 	"lua-api/lib/src/datatypes/Vector.cpp"
 	"lua-api/lib/src/datatypes/XInput.cpp"
-	"lua-api/lib/include/MathUtility.hpp"
 	"lua-api/lib/include/ScriptContext.hpp"
 	"lua-api/lib/include/ScriptPrerequisites.hpp"
 	"lua-api/lib/include/ScriptState.hpp"
