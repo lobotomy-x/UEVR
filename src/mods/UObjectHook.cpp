@@ -571,24 +571,35 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
 // caller. Every lookup is guarded — a half-initialised world must not crash the
 // menu.
 std::vector<std::pair<const char*, sdk::UObject*>> gather_common_objects() {
-    std::vector<std::pair<const char*, sdk::UObject*>> out;
+    // Memoize per ImGui frame — get_player_controller is a process_event call,
+    // and the picker (hence this) renders once per live-caller slot + once per
+    // UObject param, so an uncached call would dispatch reflected game code many
+    // times per frame.
+    static int s_frame = -1;
+    static std::vector<std::pair<const char*, sdk::UObject*>> s_cache;
+    const int frame = ImGui::GetFrameCount();
+    if (frame == s_frame) {
+        return s_cache;
+    }
+    s_frame = frame;
+    s_cache.clear();
     try {
         auto engine = sdk::UGameEngine::get();
         auto world = engine != nullptr ? engine->get_world() : nullptr;
-        if (world == nullptr) return out;
-        out.emplace_back("World", (sdk::UObject*)world);
+        if (world == nullptr) return s_cache;
+        s_cache.emplace_back("World", (sdk::UObject*)world);
         auto pc = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
         if (pc != nullptr) {
-            out.emplace_back("PC", (sdk::UObject*)pc);
+            s_cache.emplace_back("PC", (sdk::UObject*)pc);
             if (auto pawn = pc->get_acknowledged_pawn(); pawn != nullptr) {
-                out.emplace_back("Pawn", (sdk::UObject*)pawn);
+                s_cache.emplace_back("Pawn", (sdk::UObject*)pawn);
             }
             if (auto cam = pc->get_player_camera_manager(); cam != nullptr) {
-                out.emplace_back("Camera", (sdk::UObject*)cam);
+                s_cache.emplace_back("Camera", (sdk::UObject*)cam);
             }
         }
     } catch (...) {}
-    return out;
+    return s_cache;
 }
 
 // Set the first live-caller slot that has no target to `obj` (T63 send-to-
@@ -740,7 +751,14 @@ int leaf_byte_width(int k) {
 }
 bool collect_struct_leaves(sdk::UStruct* strukt, int32_t base, const std::string& prefix,
                            std::vector<StructLeaf>& out, int depth = 0) {
-    if (strukt == nullptr || depth > 6) return false;
+    if (strukt == nullptr || depth > 8) return false;
+    // Inherited members live on the SuperStruct (get_child_properties lists only
+    // the directly-declared FFields). Walk bases first so an inheriting struct is
+    // encoded completely instead of leaving inherited fields silently zeroed.
+    // Member offsets are absolute within the instance, so the same `base` applies.
+    if (auto super = strukt->get_super_struct(); super != nullptr) {
+        if (!collect_struct_leaves(super, base, prefix, out, depth + 1)) return false;
+    }
     for (auto f = strukt->get_child_properties(); f != nullptr; f = f->get_next()) {
         std::string cname;
         try { cname = utility::narrow(f->get_class()->get_name().to_string()); } catch (...) { return false; }
