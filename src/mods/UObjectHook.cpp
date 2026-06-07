@@ -3859,7 +3859,14 @@ void UObjectHook::on_frame() {
 }
 
 void UObjectHook::draw_component_gizmos() {
+    // Which axis of which component is being screen-dragged. Only this function
+    // touches it, so a function-local static is enough.
+    static sdk::USceneComponent* s_drag_comp = nullptr;
+    static int s_drag_axis = -1;
+
     if (m_gizmo_components.empty()) {
+        s_drag_comp = nullptr;
+        s_drag_axis = -1;
         return;
     }
 
@@ -3884,7 +3891,8 @@ void UObjectHook::draw_component_gizmos() {
         return;
     }
 
-    constexpr float kAxisLen = 50.0f; // world units (UE = cm)
+    constexpr float kAxisLen = 50.0f;   // world units (UE = cm)
+    constexpr float kHitPx2  = 144.0f;  // 12px hit radius, squared
 
     auto project = [&](const glm::vec3& wl, ImVec2& out) -> bool {
         glm::vec3 w = wl;
@@ -3896,6 +3904,18 @@ void UObjectHook::draw_component_gizmos() {
         return true;
     };
 
+    // Squared distance from point p to segment [a,b], in screen pixels.
+    auto seg_dist2 = [](const ImVec2& p, const ImVec2& a, const ImVec2& b) -> float {
+        const float vx = b.x - a.x, vy = b.y - a.y;
+        const float wx = p.x - a.x, wy = p.y - a.y;
+        const float vv = vx * vx + vy * vy;
+        float t = vv > 0.0f ? (wx * vx + wy * vy) / vv : 0.0f;
+        t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+        const float cx = a.x + t * vx - p.x;
+        const float cy = a.y + t * vy - p.y;
+        return cx * cx + cy * cy;
+    };
+
     struct Axis { glm::vec3 dir; ImU32 col; };
     static const Axis axes[3] = {
         { glm::vec3{1.0f, 0.0f, 0.0f}, IM_COL32(255,  60,  60, 255) }, // X red
@@ -3903,8 +3923,28 @@ void UObjectHook::draw_component_gizmos() {
         { glm::vec3{0.0f, 0.0f, 1.0f}, IM_COL32( 80, 120, 255, 255) }, // Z blue
     };
 
-    // Drop components that no longer exist; collect first so we don't mutate the
-    // set mid-iteration.
+    auto& io = ImGui::GetIO();
+    // Only let a drag START when the overlay is up and the cursor isn't over an
+    // imgui window. An in-flight drag keeps going regardless (it's latched).
+    const bool can_start = g_framework->is_drawing_ui() && !io.WantCaptureMouse;
+
+    // Release / invalidate an in-flight drag.
+    if (s_drag_comp != nullptr) {
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
+            !m_gizmo_components.contains(s_drag_comp) || !this->exists(s_drag_comp)) {
+            s_drag_comp = nullptr;
+            s_drag_axis = -1;
+        }
+    }
+
+    struct Screen {
+        sdk::USceneComponent* comp{};
+        glm::vec3 origin{};
+        ImVec2 s_origin{};
+        ImVec2 tip[3]{};
+        bool tip_ok[3]{};
+    };
+    std::vector<Screen> screens{};
     std::vector<sdk::USceneComponent*> dead{};
 
     for (auto* comp : m_gizmo_components) {
@@ -3913,28 +3953,75 @@ void UObjectHook::draw_component_gizmos() {
             continue;
         }
 
-        glm::vec3 origin{};
+        Screen sc{};
+        sc.comp = comp;
         try {
-            origin = comp->get_world_location();
+            sc.origin = comp->get_world_location();
         } catch (...) {
             continue;
         }
-
-        ImVec2 s_origin{};
-        if (!project(origin, s_origin)) {
+        if (!project(sc.origin, sc.s_origin)) {
             continue;
         }
-
-        for (const auto& ax : axes) {
-            ImVec2 s_tip{};
-            if (!project(origin + ax.dir * kAxisLen, s_tip)) {
-                continue;
-            }
-            dl->AddLine(s_origin, s_tip, ax.col, 2.0f);
-            dl->AddCircleFilled(s_tip, 4.0f, ax.col);
+        for (int i = 0; i < 3; ++i) {
+            sc.tip_ok[i] = project(sc.origin + axes[i].dir * kAxisLen, sc.tip[i]);
         }
+        screens.push_back(sc);
+    }
 
-        dl->AddCircleFilled(s_origin, 4.0f, IM_COL32(255, 255, 255, 255));
+    // Nearest axis to the cursor across all gizmos (for hover highlight + the
+    // axis a fresh click would grab).
+    sdk::USceneComponent* hover_comp = nullptr;
+    int hover_axis = -1;
+    if (can_start && s_drag_comp == nullptr) {
+        float best = kHitPx2;
+        for (const auto& sc : screens) {
+            for (int i = 0; i < 3; ++i) {
+                if (!sc.tip_ok[i]) continue;
+                const float d2 = seg_dist2(io.MousePos, sc.s_origin, sc.tip[i]);
+                if (d2 < best) {
+                    best = d2;
+                    hover_comp = sc.comp;
+                    hover_axis = i;
+                }
+            }
+        }
+        if (hover_comp != nullptr && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            s_drag_comp = hover_comp;
+            s_drag_axis = hover_axis;
+        }
+    }
+
+    // Apply the active drag: convert this frame's mouse delta into a world
+    // translation along the dragged axis, with NO view/projection matrix —
+    // project origin + axis tip, take the screen-space axis direction, and map
+    // the mouse delta's component along it back to world units.
+    if (s_drag_comp != nullptr && s_drag_axis >= 0 && s_drag_axis < 3) {
+        for (const auto& sc : screens) {
+            if (sc.comp != s_drag_comp || !sc.tip_ok[s_drag_axis]) continue;
+            const ImVec2 d{sc.tip[s_drag_axis].x - sc.s_origin.x, sc.tip[s_drag_axis].y - sc.s_origin.y};
+            const float len2 = d.x * d.x + d.y * d.y;
+            if (len2 > 1.0f) {
+                const float move = (io.MouseDelta.x * d.x + io.MouseDelta.y * d.y) / len2 * kAxisLen;
+                if (move != 0.0f) {
+                    try {
+                        s_drag_comp->set_world_location(sc.origin + axes[s_drag_axis].dir * move, false, false);
+                    } catch (...) {}
+                }
+            }
+            break;
+        }
+    }
+
+    for (const auto& sc : screens) {
+        for (int i = 0; i < 3; ++i) {
+            if (!sc.tip_ok[i]) continue;
+            const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
+                             (hover_comp == sc.comp && hover_axis == i);
+            dl->AddLine(sc.s_origin, sc.tip[i], axes[i].col, hot ? 4.0f : 2.0f);
+            dl->AddCircleFilled(sc.tip[i], hot ? 6.0f : 4.0f, axes[i].col);
+        }
+        dl->AddCircleFilled(sc.s_origin, 4.0f, IM_COL32(255, 255, 255, 255));
     }
 
     for (auto* d : dead) {
