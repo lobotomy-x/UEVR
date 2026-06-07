@@ -60,6 +60,16 @@ namespace {
 constexpr const char* kDragPayloadUObject = "UEVR_UObject";
 constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
 
+// Per-slot state for the universal object picker widget (T63). One per
+// drop/text/pick slot so the text buffer, popup filter, and the two display
+// toggles survive across frames independently.
+struct PickerState {
+    std::string text;            // short-name / 0xADDR text-input buffer
+    std::string filter;          // substring filter inside the "pick..." popup
+    bool list_classes = false;   // popup lists UClass objects instead of instances
+    bool use_type_filter = true; // popup applies the expected-class IsA filter
+};
+
 // Per-(function, object) state for the function-caller widget. Keys are the
 // raw function/object pointers; the entry sticks around until the address is
 // reused — acceptable for a debug menu.
@@ -77,6 +87,17 @@ struct ParamEditState {
     std::unordered_map<std::string, sdk::UObject*>   objs;   // ObjectProperty / InterfaceProperty slot
     std::unordered_map<std::string, sdk::UClass*>    classes;// ClassProperty slot
     std::unordered_map<std::string, glm::vec4>       vec;    // struct scratch (xyz[w]) for FVector / FRotator / FVector2D / FQuat
+    // Generic struct scratch (T64): one double per reflected scalar leaf, in the
+    // shared walk order produced by collect_struct_leaves(). Handles any struct
+    // whose leaves are all numeric — FVector/FRotator/FQuat/FTransform/FColor/
+    // FIntPoint/FMatrix/... — without hardcoding per-engine offsets.
+    std::unordered_map<std::string, std::vector<double>> struct_scratch;
+    // Per-slot universal-picker state for UObject-typed params (T63).
+    std::unordered_map<std::string, PickerState>     pickers;
+    // Inline-Lua fallback (T64): editable snippet + lazy-init flag, run via
+    // PluginLoader::do_lua_string for params the native encoder can't pack.
+    std::string lua_snippet;
+    bool        lua_snippet_init = false;
     // Text-input fallback for drop targets (Object / Class slots) — see
     // render_object_text_input / render_class_text_input. Keyed by prop name
     // so each ObjectProperty has its own buffer that survives frames.
@@ -287,13 +308,21 @@ struct LiveSlot {
     sdk::UFunction* resolved{};
     std::string resolved_label;
     std::string resolve_error;
+    PickerState picker;               // universal-picker state for the target (T63)
 };
 static std::array<LiveSlot, kLiveCallerSlotCount> s_live_slots{};
 
-// Forward decls — render_live_caller_slots() uses both render_function_call()
-// and render_object_text_input(), defined further down in this TU.
+// Forward decls — render_live_caller_slots() uses these, all defined further
+// down in this TU.
 void render_function_call(sdk::UObject* self, sdk::UFunction* fn);
 sdk::UObject* render_object_text_input(const char* id, std::string& buf);
+// Universal object picker (T63): drop target + text input + searchable popup +
+// common-object quick-picks + instances/classes & type-filter toggles. Returns
+// true on the frame `slot` changes. `auto_label`, when non-null and slot!=null,
+// replaces the address prefix (used for the WorldContext "[auto: World]" hint).
+bool render_universal_object_picker(const char* id_prefix, sdk::UObject*& slot,
+                                    PickerState& st, sdk::UClass* expected_class,
+                                    bool allow_send_to_caller, const char* auto_label);
 
 void render_live_caller_slots() {
     for (int i = 0; i < kLiveCallerSlotCount; ++i) {
@@ -304,37 +333,15 @@ void render_live_caller_slots() {
         ImGui::Indent();
 
         auto& slot = s_live_slots[i];
-        const std::string target_label = slot.target == nullptr
-            ? std::string{"[drop UObject here]"}
-            : (std::string{"["} + std::to_string((uintptr_t)slot.target) + "] "
-               + utility::narrow(slot.target->get_full_name()));
-        ImGui::Button(target_label.c_str(), ImVec2{0, 0});
-        if (auto dropped = accept_object_drop(); dropped != nullptr) {
-            if (slot.target != dropped) {
-                slot.resolved = nullptr;
-                slot.resolved_label.clear();
-                slot.resolve_error.clear();
-            }
-            slot.target = dropped;
-        }
-        if (slot.target != nullptr) {
-            ImGui::SameLine();
-            if (ImGui::SmallButton("clear target")) {
-                slot.target = nullptr;
-                slot.resolved = nullptr;
-                slot.resolved_label.clear();
-            }
-        }
-        // Text-input fallback: type "Character" / "Class /Script/Engine.Character" / "0xADDR".
-        ImGui::SameLine();
-        if (auto resolved = render_object_text_input("##slot_target", slot.target_text);
-            resolved != nullptr) {
-            if (slot.target != resolved) {
-                slot.resolved = nullptr;
-                slot.resolved_label.clear();
-                slot.resolve_error.clear();
-            }
-            slot.target = resolved;
+        // Universal picker drives the target: drop / type / pick / common-object
+        // quick-picks, all in one widget shared with the per-param editor.
+        if (render_universal_object_picker("slot_target", slot.target, slot.picker,
+                                           nullptr, false, nullptr)) {
+            // Target changed — invalidate the resolved function so the combo
+            // re-resolves against the new class.
+            slot.resolved = nullptr;
+            slot.resolved_label.clear();
+            slot.resolve_error.clear();
         }
 
         // Function picker: ONE combo. Preview = the selected function; open it
@@ -476,16 +483,21 @@ sdk::UClass* render_class_text_input(const char* id, std::string& buf) {
 // list down significantly).
 sdk::UObject* render_object_picker_popup(const char* popup_id,
                                          std::string& filter_buf,
-                                         sdk::UClass* expected_class) {
+                                         sdk::UClass* expected_class,
+                                         bool list_classes = false) {
     sdk::UObject* picked = nullptr;
     if (!ImGui::BeginPopup(popup_id)) {
         return nullptr;
     }
     utility::ScopeGuard pop_guard{[]() { ImGui::EndPopup(); }};
 
+    static const auto uclass_t = sdk::UClass::static_class();
+
     // Header: show what we're filtering against so the user understands the
     // smaller-than-expected list.
-    if (expected_class != nullptr) {
+    if (list_classes) {
+        ImGui::TextDisabled("listing UClass objects");
+    } else if (expected_class != nullptr) {
         std::string cls_name;
         try { cls_name = utility::narrow(expected_class->get_full_name()); }
         catch (...) { cls_name = "<unknown>"; }
@@ -518,8 +530,12 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
             auto item = arr->get_object(i);
             if (item == nullptr || item->object == nullptr) continue;
             auto obj = (sdk::UObject*)item->object;
-            if (expected_class != nullptr) {
-                auto cls = obj->get_class();
+            auto cls = obj->get_class();
+            if (list_classes) {
+                // Class mode: only objects that ARE UClasses. Type filter is
+                // not applied here (it constrains instances, not metaclasses).
+                if (cls == nullptr || uclass_t == nullptr || !cls->is_a(uclass_t)) continue;
+            } else if (expected_class != nullptr) {
                 if (cls == nullptr || !cls->is_a(expected_class)) continue;
             }
             std::wstring full;
@@ -548,6 +564,219 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
         ImGui::CloseCurrentPopup();
     }
     return picked;
+}
+
+// Collect the player-centric "common objects" for the picker quick-pick row.
+// Each entry is { short label, pointer }; null pointers are filtered by the
+// caller. Every lookup is guarded — a half-initialised world must not crash the
+// menu.
+std::vector<std::pair<const char*, sdk::UObject*>> gather_common_objects() {
+    std::vector<std::pair<const char*, sdk::UObject*>> out;
+    try {
+        auto engine = sdk::UGameEngine::get();
+        auto world = engine != nullptr ? engine->get_world() : nullptr;
+        if (world == nullptr) return out;
+        out.emplace_back("World", (sdk::UObject*)world);
+        auto pc = sdk::UGameplayStatics::get()->get_player_controller(world, 0);
+        if (pc != nullptr) {
+            out.emplace_back("PC", (sdk::UObject*)pc);
+            if (auto pawn = pc->get_acknowledged_pawn(); pawn != nullptr) {
+                out.emplace_back("Pawn", (sdk::UObject*)pawn);
+            }
+            if (auto cam = pc->get_player_camera_manager(); cam != nullptr) {
+                out.emplace_back("Camera", (sdk::UObject*)cam);
+            }
+        }
+    } catch (...) {}
+    return out;
+}
+
+// Set the first live-caller slot that has no target to `obj` (T63 send-to-
+// caller). Used by the picker context menu so a picked object can be shot
+// straight into the Function Caller without dragging.
+void load_live_caller_target(sdk::UObject* obj) {
+    if (obj == nullptr) return;
+    for (auto& slot : s_live_slots) {
+        if (slot.target == nullptr) {
+            slot.target = obj;
+            slot.resolved = nullptr;
+            slot.resolved_label.clear();
+            slot.resolve_error.clear();
+            return;
+        }
+    }
+    // All full — overwrite slot 0's target (keep its function; user can re-pick).
+    s_live_slots[0].target = obj;
+    s_live_slots[0].resolved = nullptr;
+    s_live_slots[0].resolved_label.clear();
+}
+
+bool render_universal_object_picker(const char* id_prefix, sdk::UObject*& slot,
+                                    PickerState& st, sdk::UClass* expected_class,
+                                    bool allow_send_to_caller, const char* auto_label) {
+    bool changed = false;
+    ImGui::PushID(id_prefix);
+    utility::ScopeGuard pop{[]() { ImGui::PopID(); }};
+
+    // Short button label (drop target). Full name is wrapped underneath so a
+    // long path never blows out the row.
+    std::string short_label;
+    std::string full_label;
+    if (slot == nullptr) {
+        short_label = "[empty — drop / type / pick]";
+    } else if (auto_label != nullptr) {
+        short_label = auto_label;
+    } else {
+        std::string cls_short = "obj";
+        try { if (auto c = slot->get_class(); c != nullptr) cls_short = utility::narrow(c->get_fname().to_string()); } catch (...) {}
+        short_label = std::format("[{} 0x{:x}]", cls_short, (uintptr_t)slot);
+    }
+    if (slot != nullptr) {
+        try { full_label = utility::narrow(slot->get_full_name()); } catch (...) {}
+    }
+
+    ImGui::Button((short_label + "##objbtn").c_str(), ImVec2{0, 0}); // stable ID; label text varies
+    if (auto dropped = accept_object_drop(); dropped != nullptr) { slot = dropped; changed = true; }
+    // Make the current object draggable so it can be chained elsewhere.
+    if (slot != nullptr) {
+        make_drag_source_for_object(slot, full_label.c_str());
+    }
+    // Right-click context menu.
+    if (slot != nullptr && ImGui::BeginPopupContextItem("##uctx")) {
+        if (ImGui::MenuItem("Copy full name")) {
+            if (OpenClipboard(NULL)) {
+                EmptyClipboard();
+                HGLOBAL h = GlobalAlloc(GMEM_DDESHARE, full_label.size() + 1);
+                if (h != nullptr) {
+                    char* d = (char*)GlobalLock(h);
+                    if (d != nullptr) { strcpy(d, full_label.c_str()); GlobalUnlock(h); SetClipboardData(CF_TEXT, h); }
+                }
+                CloseClipboard();
+            }
+        }
+        if (allow_send_to_caller && ImGui::MenuItem("Send to Function Caller (as target)")) {
+            load_live_caller_target(slot);
+        }
+        ImGui::EndPopup();
+    }
+
+    if (slot != nullptr) {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("clear")) { slot = nullptr; changed = true; }
+    }
+
+    // Text-input fallback: short name / full name / 0xADDR + Enter.
+    ImGui::SameLine();
+    if (auto resolved = render_object_text_input("##txt", st.text); resolved != nullptr) {
+        slot = resolved; changed = true;
+    }
+
+    // Pick popup.
+    ImGui::SameLine();
+    const auto popup_id = std::string{"upick##"} + id_prefix;
+    if (ImGui::SmallButton("pick...")) { ImGui::OpenPopup(popup_id.c_str()); }
+    if (auto picked = render_object_picker_popup(popup_id.c_str(), st.filter,
+                                                 st.use_type_filter ? expected_class : nullptr,
+                                                 st.list_classes);
+        picked != nullptr) {
+        slot = picked; changed = true;
+    }
+
+    // Display toggles.
+    ImGui::Checkbox("classes", &st.list_classes);
+    if (expected_class != nullptr && !st.list_classes) {
+        ImGui::SameLine();
+        ImGui::Checkbox("type filter", &st.use_type_filter);
+    }
+
+    // Common-object quick-picks.
+    {
+        const auto commons = gather_common_objects();
+        bool first = true;
+        for (const auto& [name, obj] : commons) {
+            if (obj == nullptr) continue;
+            if (!first) ImGui::SameLine();
+            first = false;
+            if (ImGui::SmallButton(name)) { slot = obj; changed = true; }
+        }
+    }
+
+    // Wrapped full name of the current value.
+    if (slot != nullptr && !full_label.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.7f, 0.7f, 0.7f, 1.0f});
+        ImGui::TextWrapped("%s", full_label.c_str());
+        ImGui::PopStyleColor();
+    }
+
+    return changed;
+}
+
+// -----------------------------------------------------------------------------
+// Generic struct-leaf walker (T64). Flattens a (possibly nested) UStruct into a
+// deterministic list of scalar leaves so the function caller can render and
+// encode ANY all-numeric struct — FVector/FRotator/FQuat/FTransform/FColor/
+// FIntPoint/FMatrix/... — driving each leaf's width from its own FProperty
+// (FloatProperty=4, DoubleProperty=8) instead of guessing UE4-vs-UE5 layout.
+// Render and encode MUST both call this so the leaf order they index is shared.
+// Returns false if any member is non-numeric (object/name/array/enum/...), in
+// which case the caller routes the whole struct to the inline-Lua fallback.
+// -----------------------------------------------------------------------------
+enum LeafKind { LK_F32, LK_F64, LK_I8, LK_I16, LK_I32, LK_I64, LK_U8, LK_U16, LK_U32, LK_U64, LK_Bool };
+struct StructLeaf {
+    int32_t offset{};          // absolute, relative to the struct base
+    int32_t container_base{};  // immediate-struct base (for FBoolProperty set/get)
+    int     kind{LK_F32};
+    std::string label;         // "Member" or "Parent.Member"
+    sdk::FProperty* prop{};    // for bool set/get
+};
+int leaf_byte_width(int k) {
+    switch (k) {
+    case LK_F32: case LK_I32: case LK_U32: return 4;
+    case LK_F64: case LK_I64: case LK_U64: return 8;
+    case LK_I16: case LK_U16: return 2;
+    case LK_I8:  case LK_U8:  case LK_Bool: return 1;
+    default: return 4;
+    }
+}
+bool collect_struct_leaves(sdk::UStruct* strukt, int32_t base, const std::string& prefix,
+                           std::vector<StructLeaf>& out, int depth = 0) {
+    if (strukt == nullptr || depth > 6) return false;
+    for (auto f = strukt->get_child_properties(); f != nullptr; f = f->get_next()) {
+        std::string cname;
+        try { cname = utility::narrow(f->get_class()->get_name().to_string()); } catch (...) { return false; }
+        if (!cname.contains("Property")) continue;
+        auto prop = (sdk::FProperty*)f;
+        const int32_t off = base + prop->get_offset();
+        std::string mn;
+        try { mn = utility::narrow(f->get_field_name().to_string()); } catch (...) { mn = "?"; }
+        const std::string label = prefix.empty() ? mn : (prefix + "." + mn);
+        const auto h = ::utility::hash(f->get_class()->get_name().to_string());
+        switch (h) {
+        case L"FloatProperty"_fnv:   out.push_back({off, base, LK_F32, label, prop}); break;
+        case L"DoubleProperty"_fnv:  out.push_back({off, base, LK_F64, label, prop}); break;
+        case L"Int8Property"_fnv:    out.push_back({off, base, LK_I8,  label, prop}); break;
+        case L"Int16Property"_fnv:   out.push_back({off, base, LK_I16, label, prop}); break;
+        case L"IntProperty"_fnv:     out.push_back({off, base, LK_I32, label, prop}); break;
+        case L"Int64Property"_fnv:   out.push_back({off, base, LK_I64, label, prop}); break;
+        case L"ByteProperty"_fnv:    out.push_back({off, base, LK_U8,  label, prop}); break;
+        case L"UInt16Property"_fnv:  out.push_back({off, base, LK_U16, label, prop}); break;
+        case L"UInt32Property"_fnv:
+        case L"UIntProperty"_fnv:    out.push_back({off, base, LK_U32, label, prop}); break;
+        case L"UInt64Property"_fnv:  out.push_back({off, base, LK_U64, label, prop}); break;
+        case L"BoolProperty"_fnv:    out.push_back({off, base, LK_Bool, label, prop}); break;
+        case L"StructProperty"_fnv: {
+            auto sp = (sdk::FStructProperty*)prop;
+            auto inner = sp != nullptr ? sp->get_struct() : nullptr;
+            if (inner == nullptr) return false;
+            if (!collect_struct_leaves(inner, off, label, out, depth + 1)) return false;
+            break;
+        }
+        default:
+            return false; // non-numeric leaf -> inline-Lua fallback
+        }
+        if (out.size() > 256) return false; // sanity cap
+    }
+    return true;
 }
 
 // Render a single parameter editor; returns nothing — state is stashed inside
@@ -646,69 +875,36 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
     case L"WeakObjectProperty"_fnv:
     case L"LazyObjectProperty"_fnv:
     case L"SoftObjectProperty"_fnv: {
-        // Same drop-target widget for every UObject-flavoured property —
-        // the encode step below handles packing into the appropriate
-        // (raw pointer / FWeakObjectPtr / FSoftObjectPtr) layout.
+        // Universal picker for every UObject-flavoured property — the encode
+        // step below packs the chosen pointer into the appropriate (raw / weak /
+        // soft) layout.
         sdk::UObject*& slot = s.objs[prop_name_narrow];
         // WorldContext parameters auto-resolve to the world — the user never has
         // to supply one (GetAllActorsOfClass and friends all take one). Re-fills
-        // when cleared; drop a different object to override.
+        // when cleared; pick a different object to override.
         const bool is_world_ctx = prop_name_narrow.find("WorldContext") != std::string::npos;
         if (is_world_ctx && slot == nullptr) {
             if (auto eng = sdk::UGameEngine::get(); eng != nullptr) {
                 slot = (sdk::UObject*)eng->get_world();
             }
         }
-        const auto label = slot == nullptr
-            ? std::string{"[drop UObject here] "} + prop_name_narrow
-            : (is_world_ctx ? std::string{"[auto: World] "} + prop_name_narrow
-                            : std::string{"[obj "} + std::to_string((uintptr_t)slot) + "] " + prop_name_narrow);
-        ImGui::Button(label.c_str(), ImVec2{0, 0});
-        if (auto dropped = accept_object_drop(); dropped != nullptr) {
-            slot = dropped;
+        sdk::UClass* expected_class = nullptr;
+        // Soft / weak / lazy object props all derive from FObjectPropertyBase
+        // (get_property_class); FObjectProperty too. FInterfaceProperty uses a
+        // different accessor — skip the hint and let the picker show everything.
+        if (name_hash != L"InterfaceProperty"_fnv) {
+            expected_class = ((sdk::FObjectProperty*)prop)->get_property_class();
         }
-        if (slot != nullptr) {
-            ImGui::SameLine();
-            if (ImGui::SmallButton("clear")) {
-                slot = nullptr;
+        // Only label "[auto: World]" while the slot still holds the live world.
+        const char* auto_lbl = nullptr;
+        if (is_world_ctx && slot != nullptr) {
+            if (auto eng = sdk::UGameEngine::get(); eng != nullptr && slot == (sdk::UObject*)eng->get_world()) {
+                auto_lbl = "[auto: World]";
             }
         }
-        // Text-input fallback: type a name (full or short) or 0xADDR and
-        // press Enter to populate the slot without needing a drag-source.
-        // Mirrors the user's Scripts/ImGui.lua object_lookup pattern.
-        ImGui::SameLine();
-        if (auto resolved = render_object_text_input(("##objtext_" + prop_name_narrow).c_str(),
-                                                     s.obj_text[prop_name_narrow]);
-            resolved != nullptr) {
-            slot = resolved;
-        }
-        // Pick-by-type popup: "pick..." button opens a searchable list of
-        // every live UObject IsA(expected_class). Sole alternative to drag-
-        // and-drop when the user has no idea what to look for. The popup ID
-        // is unique per prop so multiple slots in the same window can each
-        // have their picker open.
-        ImGui::SameLine();
-        {
-            sdk::UClass* expected_class = nullptr;
-            // Soft / weak / lazy object props all derive from FObjectPropertyBase
-            // which carries get_property_class(); FObjectProperty itself does too.
-            // FInterfaceProperty has get_interface_class — not the same vtable
-            // slot. Skip the expected_class hint for interface and let the
-            // picker show all UObjects.
-            if (name_hash != L"InterfaceProperty"_fnv) {
-                expected_class = ((sdk::FObjectProperty*)prop)->get_property_class();
-            }
-            const auto popup_id = "objpicker_" + prop_name_narrow;
-            if (ImGui::SmallButton("pick...")) {
-                ImGui::OpenPopup(popup_id.c_str());
-            }
-            if (auto picked = render_object_picker_popup(popup_id.c_str(),
-                                                         s.picker_filter[prop_name_narrow],
-                                                         expected_class);
-                picked != nullptr) {
-                slot = picked;
-            }
-        }
+        ImGui::TextUnformatted(prop_name_narrow.c_str());
+        render_universal_object_picker(prop_name_narrow.c_str(), slot, s.pickers[prop_name_narrow],
+                                       expected_class, true, auto_lbl);
         break;
     }
     case L"ClassProperty"_fnv:
@@ -733,30 +929,66 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
             resolved != nullptr) {
             slot = resolved;
         }
+        // Pick-from-list (class mode) — searchable list of every UClass.
+        ImGui::SameLine();
+        {
+            const auto popup_id = "clspick_" + prop_name_narrow;
+            if (ImGui::SmallButton("pick...")) {
+                ImGui::OpenPopup(popup_id.c_str());
+            }
+            if (auto picked = render_object_picker_popup(popup_id.c_str(),
+                                                         s.picker_filter[prop_name_narrow],
+                                                         nullptr, /*list_classes=*/true);
+                picked != nullptr) {
+                if (auto c = picked->get_class(); c != nullptr && c->is_a(sdk::UClass::static_class())) {
+                    slot = reinterpret_cast<sdk::UClass*>(picked);
+                }
+            }
+        }
         break;
     }
     case L"StructProperty"_fnv: {
-        // Render up to 4 floats from scratch state; on Call we'll memcpy this
-        // into the per-struct layout (FVector 12B, FVector2D 8B, FRotator 12B,
-        // FQuat 16B, FLinearColor 16B, FTransform unsupported here).
-        auto& v = s.vec[prop_name_narrow];
+        // Generic reflected-leaf editor (T64): flatten the struct (recursing
+        // through nested structs) to scalar leaves and edit each as a double.
+        // Handles FVector/FRotator/FQuat/FTransform/FColor/FIntPoint/FMatrix/...
+        // engine-agnostically; encode_param walks the SAME leaf order.
         const auto sp = (sdk::FStructProperty*)prop;
         const auto strukt = sp != nullptr ? sp->get_struct() : nullptr;
         if (strukt == nullptr) {
-            ImGui::Text("StructProperty %s — unknown struct", prop_name_narrow.c_str());
+            ImGui::TextDisabled("StructProperty %s — unknown struct", prop_name_narrow.c_str());
             break;
         }
         const auto sname = utility::narrow(strukt->get_fname().to_string());
-        ImGui::Text("[%s]", sname.c_str());
-        if (sname == "Vector2D") {
-            ImGui::DragFloat2(prop_name_narrow.c_str(), &v.x, 0.1f);
-        } else if (sname == "Vector" || sname == "Rotator") {
-            ImGui::DragFloat3(prop_name_narrow.c_str(), &v.x, 0.1f);
-        } else if (sname == "Quat" || sname == "LinearColor" || sname == "Vector4") {
-            ImGui::DragFloat4(prop_name_narrow.c_str(), &v.x, 0.1f);
-        } else {
-            ImGui::TextDisabled("(unsupported struct in caller — call manually via Lua)");
+        std::vector<StructLeaf> leaves;
+        const bool ok = collect_struct_leaves(strukt, 0, "", leaves);
+        if (!ok || leaves.empty()) {
+            ImGui::TextDisabled("[%s] %s — non-numeric struct; use 'Call via Lua' below", sname.c_str(), prop_name_narrow.c_str());
+            break;
         }
+        auto& scratch = s.struct_scratch[prop_name_narrow];
+        if (scratch.size() != leaves.size()) {
+            scratch.assign(leaves.size(), 0.0);
+        }
+        ImGui::Text("[%s] %s", sname.c_str(), prop_name_narrow.c_str());
+        ImGui::Indent();
+        const auto immediate_parent = [](const std::string& lab) -> std::string {
+            auto pos = lab.rfind('.');
+            return pos == std::string::npos ? std::string{} : lab.substr(0, pos);
+        };
+        size_t li = 0;
+        while (li < leaves.size()) {
+            const std::string par = immediate_parent(leaves[li].label);
+            size_t lj = li;
+            while (lj < leaves.size() && (lj - li) < 4 && immediate_parent(leaves[lj].label) == par) {
+                ++lj;
+            }
+            const int n = (int)(lj - li);
+            const std::string row = (n == 1 ? leaves[li].label : (par.empty() ? sname : par))
+                                    + "##grp" + prop_name_narrow + std::to_string(li);
+            ImGui::DragScalarN(row.c_str(), ImGuiDataType_Double, &scratch[li], n, 0.1f, nullptr, nullptr, "%.4g");
+            li = lj;
+        }
+        ImGui::Unindent();
         break;
     }
     default:
@@ -870,53 +1102,46 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
         return true;
     }
     case L"StructProperty"_fnv: {
-        // Pack the float scratch into the underlying struct layout. We only
-        // handle the well-known small POD structs here; everything else stays
-        // zero-initialised.
+        // Generic reflected-leaf encode (T64): walk the SAME leaf order the
+        // editor used (collect_struct_leaves) and write each scalar at its own
+        // offset/width. Every write is bounds-checked against params_size — a
+        // bad offset here is memory corruption on Call.
         const auto sp = (sdk::FStructProperty*)prop;
-        const auto strukt = sp->get_struct();
+        const auto strukt = sp != nullptr ? sp->get_struct() : nullptr;
         if (strukt == nullptr) return false;
-        const auto sname = utility::narrow(strukt->get_fname().to_string());
-        auto& v = s.vec[name];
-        const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
-            sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
-        if (sname == "Vector2D") {
-            if (is_ue5_vec) {
-                *(double*)(out + 0) = (double)v.x;
-                *(double*)(out + 8) = (double)v.y;
-            } else {
-                *(float*)(out + 0) = v.x;
-                *(float*)(out + 4) = v.y;
-            }
-            return true;
+        std::vector<StructLeaf> leaves;
+        if (!collect_struct_leaves(strukt, 0, "", leaves) || leaves.empty()) {
+            return false; // non-numeric struct — Lua fallback only
         }
-        if (sname == "Vector" || sname == "Rotator") {
-            if (is_ue5_vec) {
-                *(double*)(out + 0)  = (double)v.x;
-                *(double*)(out + 8)  = (double)v.y;
-                *(double*)(out + 16) = (double)v.z;
-            } else {
-                *(float*)(out + 0) = v.x;
-                *(float*)(out + 4) = v.y;
-                *(float*)(out + 8) = v.z;
+        const auto& scratch = s.struct_scratch[name];
+        for (size_t i = 0; i < leaves.size(); ++i) {
+            const auto& lf = leaves[i];
+            const double val = i < scratch.size() ? scratch[i] : 0.0;
+            const size_t abs_off = (size_t)offset + (size_t)lf.offset;
+            if (abs_off + (size_t)leaf_byte_width(lf.kind) > params_size) {
+                return false; // refuse to write past the param buffer
             }
-            return true;
-        }
-        if (sname == "Quat" || sname == "LinearColor" || sname == "Vector4") {
-            if (is_ue5_vec && sname == "Quat") {
-                *(double*)(out + 0)  = (double)v.x;
-                *(double*)(out + 8)  = (double)v.y;
-                *(double*)(out + 16) = (double)v.z;
-                *(double*)(out + 24) = (double)v.w;
-            } else {
-                *(float*)(out + 0)  = v.x;
-                *(float*)(out + 4)  = v.y;
-                *(float*)(out + 8)  = v.z;
-                *(float*)(out + 12) = v.w;
+            uint8_t* p = params + abs_off;
+            switch (lf.kind) {
+            case LK_F32:  *(float*)p    = (float)val; break;
+            case LK_F64:  *(double*)p   = val; break;
+            case LK_I8:   *(int8_t*)p   = (int8_t)(int64_t)val; break;
+            case LK_I16:  *(int16_t*)p  = (int16_t)(int64_t)val; break;
+            case LK_I32:  *(int32_t*)p  = (int32_t)(int64_t)val; break;
+            case LK_I64:  *(int64_t*)p  = (int64_t)val; break;
+            case LK_U8:   *(uint8_t*)p  = (uint8_t)(int64_t)val; break;
+            case LK_U16:  *(uint16_t*)p = (uint16_t)(int64_t)val; break;
+            case LK_U32:  *(uint32_t*)p = (uint32_t)(int64_t)val; break;
+            case LK_U64:  *(uint64_t*)p = (uint64_t)(int64_t)val; break;
+            case LK_Bool:
+                if (lf.prop != nullptr) {
+                    ((sdk::FBoolProperty*)lf.prop)->set_value_in_object(params + (size_t)offset + (size_t)lf.container_base, val != 0.0);
+                }
+                break;
+            default: break;
             }
-            return true;
         }
-        return false;
+        return true;
     }
     default:
         return false;
@@ -1493,6 +1718,52 @@ void render_function_call(sdk::UObject* self, sdk::UFunction* fn) {
     }
     if (!s.error_repr.empty()) {
         ImGui::TextColored(ImVec4{1, 0.3f, 0.3f, 1}, "err: %s", s.error_repr.c_str());
+    }
+
+    // Inline-Lua fallback (T64): a generated, editable snippet that calls this
+    // function from the Lua VM, where every math type is constructible. Use for
+    // params the native encoder can't pack (non-numeric structs, arrays, maps).
+    // do_lua_string is void — this RUNS the call, it does not return a value to
+    // the C++ caller. The template is best-effort; adapt to the game's Lua API.
+    if (ImGui::TreeNode("Call via Lua (advanced / fallback)")) {
+        utility::ScopeGuard lua_pop{[]() { ImGui::TreePop(); }};
+        if (!s.lua_snippet_init) {
+            s.lua_snippet_init = true;
+            std::string full;
+            try { full = utility::narrow(self->get_full_name()); } catch (...) { full = "<target>"; }
+            std::string fn_short;
+            try { fn_short = utility::narrow(fn->get_fname().to_string()); } catch (...) { fn_short = "<Function>"; }
+            std::string sig;
+            for (auto p : in_params) {
+                try {
+                    const auto cn = utility::narrow(p->get_class()->get_name().to_string());
+                    const auto pn = utility::narrow(p->get_field_name().to_string());
+                    if (!sig.empty()) sig += ", ";
+                    sig += cn + " " + pn;
+                } catch (...) {}
+            }
+            std::string tmpl;
+            tmpl += "-- Editable fallback. Runs in the Lua VM (no value returned to C++).\n";
+            tmpl += "-- Target: " + full + "\n";
+            tmpl += "-- Function: " + fn_short + "(" + sig + ")\n";
+            tmpl += "local obj = uevr.api:find_uobject(\"" + full + "\")\n";
+            tmpl += "if obj == nil then print(\"target not found\") return end\n";
+            tmpl += "-- edit args below (build structs with Vector()/Quaternion()/etc.):\n";
+            tmpl += "local ret = obj:call(\"" + fn_short + "\"--[[, args ]])\n";
+            tmpl += "print(\"" + fn_short + " ret =\", tostring(ret))\n";
+            s.lua_snippet = std::move(tmpl);
+        }
+        if (s.lua_snippet.size() < 2048) {
+            s.lua_snippet.resize(2048);
+        }
+        ImGui::InputTextMultiline("##luacall", s.lua_snippet.data(), s.lua_snippet.size(),
+                                  ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 8));
+        if (ImGui::Button("Run Lua")) {
+            const std::string chunk(s.lua_snippet.c_str()); // trim at first NUL
+            PluginLoader::get()->do_lua_string(chunk.c_str(), "uobjecthook_caller");
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("editable template — adapt to your game's Lua API");
     }
 }
 
