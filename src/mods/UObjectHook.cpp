@@ -6376,41 +6376,35 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     const bool is_real_object = object != nullptr && m_objects.contains((sdk::UObject*)object);
     auto object_real = (sdk::UObject*)object;
 
-    std::vector<sdk::UFunction*> sorted_functions{};
     static const auto ufunction_t = sdk::UFunction::static_class();
-
-    for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
-        auto funcs = super->get_children();
-
-        for (auto func = funcs; func != nullptr; func = func->get_next()) {
-            if (func->get_class()->is_a(ufunction_t)) {
-                sorted_functions.push_back((sdk::UFunction*)func);
-            }
-        }
-    }
-
-    std::sort(sorted_functions.begin(), sorted_functions.end(),
-        [](sdk::UFunction* a, sdk::UFunction* b) { return a->get_fname().to_string() < b->get_fname().to_string(); });
 
     // Name filter — function lists are often huge; let the user narrow them
     // (case-insensitive substring) to find the function they want to call/hook.
     static char s_func_filter[64] = "";
     ImGui::InputTextWithHint("##func_filter", "filter functions by name...", s_func_filter, sizeof(s_func_filter));
+    ImGui::SameLine();
+    // Group by class: one TreeNode per declaring class along the super chain
+    // (e.g. Actor -> K2_GetActorRotation, FPSPlayer -> CustomGameFunction)
+    // instead of one flat alphabetical list of the whole inheritance.
+    static bool s_group_by_class = false;
+    ImGui::Checkbox("Group by class", &s_group_by_class);
+
     std::string filter_lc = s_func_filter;
     std::transform(filter_lc.begin(), filter_lc.end(), filter_lc.begin(), [](unsigned char c) { return (char)std::tolower(c); });
 
-    for (auto func : sorted_functions) {
+    auto passes_filter = [&](sdk::UFunction* func) -> bool {
+        if (filter_lc.empty()) {
+            return true;
+        }
+        auto nm = utility::narrow(func->get_fname().to_string());
+        std::transform(nm.begin(), nm.end(), nm.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        return nm.find(filter_lc) != std::string::npos;
+    };
+
+    auto render_one_function = [&](sdk::UFunction* func) {
         ImGui::PushID((void*)func);
 
         utility::ScopeGuard pop_guard{[]() { ImGui::PopID(); }};
-
-        if (!filter_lc.empty()) {
-            auto nm = utility::narrow(func->get_fname().to_string());
-            std::transform(nm.begin(), nm.end(), nm.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-            if (nm.find(filter_lc) == std::string::npos) {
-                continue;
-            }
-        }
 
         const bool node_open = ImGui::TreeNode(utility::narrow(func->get_fname().to_string()).data());
         ui_function_context_menu(func, object, is_real_object);
@@ -6463,6 +6457,61 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
             }
 
             ImGui::TreePop();
+        }
+    };
+
+    auto collect_direct = [&](sdk::UStruct* strukt, std::vector<sdk::UFunction*>& out) {
+        for (auto child = strukt->get_children(); child != nullptr; child = child->get_next()) {
+            if (child->get_class()->is_a(ufunction_t)) {
+                out.push_back((sdk::UFunction*)child);
+            }
+        }
+    };
+    auto sort_by_name = [](std::vector<sdk::UFunction*>& v) {
+        std::sort(v.begin(), v.end(),
+            [](sdk::UFunction* a, sdk::UFunction* b) { return a->get_fname().to_string() < b->get_fname().to_string(); });
+    };
+
+    if (s_group_by_class) {
+        // Most-derived class first (the class actually being inspected), then up
+        // the chain. Each class's own functions live under its TreeNode.
+        for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
+            std::vector<sdk::UFunction*> funcs{};
+            collect_direct(super, funcs);
+
+            if (!filter_lc.empty()) {
+                std::erase_if(funcs, [&](sdk::UFunction* f) { return !passes_filter(f); });
+            }
+            if (funcs.empty()) {
+                continue;
+            }
+            sort_by_name(funcs);
+
+            ImGui::PushID((void*)super);
+            utility::ScopeGuard pop_guard{[]() { ImGui::PopID(); }};
+
+            const auto cls_name = utility::narrow(super->get_fname().to_string());
+            const bool is_leaf = super == (sdk::UStruct*)uclass;
+            const auto flags = is_leaf ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
+            if (ImGui::TreeNodeEx((void*)super, flags, "%s (%zu)", cls_name.c_str(), funcs.size())) {
+                for (auto func : funcs) {
+                    render_one_function(func);
+                }
+                ImGui::TreePop();
+            }
+        }
+    } else {
+        std::vector<sdk::UFunction*> sorted_functions{};
+        for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
+            collect_direct(super, sorted_functions);
+        }
+        sort_by_name(sorted_functions);
+
+        for (auto func : sorted_functions) {
+            if (!passes_filter(func)) {
+                continue;
+            }
+            render_one_function(func);
         }
     }
 }
