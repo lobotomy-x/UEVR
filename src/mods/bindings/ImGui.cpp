@@ -2045,7 +2045,10 @@ bool begin_popup_modal(const char *str_id, sol::object open_obj, sol::object fla
 
 bool begin_popup_context_item(const char *str_id, sol::object flags_obj)
 {
-    int flags{1};
+    // ImGuiPopupFlags mouse-button encoding changed in 1.92.6 (right-click is
+    // 2<<2, no longer literal 1); raw ints from Lua scripts still resolve
+    // through upstream's legacy mapping while obsolete functions are enabled.
+    int flags{ImGuiPopupFlags_MouseButtonRight};
 
     if (flags_obj.is<int>())
     {
@@ -2337,6 +2340,18 @@ bool is_item_visible()
 bool is_any_item_hovered()
 {
     return ImGui::IsAnyItemHovered();
+}
+
+bool is_window_hovered(sol::object flags_obj)
+{
+    ImGuiHoveredFlags flags = flags_obj.is<int>() ? (ImGuiHoveredFlags)flags_obj.as<int>() : ImGuiHoveredFlags_None;
+    return ImGui::IsWindowHovered(flags);
+}
+
+bool is_window_focused(sol::object flags_obj)
+{
+    ImGuiFocusedFlags flags = flags_obj.is<int>() ? (ImGuiFocusedFlags)flags_obj.as<int>() : ImGuiFocusedFlags_None;
+    return ImGui::IsWindowFocused(flags);
 }
 
 bool is_item_toggled_selection()
@@ -3191,6 +3206,8 @@ void bindings::open_imgui(sol::state_view &lua)
     imgui["is_any_item_active"] = api::imgui::is_any_item_active;
     imgui["is_any_item_focused"] = api::imgui::is_any_item_focused;
     imgui["is_any_item_hovered"] = api::imgui::is_any_item_hovered;
+    imgui["is_window_hovered"] = api::imgui::is_window_hovered;
+    imgui["is_window_focused"] = api::imgui::is_window_focused;
     imgui["is_item_active"] = api::imgui::is_item_active;
     imgui["is_item_clicked"] = api::imgui::is_item_clicked;
     imgui["is_item_edited"] = api::imgui::is_item_edited;
@@ -3733,11 +3750,4 @@ void bindings::open_imgui(sol::state_view &lua)
     draw["text"] = api::draw::text;
     draw["filled_rect"] = api::draw::filled_rect;
     draw["outline_rect"] = api::draw::outline_rect;
-    draw["line"] = api::draw::line;
-    draw["outline_circle"] = api::draw::outline_circle;
-    draw["filled_circle"] = api::draw::filled_circle;
-    draw["outline_quad"] = api::draw::outline_quad;
-    draw["filled_quad"] = api::draw::filled_quad;
-
-    lua["draw"] = draw;
-}
+    draw["line
