@@ -25,23 +25,25 @@ SOFTWARE.
 */
 
 #include <filesystem>
-#include <regex>
 #include <fstream>
-#include <filesystem>
+#include <regex>
 
 #include "../LuaLoader.hpp"
 
 #include "FS.hpp"
 
-namespace fs = std::filesystem;
+    namespace fs = std::filesystem;
 
-std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::string& filepath, bool allow_dll = false);
+std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::string &filepath, bool allow_dll = false);
 
-namespace api::fs {
-namespace detail {
-::fs::path get_datadir(std::string wanted_subdir = "") {  
+namespace api::fs
+{
+namespace detail
+{
+::fs::path get_datadir(std::string wanted_subdir = "")
+{
 
-/* 
+    /*
 local user_dir
 local uevr_dir
 local data_dir
@@ -50,30 +52,29 @@ local input = ""
 local kismet
 uevr.lua.add_script_panel("Loopholes", function()
         -- get a full path to any files on the system, e.g. to pass to 3rd party lua dll
-        kismet = uevr.api : find_uobject("Class /Script/Engine.KismetSystemLibrary"): get_class_default_object() 
-        if kismet then user_dir = user_dir or kismet:GetPlatformUserName() 
+        kismet = uevr.api : find_uobject("Class /Script/Engine.KismetSystemLibrary"): get_class_default_object()
+        if kismet then user_dir = user_dir or kismet:GetPlatformUserName()
             if user_dir then uevr_dir = uevr_dir or
-                 ("C:/users/"..user_dir.."/AppData/Roaming/UnrealVRMod") 
-                if uevr_dir then game_name = game_name or 
-                    kismet:GetGameName() 
-                    if game_name then 
+                 ("C:/users/"..user_dir.."/AppData/Roaming/UnrealVRMod")
+                if uevr_dir then game_name = game_name or
+                    kismet:GetGameName()
+                    if game_name then
                         data_dir = data_dir or (uevr_dir.."/"..game_name.."-Win64-Shipping/".."data")
-                     end 
-                 end 
-            end 
-        local c, nt, s1, s2 = imgui.input_text("URL", input) if c then input = nt end 
-        if imgui.button("Launch") then 
+                     end
+                 end
+            end
+        local c, nt, s1, s2 = imgui.input_text("URL", input) if c then input = nt end
+        if imgui.button("Launch") then
             -- can be used to open files and probably some other tricks
-            kismet:LaunchURL(input) 
-        end 
-        imgui.text(data_dir or "") 
-        imgui.text(user_dir or "") 
+            kismet:LaunchURL(input)
+        end
+        imgui.text(data_dir or "")
+        imgui.text(user_dir or "")
         imgui.text(uevr_dir or "")
-        imgui.text(data_dir or "") 
+        imgui.text(data_dir or "")
         imgui.text(game_name or "")
 end)
 */
-
 
     static const std::string modpath = []() {
         std::string result{};
@@ -83,21 +84,25 @@ end)
         return result;
     }();
 
-    if (!wanted_subdir.empty() && wanted_subdir.find("$") != std::string::npos) {
-        if (wanted_subdir.find("$scripts") != std::string::npos) {
+    if (!wanted_subdir.empty() && wanted_subdir.find("$") != std::string::npos)
+    {
+        if (wanted_subdir.find("$scripts") != std::string::npos)
+        {
             auto datadir = Framework::get_persistent_dir() / "scripts";
 
             ::fs::create_directories(datadir);
 
             return datadir;
-        } else if(wanted_subdir.find("$globalscripts") != std::string::npos) {
+        }
+        else if (wanted_subdir.find("$globalscripts") != std::string::npos)
+        {
             auto datadir = Framework::get_persistent_dir() / "..\\UEVR\\scripts";
 
             ::fs::create_directories(datadir);
 
             return datadir;
         }
-        
+
         // todo, other subdirs?
     }
 
@@ -108,28 +113,33 @@ end)
     return datadir;
 }
 
-::fs::path fix_subdir(::fs::path subdir) {
+::fs::path fix_subdir(::fs::path subdir)
+{
     ::fs::path out{subdir};
 
     return out;
 }
-}
+} // namespace detail
 
-sol::table glob(sol::this_state l, const char* filter, const char* modifier) {
+sol::table glob(sol::this_state l, const char *filter, const char *modifier)
+{
     sol::state_view state{l};
     std::regex filter_regex{filter};
     auto results = state.create_table();
     auto datadir = detail::get_datadir(modifier != nullptr ? modifier : "");
     auto i = 0;
 
-    for (const auto& entry : ::fs::recursive_directory_iterator{datadir}) {
-        if (!entry.is_regular_file() && !entry.is_symlink()) {
+    for (const auto &entry : ::fs::recursive_directory_iterator{datadir})
+    {
+        if (!entry.is_regular_file() && !entry.is_symlink())
+        {
             continue;
         }
 
         auto relpath = relative(entry.path(), datadir).string();
 
-        if (std::regex_match(relpath, filter_regex)) {
+        if (std::regex_match(relpath, filter_regex))
+        {
             results[++i] = relpath;
         }
     }
@@ -137,10 +147,12 @@ sol::table glob(sol::this_state l, const char* filter, const char* modifier) {
     return results;
 }
 
-void write(sol::this_state l, const std::string& filepath, const std::string& data) {
+void write(sol::this_state l, const std::string &filepath, const std::string &data)
+{
     const auto path = get_correct_subpath(l, filepath);
 
-    if (!path) {
+    if (!path)
+    {
         lua_pushstring(l, "fs.write: unknown error");
         lua_error(l);
     }
@@ -152,15 +164,18 @@ void write(sol::this_state l, const std::string& filepath, const std::string& da
     file << data;
 }
 
-std::string read(sol::this_state l, const std::string& filepath) {
+std::string read(sol::this_state l, const std::string &filepath)
+{
     const auto path = get_correct_subpath(l, filepath);
 
-    if (!path) {
+    if (!path)
+    {
         lua_pushstring(l, "fs.read: unknown error");
         lua_error(l);
     }
 
-    if (!exists(*path)) {
+    if (!exists(*path))
+    {
         return "";
     }
 
@@ -171,16 +186,19 @@ std::string read(sol::this_state l, const std::string& filepath) {
     buffer << file.rdbuf();
     return buffer.str();
 }
-}
+} // namespace api::fs
 
-std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::string& filepath, bool allow_dll) {
-    if (filepath.find("..") != std::string::npos) {
+std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::string &filepath, bool allow_dll)
+{
+    if (filepath.find("..") != std::string::npos && filepath.find("$globalscripts") == std::string::npos && filepath.find("..\\UEVR\\Scripts") == std::string::npos)
+    {
         lua_pushstring(l, "This API does not allow access to parent directories");
         lua_error(l);
         return {};
     }
 
-    if (std::filesystem::path(filepath).is_absolute()) {
+    if (std::filesystem::path(filepath).is_absolute())
+    {
         lua_pushstring(l, "This API does not allow the use of absolute paths");
         lua_error(l);
         return {};
@@ -188,13 +206,15 @@ std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::stri
 
     const auto corrected_subpath = api::fs::detail::fix_subdir(::fs::path{filepath});
 
-    if (corrected_subpath.string().find("..") != std::string::npos) {
+    if (corrected_subpath.string().find("..") != std::string::npos)
+    {
         lua_pushstring(l, "This API does not allow access to parent directories");
         lua_error(l);
         return {};
     }
 
-    if (corrected_subpath.is_absolute()) {
+    if (corrected_subpath.is_absolute())
+    {
         lua_pushstring(l, "This API does not allow the use of absolute paths");
         lua_error(l);
         return {};
@@ -207,9 +227,11 @@ std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::stri
         return ext;
     }();
 
-    if (!allow_dll) {
+    if (!allow_dll)
+    {
         // it's not a good idea to allow DLLs to be written to disk from Lua scripts.
-        if (extension_lower == ".dll" || extension_lower == ".exe") {
+        if (extension_lower == ".dll" || extension_lower == ".exe")
+        {
             lua_pushstring(l, "This API does not allow interacting with executables or DLLs");
             lua_error(l);
             return {};
@@ -219,7 +241,8 @@ std::optional<::fs::path> get_correct_subpath(sol::this_state l, const std::stri
     return path;
 }
 
-void bindings::open_fs(sol::state_view& lua) {
+void bindings::open_fs(sol::state_view &lua)
+{
     auto fs = lua.create_table();
 
     fs["glob"] = api::fs::glob;
@@ -235,10 +258,11 @@ void bindings::open_fs(sol::state_view& lua) {
 
     sol::function old_open = io["open"];
 
-    io["open"] = [=](sol::this_state l, const std::string& filepath, sol::object mode) -> sol::object {
+    io["open"] = [=](sol::this_state l, const std::string &filepath, sol::object mode) -> sol::object {
         auto path = get_correct_subpath(l, filepath);
 
-        if (!path) {
+        if (!path)
+        {
             lua_pushstring(l, "io.open: unknown error");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -270,18 +294,20 @@ void bindings::open_fs(sol::state_view& lua) {
         return sol::make_object(l, sol::nil);
     };*/
 
-//    io["popen"] = sol::make_object(lua, sol::nil); // on second thought, I don't want to allow this. If someone really wants this functionality, they can just make a C++ plugin and use the C++ API.
+    //    io["popen"] = sol::make_object(lua, sol::nil); // on second thought, I don't want to allow this. If someone really wants this functionality, they can just make a C++ plugin and use the C++ API.
 
     // These functions can take nil as the first argument and they will return the default filehandle associated with stdin, stdout, or stderr.
     // So they should be safe in that respect.
     sol::function old_lines = io["lines"];
 
     io["lines"] = [=](sol::this_state l, sol::object filepath_or_nil) -> sol::object {
-        if (filepath_or_nil.is<sol::nil_t>()) {
+        if (filepath_or_nil.is<sol::nil_t>())
+        {
             return old_lines(l, sol::make_object(l, sol::nil));
         }
 
-        if (!filepath_or_nil.is<std::string>()) {
+        if (!filepath_or_nil.is<std::string>())
+        {
             lua_pushstring(l, "io.lines: expected a string or nil as the first argument");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -290,7 +316,8 @@ void bindings::open_fs(sol::state_view& lua) {
         auto filepath = filepath_or_nil.as<std::string>();
         auto path = get_correct_subpath(l, filepath);
 
-        if (!path) {
+        if (!path)
+        {
             lua_pushstring(l, "io.lines: unknown error");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -304,11 +331,13 @@ void bindings::open_fs(sol::state_view& lua) {
     sol::function old_input = io["input"];
 
     io["input"] = [=](sol::this_state l, sol::object filepath_or_nil) -> sol::object {
-        if (filepath_or_nil.is<sol::nil_t>()) {
-             return old_input(l, sol::make_object(l, sol::nil));
+        if (filepath_or_nil.is<sol::nil_t>())
+        {
+            return old_input(l, sol::make_object(l, sol::nil));
         }
 
-        if (!filepath_or_nil.is<std::string>()) {
+        if (!filepath_or_nil.is<std::string>())
+        {
             lua_pushstring(l, "io.input: expected a string or nil as the first argument");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -317,7 +346,8 @@ void bindings::open_fs(sol::state_view& lua) {
         auto filepath = filepath_or_nil.as<std::string>();
         auto path = get_correct_subpath(l, filepath);
 
-        if (!path) {
+        if (!path)
+        {
             lua_pushstring(l, "io.input: unknown error");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -331,11 +361,13 @@ void bindings::open_fs(sol::state_view& lua) {
     sol::function old_output = io["output"];
 
     io["output"] = [=](sol::this_state l, sol::object filepath_or_nil) -> sol::object {
-        if (filepath_or_nil.is<sol::nil_t>()) {
-             return old_output(l, sol::make_object(l, sol::nil));
+        if (filepath_or_nil.is<sol::nil_t>())
+        {
+            return old_output(l, sol::make_object(l, sol::nil));
         }
 
-        if (!filepath_or_nil.is<std::string>()) {
+        if (!filepath_or_nil.is<std::string>())
+        {
             lua_pushstring(l, "io.output: expected a string or nil as the first argument");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -344,7 +376,8 @@ void bindings::open_fs(sol::state_view& lua) {
         auto filepath = filepath_or_nil.as<std::string>();
         auto path = get_correct_subpath(l, filepath);
 
-        if (!path) {
+        if (!path)
+        {
             lua_pushstring(l, "io.output: unknown error");
             lua_error(l);
             return sol::make_object(l, sol::nil);
@@ -357,13 +390,17 @@ void bindings::open_fs(sol::state_view& lua) {
 
     sol::function old_require = lua["require"];
 
-    lua["require"] = [=](sol::this_state l, const std::string& filepath) -> sol::object {
-        if (filepath.find("..") != std::string::npos) {
+    lua["require"] = [=](sol::this_state l, const std::string &filepath) -> sol::object {
+        if (
+            filepath.find("$globalscripts\\") == std::string::npos &&
+            filepath.find("..") != std::string::npos)
+        {
             lua_pushstring(l, "require does not allow access to parent directories");
             lua_error(l);
         }
 
-        if (std::filesystem::path(filepath).is_absolute()) {
+        if (std::filesystem::path(filepath).is_absolute())
+        {
             lua_pushstring(l, "require does not allow the use of absolute paths");
             lua_error(l);
         }
@@ -375,7 +412,8 @@ void bindings::open_fs(sol::state_view& lua) {
         lua["package"]["searchers"] = lua.create_table();
 
         sol::table searchers = lua.registry()["package_searchers"];
-        for (auto&& [k, v] : searchers) {
+        for (auto &&[k, v] : searchers)
+        {
             lua["package"]["searchers"][k] = v;
         }
 
@@ -384,10 +422,11 @@ void bindings::open_fs(sol::state_view& lua) {
 
     sol::function old_loadlib = lua["package"]["loadlib"];
 
-    lua["package"]["loadlib"] = [=](sol::this_state l, const std::string& filepath, const std::string& funcname) -> sol::object {
+    lua["package"]["loadlib"] = [=](sol::this_state l, const std::string &filepath, const std::string &funcname) -> sol::object {
         const auto path = get_correct_subpath(l, filepath, true);
 
-        if (!path) {
+        if (!path)
+        {
             lua_pushstring(l, "package.loadlib: unknown error");
             lua_error(l);
         }
@@ -398,7 +437,8 @@ void bindings::open_fs(sol::state_view& lua) {
             return ext;
         }();
 
-        if (extension_lower != ".dll") {
+        if (extension_lower != ".dll")
+        {
             lua_pushstring(l, "package.loadlib: only DLLs are allowed");
             lua_error(l);
         }

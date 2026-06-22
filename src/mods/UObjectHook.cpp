@@ -28,15 +28,19 @@
 #include <sdk/FMapProperty.hpp>
 #include <sdk/FSetProperty.hpp>
 #include <sdk/UMotionControllerComponent.hpp>
-   
+#include <sdk/UTexture.hpp>
+#include <sdk/StereoStuff.hpp>
+
 #include <imgui_internal.h>
 #include "uobjecthook/SDKDumper.hpp"
 #include "VR.hpp"
 #include "PluginLoader.hpp"
+#include <d3d11.h>
 
 #include "UObjectHook.hpp"
 
 #define VERBOSE_UOBJECTHOOK
+
 
 // ---------------------------------------------------------------------------
 // Interactive function-caller helpers
@@ -54,43 +58,90 @@
 // ---------------------------------------------------------------------------
 
 namespace {
+
+#pragma region new_gui
 // Payload type identifiers used by ImGui's drag-and-drop machinery. Anything
 // elsewhere in UObjectHook can publish a payload of the same type and the
 // function-caller target will pick it up.
 constexpr const char* kDragPayloadUObject = "UEVR_UObject";
 constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
 
-// Touch-style middle-mouse drag-to-pan for the current scroll region. Call it
-// inside a BeginChild/BeginListBox scope (after the Begin, before the matching
-// End) so SetScroll* targets that child. Middle button is unbound elsewhere in
-// the overlay, so this never collides with the left-button drag-drop sources,
-// right-button context menus, window-move, or text selection. The active scroll
-// target is latched per-window via the seeded GetID, so a fast drag that pulls
-// the cursor outside the child bounds keeps scrolling until the button releases.
-// In VR the right thumbstick already drives io.MouseWheel (OverlayComponent), so
-// this is the desktop-pointer counterpart.
+// Touch-style drag-to-pan for the current scroll region. Call it inside a
+// BeginChild/BeginListBox scope (after the Begin, before the matching End) so
+// SetScroll* targets that child. The active scroll target is latched per-window
+// via the seeded GetID, so a fast drag that pulls the cursor outside the child
+// bounds keeps scrolling until the button releases.
+//   Flat: middle mouse button — unbound elsewhere, so it never collides with the
+//     left-button drag-drop sources, right-button context menus, or window-move.
+//   VR: the controller trigger maps to the left mouse button, so use that; gated
+//     on no item hovered so a trigger-drag on empty list space scrolls without
+//     stealing item drag-drops.
+// Vertically biased + faster than 1:1 (lists are tall; 1:1 felt sluggish).
 inline void drag_scroll_current_window() {
     auto& io = ImGui::GetIO();
+    const bool vr = VR::get()->is_hmd_active();
+    const ImGuiMouseButton btn = vr ? ImGuiMouseButton_Left : ImGuiMouseButton_Middle;
     const ImGuiID id = ImGui::GetID("##dragscroll");
     static ImGuiID s_active = 0;
 
-    if (s_active == 0 && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+    if (s_active == 0 && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(btn)
+        && (!vr || !ImGui::IsAnyItemHovered())) {
         s_active = id;
     }
 
     if (s_active == id) {
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
-            if (io.MouseDelta.x != 0.0f) {
-                ImGui::SetScrollX(ImGui::GetScrollX() - io.MouseDelta.x);
-            }
+        if (ImGui::IsMouseDown(btn)) {
             if (io.MouseDelta.y != 0.0f) {
-                ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
+                ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y * 2.5f);
+            }
+            if (io.MouseDelta.x != 0.0f) {
+                ImGui::SetScrollX(ImGui::GetScrollX() - io.MouseDelta.x * 1.5f);
             }
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         } else {
             s_active = 0;
         }
     }
+}
+
+// Right-click Copy/Paste for a vector/quat widget. Call immediately AFTER the
+// DragFloatN so the context menu binds to it. Copy writes "x, y, z[, w]" to the
+// clipboard; Paste parses that many floats back (tolerant of commas / () / []).
+// Returns true when a paste actually wrote new values.
+inline bool vector_copy_paste(const char* popup_id, float* v, int n) {
+    bool pasted = false;
+    if (ImGui::BeginPopupContextItem(popup_id)) {
+        if (ImGui::MenuItem("Copy")) {
+            std::stringstream ss;
+            for (int i = 0; i < n; ++i) {
+                if (i != 0) ss << ", ";
+                ss << v[i];
+            }
+            ImGui::SetClipboardText(ss.str().c_str());
+        }
+        if (ImGui::MenuItem("Paste")) {
+            if (const char* c = ImGui::GetClipboardText(); c != nullptr) {
+                std::string s{c};
+                for (auto& ch : s) {
+                    if (ch == ',' || ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == ';') {
+                        ch = ' ';
+                    }
+                }
+                std::stringstream ss{s};
+                float tmp[4]{};
+                int got = 0;
+                while (got < n && (ss >> tmp[got])) {
+                    ++got;
+                }
+                if (got == n) {
+                    for (int i = 0; i < n; ++i) v[i] = tmp[i];
+                    pasted = true;
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+    return pasted;
 }
 
 // Per-slot state for the universal object picker widget (T63). One per
@@ -636,6 +687,92 @@ std::vector<std::pair<const char*, sdk::UObject*>> gather_common_objects() {
     return s_cache;
 }
 
+// Sub-objects reachable from a common object, for the picker dropdowns:
+// World->PersistentLevel, PC->HUD, Camera(manager)->ViewTarget, Pawn->its
+// Skeletal/Capsule/Camera components + root. All lookups guarded; object-pointer
+// property reads return a live pointer or null.
+std::vector<std::pair<std::string, sdk::UObject*>> gather_common_object_children(const std::string& kind, sdk::UObject* obj) {
+    std::vector<std::pair<std::string, sdk::UObject*>> out;
+    if (obj == nullptr) return out;
+
+    auto read_obj_prop = [](sdk::UObject* o, const wchar_t* name) -> sdk::UObject* {
+        if (o == nullptr) return nullptr;
+        auto data = o->get_property_data(name);
+        return data != nullptr ? *(sdk::UObject**)data : nullptr;
+    };
+
+    try {
+        if (kind == "World") {
+            if (auto lvl = read_obj_prop(obj, L"PersistentLevel")) out.emplace_back("PersistentLevel", lvl);
+        } else if (kind == "PC") {
+            if (auto hud = read_obj_prop(obj, L"MyHUD")) out.emplace_back("HUD", hud);
+        } else if (kind == "Camera") {
+            // FTViewTarget ViewTarget; first member is AActor* Target.
+            if (auto tgt = read_obj_prop(obj, L"ViewTarget")) out.emplace_back("ViewTarget", tgt);
+        } else if (kind == "Pawn") {
+            auto actor = (sdk::AActor*)obj;
+            static const auto skel_c = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.SkeletalMeshComponent");
+            static const auto caps_c = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.CapsuleComponent");
+            static const auto cam_c  = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.CameraComponent");
+            if (auto root = actor->get_root_component()) out.emplace_back("RootComponent", (sdk::UObject*)root);
+            if (skel_c != nullptr) {
+                int n = 0;
+                for (auto c : actor->get_components_by_class(skel_c)) {
+                    if (c == nullptr) continue;
+                    out.emplace_back(n == 0 ? "SkeletalMesh" : ("SkeletalMesh " + std::to_string(n)), (sdk::UObject*)c);
+                    ++n;
+                }
+            }
+            if (caps_c != nullptr) {
+                if (auto c = actor->get_component_by_class(caps_c)) out.emplace_back("Capsule", (sdk::UObject*)c);
+            }
+            if (cam_c != nullptr) {
+                int n = 0;
+                for (auto c : actor->get_components_by_class(cam_c)) {
+                    if (c == nullptr) continue;
+                    out.emplace_back(n == 0 ? "CameraComponent" : ("CameraComponent " + std::to_string(n)), (sdk::UObject*)c);
+                    ++n;
+                }
+            }
+        }
+    } catch (...) {}
+    return out;
+}
+
+// CDOs of every BlueprintFunctionLibrary subclass (GameplayStatics, Kismet*, ...),
+// so the picker / function caller can target a library and call its static
+// functions. Built once (the class set is static); the full-array walk + per-class
+// is_a is why it's cached rather than rebuilt per frame.
+std::vector<std::pair<std::string, sdk::UObject*>>& gather_function_libraries() {
+    static std::vector<std::pair<std::string, sdk::UObject*>> s_cache;
+    if (!s_cache.empty()) {
+        return s_cache;
+    }
+    try {
+        static const auto bfl = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.BlueprintFunctionLibrary");
+        static const auto uclass_t = sdk::UClass::static_class();
+        if (bfl == nullptr || uclass_t == nullptr) {
+            return s_cache;
+        }
+        auto arr = sdk::FUObjectArray::get();
+        const auto count = arr ? arr->get_object_count() : 0;
+        for (int32_t i = 0; i < count; ++i) {
+            auto item = arr->get_object(i);
+            if (item == nullptr || item->object == nullptr) continue;
+            auto o = (sdk::UObject*)item->object;
+            auto oc = o->get_class();
+            if (oc == nullptr || !oc->is_a(uclass_t)) continue; // o is a UClass
+            auto cls = (sdk::UClass*)o;
+            if (cls == bfl || !cls->is_a(bfl)) continue;          // derives from BFL
+            if (auto cdo = cls->get_class_default_object()) {
+                s_cache.emplace_back(utility::narrow(cls->get_fname().to_string()), cdo);
+            }
+        }
+        std::sort(s_cache.begin(), s_cache.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    } catch (...) {}
+    return s_cache;
+}
+
 // Set the first live-caller slot that has no target to `obj` (T63 send-to-
 // caller). Used by the picker context menu so a picked object can be shot
 // straight into the Function Caller without dragging.
@@ -734,7 +871,10 @@ bool render_universal_object_picker(const char* id_prefix, sdk::UObject*& slot,
         ImGui::Checkbox("type filter", &st.use_type_filter);
     }
 
-    // Common-object quick-picks.
+    // Common-object quick-picks. Each opens a dropdown to the base object or its
+    // key sub-objects (World->PersistentLevel, PC->HUD, Camera->ViewTarget,
+    // Pawn->components). "Libs" lists BlueprintFunctionLibrary CDOs (static fns,
+    // e.g. GameplayStatics / Kismet*).
     {
         const auto commons = gather_common_objects();
         bool first = true;
@@ -742,7 +882,42 @@ bool render_universal_object_picker(const char* id_prefix, sdk::UObject*& slot,
             if (obj == nullptr) continue;
             if (!first) ImGui::SameLine();
             first = false;
-            if (ImGui::SmallButton(name)) { slot = obj; changed = true; }
+            ImGui::PushID(name);
+            if (ImGui::SmallButton(name)) { ImGui::OpenPopup("cpop"); }
+            if (ImGui::BeginPopup("cpop")) {
+                if (ImGui::MenuItem(name)) { slot = obj; changed = true; }
+                const auto children = gather_common_object_children(name, obj);
+                if (!children.empty()) { ImGui::Separator(); }
+                for (const auto& [clabel, cobj] : children) {
+                    if (cobj == nullptr) continue;
+                    if (ImGui::MenuItem(clabel.c_str())) { slot = cobj; changed = true; }
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::PopID();
+        }
+
+        if (!first) { ImGui::SameLine(); }
+        if (ImGui::SmallButton("Libs")) { ImGui::OpenPopup("libspop"); }
+        if (ImGui::BeginPopup("libspop")) {
+            auto& libs = gather_function_libraries();
+            if (libs.empty()) {
+                ImGui::TextDisabled("no function libraries (not yet populated)");
+            } else {
+                ImGui::TextDisabled("%zu libraries — static functions via CDO", libs.size());
+                if (ImGui::BeginChild("libslist", ImVec2(280.0f, 320.0f))) {
+                    for (const auto& [lname, lcdo] : libs) {
+                        if (lcdo == nullptr) continue;
+                        if (ImGui::Selectable(lname.c_str())) {
+                            slot = lcdo;
+                            changed = true;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+                }
+                ImGui::EndChild();
+            }
+            ImGui::EndPopup();
         }
     }
 
@@ -1848,7 +2023,7 @@ nlohmann::json UObjectHook::MotionControllerStateBase::to_json() const {
         {"location_offset", utility::math::to_json(location_offset)},
         {"hand", hand},
         {"permanent", permanent}
-    };                                                                                                                                                                          
+    };
 }
 
 void UObjectHook::MotionControllerStateBase::from_json(const nlohmann::json& data) {
@@ -2034,7 +2209,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
 
             const auto ps = func->get_properties_size();
             const auto ma = func->get_min_alignment();
-        
+
             if (ma > 1) {
                 data.heavy_data->params.resize(((ps + ma - 1) / ma) * ma);
             } else {
@@ -2053,7 +2228,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                 //SPDLOG_ERROR("[UObjectHook] Failed to copy params for function {:x}", (uintptr_t)func);
                 return result;
             }
-    
+
             // Go through all properties and look for arrays and upgrade them so we actually own the data
             // We'll do this by copying the data to a new array
             for (auto prop = func->get_child_properties(); prop != nullptr; prop = prop->get_next()) {
@@ -2061,10 +2236,10 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                 if (c == nullptr) {
                     continue;
                 }
-    
+
                 const auto cname = c->get_name().to_string();
                 const auto cname_hash = ::utility::hash(cname);
-    
+
                 switch (cname_hash) {
                 case L"ArrayProperty"_fnv:
                 {
@@ -2073,26 +2248,26 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
 
                     size_t inner_size = sizeof(void*);
                     bool supported = false;
-    
+
                     const auto inner = prop_desc->get_inner();
-    
+
                     if (inner != nullptr) {
                         const auto inner_c = inner->get_class();
-    
+
                         if (inner_c != nullptr) {
                             const auto inner_cname = inner_c->get_name().to_string();
                             const auto inner_cname_hash = ::utility::hash(inner_cname);
-    
+
                             // todo... recursive array stuff? good enough for now
                             switch (inner_cname_hash) {
                             case L"StructProperty"_fnv:
                             {
                                 const auto s = ((sdk::FStructProperty*)inner)->get_struct();
-    
+
                                 if (s == nullptr) {
                                     break;
                                 }
-    
+
                                 if (s->is_a(sdk::UScriptStruct::static_class())) {
                                     inner_size = s->get_struct_size();
                                 } else {
@@ -2110,7 +2285,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                                 supported = true;
                                 break;
                             }
-    
+
                             default:
                                 break;
                             }
@@ -2130,18 +2305,18 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                         arr.data = nullptr;
                         break;
                     }
-    
+
                     auto& bak_arr = *(GenericArray*)((uintptr_t)bak.data() + prop_desc->get_offset());
                     auto new_arr = sdk::TArray<void*>{};
 
                     if (bak_arr.data != nullptr) {
                         new_arr = std::move(bak_arr);
-    
+
                         if (arr.capacity > new_arr.capacity) {
                             new_arr.data = (void**)sdk::FMalloc::get()->realloc(new_arr.data, arr.capacity * inner_size, sizeof(void*));
                             new_arr.capacity = arr.capacity;
                         }
-    
+
                         new_arr.count = arr.count;
                     } else if (arr.capacity > 0) {
                         new_arr.data = (void**)sdk::FMalloc::get()->malloc(arr.capacity * inner_size, sizeof(void*));
@@ -2149,7 +2324,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                         new_arr.count = arr.count;
                         new_arr.capacity = arr.capacity;
                     }
-    
+
                     if (arr.data != nullptr && arr.count > 0 && arr.capacity >= arr.count && new_arr.data != nullptr && !IsBadReadPtr((void*)arr.data, arr.capacity * inner_size)) {
                         memcpy(new_arr.data, arr.data, arr.count * inner_size);
                         arr.data = nullptr;
@@ -2157,13 +2332,13 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                         arr.capacity = 0;
                         arr = std::move(new_arr);
                     } else {
-                        arr.count = 0;  
+                        arr.count = 0;
                     }
                 }
                 case L"StrProperty"_fnv:
                 {
                     using FString = sdk::TArray<wchar_t>;
-    
+
                     const auto prop_desc = (sdk::FProperty*)prop;
 
                     // uh oh
@@ -2173,18 +2348,18 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
 
                     auto& str = *(FString*)((uintptr_t)data.heavy_data->params.data() + prop_desc->get_offset());
                     auto& bak_str = *(FString*)((uintptr_t)bak.data() + prop_desc->get_offset());
-    
+
                     auto new_str = FString{};
-    
+
                     // Same thing but much simpler because we know it's wchar_t
                     if (bak_str.data != nullptr) {
                         new_str = std::move(bak_str);
-    
+
                         if (str.capacity > new_str.capacity) {
                             new_str.data = (wchar_t*)sdk::FMalloc::get()->realloc(new_str.data, str.capacity * sizeof(wchar_t), sizeof(wchar_t));
                             new_str.capacity = str.capacity;
                         }
-    
+
                         new_str.count = str.count;
                     } else if (str.capacity > 0) {
                         new_str.data = (wchar_t*)sdk::FMalloc::get()->malloc(str.capacity * sizeof(wchar_t), sizeof(wchar_t));
@@ -2192,7 +2367,7 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                         new_str.count = str.count;
                         new_str.capacity = str.capacity;
                     }
-    
+
                     if (str.data != nullptr && str.count > 0 && str.capacity >= str.count && new_str.data != nullptr && !IsBadReadPtr((void*)str.data, str.capacity * sizeof(wchar_t))) {
                         memcpy(new_str.data, str.data, str.count * sizeof(wchar_t));
                         str.data = nullptr;
@@ -2287,6 +2462,17 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         option.config_load(cfg, set_defaults);
     }
 
+    // Restore the plain gizmo/inspector toggles (see on_config_save).
+    if (!set_defaults) {
+        if (auto v = cfg.get<int>("UObjectHook_GizmoMode")) m_gizmo_mode = *v;
+        if (auto v = cfg.get<float>("UObjectHook_GizmoThickness")) m_gizmo_thickness = *v;
+        if (auto v = cfg.get<float>("UObjectHook_GizmoAxisLen")) m_gizmo_axis_len = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_ShowTexturePreviews")) m_show_texture_previews = *v;
+    }
+
     if (!set_defaults && m_enabled_at_startup->value()) {
         m_wants_activate = true;
     }
@@ -2298,6 +2484,16 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     for (IModValue& option : m_options) {
         option.config_save(cfg);
     }
+
+    // Persist the plain gizmo/inspector toggles (these are not ModValues) so the Config-tab
+    // settings survive restarts.
+    cfg.set<int>("UObjectHook_GizmoMode", m_gizmo_mode);
+    cfg.set<float>("UObjectHook_GizmoThickness", m_gizmo_thickness);
+    cfg.set<float>("UObjectHook_GizmoAxisLen", m_gizmo_axis_len);
+    cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
+    cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
+    cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
+    cfg.set<bool>("UObjectHook_ShowTexturePreviews", m_show_texture_previews);
 }
 
 void UObjectHook::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
@@ -2306,7 +2502,7 @@ void UObjectHook::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
     if (m_wants_activate) {
         hook();
     }
-    
+
     if (m_fully_hooked) {
         {
             std::shared_lock _{m_mutex};
@@ -2331,7 +2527,7 @@ const auto quat_converter = glm::quat{Matrix4x4f {
 }};
 
 // TODO: split this into some functions because its getting a bit massive
-void UObjectHook::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+void UObjectHook::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                         const float world_to_meters, Vector3f* view_location, bool is_double)
 {
     if (!m_fully_hooked) {
@@ -2404,7 +2600,7 @@ void UObjectHook::on_pre_calculate_stereo_view_offset(void* stereo_device, const
     }
 }
 
-void UObjectHook::on_post_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+void UObjectHook::on_post_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                                     const float world_to_meters, Vector3f* view_location, bool is_double)
 {
     if (!m_fully_hooked) {
@@ -2440,11 +2636,11 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
     auto view_d = (Vector3d*)view_location;
     auto rot_d = (Rotator<double>*)view_rotation;
 
-    const auto view_mat_inverse = !is_double ? 
+    const auto view_mat_inverse = !is_double ?
         glm::yawPitchRoll(
             glm::radians(-view_rotation->yaw),
             glm::radians(view_rotation->pitch),
-            glm::radians(-view_rotation->roll)) : 
+            glm::radians(-view_rotation->roll)) :
         glm::yawPitchRoll(
             glm::radians(-(float)rot_d->yaw),
             glm::radians((float)rot_d->pitch),
@@ -2455,7 +2651,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
     };
 
     auto vqi_norm = glm::normalize(view_quat_inverse);
-    
+
     // Decoupled Pitch
     if (vr->is_decoupled_pitch_enabled()) {
         vqi_norm = utility::math::flatten(vqi_norm);
@@ -2559,7 +2755,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
 
     update_motion_controller_components(
         final_position, head_euler,
-        left_hand_position, left_hand_euler, 
+        left_hand_position, left_hand_euler,
         right_hand_position, right_hand_euler);
 
     sdk::TArray<sdk::UPrimitiveComponent*> overlapped_components{};
@@ -2618,7 +2814,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                 state.adjusting = false;
             }
         }
-        
+
         auto update_overlaps = [&](int32_t hand, const sdk::TArray<sdk::UPrimitiveComponent*>& components) {
             const auto was_pressed = hand == 0 ? was_a_pressed_left : was_a_pressed_right;
             const auto is_pressed = hand == 0 ? is_a_down_raw_left : is_a_down_raw_right;
@@ -2657,7 +2853,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
 
                             return false;
                         });
-                    
+
                     if (owner_is_adjustment_vis) {
                         continue;
                     }
@@ -2690,7 +2886,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
         if (!this->exists(comp) || it.second == nullptr) {
             continue;
         }
-        
+
         auto& state = *it.second;
         const auto orig_position = comp->get_world_location();
         const auto orig_rotation = comp->get_world_rotation();
@@ -2718,6 +2914,15 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                 auto visualizer = ugs->spawn_actor(sdk::UGameEngine::get()->get_world(), sdk::AActor::static_class(), orig_position);
 
                 if (visualizer != nullptr) {
+                    // Store the visualizer BEFORE building its components: the 72-box loop below
+                    // calls process_event / property reads that can throw, and if it aborts before
+                    // the store, the actor is never recorded -> it re-spawns (72 box components)
+                    // EVERY frame -> the perf hit + actor leak. Storing first makes the
+                    // "== nullptr" gate hold even if the build partially fails.
+                    {
+                        std::unique_lock _{m_mutex};
+                        state.adjustment_visualizer = visualizer;
+                    }
                     auto add_comp = [&](sdk::UClass* c, std::function<void(sdk::UActorComponent*)> fn) -> sdk::UActorComponent* {
                         if (c == nullptr) {
                             SPDLOG_ERROR("[UObjectHook] Cannot add component of null class");
@@ -2738,7 +2943,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                         } else {
                             SPDLOG_ERROR("[UObjectHook] Failed to add component {} to adjustment visualizer", utility::narrow(c->get_full_name()));
                         }
-                        
+
                         return new_comp;
                     };
 
@@ -2795,9 +3000,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                     }
 
                     //ugs->finish_spawning_actor(visualizer, orig_position);
-
-                    std::unique_lock _{m_mutex};
-                    state.adjustment_visualizer = visualizer;
+                    // (visualizer was already stored above, before the component build)
                 } else {
                     SPDLOG_ERROR("[UObjectHook] Failed to spawn actor for adjustment visualizer");
                 }
@@ -2807,7 +3010,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
             }
 
             std::unique_lock _{m_mutex};
-            const auto mat_inverse = 
+            const auto mat_inverse =
                 glm::yawPitchRoll(
                     glm::radians(-orig_rotation.y),
                     glm::radians(orig_rotation.x),
@@ -2826,13 +3029,41 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                 state.adjustment_visualizer = nullptr;
             }
 
-            comp->set_world_location(adjusted_location, false, false);
-            comp->set_world_rotation(adjusted_euler, false, false);
+            // The shared gizmo mode (set in the flat overlay) also drives the VR
+            // controller-attached behavior: Move follows the hand 6DOF (unchanged
+            // default), Rotate follows only the hand's rotation, Scale grows/shrinks
+            // uniformly as the hand moves away from / toward the component. The flat
+            // imgui gizmo can't world-align in VR (it lives on the overlay quad), so
+            // VR manipulation reuses this verified controller-attach path instead.
+            if (m_gizmo_mode == 1) {
+                comp->set_world_rotation(adjusted_euler, false, false);
+            } else if (m_gizmo_mode == 2) {
+                // Only scale PERMANENT attachments: the non-permanent reset below
+                // restores location/rotation each frame but not scale, so writing
+                // scale on a preview attachment would accumulate (leak). Dropping the
+                // baseline when not scaling means a later scale re-seeds with delta 0
+                // (no pop) on its first frame.
+                static std::unordered_map<sdk::USceneComponent*, float> s_scale_last_dist;
+                if (state.permanent) {
+                    const float dist = glm::length(hand_position - orig_position);
+                    if (auto it_d = s_scale_last_dist.find(comp); it_d != s_scale_last_dist.end()) {
+                        auto sc = comp->get_relative_scale();
+                        sc += glm::vec3{(dist - it_d->second) * 0.01f};
+                        comp->set_relative_scale(sc);
+                    }
+                    s_scale_last_dist[comp] = dist;
+                } else {
+                    s_scale_last_dist.erase(comp);
+                }
+            } else {
+                comp->set_world_location(adjusted_location, false, false);
+                comp->set_world_rotation(adjusted_euler, false, false);
+            }
         }
 
         if (!state.permanent) {
             GameThreadWorker::get().enqueue([this, comp, orig_position, orig_rotation]() {
-               
+
                 if (!this->exists(comp)) {
                     return;
                 }
@@ -2840,7 +3071,7 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
                 comp->set_world_location(orig_position, false, false);
                 comp->set_world_rotation(orig_rotation, false, false);
             });
-            GameThreadWorker::get().execute();           
+            GameThreadWorker::get().execute();
         }
     }
 }
@@ -2892,7 +3123,7 @@ void UObjectHook::spawn_overlapper(uint32_t hand) {
                 } else {
                     SPDLOG_ERROR("[UObjectHook] Failed to add component {} to target", utility::narrow(c->get_full_name()));
                 }
-                
+
                 return new_comp;
             };
 
@@ -2915,7 +3146,7 @@ void UObjectHook::spawn_overlapper(uint32_t hand) {
 
             const auto skeletal_mesh_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.SkeletalMeshComponent");
             const auto meshes = get_objects_by_class(skeletal_mesh_t);
-            
+
             for (auto obj : meshes) {
                 if (!this->exists(obj)) {
                     continue;
@@ -2967,7 +3198,7 @@ void UObjectHook::spawn_overlapper(uint32_t hand) {
                 if (new_sphere != nullptr) {
                     new_sphere->attach_to(mesh, L"None", 0, true);
                 //   new_sphere->set_local_transform(glm::vec3{}, glm::vec4{0, 0, 0, 1}, glm::vec3{1, 1, 1});
-                    
+
                     new_sphere->set_local_transform(glm::vec3{0, 0, 82}, glm::vec4{0, 0, 0, 1}, glm::vec3{1, 1, 1});
 
                     std::unique_lock _{m_mutex};
@@ -3177,7 +3408,7 @@ std::vector<std::shared_ptr<UObjectHook::PersistentState>> UObjectHook::deserial
     if (!std::filesystem::exists(uobjecthook_dir)) {
         return {};
     }
-    
+
     // Gather all .json files in this directory
     std::vector<std::filesystem::path> json_files{};
     for (const auto& p : std::filesystem::directory_iterator(uobjecthook_dir)) {
@@ -3375,7 +3606,7 @@ void UObjectHook::update_persistent_states() {
 
             for (const auto& prop_state : prop_base->properties) {
                 const auto prop_desc = obj.definition->find_property(prop_state->name);
-            
+
                 if (prop_desc == nullptr) {
                     continue;
                 }
@@ -3426,6 +3657,23 @@ void UObjectHook::update_persistent_states() {
                         value = prop_state->data.u16;
                     }
                     break;
+                case "StructProperty"_fnv:
+                    {
+                        // Restore the raw struct bytes (Vector/Rotator/Transform/etc.). Clamp the
+                        // copy to the actual struct size so a stale/oversized save can't overrun.
+                        if (prop_state->struct_size > 0) {
+                            uint32_t sz = prop_state->struct_size;
+                            if (const auto sp = (sdk::FStructProperty*)prop_desc; sp != nullptr) {
+                                if (const auto strukt = sp->get_struct(); strukt != nullptr) {
+                                    sz = std::min<uint32_t>(sz, (uint32_t)strukt->get_properties_size());
+                                }
+                            }
+                            sz = std::min<uint32_t>(sz, (uint32_t)sizeof(prop_state->struct_bytes));
+                            auto* dst = (void*)(obj.as<uintptr_t>() + ((sdk::FProperty*)prop_desc)->get_offset());
+                            memcpy(dst, prop_state->struct_bytes, sz);
+                        }
+                    }
+                    break;
                 default:
                     // OH NO!!!!! anyways
                     break;
@@ -3438,7 +3686,7 @@ void UObjectHook::update_persistent_states() {
 void UObjectHook::update_motion_controller_components(
     const glm::vec3& hmd_location, const glm::vec3& hmd_euler,
     const glm::vec3& left_hand_location, const glm::vec3& left_hand_euler,
-    const glm::vec3& right_hand_location, const glm::vec3& right_hand_euler) 
+    const glm::vec3& right_hand_location, const glm::vec3& right_hand_euler)
 {
     const auto mc_c = sdk::UMotionControllerComponent::static_class();
 
@@ -3525,7 +3773,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         if (player_controller == nullptr) {
             return nullptr;
         }
-        
+
         return player_controller->get_acknowledged_pawn();
         break;
     }
@@ -3542,7 +3790,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
     }
 
     case "Camera Manager"_fnv:
-    {      
+    {
         auto world = engine->get_world();
         if (world == nullptr) {
             return nullptr;
@@ -3553,7 +3801,7 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         if (player_controller == nullptr) {
             return nullptr;
         }
-        
+
         return player_controller->get_player_camera_manager();
         break;
     }
@@ -3652,7 +3900,7 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                 const auto comp_ends_with_number = comp_fname.get_number() != 0;
 
                 const auto comp_expanded_name = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp_name);
-                const auto is_match = comp_ends_with_number ? next_it->starts_with(comp_expanded_name) 
+                const auto is_match = comp_ends_with_number ? next_it->starts_with(comp_expanded_name)
                                                             : *next_it == comp_expanded_name;
 
                 if (is_match) {
@@ -3725,7 +3973,7 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                 if (inner == nullptr) {
                     return nullptr;
                 }
-                
+
                 const auto inner_c = inner->get_class();
 
                 if (inner_c == nullptr) {
@@ -3770,7 +4018,7 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                     const auto obj_ends_with_number = obj_fname.get_number() != 0;
 
                     const auto obj_expanded_name = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj_name);
-                    const auto is_match = obj_ends_with_number ? prop_it->starts_with(obj_expanded_name) 
+                    const auto is_match = obj_ends_with_number ? prop_it->starts_with(obj_expanded_name)
                                                                : *prop_it == obj_expanded_name;
 
                     if (is_match) {
@@ -3864,7 +4112,25 @@ void UObjectHook::draw_component_gizmos() {
     static sdk::USceneComponent* s_drag_comp = nullptr;
     static int s_drag_axis = -1;
 
-    if (m_gizmo_components.empty()) {
+    // This frame's working set: the explicit "Show gizmo" list, plus — when enabled — any
+    // component a motion controller is currently adjusting, so a gizmo appears on whatever
+    // you grab in VR without ticking "Show gizmo" first. Transient: never mutates
+    // m_gizmo_components.
+    std::unordered_set<sdk::USceneComponent*> draw_comps = m_gizmo_components;
+    if (m_auto_gizmo_on_adjust) {
+        std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> mc;
+        {
+            std::shared_lock _{m_mutex};
+            mc = m_motion_controller_attached_components;
+        }
+        for (const auto& [comp, state] : mc) {
+            if (comp != nullptr && state != nullptr && state->adjusting) {
+                draw_comps.insert(comp);
+            }
+        }
+    }
+
+    if (draw_comps.empty()) {
         s_drag_comp = nullptr;
         s_drag_axis = -1;
         return;
@@ -3894,6 +4160,14 @@ void UObjectHook::draw_component_gizmos() {
     const float kAxisLen = m_gizmo_axis_len; // world units (UE = cm), user-tunable
     constexpr float kHitPx2 = 144.0f;        // 12px hit radius, squared
 
+    // In VR the gizmo is painted onto the framework UI overlay quad. ProjectWorldToScreen
+    // produces coords that are world-aligned for the SLATE overlay (UI closed); once the
+    // UI opens the framework quad is placed differently, so the same pixels drift. Remap
+    // through the overlay so the gizmo stays on the object while the UI is open (the only
+    // time it can be grabbed). Identity outside VR / when the UI is closed.
+    auto vr = VR::get();
+    const bool remap_overlay = vr != nullptr && vr->is_hmd_active();
+
     auto project = [&](const glm::vec3& wl, ImVec2& out) -> bool {
         glm::vec3 w = wl;
         glm::vec2 sp{0.0f, 0.0f};
@@ -3901,6 +4175,9 @@ void UObjectHook::draw_component_gizmos() {
             return false; // behind camera / off-screen
         }
         out = ImVec2{sp.x, sp.y};
+        if (remap_overlay) {
+            out = vr->get_overlay_component().transform_world_aligned_to_overlay(out);
+        }
         return true;
     };
 
@@ -3925,29 +4202,42 @@ void UObjectHook::draw_component_gizmos() {
 
     auto& io = ImGui::GetIO();
     // Only let a drag START when the overlay is up and the cursor isn't over an
-    // imgui window. An in-flight drag keeps going regardless (it's latched).
-    const bool can_start = g_framework->is_drawing_ui() && !io.WantCaptureMouse;
+    // actual imgui widget. We deliberately do NOT gate on io.WantCaptureMouse:
+    // UEVR's overlay runs a fullscreen dockspace host window, so WantCaptureMouse
+    // is true across the whole screen even over the transparent central node where
+    // the gizmo is visible — gating on it made the gizmo undraggable. Gating on
+    // hovered/active item instead lets axis clicks land in open space while still
+    // yielding to buttons/sliders. An in-flight drag keeps going regardless.
+    const bool can_start = g_framework->is_drawing_ui() &&
+        !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive();
 
     // Release / invalidate an in-flight drag.
     if (s_drag_comp != nullptr) {
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) ||
-            !m_gizmo_components.contains(s_drag_comp) || !this->exists(s_drag_comp)) {
+            !draw_comps.contains(s_drag_comp) || !this->exists(s_drag_comp)) {
             s_drag_comp = nullptr;
             s_drag_axis = -1;
         }
     }
 
+    // Rotate mode draws a standard ring per axis (a circle in the plane normal to
+    // that axis) instead of a line + tip; project kRingSeg points around each.
+    constexpr int kRingSeg = 20;
     struct Screen {
         sdk::USceneComponent* comp{};
         glm::vec3 origin{};
         ImVec2 s_origin{};
         ImVec2 tip[3]{};
         bool tip_ok[3]{};
+        ImVec2 plane[3]{};   // translate-mode 2-axis plane handles (corner point)
+        bool plane_ok[3]{};
+        ImVec2 ring[3][kRingSeg]{};
+        bool ring_ok[3][kRingSeg]{};
     };
     std::vector<Screen> screens{};
     std::vector<sdk::USceneComponent*> dead{};
 
-    for (auto* comp : m_gizmo_components) {
+    for (auto* comp : draw_comps) {
         if (comp == nullptr || !this->exists(comp)) {
             dead.push_back(comp);
             continue;
@@ -3966,6 +4256,25 @@ void UObjectHook::draw_component_gizmos() {
         for (int i = 0; i < 3; ++i) {
             sc.tip_ok[i] = project(sc.origin + axes[i].dir * kAxisLen, sc.tip[i]);
         }
+        if (m_gizmo_mode == 0) {
+            // Plane handle p sits in the plane of axes (p+1) and (p+2), offset a bit
+            // out from the origin along both.
+            for (int p = 0; p < 3; ++p) {
+                const glm::vec3& ua = axes[(p + 1) % 3].dir;
+                const glm::vec3& ub = axes[(p + 2) % 3].dir;
+                sc.plane_ok[p] = project(sc.origin + (ua + ub) * (kAxisLen * 0.4f), sc.plane[p]);
+            }
+        }
+        if (m_gizmo_mode == 1) {
+            for (int i = 0; i < 3; ++i) {
+                const glm::vec3& u = axes[(i + 1) % 3].dir;
+                const glm::vec3& v = axes[(i + 2) % 3].dir;
+                for (int s = 0; s < kRingSeg; ++s) {
+                    const float t = ((float)s / (float)kRingSeg) * 6.28318530718f;
+                    sc.ring_ok[i][s] = project(sc.origin + kAxisLen * (ImCos(t) * u + ImSin(t) * v), sc.ring[i][s]);
+                }
+            }
+        }
         screens.push_back(sc);
     }
 
@@ -3977,13 +4286,32 @@ void UObjectHook::draw_component_gizmos() {
         float best = kHitPx2;
         for (const auto& sc : screens) {
             for (int i = 0; i < 3; ++i) {
-                if (!sc.tip_ok[i]) continue;
-                const float d2 = seg_dist2(io.MousePos, sc.s_origin, sc.tip[i]);
-                if (d2 < best) {
-                    best = d2;
-                    hover_comp = sc.comp;
-                    hover_axis = i;
+                if (m_gizmo_mode == 1) {
+                    for (int s = 0; s < kRingSeg; ++s) {
+                        const int s2 = (s + 1) % kRingSeg;
+                        if (!sc.ring_ok[i][s] || !sc.ring_ok[i][s2]) continue;
+                        const float d2 = seg_dist2(io.MousePos, sc.ring[i][s], sc.ring[i][s2]);
+                        if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = i; }
+                    }
+                } else {
+                    if (!sc.tip_ok[i]) continue;
+                    const float d2 = seg_dist2(io.MousePos, sc.s_origin, sc.tip[i]);
+                    if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = i; }
                 }
+            }
+            // Multi-axis handles: translate plane handles (axis 3..5) and the scale
+            // center handle (axis 6, uniform).
+            if (m_gizmo_mode == 0) {
+                for (int p = 0; p < 3; ++p) {
+                    if (!sc.plane_ok[p]) continue;
+                    const float dx = io.MousePos.x - sc.plane[p].x, dy = io.MousePos.y - sc.plane[p].y;
+                    const float d2 = dx * dx + dy * dy;
+                    if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = 3 + p; }
+                }
+            } else if (m_gizmo_mode == 2) {
+                const float dx = io.MousePos.x - sc.s_origin.x, dy = io.MousePos.y - sc.s_origin.y;
+                const float d2 = dx * dx + dy * dy;
+                if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = 6; }
             }
         }
         if (hover_comp != nullptr && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -3992,36 +4320,175 @@ void UObjectHook::draw_component_gizmos() {
         }
     }
 
-    // Apply the active drag: convert this frame's mouse delta into a world
-    // translation along the dragged axis, with NO view/projection matrix —
-    // project origin + axis tip, take the screen-space axis direction, and map
-    // the mouse delta's component along it back to world units.
-    if (s_drag_comp != nullptr && s_drag_axis >= 0 && s_drag_axis < 3) {
+    // Apply the active drag. All three modes share the same screen-space mapping
+    // (NO view/projection matrix): project origin + axis tip, take the screen
+    // vector d for the dragged axis, and use the mouse delta's component along it.
+    // Translate maps that to world units, rotate to degrees about the world axis,
+    // scale to an additive change on that axis component.
+    if (s_drag_comp != nullptr && s_drag_axis >= 0) {
         for (const auto& sc : screens) {
-            if (sc.comp != s_drag_comp || !sc.tip_ok[s_drag_axis]) continue;
-            const ImVec2 d{sc.tip[s_drag_axis].x - sc.s_origin.x, sc.tip[s_drag_axis].y - sc.s_origin.y};
-            const float len2 = d.x * d.x + d.y * d.y;
-            if (len2 > 1.0f) {
-                const float move = (io.MouseDelta.x * d.x + io.MouseDelta.y * d.y) / len2 * kAxisLen;
-                if (move != 0.0f) {
-                    try {
-                        s_drag_comp->set_world_location(sc.origin + axes[s_drag_axis].dir * move, false, false);
-                    } catch (...) {}
+            if (sc.comp != s_drag_comp) continue;
+            try {
+                if (s_drag_axis < 3 && sc.tip_ok[s_drag_axis]) {
+                    // Single-axis: translate/rotate/scale along axis s_drag_axis.
+                    const ImVec2 d{sc.tip[s_drag_axis].x - sc.s_origin.x, sc.tip[s_drag_axis].y - sc.s_origin.y};
+                    const float len2 = d.x * d.x + d.y * d.y;
+                    if (len2 > 1.0f) {
+                        const float dot = io.MouseDelta.x * d.x + io.MouseDelta.y * d.y;
+                        const float px_along = dot / ImSqrt(len2);
+                        if (m_gizmo_mode == 1) {
+                            // Rotate: pixels -> degrees about the world axis. FRotator
+                            // {Pitch=x (about Y), Yaw=y (about Z), Roll=z (about X)}.
+                            const float a = px_along * 0.5f;
+                            glm::vec3 euler{0.0f, 0.0f, 0.0f};
+                            if (s_drag_axis == 0)      euler.z = a;
+                            else if (s_drag_axis == 1) euler.x = a;
+                            else                       euler.y = a;
+                            if (a != 0.0f) s_drag_comp->add_world_rotation(euler, false, false);
+                        } else if (m_gizmo_mode == 2) {
+                            auto scale = s_drag_comp->get_relative_scale();
+                            scale[s_drag_axis] += px_along * 0.01f;
+                            s_drag_comp->set_relative_scale(scale);
+                        } else {
+                            const float move = (dot / len2) * kAxisLen;
+                            if (move != 0.0f) {
+                                s_drag_comp->set_world_location(sc.origin + axes[s_drag_axis].dir * move, false, false);
+                            }
+                        }
+                    }
+                } else if (s_drag_axis >= 3 && s_drag_axis < 6) {
+                    // Plane translate: decompose the mouse delta into the two in-plane
+                    // axes' screen directions (solve d = a*u_screen + b*v_screen), then
+                    // move that many world units along each axis. No view matrix needed.
+                    const int p = s_drag_axis - 3;
+                    const int ia = (p + 1) % 3, ib = (p + 2) % 3;
+                    if (sc.tip_ok[ia] && sc.tip_ok[ib]) {
+                        const ImVec2 us{sc.tip[ia].x - sc.s_origin.x, sc.tip[ia].y - sc.s_origin.y};
+                        const ImVec2 vs{sc.tip[ib].x - sc.s_origin.x, sc.tip[ib].y - sc.s_origin.y};
+                        const float det = us.x * vs.y - vs.x * us.y;
+                        if (ImAbs(det) > 1.0f) {
+                            const float a = (io.MouseDelta.x * vs.y - vs.x * io.MouseDelta.y) / det;
+                            const float b = (us.x * io.MouseDelta.y - io.MouseDelta.x * us.y) / det;
+                            if (a != 0.0f || b != 0.0f) {
+                                const glm::vec3 mv = axes[ia].dir * (a * kAxisLen) + axes[ib].dir * (b * kAxisLen);
+                                s_drag_comp->set_world_location(sc.origin + mv, false, false);
+                            }
+                        }
+                    }
+                } else if (s_drag_axis == 6) {
+                    // Center handle: uniform scale by vertical drag (drag up = larger).
+                    const float delta = -io.MouseDelta.y * 0.01f;
+                    if (delta != 0.0f) {
+                        auto scale = s_drag_comp->get_relative_scale();
+                        scale += glm::vec3{delta, delta, delta};
+                        s_drag_comp->set_relative_scale(scale);
+                    }
                 }
-            }
+            } catch (...) {}
             break;
         }
     }
 
     for (const auto& sc : screens) {
-        for (int i = 0; i < 3; ++i) {
-            if (!sc.tip_ok[i]) continue;
-            const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
-                             (hover_comp == sc.comp && hover_axis == i);
-            dl->AddLine(sc.s_origin, sc.tip[i], axes[i].col, hot ? 4.0f : 2.0f);
-            dl->AddCircleFilled(sc.tip[i], hot ? 6.0f : 4.0f, axes[i].col);
+        // Off-screen indicator (D4): if this gizmo's origin projects outside the viewport, draw
+        // an edge-clamped arrow + component name pointing toward it instead of the (invisible,
+        // off-screen) gizmo, so you know which way to look. Additive; only fires when off-screen.
+        {
+            const auto* vp = ImGui::GetMainViewport();
+            const ImVec2 vmin = vp->Pos;
+            const ImVec2 vmax = ImVec2{vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y};
+            if (sc.s_origin.x < vmin.x || sc.s_origin.x > vmax.x || sc.s_origin.y < vmin.y || sc.s_origin.y > vmax.y) {
+                const float m = 26.0f;
+                const ImVec2 ctr{(vmin.x + vmax.x) * 0.5f, (vmin.y + vmax.y) * 0.5f};
+                const ImVec2 e{std::clamp(sc.s_origin.x, vmin.x + m, vmax.x - m), std::clamp(sc.s_origin.y, vmin.y + m, vmax.y - m)};
+                ImVec2 d{sc.s_origin.x - ctr.x, sc.s_origin.y - ctr.y};
+                const float len = ImSqrt(d.x * d.x + d.y * d.y);
+                if (len > 0.001f) { d.x /= len; d.y /= len; }
+                const ImVec2 perp{-d.y, d.x};
+                const float s = 11.0f;
+                const ImVec2 tip{e.x + d.x * s, e.y + d.y * s};
+                const ImVec2 b1{e.x - d.x * s + perp.x * s * 0.6f, e.y - d.y * s + perp.y * s * 0.6f};
+                const ImVec2 b2{e.x - d.x * s - perp.x * s * 0.6f, e.y - d.y * s - perp.y * s * 0.6f};
+                dl->AddTriangleFilled(tip, b1, b2, IM_COL32(255, 220, 60, 235));
+                try {
+                    std::string n = utility::narrow(sc.comp->get_fname().to_string());
+                    dl->AddText(ImVec2{e.x + 8.0f, e.y - 6.0f}, IM_COL32(255, 220, 60, 235), n.c_str());
+                } catch (...) {}
+                continue; // skip the normal (off-screen) gizmo draw for this one
+            }
         }
-        dl->AddCircleFilled(sc.s_origin, 4.0f, IM_COL32(255, 255, 255, 255));
+
+        // Overlay the actor/component short name + live transform metrics next to each gizmo,
+        // placed via the same world->screen projection (sc.s_origin already includes the VR
+        // overlay remap). Pure additive text — never affects gizmo interaction. Toggleable.
+        if (m_gizmo_show_labels) try {
+            std::string cname = utility::narrow(sc.comp->get_fname().to_string());
+            std::string aname;
+            if (auto* owner = sc.comp->get_owner()) {
+                try { aname = utility::narrow(owner->get_fname().to_string()); } catch (...) {}
+            }
+            const auto rot = sc.comp->get_world_rotation();
+            const auto scl = sc.comp->get_relative_scale();
+            char buf[256];
+            snprintf(buf, sizeof(buf), "%s%s%s\nP %.1f %.1f %.1f\nR %.1f %.1f %.1f\nS %.2f %.2f %.2f",
+                aname.c_str(), aname.empty() ? "" : " / ", cname.c_str(),
+                sc.origin.x, sc.origin.y, sc.origin.z, rot.x, rot.y, rot.z, scl.x, scl.y, scl.z);
+            // Drop-shadow for legibility over arbitrary game backgrounds.
+            dl->AddText(ImVec2{sc.s_origin.x + 11.0f, sc.s_origin.y + 11.0f}, IM_COL32(0, 0, 0, 200), buf);
+            dl->AddText(ImVec2{sc.s_origin.x + 10.0f, sc.s_origin.y + 10.0f}, IM_COL32(255, 255, 255, 235), buf);
+        } catch (...) {}
+
+        // STUB no-op (E1/E2): drive this gizmo's axis from a VR thumbstick while adjusting.
+        // See vr_gizmo_stick_adjust() for the implementation context.
+        if (remap_overlay) {
+            vr_gizmo_stick_adjust(sc.comp);
+        }
+
+        if (m_gizmo_mode == 1) {
+            // Rotate: one standard colored ring per axis (projected polyline).
+            for (int i = 0; i < 3; ++i) {
+                const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
+                                 (hover_comp == sc.comp && hover_axis == i);
+                const float th = hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
+                for (int s = 0; s < kRingSeg; ++s) {
+                    const int s2 = (s + 1) % kRingSeg;
+                    if (!sc.ring_ok[i][s] || !sc.ring_ok[i][s2]) continue;
+                    dl->AddLine(sc.ring[i][s], sc.ring[i][s2], axes[i].col, th);
+                }
+            }
+        } else {
+            for (int i = 0; i < 3; ++i) {
+                if (!sc.tip_ok[i]) continue;
+                const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
+                                 (hover_comp == sc.comp && hover_axis == i);
+                const float th = hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
+                const float r = hot ? m_gizmo_thickness * 2.0f : m_gizmo_thickness * 1.5f;
+                dl->AddLine(sc.s_origin, sc.tip[i], axes[i].col, th);
+                if (m_gizmo_mode == 2) {
+                    dl->AddRectFilled(ImVec2{sc.tip[i].x - r, sc.tip[i].y - r},
+                                      ImVec2{sc.tip[i].x + r, sc.tip[i].y + r}, axes[i].col); // scale: box
+                } else {
+                    dl->AddCircleFilled(sc.tip[i], r, axes[i].col);                    // translate: dot
+                }
+            }
+            // Translate plane handles: a small semi-transparent quad per plane,
+            // tinted by the axis it is perpendicular to.
+            if (m_gizmo_mode == 0) {
+                for (int p = 0; p < 3; ++p) {
+                    const int ia = (p + 1) % 3, ib = (p + 2) % 3;
+                    if (!sc.plane_ok[p] || !sc.tip_ok[ia] || !sc.tip_ok[ib]) continue;
+                    const bool hot = (s_drag_comp == sc.comp && s_drag_axis == 3 + p) ||
+                                     (hover_comp == sc.comp && hover_axis == 3 + p);
+                    const ImVec2 ca{sc.s_origin.x + 0.4f * (sc.tip[ia].x - sc.s_origin.x), sc.s_origin.y + 0.4f * (sc.tip[ia].y - sc.s_origin.y)};
+                    const ImVec2 cb{sc.s_origin.x + 0.4f * (sc.tip[ib].x - sc.s_origin.x), sc.s_origin.y + 0.4f * (sc.tip[ib].y - sc.s_origin.y)};
+                    const ImU32 col = (axes[p].col & 0x00FFFFFF) | ((ImU32)(hot ? 180 : 80) << IM_COL32_A_SHIFT);
+                    dl->AddQuadFilled(sc.s_origin, ca, sc.plane[p], cb, col);
+                }
+            }
+        }
+        const bool center_hot = m_gizmo_mode == 2 &&
+            ((s_drag_comp == sc.comp && s_drag_axis == 6) || (hover_comp == sc.comp && hover_axis == 6));
+        dl->AddCircleFilled(sc.s_origin, center_hot ? 8.0f : 4.0f, IM_COL32(255, 255, 255, 255));
     }
 
     for (auto* d : dead) {
@@ -4752,6 +5219,23 @@ void UObjectHook::draw_config() {
     m_attach_lerp_enabled->draw("Enable Attach Lerp");
     m_attach_lerp_speed->draw("Attach Lerp Speed");
     m_keybind_toggle_uobject_hook->draw("Disable UObjectHook Key");
+
+    // Central place for the gizmo + inspector toggles that otherwise only live in the
+    // per-component gizmo Settings popup / property panel. NOTE: these are plain members, so
+    // they apply for the session but are not yet persisted across restarts — converting them
+    // to ModToggle/ModSlider would make them true saved defaults (follow-up).
+    ImGui::SeparatorText("Gizmo defaults");
+    ImGui::RadioButton("Move##cfg", &m_gizmo_mode, 0); ImGui::SameLine();
+    ImGui::RadioButton("Rotate##cfg", &m_gizmo_mode, 1); ImGui::SameLine();
+    ImGui::RadioButton("Scale##cfg", &m_gizmo_mode, 2);
+    ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
+    ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
+    ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
+    ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
+    ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
+
+    ImGui::SeparatorText("Inspector");
+    ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
 }
 
 void UObjectHook::draw_developer() {
@@ -4804,7 +5288,7 @@ void UObjectHook::draw_process_event_monitor() {
         }
 
         if (m_process_event_listening) {
-          
+
             if (ImGui::Button("Clear Ignored Functions")) {
                 m_ignored_recent_functions.clear();
             }
@@ -4835,7 +5319,7 @@ void UObjectHook::draw_process_event_monitor() {
                     if (ufunc == nullptr) {
                         continue;
                     }
-                    
+
                     if (m_ignored_recent_functions.contains(ufunc)) {
                         continue;
                     }
@@ -4869,7 +5353,7 @@ void UObjectHook::draw_process_event_monitor() {
 
                 std::string_view search{m_process_event_search.buffer.data()};
                 std::vector<sdk::UFunction*> functions_sorted_by_call_count{};
-                
+
                 for (auto& [ufunc, data] : m_called_functions) {
                     if (ufunc == nullptr) {
                         continue;
@@ -4917,7 +5401,7 @@ void UObjectHook::draw_process_event_monitor() {
                     }
 
                     ImGui::SameLine();
-                    
+
                     const auto made = ImGui::TreeNode(utility::narrow(ufunc->get_full_name()).c_str());
 
                     ImGui::SameLine();
@@ -5071,7 +5555,7 @@ void UObjectHook::draw_main() {
                     comp = m_spawned_spheres_to_components[comp];
                 }
 
-                if (attach_all){ 
+                if (attach_all){
                     if (!m_motion_controller_attached_components.contains(comp)) {
                         m_motion_controller_attached_components[comp] = std::make_shared<MotionControllerState>();
                     }
@@ -5148,7 +5632,7 @@ void UObjectHook::draw_main() {
 
                     if (pawn != nullptr) {
                         ui_handle_object(pawn);
-                  
+
                     } else {
                         ImGui::Text("No pawn");
                     }
@@ -5158,7 +5642,7 @@ void UObjectHook::draw_main() {
 
                 ImGui::TreePop();
             }
-        
+
             if (ImGui::TreeNode("Camera Manager")) {
                 ImGui::TreeNodeSetOpen(ImGui::GetID("World"), false);
                 ImGui::TreeNodeSetOpen(ImGui::GetID("Acknowledged Pawn"), false);
@@ -5343,11 +5827,24 @@ void UObjectHook::draw_main() {
             if (uclass->is_a(sdk::AActor::static_class())) {
                 static char component_add_name[256]{};
 
-                if (ImGui::InputText("Add Component Permanently", component_add_name, sizeof(component_add_name), ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue)) {
-                    const auto component_c = sdk::find_uobject<sdk::UClass>(utility::widen(component_add_name));
-
-                    if (component_c != nullptr) {
-                        m_on_creation_add_component_jobs[uclass] = [this, component_c](sdk::UObject* object) {
+                // Resolve a class by full path ("Class /Script/Engine.X") or by short name ("X",
+                // retried under /Script/Engine — covers the common engine components).
+                auto resolve_class = [](const char* name) -> sdk::UClass* {
+                    if (name == nullptr || name[0] == '\0') return nullptr;
+                    auto c = sdk::find_uobject<sdk::UClass>(utility::widen(name));
+                    if (c == nullptr && std::string_view(name).find('/') == std::string_view::npos) {
+                        c = sdk::find_uobject<sdk::UClass>(std::wstring(L"Class /Script/Engine.") + utility::widen(name));
+                    }
+                    return c;
+                };
+                // Queue a component to be added to every instance of this actor class on creation
+                // (the "Permanently" path). Shared by the text field, drag-drop, and quick buttons.
+                auto queue_add = [this, uclass](sdk::UClass* component_c) {
+                    if (component_c == nullptr) {
+                        strcpy_s(component_add_name, "Nonexistent component");
+                        return;
+                    }
+                    m_on_creation_add_component_jobs[uclass] = [this, component_c](sdk::UObject* object) {
                             if (!this->exists(object)) {
                                 return;
                             }
@@ -5396,9 +5893,30 @@ void UObjectHook::draw_main() {
                                 component_add_name[2] = 'r';
                                 component_add_name[3] = '\0';
                             }
-                        };
-                    } else {
-                        strcpy_s(component_add_name, "Nonexistent component");
+                    };
+                }; // end queue_add
+
+                if (ImGui::InputText("Add Component Permanently", component_add_name, sizeof(component_add_name),
+                        ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue)) {
+                    queue_add(resolve_class(component_add_name));
+                }
+                // Drag a UClass from the class browser onto the field above to add it.
+                if (auto* dropped = accept_class_drop(); dropped != nullptr) {
+                    queue_add(dropped);
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("(or drop a UClass here)");
+
+                // Quick-add common components.
+                static const char* const k_common_components[] = {
+                    "StaticMeshComponent", "PointLightComponent", "SpotLightComponent",
+                    "SphereComponent", "BoxComponent", "ArrowComponent", "SceneComponent",
+                };
+                ImGui::TextDisabled("Common:");
+                for (int i = 0; i < (int)IM_ARRAYSIZE(k_common_components); ++i) {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton(k_common_components[i])) {
+                        queue_add(resolve_class(k_common_components[i]));
                     }
                 }
             }
@@ -5610,8 +6128,25 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
         }
         if (gizmo) {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(140.0f);
-            ImGui::SliderFloat("axis len##gizmo", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
+            ImGui::RadioButton("Move##gizmo", &m_gizmo_mode, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("Rotate##gizmo", &m_gizmo_mode, 1);
+            ImGui::SameLine();
+            ImGui::RadioButton("Scale##gizmo", &m_gizmo_mode, 2);
+            ImGui::SameLine();
+            if (ImGui::Button("Settings##gizmo")) {
+                ImGui::OpenPopup("gizmo_settings");
+            }
+            // Global gizmo appearance — applies universally to all modes/components.
+            if (ImGui::BeginPopup("gizmo_settings")) {
+                ImGui::SetNextItemWidth(180.0f);
+                ImGui::SliderFloat("thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
+                ImGui::SetNextItemWidth(180.0f);
+                ImGui::SliderFloat("length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
+                ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
+                ImGui::Checkbox("Show labels", &m_gizmo_show_labels);
+                ImGui::EndPopup();
+            }
         }
     }
 
@@ -5658,7 +6193,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             auto existing = std::find_if(m_persistent_states.begin(), m_persistent_states.end(), [&](const auto& state2) {
                 return state2 != nullptr && state2->path.resolve() == comp;
             });
-             
+
             // Finetuning of the controller rotation offset
             // Convert to pitch/yaw/roll first.
             auto euler = utility::math::euler_angles_from_steamvr(state->rotation_offset);
@@ -5677,17 +6212,17 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                     (*existing)->state.location_offset = state->location_offset;
                 }
             }
-             
+
             //for (auto uobject : m_inline_uobjecthooks) {
             //    sdk::UObject* out;
             //    if (UObjectHook::object_from_path_or_address(uobject.first, out)){
             //        if (out == comp) {
-            //                        
+            //
             //                }
             //        }
-            //     
-            //}                
-          
+            //
+            //}
+
             // Per-component lua console.
             // The previous implementation had four serious bugs stacked on top of each other:
             //   - `static std::string_view text = std::string + std::string` left a string_view
@@ -5720,7 +6255,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 }
                 ImGui::TreePop();
             }
-  
+
             auto save_state_logic = [&](const std::vector<std::string>& path) {
                 auto json = serialize_mc_state(path, state);
 
@@ -5847,31 +6382,84 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             }
         }
     }
-    
+
     void* addr = (void*)((uintptr_t)comp);
     const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
 
-    glm::vec3  loc = comp->get_world_location();
-    glm::vec3 rot = comp->get_world_rotation();
+    // Local toggle switches location/rotation between world and parent-relative
+    // space (scale is always relative). Reset buttons go to identity. The Quat row
+    // edits the same rotation as a quaternion (routed through euler since the SDK
+    // setter is FRotator-based).
+    ImGui::Checkbox("Local##xform", &m_gizmo_local);
+    ImGui::SameLine();
+    ImGui::TextDisabled(m_gizmo_local ? "(relative)" : "(world)");
 
-    // Finetuning of the controller rotation offset
-    // Convert to pitch/yaw/roll first.
-    std::string_view rotid = "World Rotation##" + hex;
-    std::string_view locid = "World Location##" + hex;
+    glm::vec3 loc = m_gizmo_local ? comp->get_relative_location() : comp->get_world_location();
+    glm::vec3 rot = m_gizmo_local ? comp->get_relative_rotation() : comp->get_world_rotation();
+    glm::vec3 scale = comp->get_relative_scale();
 
-    ImGui::PushID(rotid.data());
-    if (ImGui::DragFloat3(rotid.data(), &rot.x, 0.1f)) {
-        comp->set_world_rotation(rot, true, false);
+    const bool local = m_gizmo_local;
+    auto set_loc = [comp, local](const glm::vec3& v) {
+        if (local) { comp->set_relative_location(v, true, false); }
+        else       { comp->set_world_location(v, true, false); }
+    };
+    auto set_rot = [comp, local](const glm::vec3& v) {
+        if (local) { comp->set_relative_rotation(v, true, false); }
+        else       { comp->set_world_rotation(v, true, false); }
+    };
+
+    ImGui::PushID("location");
+    if (ImGui::SmallButton("R")) { set_loc(glm::vec3{0.0f, 0.0f, 0.0f}); }
+    ImGui::SameLine();
+    {
+        bool ch = ImGui::DragFloat3(local ? "Location" : "World Location", &loc.x, 0.1f);
+        ch |= vector_copy_paste("##ctx", &loc.x, 3);
+        if (ch) { set_loc(loc); }
     }
     ImGui::PopID();
-    ImGui::PushID(locid.data());
-    if (ImGui::DragFloat3(locid.data(), &loc.x, 0.1f)) {
-        comp->set_world_location(rot, true, false);
+
+    ImGui::PushID("rotation");
+    if (ImGui::SmallButton("R")) { set_rot(glm::vec3{0.0f, 0.0f, 0.0f}); }
+    ImGui::SameLine();
+    {
+        bool ch = ImGui::DragFloat3(local ? "Rotation" : "World Rotation", &rot.x, 0.1f);
+        ch |= vector_copy_paste("##ctx", &rot.x, 3);
+        if (ch) { set_rot(rot); }
+    }
+    {
+        // FRotator (pitch=x, yaw=y, roll=z deg) -> quat with the same convention the
+        // rest of UObjectHook uses, displayed as xyzw.
+        const glm::quat q{glm::yawPitchRoll(glm::radians(-rot.y), glm::radians(rot.x), glm::radians(-rot.z))};
+        glm::vec4 qv{q.x, q.y, q.z, q.w};
+        bool ch = ImGui::DragFloat4("Quat (xyzw)", &qv.x, 0.01f);
+        ch |= vector_copy_paste("##quatctx", &qv.x, 4);
+        if (ch) {
+            // Guard a near-zero quat (e.g. dragging w to 0): normalize() would
+            // produce NaN and a NaN FRotator would corrupt the transform.
+            const float ql2 = qv.x * qv.x + qv.y * qv.y + qv.z * qv.z + qv.w * qv.w;
+            if (ql2 > 1e-6f) {
+                glm::quat nq = glm::normalize(glm::quat{qv.w, qv.x, qv.y, qv.z});
+                set_rot(glm::degrees(utility::math::euler_angles_from_steamvr(nq)));
+            }
+        }
     }
     ImGui::PopID();
+
+    ImGui::PushID("scale");
+    if (ImGui::SmallButton("R")) { comp->set_relative_scale(glm::vec3{1.0f, 1.0f, 1.0f}); }
+    ImGui::SameLine();
+    {
+        bool ch = ImGui::DragFloat3("Scale", &scale.x, 0.01f);
+        ch |= vector_copy_paste("##ctx", &scale.x, 3);
+        if (ch) { comp->set_relative_scale(scale); }
+    }
+    ImGui::PopID();
+    ImGui::Separator();
     ImGui::PushID("CamOffset");
- if (ImGui::DragFloat3("Camera Offset", &m_camera_attach.offset.x, 0.1f)) {
-        if (m_persistent_camera_state != nullptr) {
+    {
+        bool ch = ImGui::DragFloat3("Camera Offset", &m_camera_attach.offset.x, 0.1f);
+        ch |= vector_copy_paste("##ctx", &m_camera_attach.offset.x, 3);
+        if (ch && m_persistent_camera_state != nullptr) {
             m_persistent_camera_state->offset = m_camera_attach.offset;
         }
     }
@@ -5960,7 +6548,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 SPDLOG_ERROR("[UObjectHook] Can't save visibility state, did not start from a valid base or none of the allowed bases can reach this component");
                 return;
             }
-            
+
             if (props != nullptr) {
                 m_persistent_properties.push_back(props);
             }
@@ -5991,7 +6579,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 }
 
                 if (comp->get_class()->get_fname().to_string().ends_with(L"MeshComponent")) {
-                
+
 
                   if (ImGui::Button("Toggle Visibility")){
                         static auto isbonehidden = comp->get_class()->find_function(L"IsBoneHiddenByName");
@@ -6003,24 +6591,24 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                         } parms;
                         parms.name = name;
                         comp->process_event(isbonehidden, &parms);
-                        
+
                         comp->process_event(parms.ReturnValue ? unhidebone : hidebone, &parms);
 
-                        
+
 
                 //std::string_view luadata = "local comp = uevr.api:to_uobject(" +
-                //     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" + 
+                //     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" +
                 //        (utility::narrow(name.to_string())) + R"('
                 //                    if comp:IsBoneHiddenByName(socket) then
-                //                    comp:UnHideBoneByName(socket)      
+                //                    comp:UnHideBoneByName(socket)
                 //                    else comp:HideBoneByName(socket)
                 //                end)";
                 //    PluginLoader::get()->do_lua_string(luadata.data(), "togglevis");
-                    }                                                                             
+                    }
                 }
                 ImGui::TreePop();
             }
-        
+
             }
 
         ImGui::TreePop();
@@ -6210,8 +6798,18 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
     }
     static auto pc = sdk::UGameplayStatics::get()->get_player_controller(sdk::UGameEngine::get()->get_world(), 0);
     auto actor = (sdk::AActor*)object;
+    if (auto comp = actor->get_root_component()){
+   		bool gizmo = m_gizmo_components.contains(comp);
+        if (ImGui::Checkbox("Show gizmo", &gizmo)) {
+            if (gizmo) {
+                m_gizmo_components.insert(comp);
+            } else {
+                m_gizmo_components.erase(comp);
+            }
+        }
+    }
 
-    if (m_camera_attach.object != object ){
+        if (m_camera_attach.object != object ){
         if (ImGui::Button("Attach Camera to")) {
             m_camera_attach.object = object;
             m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
@@ -6717,7 +7315,7 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
         return;
     }
 
-        
+
 static const std::map<std::string_view, uint64_t> EPropertyFlags = {
     {"CPF_None",  0x0000000000000000},
     {"CPF_Edit",                                0x0000000000000001},
@@ -6775,7 +7373,7 @@ static const std::map<std::string_view, uint64_t> EPropertyFlags = {
 const auto check_flags = [](uint64_t flags){
     std::map<std::string_view, bool> all_flags{};
     for (auto& flag : EPropertyFlags) {
-        all_flags[flag.first] = (flags & (flag.second)) != 0;        
+        all_flags[flag.first] = (flags & (flag.second)) != 0;
     }
     return all_flags;
 };
@@ -6783,23 +7381,145 @@ const auto check_flags = [](uint64_t flags){
 
     const bool is_real_object = object != nullptr && m_objects.contains((sdk::UObject*)object);
 
-    std::vector<sdk::FField*> sorted_fields{};
+    // Property list controls: filter by property type, and optionally group properties by
+    // the class that declares them or by their property type. One inspector is shown at a
+    // time, so function-local statics for the control state are fine.
+    static char s_prop_name_filter[64]{};   // search properties by NAME (substring)
+    static int s_prop_type_idx = 0;          // 0 = All, else index into type_list
+    static int s_prop_base_idx = 0;          // 0 = All, else index into base_list
+    static int s_prop_group_mode = 0;        // 0 = flat, 1 = by base class, 2 = by type
+
+    // Reset the type/base dropdown selections when switching to a different object — the saved
+    // index would otherwise point at a different type/class in the new object's lists.
+    static sdk::UStruct* s_last_props_uclass = nullptr;
+    if (uclass != s_last_props_uclass) {
+        s_last_props_uclass = uclass;
+        s_prop_type_idx = 0;
+        s_prop_base_idx = 0;
+    }
+
+    // Tree connector lines on by default (imgui 1.92) for the inspector's trees.
+    ImGui::GetStyle().TreeLinesFlags = ImGuiTreeNodeFlags_DrawLinesFull;
+
+    // Collect (property, declaring struct) so grouping/filtering can key off either.
+    struct FieldEntry { sdk::FField* prop; sdk::UStruct* decl; };
+    std::vector<FieldEntry> sorted_fields{};
 
     for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
         auto props = super->get_child_properties();
 
         for (auto prop = props; prop != nullptr; prop = prop->get_next()) {
-            sorted_fields.push_back(prop);
+            sorted_fields.push_back(FieldEntry{prop, super});
         }
     }
 
-    std::sort(sorted_fields.begin(), sorted_fields.end(), [](sdk::FField* a, sdk::FField* b) {
-        return a->get_field_name().to_string() < b->get_field_name().to_string();
+    // Build the distinct type + base-class lists for the filter dropdowns (index 0 = "All").
+    std::vector<std::string> type_list{"All"};
+    std::vector<std::string> base_list{"All"};
+    for (const auto& e : sorted_fields) {
+        std::string t, b;
+        try { t = utility::narrow(e.prop->get_class()->get_name().to_string()); } catch (...) {}
+        try { b = utility::narrow(e.decl->get_fname().to_string()); } catch (...) {}
+        if (!t.empty() && std::find(type_list.begin(), type_list.end(), t) == type_list.end()) type_list.push_back(t);
+        if (!b.empty() && std::find(base_list.begin(), base_list.end(), b) == base_list.end()) base_list.push_back(b);
+    }
+    std::sort(type_list.begin() + 1, type_list.end());
+    std::sort(base_list.begin() + 1, base_list.end());
+    if (s_prop_type_idx >= (int)type_list.size()) s_prop_type_idx = 0;
+    if (s_prop_base_idx >= (int)base_list.size()) s_prop_base_idx = 0;
+
+    // Controls: name search (text) + property-type dropdown + base-class dropdown + group + tex stub.
+    ImGui::SetNextItemWidth(150.0f);
+    ImGui::InputTextWithHint("##propnamefilter", "search properties...", s_prop_name_filter, sizeof(s_prop_name_filter));
+    ImGui::SameLine();
+    {
+        std::vector<const char*> items; items.reserve(type_list.size());
+        for (const auto& s : type_list) items.push_back(s.c_str());
+        ImGui::SetNextItemWidth(140.0f);
+        ImGui::Combo("type##proptype", &s_prop_type_idx, items.data(), (int)items.size());
+    }
+    ImGui::SameLine();
+    {
+        std::vector<const char*> items; items.reserve(base_list.size());
+        for (const auto& s : base_list) items.push_back(s.c_str());
+        ImGui::SetNextItemWidth(150.0f);
+        ImGui::Combo("base##propbase", &s_prop_base_idx, items.data(), (int)items.size());
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::Combo("group##propgroup", &s_prop_group_mode, "Flat\0By base class\0By type\0");
+    ImGui::SameLine();
+    ImGui::Checkbox("tex preview##stub", &m_show_texture_previews); // STUB, default off (crash-prone)
+    if (m_show_texture_previews && object != nullptr && uclass != nullptr) {
+        std::string tex_cn;
+        try { tex_cn = utility::narrow(uclass->get_fname().to_string()); } catch (...) {}
+        if (tex_cn.find("Texture") != std::string::npos) {
+            draw_texture_preview((sdk::UObject*)object);
+        }
+    }
+
+    const std::string sel_type = (s_prop_type_idx > 0 && s_prop_type_idx < (int)type_list.size()) ? type_list[s_prop_type_idx] : std::string{};
+    const std::string sel_base = (s_prop_base_idx > 0 && s_prop_base_idx < (int)base_list.size()) ? base_list[s_prop_base_idx] : std::string{};
+
+    const auto group_key_of = [&](const FieldEntry& e) -> std::wstring {
+        if (s_prop_group_mode == 1) return e.decl->get_fname().to_string();
+        if (s_prop_group_mode == 2) return e.prop->get_class()->get_name().to_string();
+        return std::wstring{};
+    };
+
+    // Sort by group key first (when grouping), then by field name.
+    std::sort(sorted_fields.begin(), sorted_fields.end(), [&](const FieldEntry& a, const FieldEntry& b) {
+        if (s_prop_group_mode != 0) {
+            const auto ga = group_key_of(a), gb = group_key_of(b);
+            if (ga != gb) return ga < gb;
+        }
+        return a.prop->get_field_name().to_string() < b.prop->get_field_name().to_string();
     });
 
-    for (auto prop : sorted_fields) {
+    std::wstring cur_group_key{};
+    bool cur_group_open = true;
+    bool any_group_started = false;
+
+    for (auto& entry : sorted_fields) {
+        auto prop = entry.prop;
+        auto decl = entry.decl;
         auto propc = prop->get_class();
         const auto propc_type = propc->get_name().to_string();
+
+        // Filters combine (AND): property-type dropdown, base-class dropdown, name search.
+        if (!sel_type.empty() && utility::narrow(propc_type) != sel_type) {
+            continue;
+        }
+        if (!sel_base.empty()) {
+            std::string bn;
+            try { bn = utility::narrow(decl->get_fname().to_string()); } catch (...) {}
+            if (bn != sel_base) {
+                continue;
+            }
+        }
+        if (s_prop_name_filter[0] != '\0') {
+            std::string hay = utility::narrow(prop->get_field_name().to_string());
+            std::string needle = s_prop_name_filter;
+            std::transform(hay.begin(), hay.end(), hay.begin(), [](unsigned char c){ return (char)::tolower(c); });
+            std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c){ return (char)::tolower(c); });
+            if (hay.find(needle) == std::string::npos) {
+                continue;
+            }
+        }
+
+        // Group header: emit a collapsing header whenever the group key changes; skip the
+        // group's properties while it is collapsed.
+        if (s_prop_group_mode != 0) {
+            const std::wstring key = (s_prop_group_mode == 1) ? decl->get_fname().to_string() : propc_type;
+            if (!any_group_started || key != cur_group_key) {
+                cur_group_key = key;
+                any_group_started = true;
+                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+            }
+            if (!cur_group_open) {
+                continue;
+            }
+        }
 
         if (object == nullptr) {
             const auto name = utility::narrow(propc->get_name().to_string());
@@ -6903,11 +7623,11 @@ const auto check_flags = [](uint64_t flags){
 
                 if (unsave) {
                     props->properties.erase(
-                        std::remove(props->properties.begin(), props->properties.end(), state), 
+                        std::remove(props->properties.begin(), props->properties.end(), state),
                         props->properties.end()
                     );
                 }
-                
+
                 // Concat the entire path together and hash it to get a unique name
                 std::string concat_path{};
                 for (const auto& p : previous_path.path()) {
@@ -6933,7 +7653,7 @@ const auto check_flags = [](uint64_t flags){
 
                         // Delete the property entry from m_peristent_properties.
                         m_persistent_properties.erase(
-                            std::remove(m_persistent_properties.begin(), m_persistent_properties.end(), props), 
+                            std::remove(m_persistent_properties.begin(), m_persistent_properties.end(), props),
                             m_persistent_properties.end()
                         );
 
@@ -6955,15 +7675,82 @@ const auto check_flags = [](uint64_t flags){
             if (ImGui::Button("Unsave Property")) {
                 save_logic(true);
             }
-        
+
 
             ImGui::EndPopup();
         };
-      
+
+        // Struct-aware version (Vector/Rotator/Transform/etc.): the 8-byte union can't hold a
+        // struct, so we snapshot the raw struct bytes into PropertyState::struct_bytes. Mirrors
+        // display_context's save_logic. Also offers Edit flags so struct rows have a full menu.
+        auto display_context_struct = [&](void* saddr, int32_t ssize) {
+            if (!ImGui::BeginPopupContextItem()) {
+                return;
+            }
+            if (!previous_path.has_valid_base()) {
+                ImGui::Text("Can't save, did not start from a valid base");
+                ImGui::EndPopup();
+                return;
+            }
+            auto save_logic = [&](bool unsave = false) {
+                std::shared_ptr<PersistentProperties> props{};
+                for (const auto& ep : m_persistent_properties) {
+                    if (ep->path.resolve() == object) { props = ep; break; }
+                }
+                if (props == nullptr) {
+                    props = std::make_shared<PersistentProperties>();
+                    props->path = StatePath{previous_path.path()};
+                    m_persistent_properties.push_back(props);
+                }
+                std::shared_ptr<PersistentProperties::PropertyState> state{};
+                for (const auto& es : props->properties) {
+                    if (es->name == prop->get_field_name().to_string()) { state = es; break; }
+                }
+                if (state == nullptr) {
+                    state = std::make_shared<PersistentProperties::PropertyState>();
+                    state->name = prop->get_field_name().to_string();
+                    props->properties.push_back(state);
+                }
+                const uint32_t n = std::min<uint32_t>((uint32_t)std::max(ssize, 0), (uint32_t)sizeof(state->struct_bytes));
+                state->struct_size = n;
+                if (saddr != nullptr && n > 0 && !IsBadReadPtr(saddr, n)) {
+                    memcpy(state->struct_bytes, saddr, n);
+                }
+                if (unsave) {
+                    props->properties.erase(std::remove(props->properties.begin(), props->properties.end(), state), props->properties.end());
+                }
+                std::string concat_path{};
+                for (const auto& p : previous_path.path()) concat_path += p;
+                auto wanted_path = UObjectHook::get_persistent_dir() / (std::to_string(utility::hash(concat_path)) + "_props.json");
+                if (props->path_to_json.has_value()) wanted_path = props->path_to_json.value();
+                try {
+                    std::filesystem::create_directories(wanted_path.parent_path());
+                    if (props->properties.empty()) {
+                        if (std::filesystem::exists(wanted_path)) std::filesystem::remove(wanted_path);
+                        m_persistent_properties.erase(std::remove(m_persistent_properties.begin(), m_persistent_properties.end(), props), m_persistent_properties.end());
+                        return;
+                    }
+                    props->save_to_file(wanted_path);
+                } catch (const std::exception& e) {
+                    SPDLOG_ERROR("[UObjectHook] Failed to save persistent struct property: {}", e.what());
+                } catch (...) {
+                    SPDLOG_ERROR("[UObjectHook] Failed to save persistent struct property");
+                }
+            };
+            if (ImGui::Button("Save Property")) { save_logic(); }
+            if (ImGui::Button("Unsave Property")) { save_logic(true); }
+            ImGui::Separator();
+            if (ImGui::BeginMenu("Edit flags")) {
+                edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                ImGui::EndMenu();
+            }
+            ImGui::EndPopup();
+        };
+
         const auto& prop_name =  utility::narrow(prop->get_field_name().to_string());
         sdk::FProperty* fprop = ((sdk::FProperty*)prop);
 
-        
+
         switch (hash_type) {
 
 
@@ -7201,6 +7988,9 @@ const auto check_flags = [](uint64_t flags){
                 const auto strukt = ((sdk::FStructProperty*)prop)->get_struct();
 
                 if (ui_try_known_struct(prop_name, addr, strukt)) {
+                    // Known structs (Vector/Rotator/Transform/...) render compactly + return; attach
+                    // the struct-save / edit-flags right-click menu to that row so they're savable too.
+                    display_context_struct(addr, strukt != nullptr ? (int32_t)strukt->get_properties_size() : 0);
                     break;
                 }
 
@@ -7289,7 +8079,7 @@ const auto check_flags = [](uint64_t flags){
             }
             break;
         };
-        std::string prop_name_edit = prop_name + "EditFlags";                                            
+        std::string prop_name_edit = prop_name + "EditFlags";
         if (ImGui::BeginPopupContextItem(prop_name_edit.c_str())){
                 if (ImGui::BeginMenu("Edit flags")) {
                     edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
@@ -7318,7 +8108,7 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
         ImGui::Text("Failed to get inner property");
         return;
     }
-    
+
     const auto inner_c = inner->get_class();
 
     if (inner_c == nullptr) {
@@ -7470,7 +8260,7 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             ImGui::Text("Cannot determine struct type");
             return;
         }
-        
+
         auto element_size = strukt->get_struct_size();
 
         if (element_size == 0) {
@@ -7658,6 +8448,35 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
     };
 }
 
+// Reusable copy/paste for POD math structs (Vector/Rotator/Quat/Transform/LinearColor/...).
+// "Copy" snapshots the struct's raw bytes into a process-wide clipboard; "Paste" appears only
+// for a struct of the SAME type-name and byte-size and writes them back. Renders inline, so
+// call it right after the struct's editor row (it issues its own SameLine).
+static void ui_struct_clipboard(const std::string& sname, void* addr, int32_t size) {
+    struct Clip { char name[64]{}; uint8_t data[128]{}; int32_t size{0}; bool valid{false}; };
+    static Clip s_clip{};
+
+    if (addr == nullptr || size <= 0 || size > (int32_t)sizeof(s_clip.data)) {
+        return;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Copy") && !IsBadReadPtr(addr, (size_t)size)) {
+        memcpy(s_clip.data, addr, (size_t)size);
+        s_clip.size = size;
+        strncpy_s(s_clip.name, sname.c_str(), sizeof(s_clip.name) - 1);
+        s_clip.valid = true;
+    }
+
+    // Paste only into a matching struct type+size, so you can't smear a Quat over a Vector.
+    if (s_clip.valid && s_clip.size == size && sname == s_clip.name) {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Paste") && !IsBadReadPtr(addr, (size_t)size)) {
+            memcpy(addr, s_clip.data, (size_t)size);
+        }
+    }
+}
+
 bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition) {
     if (addr == nullptr || definition == nullptr) {
         return false;
@@ -7738,6 +8557,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
         }
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[%s]", sname.c_str());
+        ui_struct_clipboard(sname, addr, total);
         return true;
     }
 
@@ -7745,6 +8565,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
         const bool open = ImGui::TreeNode(label.c_str());
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[Transform]");
+        ui_struct_clipboard(sname, addr, total);
         if (open) {
             for (auto field = definition->get_child_properties(); field != nullptr; field = field->get_next()) {
                 std::string fcname;
@@ -7769,6 +8590,156 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
     }
 
     return false;
+}
+
+// Texture2D preview (D3D11) — implemented via the SDK's self-calibrating UTexture accessors
+// (UTexture::get_texture_rhi -> FRHITexture::get_native_resource), the same render-resource path
+// D3D11Component uses for the UE backbuffer (D3D11Component.cpp:243). No hardcoded offsets.
+// Gated behind m_show_texture_previews (default OFF); every deref guarded + try/catch.
+// D3D12 not implemented yet (would need an imgui SRV-heap descriptor). SRVs cached per native.
+void UObjectHook::draw_texture_preview(sdk::UObject* texture) {
+    if (texture == nullptr) {
+        return;
+    }
+
+    if (g_framework->get_renderer_type() != Framework::RendererType::D3D11) {
+        ImGui::TextDisabled("[texture preview: only D3D11 implemented]");
+        return;
+    }
+
+    // Only Texture2D-family assets: update_render_resource_offset_texture2d calibrates a SHARED
+    // static offset off the texture's 2D vtable, so feeding it a non-2D texture would corrupt it.
+    std::string tclass;
+    try { tclass = utility::narrow(texture->get_class()->get_fname().to_string()); } catch (...) {}
+    if (tclass.find("Texture2D") == std::string::npos) {
+        ImGui::TextDisabled("[texture preview: only Texture2D supported (%s)]", tclass.c_str());
+        return;
+    }
+
+    try {
+        auto* utex = (sdk::UTexture*)texture;
+
+        // The SDK only captures the FRHITexture2D vtable inside UEVR's VR render-target hook, so
+        // in flat (no-VR) mode it stays null and every calibration fails ("vtable is null"). Bootstrap
+        // it here from THIS texture's resource chain: walk UTexture -> FTextureResource -> the RHI
+        // texture, recognized by its vtable living in d3d11/d3d12.dll. Self-contained, gated behind the
+        // experimental toggle, fully guarded. The SDK's own calibration then validates the offset.
+        if (FRHITexture2D::get_vtable() == nullptr) {
+            const auto vtable_in_d3d = [](void* vt) -> bool {
+                if (vt == nullptr || IsBadReadPtr(vt, sizeof(void*))) return false;
+                HMODULE mod = nullptr;
+                if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                        (LPCSTR)vt, &mod) || mod == nullptr) return false;
+                char path[MAX_PATH]{};
+                if (GetModuleFileNameA(mod, path, MAX_PATH) == 0) return false;
+                std::string p = path;
+                std::transform(p.begin(), p.end(), p.begin(), [](unsigned char c){ return (char)::tolower(c); });
+                return p.size() >= 9 && (p.compare(p.size() - 9, 9, "d3d11.dll") == 0 || p.compare(p.size() - 9, 9, "d3d12.dll") == 0);
+            };
+            const auto base = (uintptr_t)texture;
+            for (uint32_t i = sizeof(void*); i < 0x400 && FRHITexture2D::get_vtable() == nullptr; i += sizeof(void*)) {
+                if (IsBadReadPtr((void*)(base + i), sizeof(void*))) continue;
+                auto* p1 = *(void**)(base + i); // candidate FTextureResource*
+                if (p1 == nullptr || IsBadReadPtr(p1, sizeof(void*))) continue;
+                for (uint32_t j = sizeof(void*); j < 0x100; j += sizeof(void*)) {
+                    if (IsBadReadPtr((void*)((uintptr_t)p1 + j), sizeof(void*))) continue;
+                    auto* p2 = *(void**)((uintptr_t)p1 + j); // candidate FRHITexture2D*
+                    if (p2 == nullptr || IsBadReadPtr(p2, sizeof(void*))) continue;
+                    auto* vt = *(void**)p2;
+                    if (vtable_in_d3d(vt)) {
+                        FRHITexture2D::set_vtable(vt);
+                        spdlog::info("[texture preview] bootstrapped FRHITexture2D vtable from inspected texture (flat mode)");
+                        break;
+                    }
+                }
+            }
+        }
+
+        sdk::UTexture::update_render_resource_offset_texture2d(utex); // self-calibrate Resource offset (render thread)
+
+        auto* rhi = utex->get_texture_rhi();
+        if (rhi == nullptr) { ImGui::TextDisabled("[texture: no RHI (streamed out / not resident?)]"); return; }
+
+        auto* native = (ID3D11Texture2D*)rhi->get_native_resource();
+        if (native == nullptr) { ImGui::TextDisabled("[texture: no native D3D11 resource]"); return; }
+
+        // One SRV per native texture. Debug tool: SRVs are cached (leaked) and bounded by the
+        // number of distinct textures inspected.
+        static std::unordered_map<ID3D11Texture2D*, ID3D11ShaderResourceView*> s_srv_cache{};
+
+        D3D11_TEXTURE2D_DESC desc{};
+        native->GetDesc(&desc); // AVs if `native` is bogus -> caught by the surrounding try
+
+        ID3D11ShaderResourceView* srv = nullptr;
+        if (auto it = s_srv_cache.find(native); it != s_srv_cache.end()) {
+            srv = it->second;
+        } else {
+            auto device = g_framework->get_d3d11_hook()->get_device();
+            if (device == nullptr) { ImGui::TextDisabled("[texture: no D3D11 device]"); return; }
+
+            // Typeless resource formats can't be used directly for an SRV — map to a typed
+            // equivalent so typeless textures / render targets still preview instead of failing.
+            DXGI_FORMAT srv_format = desc.Format;
+            switch (desc.Format) {
+            case DXGI_FORMAT_R8G8B8A8_TYPELESS:     srv_format = DXGI_FORMAT_R8G8B8A8_UNORM; break;
+            case DXGI_FORMAT_B8G8R8A8_TYPELESS:     srv_format = DXGI_FORMAT_B8G8R8A8_UNORM; break;
+            case DXGI_FORMAT_R10G10B10A2_TYPELESS:  srv_format = DXGI_FORMAT_R10G10B10A2_UNORM; break;
+            case DXGI_FORMAT_R16G16B16A16_TYPELESS: srv_format = DXGI_FORMAT_R16G16B16A16_FLOAT; break;
+            case DXGI_FORMAT_R32G32B32A32_TYPELESS: srv_format = DXGI_FORMAT_R32G32B32A32_FLOAT; break;
+            case DXGI_FORMAT_BC1_TYPELESS:          srv_format = DXGI_FORMAT_BC1_UNORM; break;
+            case DXGI_FORMAT_BC2_TYPELESS:          srv_format = DXGI_FORMAT_BC2_UNORM; break;
+            case DXGI_FORMAT_BC3_TYPELESS:          srv_format = DXGI_FORMAT_BC3_UNORM; break;
+            case DXGI_FORMAT_BC7_TYPELESS:          srv_format = DXGI_FORMAT_BC7_UNORM; break;
+            default: break;
+            }
+
+            D3D11_SHADER_RESOURCE_VIEW_DESC sd{};
+            sd.Format = srv_format;
+            sd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            sd.Texture2D.MipLevels = desc.MipLevels ? desc.MipLevels : 1;
+            if (FAILED(device->CreateShaderResourceView(native, &sd, &srv)) || srv == nullptr) {
+                ImGui::TextDisabled("[texture: CreateShaderResourceView failed]");
+                return;
+            }
+            s_srv_cache[native] = srv;
+        }
+
+        // Aspect-fit into a max preview box.
+        const float maxw = 256.0f;
+        const float aspect = desc.Height > 0 ? (float)desc.Width / (float)desc.Height : 1.0f;
+        const ImVec2 size = aspect >= 1.0f ? ImVec2{maxw, maxw / aspect} : ImVec2{maxw * aspect, maxw};
+        ImGui::Text("%ux%u %s", desc.Width, desc.Height, desc.Format == DXGI_FORMAT_R8G8B8A8_UNORM ? "RGBA8" : "");
+        ImGui::Image((ImTextureID)(uintptr_t)srv, size);
+    } catch (...) {
+        ImGui::TextDisabled("[texture preview: resolve failed (bad offsets / unsupported layout)]");
+    }
+}
+
+#pragma endregion
+// === STUB (VR — needs a headset to verify; empty so the build stays green) ================
+// E1+E2: while a component is being adjusted in VR (motion-controller attach in adjust mode,
+// or just selected for the gizmo), let the LEFT/RIGHT thumbstick drive the gizmo's active axis
+// (X/Y on one stick, Z on the other) and draw the gizmo as if the matching axis HANDLE were
+// being mouse-clicked (highlight it hot).
+//
+// TASK / CONTEXT for the implementer (Gemini / user / future me):
+//   Input: read thumbstick axes from VR::get() controller state (see how OverlayComponent /
+//     the VR input path reads controller axes). Map left-stick X/Y -> gizmo X/Y, right-stick
+//     Y -> gizmo Z. Respect m_gizmo_mode (0 translate / 1 rotate / 2 scale).
+//   Apply: reuse the SAME edits the mouse-drag path uses in draw_component_gizmos —
+//     set_world_location / add_world_rotation / set_relative_scale. Scale the stick delta by
+//     frame delta-time * a sensitivity constant so it's framerate-independent.
+//   Display (E2): set the gizmo hot/hover state for the stick-driven axis so the handle looks
+//     "clicked" (extend draw_component_gizmos' hot-state to accept a VR-driven axis index).
+//   E3: if `comp` is MC-attached in adjust mode (m_auto_gizmo_on_adjust already draws its
+//     gizmo), feed these edits into the MotionControllerState location_offset/rotation_offset
+//     (see draw_component_gizmos ~2879) and surface the metrics (ties into the D3 label).
+//   Call site: a guarded no-op call is already wired in draw_component_gizmos (VR-active path).
+// =========================================================================================
+void UObjectHook::vr_gizmo_stick_adjust(sdk::USceneComponent* comp) {
+    // INTENTIONALLY EMPTY — see the context block above. No-op keeps the build green and the
+    // feature discoverable; fill in per the steps (needs a headset to verify).
+    (void)comp;
 }
 
 void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {
@@ -7855,9 +8826,9 @@ void* UObjectHook::add_object(void* rcx, void* rdx, void* r8, void* r9, void* st
 
     {
         static bool is_rcx = [&]() {
-            if (!IsBadReadPtr(rcx, sizeof(void*)) && 
+            if (!IsBadReadPtr(rcx, sizeof(void*)) &&
                 !IsBadReadPtr(*(void**)rcx, sizeof(void*)) &&
-                !IsBadReadPtr(**(void***)rcx, sizeof(void*))) 
+                !IsBadReadPtr(**(void***)rcx, sizeof(void*)))
             {
                 SPDLOG_INFO("[UObjectHook] RCX is UObjectBase*");
                 return true;
@@ -7969,10 +8940,16 @@ nlohmann::json UObjectHook::PersistentProperties::to_json() const {
     json["hide_legacy"] = hide_legacy;
 
     for (const auto& prop : properties) {
-        json["properties"].push_back({
+        nlohmann::json pj{
             {"name", utility::narrow(prop->name)},
             {"data", prop->data.u64}
-        });
+        };
+        if (prop->struct_size > 0) {
+            const uint32_t n = std::min<uint32_t>(prop->struct_size, (uint32_t)sizeof(prop->struct_bytes));
+            pj["struct_size"] = n;
+            pj["struct_bytes"] = std::vector<uint8_t>(prop->struct_bytes, prop->struct_bytes + n);
+        }
+        json["properties"].push_back(pj);
     }
 
     return json;
@@ -8009,6 +8986,13 @@ std::shared_ptr<UObjectHook::PersistentProperties> UObjectHook::PersistentProper
         auto state = std::make_shared<PropertyState>();
         state->name = utility::widen(prop["name"].get<std::string>());
         state->data.u64 = prop["data"].get<uint64_t>();
+        if (prop.contains("struct_size") && prop["struct_size"].is_number_unsigned()) {
+            state->struct_size = std::min<uint32_t>(prop["struct_size"].get<uint32_t>(), (uint32_t)sizeof(state->struct_bytes));
+            if (prop.contains("struct_bytes") && prop["struct_bytes"].is_array()) {
+                auto v = prop["struct_bytes"].get<std::vector<uint8_t>>();
+                memcpy(state->struct_bytes, v.data(), std::min<size_t>(v.size(), sizeof(state->struct_bytes)));
+            }
+        }
         result->properties.push_back(state);
     }
 
@@ -8067,7 +9051,7 @@ std::vector<std::shared_ptr<UObjectHook::PersistentProperties>> UObjectHook::des
     if (!std::filesystem::exists(uobjecthook_dir)) {
         return {};
     }
-    
+
     // Gather all .json files in this directory
     std::vector<std::filesystem::path> json_files{};
     for (const auto& p : std::filesystem::directory_iterator(uobjecthook_dir)) {

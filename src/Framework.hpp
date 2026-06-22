@@ -337,7 +337,14 @@ private:
     bool m_cursor_state{false};
     bool m_cursor_state_changed{true};
     bool m_ui_option_transparent{true};
-    bool m_ui_passthrough{false};
+    // Input routing while the overlay is open: 0 = Capture (block all game input),
+    // 1 = Passthrough (game always gets input), 2 = Smart (passthrough unless an
+    // ImGui window is hovered or has active/edited content). Cycle with Delete.
+    int m_input_mode{2};
+    // Smart mode: set when the user clicks the viewport (outside any UI window) to
+    // hand mouse control to the game (camera/mouse-look) — drops the SetCursorPos
+    // pin + hides the cursor while keeping the overlay. Menu key frees it again.
+    bool m_smart_game_mouse{true};
 
     ImVec2 m_last_window_pos{};
     ImVec2 m_last_window_size{};

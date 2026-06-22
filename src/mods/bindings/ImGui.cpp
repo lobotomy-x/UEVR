@@ -369,7 +369,7 @@ void show_stack_tool_window(sol::object open_obj)
         open_p = &open;
     }
 
-    ImGui::ShowStackToolWindow(open_p);
+    ImGui::ShowIDStackToolWindow(open_p);
 }
 
 void show_font_selector(const char *label)
@@ -3487,7 +3487,7 @@ void bindings::open_imgui(sol::state_view &lua)
                    "None", ImGuiItemFlags_None, "NoTabStop", ImGuiItemFlags_NoTabStop);
 
     imgui.new_enum("PopupFlags", "AnyPopup", ImGuiPopupFlags_AnyPopup, "AnyPopupId", ImGuiPopupFlags_AnyPopupId, "AnyPopupLevel",
-                   ImGuiPopupFlags_AnyPopupLevel, "MouseButtonDefault_", ImGuiPopupFlags_MouseButtonDefault_, "MouseButtonLeft",
+                   ImGuiPopupFlags_AnyPopupLevel, "MouseButtonDefault_", ImGuiPopupFlags_MouseButtonRight, "MouseButtonLeft",
                    ImGuiPopupFlags_MouseButtonLeft, "MouseButtonMask_", ImGuiPopupFlags_MouseButtonMask_, "MouseButtonMiddle",
                    ImGuiPopupFlags_MouseButtonMiddle, "MouseButtonRight", ImGuiPopupFlags_MouseButtonRight, "None", ImGuiPopupFlags_None,
                    "NoOpenOverExistingPopup", ImGuiPopupFlags_NoOpenOverExistingPopup, "NoOpenOverItems", ImGuiPopupFlags_NoOpenOverItems, "NoReopen",
@@ -3750,4 +3750,11 @@ void bindings::open_imgui(sol::state_view &lua)
     draw["text"] = api::draw::text;
     draw["filled_rect"] = api::draw::filled_rect;
     draw["outline_rect"] = api::draw::outline_rect;
-    draw["line
+    draw["line"] = api::draw::line;
+    draw["outline_circle"] = api::draw::outline_circle;
+    draw["filled_circle"] = api::draw::filled_circle;
+    draw["outline_quad"] = api::draw::outline_quad;
+    draw["filled_quad"] = api::draw::filled_quad;
+
+    lua["draw"] = draw;
+}

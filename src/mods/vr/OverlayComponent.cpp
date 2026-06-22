@@ -635,6 +635,68 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
     return should_show_overlay;
 }
 
+ImVec2 OverlayComponent::transform_world_aligned_to_overlay(const ImVec2& slate_px) const {
+    // While the UI is CLOSED the imgui texture is shown on the slate overlay, whose
+    // placement (distance m_slate_distance, size m_slate_size, scale_factor 1, plus the
+    // slate x/y offsets) makes a flat ProjectWorldToScreen pixel already line up with
+    // the world. Opening the UI swaps to the framework overlay (distance
+    // m_framework_distance, size m_framework_size * rt_width/1920, no x/y offset) so the
+    // SAME pixel now subtends a different angle and world-aligned content (gizmos, Lua
+    // overlays) drifts. We rescale about screen-centre by the inverse angular ratio so
+    // it re-aligns. Identity when the UI is closed.
+    //
+    // Flat-quad approximation: ignores m_framework_curvature (error grows toward the
+    // periphery when curvature > 0) and treats the slate overlay as flat. Good enough to
+    // restore centre alignment; fine-tune in-headset if curvature is non-zero.
+    if (!g_framework->is_drawing_ui()) {
+        return slate_px; // slate overlay is already world-aligned
+    }
+
+    const auto is_d3d12 = g_framework->get_renderer_type() == Framework::RendererType::D3D12;
+    const auto size = is_d3d12 ? g_framework->get_d3d12_rt_size() : g_framework->get_d3d11_rt_size();
+    if (size.x <= 0.0f || size.y <= 0.0f) {
+        return slate_px;
+    }
+
+    const float aspect = size.x / size.y;
+    const float scale_factor = size.x / 1920.0f; // mirrors update_overlay_openvr framework path
+
+    const float slate_dist = m_slate_distance->value() - 0.01f; // matches slate placement
+    const float fw_dist    = m_framework_distance->value();
+    const float slate_sz   = m_slate_size->value();
+    const float fw_sz      = m_framework_size->value() * scale_factor;
+    if (slate_dist <= 0.0f || fw_dist <= 0.0f || fw_sz <= 0.0f) {
+        return slate_px;
+    }
+
+    // Uniform scale about centre; aspect cancels because both quads share it.
+    const float S = (slate_sz * fw_dist) / (slate_dist * fw_sz);
+
+    // Live, headset-tunable knobs (see OverlayComponent.hpp): blend the computed
+    // correction by _Correction (0 = identity/no remap, 1 = full, >1 = over-correct) and
+    // apply a raw catch-all multiplier _Scale on top.
+    const float strength = m_framework_gizmo_correction->value();
+    const float extra    = m_framework_gizmo_scale->value();
+    const float S_eff = (1.0f + (S - 1.0f) * strength) * extra;
+
+    // Slate x/y offsets shift the slate quad centre (metres along right/up); fold their
+    // apparent-angle contribution in (scaled by strength so _Correction=0 is true
+    // identity). Framework placement has no x/y offset. y is +up in world but +down in
+    // screen space, hence the negative sign on Oy.
+    const float fw_w_m = fw_sz * aspect; // framework quad width in metres-basis
+    const float fw_h_m = fw_sz;          // framework quad height in metres-basis
+    const float Ox =  (m_slate_x_offset->value() * fw_dist) / (slate_dist * fw_w_m) * strength;
+    const float Oy = -(m_slate_y_offset->value() * fw_dist) / (slate_dist * fw_h_m) * strength;
+
+    const float ux = slate_px.x / size.x - 0.5f;
+    const float uy = slate_px.y / size.y - 0.5f;
+
+    const float ux2 = ux * S_eff + Ox;
+    const float uy2 = uy * S_eff + Oy;
+
+    return ImVec2{ (ux2 + 0.5f) * size.x, (uy2 + 0.5f) * size.y };
+}
+
 void OverlayComponent::update_overlay_openvr() {
     if (!VR::get()->get_runtime()->is_openvr()) {
         return;

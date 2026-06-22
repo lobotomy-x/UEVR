@@ -163,6 +163,21 @@ void ScriptContext::setup_callback_bindings() {
             std::scoped_lock _{m_mtx};
             m_on_post_engine_tick_callbacks.push_back(fn);
         },
+        "on_pawn_changed",
+        [this](sol::function fn) {
+            std::scoped_lock _{m_mtx};
+            m_on_pawn_changed_callbacks.push_back(fn);
+        },
+        "on_view_target_changed",
+        [this](sol::function fn) {
+            std::scoped_lock _{m_mtx};
+            m_on_view_target_changed_callbacks.push_back(fn);
+        },
+        "on_level_changed",
+        [this](sol::function fn) {
+            std::scoped_lock _{m_mtx};
+            m_on_level_changed_callbacks.push_back(fn);
+        },
         "on_pre_slate_draw_window_render_thread",
         [this](sol::function fn) {
             std::scoped_lock _{m_mtx};
@@ -1553,6 +1568,59 @@ void ScriptContext::on_pre_engine_tick(UEVR_UGameEngineHandle engine, float delt
             } catch (...) {
                 ctx->log_error("Unknown exception in on_pre_engine_tick");
             }
+
+        // C++-side change detection: poll the local pawn / camera view-target / persistent level
+        // and fire the corresponding callbacks only when they change. Lets scripts reapply a
+        // camera mod (etc.) on the event without polling every frame in Lua.
+        const auto fire_changed = [&](std::vector<sol::protected_function>& cbs, uevr::API::UObject* obj, const char* what) {
+            auto wrapped = sol::make_object(ctx->m_lua.lua_state(), obj);
+            for (auto& fn : cbs) {
+                try {
+                    ctx->handle_protected_result(fn(wrapped));
+                } catch (const std::exception& e) {
+                    ctx->log_error(std::string("Exception in ") + what + ": " + e.what());
+                } catch (...) {
+                    ctx->log_error(std::string("Unknown exception in ") + what);
+                }
+            }
+        };
+
+        try {
+            auto& api = uevr::API::get();
+            if (api != nullptr) {
+                auto* pc = api->get_player_controller(0);
+                auto* pawn = api->get_local_pawn(0);
+
+                if ((void*)pawn != ctx->m_last_pawn) {
+                    ctx->m_last_pawn = (void*)pawn;
+                    fire_changed(ctx->m_on_pawn_changed_callbacks, pawn, "on_pawn_changed");
+                }
+
+                uevr::API::UObject* view_target = nullptr;
+                if (pc != nullptr) {
+                    if (auto* cam_pp = pc->get_property_data<uevr::API::UObject*>(L"PlayerCameraManager");
+                        cam_pp != nullptr && *cam_pp != nullptr) {
+                        // FTViewTarget.Target (an AActor*) is the first member of the ViewTarget struct.
+                        if (auto* vt_pp = (*cam_pp)->get_property_data<uevr::API::UObject*>(L"ViewTarget"); vt_pp != nullptr) {
+                            view_target = *vt_pp;
+                        }
+                    }
+                }
+                if ((void*)view_target != ctx->m_last_view_target) {
+                    ctx->m_last_view_target = (void*)view_target;
+                    fire_changed(ctx->m_on_view_target_changed_callbacks, view_target, "on_view_target_changed");
+                }
+
+                // A PlayerController lives in the persistent level; its Outer changes on level load.
+                uevr::API::UObject* level = (pc != nullptr) ? pc->get_outer() : nullptr;
+                if ((void*)level != ctx->m_last_level) {
+                    ctx->m_last_level = (void*)level;
+                    fire_changed(ctx->m_on_level_changed_callbacks, level, "on_level_changed");
+                }
+            }
+        } catch (...) {
+            ctx->log_error("Unknown exception in change-detection poll");
+        }
     });
 }
 

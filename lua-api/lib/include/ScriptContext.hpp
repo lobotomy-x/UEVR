@@ -150,6 +150,13 @@ private:
     std::vector<sol::protected_function> m_on_xinput_set_state_callbacks{};
     std::vector<sol::protected_function> m_on_pre_engine_tick_callbacks{};
     std::vector<sol::protected_function> m_on_post_engine_tick_callbacks{};
+    // C++-side change detection (polled each tick) so scripts can react without per-frame Lua polling.
+    std::vector<sol::protected_function> m_on_pawn_changed_callbacks{};
+    std::vector<sol::protected_function> m_on_view_target_changed_callbacks{};
+    std::vector<sol::protected_function> m_on_level_changed_callbacks{};
+    void* m_last_pawn{nullptr};
+    void* m_last_view_target{nullptr};
+    void* m_last_level{nullptr};
     std::vector<sol::protected_function> m_on_pre_slate_draw_window_render_thread_callbacks{};
     std::vector<sol::protected_function> m_on_post_slate_draw_window_render_thread_callbacks{};
     std::vector<sol::protected_function> m_on_early_calculate_stereo_view_offset_callbacks{};

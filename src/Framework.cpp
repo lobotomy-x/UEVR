@@ -51,6 +51,7 @@
 #include <spdlog/common.h>
 #include <spdlog/spdlog.h>
 #include <stop_token>
+#include <fstream>
 #include <string>
 #include <string.h>
 #include <thread>
@@ -84,6 +85,70 @@ using namespace std::literals;
 
 std::unique_ptr<Framework> g_framework{};
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+namespace {
+// A stale imgui.ini left over from a multiviewport session stores popped-out windows at
+// positions outside the main viewport (ViewportPos=/ViewportId= keys). On D3D12 those
+// restore as secondary viewports + swapchains on the very first frame -- before the MV
+// gate or any re-absorb logic can run -- which hits the unstable D3D12 per-viewport path
+// and crashes. Strip the secondary-viewport associations and clamp obviously-off-screen
+// window positions so everything starts in the main viewport. The user can still pop
+// windows out again during the session. One-shot, runs before ImGui reads the ini.
+void sanitize_imgui_ini(const std::string& ini_path) try {
+    if (!std::filesystem::exists(ini_path)) {
+        return;
+    }
+
+    std::ifstream in{ini_path};
+    if (!in) {
+        return;
+    }
+
+    std::vector<std::string> lines{};
+    std::string line{};
+    bool changed = false;
+
+    while (std::getline(in, line)) {
+        // Drop secondary-viewport associations entirely -> window falls back to main viewport.
+        if (line.rfind("ViewportPos=", 0) == 0 || line.rfind("ViewportId=", 0) == 0) {
+            changed = true;
+            continue;
+        }
+
+        // Clamp window positions that are clearly off the main viewport (negative or huge),
+        // the signature of a window that was popped out onto its own OS window/monitor.
+        if (line.rfind("Pos=", 0) == 0) {
+            int x = 0, y = 0;
+            if (sscanf_s(line.c_str(), "Pos=%d,%d", &x, &y) == 2) {
+                if (x < 0 || y < 0 || x > 16384 || y > 16384) {
+                    line = "Pos=60,60";
+                    changed = true;
+                }
+            }
+        }
+
+        lines.push_back(line);
+    }
+    in.close();
+
+    if (!changed) {
+        return;
+    }
+
+    std::ofstream out{ini_path, std::ios::trunc};
+    if (!out) {
+        return;
+    }
+    for (const auto& l : lines) {
+        out << l << "\n";
+    }
+    spdlog::info("[Framework] Sanitized stale multiviewport entries from imgui.ini");
+} catch (const std::exception& e) {
+    spdlog::error("[Framework] Failed to sanitize imgui.ini: {}", e.what());
+} catch (...) {
+    spdlog::error("[Framework] Failed to sanitize imgui.ini (unknown)");
+}
+}
 
 UEVRSharedMemory::UEVRSharedMemory() {
     spdlog::info("Shared memory constructor!");
@@ -517,7 +582,8 @@ void Framework::setup_main_dockspace() {
         return;
     }
 
-    ImGui::SetNextWindowPos(viewport->WorkPos);
+ /*
+ 	ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -543,6 +609,7 @@ void Framework::setup_main_dockspace() {
     s_main_dockspace_id = ImGui::GetID("UEVR_MainDockSpace");
     //  ImGui::DockSpace(s_main_dockspace_id, ImVec2(0.0f, 0.0f), dock_flags);
     ImGui::End();
+    */
 }
 
 // Drain queued Win32 messages destined for secondary ImGui viewports.
@@ -1019,7 +1086,7 @@ void Framework::on_frame_d3d12() {
 
     // Drive secondary viewports on the present thread, same as D3D11. See the comment in
     // run_imgui_frame for why this isn't done there.
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    if (!VR::get()->is_hmd_active() && (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)) {
         // Drain pending popup-HWND messages BEFORE UpdatePlatformWindows
         // so any WM_SIZE / WM_MOVE / WM_DESTROY from the previous frame
         // is reflected in the viewport state this frame. Running it
@@ -1114,7 +1181,17 @@ void Framework::on_reset(uint32_t w, uint32_t h) {
 
     m_has_frame = false;
     m_first_initialize = false;
-    m_initialized = false;
+
+    // Single-viewport flat D3D11: KEEP m_initialized so initialize() does NOT recreate
+    // the whole ImGui context on every fullscreen/resolution change (the overlay
+    // "break"). The full resource release above already ran — incl. on_device_reset()
+    // releasing VR's cached backbuffer so the engine's ResizeBuffers succeeds — so this
+    // ONLY skips the context churn; on_frame_d3d11's BackendRendererUserData==null check
+    // rebuilds the DX11 backend + RTVs next frame with the context intact. VR / D3D12 /
+    // multiviewport keep the full re-initialize (m_initialized=false).
+    const bool keep_context = m_is_d3d11 && !m_is_d3d12 && !VR::get()->is_hmd_active()
+        && ImGui::GetCurrentContext() != nullptr && ImGui::GetPlatformIO().Viewports.Size <= 1;
+    m_initialized = keep_context;
 }
 
 void Framework::activate_window() {
@@ -1234,6 +1311,18 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
             }
             return false;
         }
+        // Delete cycles the input-routing mode (Capture -> Passthrough -> Smart).
+        // Only intercepted while the overlay is open so it stays available to the
+        // game during normal play.
+        if (w_param == VK_DELETE && m_draw_ui) {
+            const bool was_down = (l_param & 0x40000000) != 0;
+            if (!was_down) {
+                m_input_mode = (m_input_mode + 1) % 3;
+                spdlog::info("[Framework] Input mode -> {}",
+                    m_input_mode == 0 ? "Capture" : (m_input_mode == 1 ? "Passthrough" : "Smart"));
+            }
+            return false;
+        }
         break;
     case WM_KEYUP:
     case WM_SYSKEYUP:
@@ -1292,26 +1381,40 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
     }
 
     {
-        // If the user is interacting with the UI we block the message from going to the game.
+        // Input routing while the overlay is open (m_input_mode):
+        //   0 Capture     — block ALL input from the game.
+        //   1 Passthrough — never block (game + UI both receive input).
+        //   2 Smart (def) — pass input to the game UNLESS the UI actually needs it:
+        //                   mouse messages are blocked only while an ImGui window is
+        //                   hovered (WantCaptureMouse); keyboard only while a text
+        //                   field is being edited (WantTextInput). Crucially it does
+        //                   NOT use WantCaptureKeyboard — that is true whenever any
+        //                   UEVR window merely has focus, which would swallow WASD.
         const auto& io = ImGui::GetIO();
-        if (m_draw_ui && !m_ui_passthrough) {
-            // Fix of a bug that makes the input key down register but the key up will never register
-            // when clicking on the ui while the game is not focused
-            if (message == WM_INPUT && GET_RAWINPUT_CODE_WPARAM(w_param) == RIM_INPUTSINK) {
-                return false;
+        // Smart: a left-click in the viewport (outside any UI window) hands mouse
+        // control to the game so the camera/mouse-look works; a click on a UI window
+        // takes control back. draw_ui() drops/re-applies the SetCursorPos pin + cursor
+        // to match m_smart_game_mouse.
+        if (m_draw_ui && m_input_mode == 2 && message == WM_LBUTTONDOWN) {
+            m_smart_game_mouse = !io.WantCaptureMouse;
+        }
+        if (m_draw_ui && m_input_mode != 1) {
+            const bool is_keyboard = (message >= WM_KEYFIRST && message <= WM_KEYLAST);
+            const bool is_mouse = (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST) || message == WM_INPUT;
+
+            bool block;
+            if (m_input_mode == 0) {
+                block = true; // Capture: block everything (except the allow-list below)
+            } else {          // Smart: keyboard only while editing text; mouse only while
+                              // a window is hovered AND the game isn't driving the mouse.
+                block = (is_keyboard && io.WantTextInput) || (is_mouse && io.WantCaptureMouse && !m_smart_game_mouse);
             }
 
             static std::unordered_set<UINT> forcefully_allowed_messages{WM_DEVICECHANGE, // Allows XInput devices to connect to UE
                 WM_SHOWWINDOW, WM_ACTIVATE, WM_ACTIVATEAPP, WM_CLOSE, WM_DPICHANGED, WM_SIZING, WM_MOUSEACTIVATE};
 
-            if (!forcefully_allowed_messages.contains(message)) {
-                if (m_is_ui_focused) {
-                    if (io.WantCaptureMouse || io.WantCaptureKeyboard || io.WantTextInput)
-                        return false;
-                } else {
-                    if (!is_mouse_moving && (io.WantCaptureMouse || io.WantCaptureKeyboard || io.WantTextInput))
-                        return false;
-                }
+            if (block && !forcefully_allowed_messages.contains(message)) {
+                return false;
             }
         }
     }
@@ -1437,8 +1540,9 @@ void Framework::reload_config() try {
     spdlog::error("Failed to reload config: {}", e.what());
 }
 
+// lazy. always show cursor gating on_frame overlays is dumb now that overlays work okay in vr
 bool Framework::is_drawing_anything() const {
-    return m_draw_ui || FrameworkConfig::get()->is_always_show_cursor();
+    return true/*m_draw_ui || FrameworkConfig::get()->is_always_show_cursor()*/;
 }
 
 void Framework::set_draw_ui(bool state, bool should_save) {
@@ -1585,11 +1689,17 @@ void Framework::draw_ui_impl() {
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Makes the UI transparent when not focused.");
     }
-    ImGui::Checkbox("Input Passthrough", &m_ui_passthrough);
+    {
+        const char* input_modes[] = { "Capture", "Passthrough", "Smart" };
+        if (m_input_mode < 0 || m_input_mode > 2) { m_input_mode = 2; }
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::Combo("Input Mode", &m_input_mode, input_modes, IM_ARRAYSIZE(input_modes));
+    }
     ImGui::SameLine();
     ImGui::Text("(?)");
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Allows mouse and keyboard inputs to register to the game while the UI is focused.");
+        ImGui::SetTooltip("How input is routed while the overlay is open. Cycle with the Delete key.\n"
+            "Smart (default): the game receives input unless an ImGui window is hovered or being edited.");
     }
     FrameworkConfig::get()->get_advanced_mode()->draw("Show Advanced Options");
 
@@ -1828,10 +1938,14 @@ void Framework::draw_ui() {
     // viewport on the next frame.
     auto& cf = ImGui::GetIO().ConfigFlags;
     cf = IMGUICONFIGFLAGS | ImGuiConfigFlags_NoMouseCursorChange; // causes bugs with the cursor
-    // Multiviewport is disabled on D3D11 (secondary-swapchain fullscreen issues)
-    // and disabled entirely while the HMD is active — the per-viewport submit
-    // path device-hangs/AVs inside the VR compositor frame. Kept for flat D3D12.
-    if (FrameworkConfig::get()->is_use_multiviewport() && get_renderer_type() != RendererType::D3D11
+    // Multiviewport is disabled on D3D11 (secondary-swapchain fullscreen issues) AND on D3D12
+    // (popping the overlay out to a secondary viewport device-hangs/crashes — confirmed live:
+    // moving the overlay out of the main window crashed a flat-D3D12 game), and entirely while
+    // the HMD is active (per-viewport submit AVs inside the VR compositor frame). The stale-ini
+    // sanitizer handles startup pop-outs; this kills the runtime pop-out crash path.
+    if (FrameworkConfig::get()->is_use_multiviewport()
+        && get_renderer_type() != RendererType::D3D11
+        && get_renderer_type() != RendererType::D3D12
         && !VR::get()->is_hmd_active()) {
         cf |= ImGuiConfigFlags_ViewportsEnable;
     }
@@ -1843,6 +1957,17 @@ void Framework::draw_ui() {
     // into the main viewport on the next frame, so no explicit destroy is needed.
     // If orphaned OS windows ever do need explicit teardown, it must happen
     // OUTSIDE the frame scope (like on_reset does), never here.
+
+    // Smart, game engaged (last click was in the game, not a UI window): drop the
+    // SetCursorPos pin so the game can drive the cursor for its menus / mouse-look.
+    // Cursor visibility is intentionally left alone (user-managed).
+    if (m_draw_ui) {
+        if (m_input_mode == 2 && m_smart_game_mouse) {
+            remove_set_cursor_pos_patch();
+        } else {
+            patch_set_cursor_pos();
+        }
+    }
 
     if (!m_draw_ui) {
         // remove SetCursorPos patch
@@ -2114,6 +2239,7 @@ bool Framework::initialize() {
         set_imgui_style();
 
         static const auto imgui_ini = (get_persistent_dir() / "imgui.ini").string();
+        sanitize_imgui_ini(imgui_ini); // strip stale multiviewport window positions (D3D12 secondary-viewport crash)
         ImGui::GetIO().IniFilename = imgui_ini.c_str();
 
         spdlog::info("Initializing ImGui Win32");
@@ -2179,6 +2305,7 @@ bool Framework::initialize() {
         set_imgui_style();
 
         static const auto imgui_ini = (get_persistent_dir() / "imgui.ini").string();
+        sanitize_imgui_ini(imgui_ini); // strip stale multiviewport window positions (D3D12 secondary-viewport crash)
         ImGui::GetIO().IniFilename = imgui_ini.c_str();
 
         if (!ImGui_ImplWin32_Init(m_wnd)) {

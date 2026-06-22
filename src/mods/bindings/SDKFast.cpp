@@ -55,7 +55,6 @@ namespace {
         We should add callbacks for the following
                 on level
                 on world
-                on
 
     */
 
@@ -600,6 +599,23 @@ static std::string fprop_type_name(uevr::API::FProperty* prop) {
     return std::string(ws.begin(), ws.end());
 }
 
+// An EnumProperty's value occupies the width of its underlying numeric property
+// (UE enums are usually uint8). A fixed int32 read over-reads neighbor bytes and a
+// fixed int32 write clobbers up to 3 adjacent live-object bytes, so resolve the
+// real width and read/write exactly that.
+static int enum_underlying_size(uevr::API::FProperty* prop) {
+    auto ep = reinterpret_cast<uevr::API::FEnumProperty*>(prop);
+    auto underlying = ep != nullptr ? ep->get_underlying_prop() : nullptr;
+    if (underlying == nullptr) {
+        return 1;
+    }
+    const auto un = fprop_type_name(underlying);
+    if (un == "Int64Property" || un == "UInt64Property") return 8;
+    if (un == "IntProperty"   || un == "UInt32Property") return 4;
+    if (un == "Int16Property" || un == "UInt16Property") return 2;
+    return 1; // ByteProperty / Int8Property / unknown -> 1 byte (safe default)
+}
+
 static sol::object get_property(sol::this_state s, uevr::API::UObject* obj, const std::string& name) {
     sol::state_view lua{s};
     if (obj == nullptr) {
@@ -635,13 +651,18 @@ static sol::object get_property(sol::this_state s, uevr::API::UObject* obj, cons
         const auto ws = reinterpret_cast<uevr::API::FName*>(at)->to_string();
         return sol::make_object(lua, std::string(ws.begin(), ws.end()));
     }
-    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+    if (type == "ObjectProperty" || type == "ClassProperty") {
         return sol::make_object(lua, *reinterpret_cast<uevr::API::UObject**>(at));
     }
     if (type == "EnumProperty") {
-        // Underlying value as int. Width can be <4 bytes for some enums; mirrors
-        // UObjectHook's int32 read. Returns the raw value (round-trips with set).
-        return sol::make_object(lua, (int)*reinterpret_cast<int32_t*>(at));
+        int64_t v = 0;
+        switch (enum_underlying_size(prop)) {
+        case 8:  v = *reinterpret_cast<int64_t*>(at); break;
+        case 4:  v = *reinterpret_cast<int32_t*>(at); break;
+        case 2:  v = *reinterpret_cast<int16_t*>(at); break;
+        default: v = *reinterpret_cast<uint8_t*>(at); break;
+        }
+        return sol::make_object(lua, (int)v);
     }
     if (type == "StrProperty") {
         // FString = { wchar_t* data; int32 count; int32 max } at the offset.
@@ -694,11 +715,21 @@ static bool set_property(uevr::API::UObject* obj, const std::string& name, sol::
         *reinterpret_cast<uevr::API::FName*>(at) = uevr::API::FName(std::wstring(sv.begin(), sv.end()));
         return true;
     }
-    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+    if (type == "ObjectProperty" || type == "ClassProperty") {
         *reinterpret_cast<uevr::API::UObject**>(at) = value.is<uevr::API::UObject*>() ? value.as<uevr::API::UObject*>() : nullptr;
         return true;
     }
-    if (type == "EnumProperty") { if (!value.is<double>()) return false; *reinterpret_cast<int32_t*>(at) = value.as<int32_t>(); return true; }
+    if (type == "EnumProperty") {
+        if (!value.is<double>()) return false;
+        const int64_t v = (int64_t)value.as<double>();
+        switch (enum_underlying_size(prop)) {
+        case 8:  *reinterpret_cast<int64_t*>(at) = v;          break;
+        case 4:  *reinterpret_cast<int32_t*>(at) = (int32_t)v; break;
+        case 2:  *reinterpret_cast<int16_t*>(at) = (int16_t)v; break;
+        default: *reinterpret_cast<uint8_t*>(at) = (uint8_t)v; break;
+        }
+        return true;
+    }
     // StrProperty SET intentionally unsupported: an FString owns a heap buffer;
     // writing a transient Lua-string pointer would dangle. Use reflection for that.
     return false;
@@ -737,7 +768,7 @@ static bool encode_param(uevr::API::FProperty* prop, uint8_t* at, sol::object v)
         *reinterpret_cast<uevr::API::FName*>(at) = uevr::API::FName(std::wstring(sv.begin(), sv.end()));
         return true;
     }
-    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+    if (type == "ObjectProperty" || type == "ClassProperty") {
         *reinterpret_cast<uevr::API::UObject**>(at) = v.is<uevr::API::UObject*>() ? v.as<uevr::API::UObject*>() : nullptr;
         return true;
     }
@@ -762,7 +793,7 @@ static sol::object decode_param(sol::state_view lua, uevr::API::FProperty* prop,
         const auto ws = reinterpret_cast<uevr::API::FName*>(at)->to_string();
         return sol::make_object(lua, std::string(ws.begin(), ws.end()));
     }
-    if (type == "ObjectProperty" || type == "ClassProperty" || type == "WeakObjectProperty") {
+    if (type == "ObjectProperty" || type == "ClassProperty") {
         return sol::make_object(lua, *reinterpret_cast<uevr::API::UObject**>(at));
     }
     return sol::make_object(lua, sol::nil);

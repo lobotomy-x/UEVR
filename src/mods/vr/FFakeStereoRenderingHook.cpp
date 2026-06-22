@@ -5281,7 +5281,16 @@ IStereoRenderTargetManager* FFakeStereoRenderingHook::get_render_target_manager_
         return nullptr;
     }
 
-    if (!vr->get_runtime()->got_first_poses || vr->is_hmd_active()) {
+    // m_runtime can be momentarily null/swapped from another thread (reinitialize_openvr/openxr
+    // reset+reassign it under m_openvr_mtx, which this render-thread path does not take), so guard
+    // the raw get_runtime() deref to avoid a null-window AV.
+    auto* runtime = vr->get_runtime();
+
+    if (runtime == nullptr) {
+        return nullptr;
+    }
+
+    if (!runtime->got_first_poses || vr->is_hmd_active()) {
         if (g_hook->m_uses_old_rendertarget_manager) {
             return (IStereoRenderTargetManager*)&g_hook->m_rtm_418;
         }
@@ -5307,7 +5316,9 @@ IStereoLayers* FFakeStereoRenderingHook::get_stereo_layers_hook(FFakeStereoRende
         return nullptr;
     }
 
-    if (!VR::get()->get_runtime()->got_first_poses || VR::get()->is_hmd_active()) {
+    auto* runtime = VR::get()->get_runtime();
+
+    if (runtime != nullptr && (!runtime->got_first_poses || VR::get()->is_hmd_active())) {
         /*static uint8_t fake_data[0x100]{};
 
         if (*(uintptr_t*)&fake_data == 0) {

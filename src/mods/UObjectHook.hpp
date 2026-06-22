@@ -55,7 +55,7 @@ public:
         m_uobject_hook_disabled = disabled;
         m_fixed_visibilities = false;
     }
-    
+
     bool is_fully_hooked() const {
         return m_fully_hooked;
     }
@@ -64,7 +64,7 @@ protected:
     std::string_view get_name() const override { return "UObjectHook"; };
     bool is_advanced_mod() const override { return true; }
 
-    std::vector<SidebarEntryInfo> get_sidebar_entries() override { 
+    std::vector<SidebarEntryInfo> get_sidebar_entries() override {
         return {
             { "Main", true },
             { "Config", false },
@@ -113,10 +113,10 @@ protected:
     // Filter buffer for the class browser (shared across tabs)
     std::string m_class_browser_filter{};
 
-    void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+    void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
 
-    void on_post_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+    void on_post_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                                       const float world_to_meters, Vector3f* view_location, bool is_double) override;
 
 public:
@@ -223,6 +223,15 @@ private:
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
     bool ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition);
 
+    // STUB (disabled by default, crash-prone) — render a UTexture2D/UTexture as an ImGui::Image.
+    // See the context dump above its definition in UObjectHook.cpp. Gated on m_show_texture_previews.
+    void draw_texture_preview(sdk::UObject* texture);
+
+    // STUB (VR, needs headset) — E1/E2: drive the active gizmo axis from a thumbstick while a
+    // component is adjusted in VR, and show the driven axis as if its handle were mouse-clicked.
+    // Context dump above the definition in UObjectHook.cpp. Empty no-op until implemented.
+    void vr_gizmo_stick_adjust(sdk::USceneComponent* comp);
+
     void ui_handle_scene_component(sdk::USceneComponent* component);
     void ui_handle_material_interface(sdk::UObject* object);
     void ui_handle_actor(sdk::UObject* object);
@@ -303,6 +312,12 @@ private:
     std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> m_motion_controller_attached_components{};
     std::unordered_set<sdk::USceneComponent*> m_gizmo_components{};
     float m_gizmo_axis_len{50.0f}; // world units (UE cm) for the translate gizmo axes
+    float m_gizmo_thickness{4.0f}; // gizmo line thickness (px), applies to all modes
+    int m_gizmo_mode{0};           // 0 = translate, 1 = rotate, 2 = scale
+    bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
+    bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
+    bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
+    bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     sdk::AActor* m_overlap_detection_actor{nullptr};
     sdk::AActor* m_overlap_detection_actor_left{nullptr};
 
@@ -315,7 +330,7 @@ private:
         std::shared_lock _{m_mutex};
         return m_spawned_spheres;
     }
-    
+
     std::unordered_set<sdk::USceneComponent*> m_spawned_spheres{};
     std::unordered_set<sdk::USceneComponent*> m_components_with_spheres{};
     std::unordered_map<sdk::USceneComponent*, sdk::USceneComponent*> m_spawned_spheres_to_components{};
@@ -476,7 +491,7 @@ private:
         nlohmann::json to_json() const;
         static std::shared_ptr<PersistentProperties> from_json(std::filesystem::path json_path);
         static std::shared_ptr<PersistentProperties> from_json(const nlohmann::json& j);
-        
+
         StatePath path{};
 
         struct PropertyState {
@@ -490,6 +505,10 @@ private:
                 uint16_t u16;
                 bool b;
             } data;
+            // For struct properties (Vector/Rotator/Transform/etc.) the 8-byte union can't hold the
+            // value, so the raw struct bytes live here. struct_size > 0 means "apply struct_bytes".
+            uint8_t struct_bytes[128]{};
+            uint32_t struct_size{0};
         };
 
         std::vector<std::shared_ptr<PropertyState>> properties{};
@@ -503,7 +522,7 @@ private:
     std::shared_ptr<PersistentCameraState> m_persistent_camera_state{};
     std::vector<std::shared_ptr<PersistentState>> m_persistent_states{};
     std::vector<std::shared_ptr<PersistentProperties>> m_persistent_properties{};
-    std::unordered_map<std::string_view, std::string_view> m_inline_uobjecthooks{}; 
+    std::unordered_map<std::string_view, std::string_view> m_inline_uobjecthooks{};
     void reload_persistent_states() {
         m_persistent_states = deserialize_all_mc_states();
         m_persistent_camera_state = deserialize_camera_state();

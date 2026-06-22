@@ -53,6 +53,14 @@ public:
         return m_ui_invert_alpha->value();
     }
 
+    // Remap a "slate-correct" screen-space point (one produced by
+    // UGameplayStatics::ProjectWorldToScreen, which aligns with the world while the UI
+    // is CLOSED and the slate overlay is shown) into the coordinates needed so it still
+    // appears at the same apparent world direction while the FRAMEWORK UI overlay is
+    // open. Identity when the UI is closed. VR-only; callers gate on is_hmd_active().
+    // See the .cpp for the math (flat-quad approximation; ignores framework curvature).
+    ImVec2 transform_world_aligned_to_overlay(const ImVec2& slate_px) const;
+
 private:
     // Cached data for imgui VR overlay so we know when we need to update it
     // instead of doing it constantly every frame
@@ -123,6 +131,16 @@ private:
     // 0 = flat quad, 1 = full cylinder wrap) so it can reach into the periphery
     // instead of being a flat square dead-ahead.
     const ModSlider::Ptr m_framework_curvature{ ModSlider::create("UI_Framework_Curvature", 0.0f, 1.0f, 0.0f) };
+    // Live tuning for the world-aligned overlay remap (transform_world_aligned_to_overlay).
+    // The remap can't be verified without a headset, so expose its knobs:
+    //   _Correction : strength applied to the computed (S-1) center-scale deviation.
+    //                 0 = no remap (identity, old behavior), 1 = full computed correction,
+    //                 >1 = over-correct. Drop it if the gizmo is pulled too far toward
+    //                 screen-center, raise it if it still drifts outward from the object.
+    //   _Scale      : raw uniform multiplier about screen-center, a catch-all fudge if the
+    //                 whole projection scale is off (1 = no extra scaling).
+    const ModSlider::Ptr m_framework_gizmo_correction{ ModSlider::create("UI_Framework_Gizmo_Correction", 0.0f, 2.0f, 1.0f) };
+    const ModSlider::Ptr m_framework_gizmo_scale{ ModSlider::create("UI_Framework_Gizmo_Scale", 0.25f, 4.0f, 1.0f) };
     const ModToggle::Ptr m_framework_ui_follows_view{ ModToggle::create("UI_Framework_FollowView", false) };
     const ModToggle::Ptr m_framework_wrist_ui{ ModToggle::create("UI_Framework_WristUI", false) };
     const ModToggle::Ptr m_framework_mouse_emulation{ ModToggle::create("UI_Framework_MouseEmulation", true) };
@@ -143,6 +161,8 @@ public:
             *m_framework_distance,
             *m_framework_size,
             *m_framework_curvature,
+            *m_framework_gizmo_correction,
+            *m_framework_gizmo_scale,
             *m_framework_ui_follows_view,
             *m_framework_wrist_ui,
             *m_framework_mouse_emulation,
