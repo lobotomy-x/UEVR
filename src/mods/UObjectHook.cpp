@@ -3515,12 +3515,21 @@ UObjectHook::ResolvedObject UObjectHook::resolve_persistent_target(const Persist
     }
 
     // Stable-locator fallback for objects no allowed base can reach (e.g. click-selected world
-    // actors). sdk::find_uobject matches object->get_full_name() == locator and caches the hit with
-    // vtable+array-index validation, so repeat ticks are O(1) and it self-invalidates on level load.
+    // actors). sdk::find_uobject matches object->get_full_name() == locator and caches HITS with
+    // vtable+array-index validation, so a resolved locator is O(1) per tick and self-invalidates on
+    // level load. A MISS, however, does a full O(N) get_full_name scan of the whole object array and
+    // is NOT cached — so an absent target (destroyed / not-yet-spawned / wrong level) would re-scan
+    // every frame. Guard that with a per-bucket cooldown: after a miss, serve null without scanning
+    // for a while, so the worst case is one scan per ~cooldown ticks instead of one per frame.
     if (!pp.object_locator.empty()) {
+        if (pp.locator_miss_cooldown > 0) {
+            --pp.locator_miss_cooldown;
+            return nullptr;
+        }
         if (auto* o = sdk::find_uobject<sdk::UObject>(pp.object_locator); o != nullptr) {
             return ResolvedObject{o, o->get_class()};
         }
+        pp.locator_miss_cooldown = 90; // ~1.5s at 60fps before the next full-array lookup attempt
     }
 
     return nullptr;
@@ -4274,6 +4283,10 @@ void UObjectHook::handle_click_select() {
         }
         if (inserted) {
             spdlog::info("[UObjectHook] click-select added gizmo target: {} (dist {:.0f})", name, best_t);
+            // Tell draw_component_gizmos a pick consumed this left-press, so the gizmo-axis grab is
+            // suppressed this frame (the disarm below would otherwise re-enable can_start mid-frame
+            // and the same click could grab an axis near the cursor).
+            m_click_select_picked_frame = true;
             // One-shot: disarm after a successful pick so there's no "remember to turn it off" step.
             // Hold the sticky option to keep picking multiple targets in a row.
             if (!m_click_select_sticky) {
@@ -4284,6 +4297,12 @@ void UObjectHook::handle_click_select() {
 }
 
 void UObjectHook::draw_component_gizmos() {
+    // Per-frame state for the picker/drag-scroll interplay. picked_frame is set by
+    // handle_click_select if it consumes the click this frame; busy starts as "picker armed" and is
+    // refined to include a grabbed/hot gizmo below (read by the global drag-scroll to yield in VR).
+    m_click_select_picked_frame = false;
+    m_gizmo_or_picker_busy = m_click_select_mode;
+
     // Click-to-select runs before the early-out below so it can seed the very first gizmo
     // target. It only does work while m_click_select_mode is on and the left button was
     // just pressed; otherwise it returns immediately.
@@ -4394,7 +4413,7 @@ void UObjectHook::draw_component_gizmos() {
     // the gizmo is visible — gating on it made the gizmo undraggable. Gating on
     // hovered/active item instead lets axis clicks land in open space while still
     // yielding to buttons/sliders. An in-flight drag keeps going regardless.
-    const bool can_start = g_framework->is_drawing_ui() && !m_click_select_mode &&
+    const bool can_start = g_framework->is_drawing_ui() && !m_click_select_mode && !m_click_select_picked_frame &&
         !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive();
 
     // Release / invalidate an in-flight drag.
@@ -4505,6 +4524,11 @@ void UObjectHook::draw_component_gizmos() {
             s_drag_axis = hover_axis;
         }
     }
+
+    // A gizmo is grabbed or an axis is hot under the cursor → the global drag-scroll should yield in
+    // VR (where it shares the left button with this grab). Combined with the picker-armed state set
+    // at the top of the function.
+    m_gizmo_or_picker_busy = m_gizmo_or_picker_busy || s_drag_comp != nullptr || hover_comp != nullptr;
 
     // Apply the active drag. All three modes share the same screen-space mapping
     // (NO view/projection matrix): project origin + axis tip, take the screen

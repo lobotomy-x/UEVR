@@ -31,6 +31,12 @@ class UObjectHook : public Mod {
 public:
     static std::shared_ptr<UObjectHook>& get();
 
+    // True when a transform gizmo is grabbed / hot under the cursor, or the click-select picker is
+    // armed, for THIS frame. Computed in draw_component_gizmos (runs during draw_ui, before the
+    // global drag-scroll). The drag-scroll reads it to yield in VR, where it shares the left button
+    // with the gizmo axis-drag. Same-thread read, so a plain bool is fine.
+    bool is_gizmo_or_picker_busy() const { return m_gizmo_or_picker_busy; }
+
     std::unordered_set<sdk::UObjectBase*> get_objects_by_class(sdk::UClass* uclass) const {
         std::shared_lock _{m_mutex};
         if (auto it = m_objects_by_class.find(uclass); it != m_objects_by_class.end()) {
@@ -329,6 +335,8 @@ private:
     bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
     bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
+    bool m_click_select_picked_frame{false}; // set by handle_click_select on a pick; suppresses the gizmo-axis grab on that same left-press frame
+    bool m_gizmo_or_picker_busy{false};      // gizmo grabbed/hot or picker armed this frame (read by the global drag-scroll to yield in VR)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     sdk::AActor* m_overlap_detection_actor{nullptr};
@@ -529,8 +537,13 @@ private:
         bool hide_legacy{false};
         // Stable-locator fallback: when no allowed-base path can reach the object (e.g. a
         // click-selected world actor), we store its full name here and re-resolve it each tick via
-        // sdk::find_uobject (which caches + self-invalidates across level loads). Empty => use `path`.
+        // sdk::find_uobject (which caches HITS + self-invalidates across level loads). Empty => use `path`.
         std::wstring object_locator{};
+        // find_uobject only caches hits; a MISS does a full O(N) get_full_name scan of the whole
+        // object array. An absent locator target (destroyed / not-yet-spawned / wrong level) would
+        // therefore re-scan every tick. This per-bucket cooldown skips the lookup for a while after a
+        // miss so the worst case is one scan per ~cooldown ticks instead of one per frame. Transient.
+        mutable uint32_t locator_miss_cooldown{0};
     };
 
     // Resolve a saved property bucket to its live object: prefer the base-relative `path` (survives

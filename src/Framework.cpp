@@ -31,6 +31,7 @@
 #include "mods/ImGuiThemeHelpers.hpp"
 #include "mods/PluginLoader.hpp"
 #include "mods/VR.hpp"
+#include "mods/UObjectHook.hpp" // is_gizmo_or_picker_busy() — VR drag-scroll yields to gizmo axis-drag
 #include "mods/vr/d3d12/CommandContext.hpp"
 #include <ShlObj_core.h>
 #include <algorithm>
@@ -782,8 +783,11 @@ void Framework::run_imgui_frame(bool from_present) {
             }
         } else if (ImGui::IsMouseClicked(kBtn) && g.HoveredWindow != nullptr && g.MovingWindow == nullptr &&
                    (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f) &&
-                   // middle button can start anywhere (it does nothing else); VR-left must avoid item drags
-                   (!vr || (g.HoveredId == 0 && g.ActiveId == 0))) {
+                   // middle button can start anywhere (it does nothing else); VR-left must avoid item
+                   // drags AND yield to the gizmo axis-drag / picker, which share the left button and
+                   // hit-test the background draw list (so they never set HoveredId/ActiveId).
+                   (!vr || (g.HoveredId == 0 && g.ActiveId == 0 &&
+                            !(UObjectHook::get() != nullptr && UObjectHook::get()->is_gizmo_or_picker_busy())))) {
             s_drag_scroll_win = g.HoveredWindow;
         }
     }
