@@ -8066,6 +8066,11 @@ const auto check_flags = [](uint64_t flags){
     if (clamp_item_width) {
         ImGui::PushItemWidth(m_inspector_item_width);
     }
+    // RAII pop: the property loop below has lambda-local returns and can surface exceptions from
+    // reflection calls; a manual pop after the loop would be skipped on an uncaught throw and corrupt
+    // ImGui's item-width stack. Guard pops on every exit. Nothing is drawn after the loop, so popping
+    // at function scope is equivalent to popping right after it.
+    utility::ScopeGuard item_width_pop{[clamp_item_width]() { if (clamp_item_width) { ImGui::PopItemWidth(); } }};
 
     for (auto& entry : sorted_fields) {
         auto prop = entry.prop;
@@ -8705,10 +8710,7 @@ const auto check_flags = [](uint64_t flags){
             }
         }
     }
-
-    if (clamp_item_width) {
-        ImGui::PopItemWidth();
-    }
+    // item_width_pop (ScopeGuard above) pops here.
 }
 
 void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop) {
