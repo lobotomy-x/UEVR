@@ -8,6 +8,22 @@ Build: `cmake --build build --config RelWithDebInfo --target uevr -- /m` (ignore
 
 ---
 
+## LATEST STATUS — 2026-06-23 (all committed + pushed to fork `lobotomy-x/UEVR` branch `luavrlib`, tip `2cb8e2c`; built+deployed; NOT in-headset-verified)
+
+This supersedes the stale "Save Property" / "#1 click-select" / texture entries below. Each change-set went through adversarial multi-agent review; confirmed bugs were fixed and re-verified.
+
+- ✅ **Save Property — FIXED & WORKS** (was the "still broken" item). Three root causes fixed: (1) a popup hijack (`<name>EditFlags` popup stole the right-click) hid the Save button — consolidated to one menu per row gated on `row_ctx_drawn`; (2) the hard `has_valid_base()` gate — now `resolve_save_target()` falls back to `try_get_path` then a full-name locator; (3) known-struct save bound to the trailing Copy button — now `OpenPopupOnItemClick` on the value row. Also added UInt64/Int64 reapply + "Persistent Level" base fix.
+- ✅ **Stable object-locator model** — arbitrary objects (no allowed-base path, e.g. click-selected world actors) are now saveable: `PersistentProperties.object_locator` (= `get_full_name()`), `resolve_persistent_target()` re-resolves via `sdk::find_uobject` with a per-bucket miss-cooldown (re-probes ~every 20 ticks; on-click dedup bypasses it). Class is embedded in the locator ⇒ no wrong-offset write. Limitation: runtime-spawned objects with session-varying name numbers won't re-match.
+- ✅ **#1 click-to-select gizmo targets** — one-shot "Pick gizmo target" button (auto-disarms after a hit, Esc cancels, optional sticky). Deprojects the cursor (`screen_to_world`), picks the front-most scene component in a cone, adds to `m_gizmo_components`. Suppresses the gizmo-axis grab on the pick frame; yields VR drag-scroll while picking.
+- ✅ **Lua `uevr.reset_scripts()`** — deferred-safe (flag drained at top of `LuaLoader::on_frame`).
+- ✅ **Numbered-component reapply** — `StatePath::resolve` now exact-matches the saved numbered sibling first (de-numbered prefix as fallback), so a save no longer reapplies onto the wrong same-base-name instance.
+- ✅ **Global drag-to-scroll** — matches the class browser (`drag_scroll_current_window`): MIDDLE mouse flat / VR-left (yields to gizmo/picker), 2.5x/1.5x, ResizeAll cursor. + window width cap (~900px) for readable columns.
+- ✅ **Texture preview D3D11 crash — FIXED** (was crashing). The flat-mode FRHITexture2D vtable "bootstrap" was wrong (scanned for a `d3d11.dll` vtable, but UE's FD3D11Texture2D vtable is in the game module) → corrupted virtual calls → crash. REMOVED it; flat mode now shows "enter VR to capture vtable", works in VR. **NOTE: the "🟡 Texture preview" + "D3D11 texture preview bootstrap" entries below are OBSOLETE** — there is no offset/bootstrap to fill in; the feature is VR-only until a proper flat-mode RHI hook exists.
+
+Still open (mostly headset-gated — do NOT implement blind): **#2** gizmo highlight adjusted axis (thumbstick/slider), **D2** show 3 gizmos offset, **recenter** button, **E1/E2/E3** VR stick-adjust, **camera_attach #2**, **#3 OpenXR overlay-missing** (needs a failing game's log), Mortal Shell 2 `m_runtime` UAF full fix.
+
+---
+
 ## ✅ Done this session (in the deployed DLL, uncommitted)
 
 | Feature | Where | Verified |
