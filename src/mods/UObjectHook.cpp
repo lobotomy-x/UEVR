@@ -3939,21 +3939,43 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                 return nullptr;
             }
 
+            sdk::UActorComponent* matched = nullptr;
+
+            // Pass 1: exact full (numbered) name match. The saved token is "<Class> <FullName>"
+            // including the FName number, so this disambiguates among same-base-name siblings
+            // (e.g. picks "StaticMeshComponent SM_Door_2" over "..._5"), which the de-numbered
+            // prefix match below cannot. Prefer it when the exact instance still exists.
             for (auto comp : components) {
-                const auto& comp_fname = comp->get_fname();
-                const auto comp_name = comp_fname.to_string_remove_numbers();
-                const auto comp_ends_with_number = comp_fname.get_number() != 0;
-
-                const auto comp_expanded_name = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp_name);
-                const auto is_match = comp_ends_with_number ? next_it->starts_with(comp_expanded_name)
-                                                            : *next_it == comp_expanded_name;
-
-                if (is_match) {
-                    previous_data = comp;
-                    previous_data_desc = comp->get_class();
-                    ++it;
+                const auto full_name = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string());
+                if (*next_it == full_name) {
+                    matched = comp;
                     break;
                 }
+            }
+
+            // Pass 2 (fallback): de-numbered match — original behavior, covers cross-session number
+            // drift where the sibling exists but got a different FName number this run.
+            if (matched == nullptr) {
+                for (auto comp : components) {
+                    const auto& comp_fname = comp->get_fname();
+                    const auto comp_name = comp_fname.to_string_remove_numbers();
+                    const auto comp_ends_with_number = comp_fname.get_number() != 0;
+
+                    const auto comp_expanded_name = utility::narrow(comp->get_class()->get_fname().to_string() + L" " + comp_name);
+                    const auto is_match = comp_ends_with_number ? next_it->starts_with(comp_expanded_name)
+                                                                : *next_it == comp_expanded_name;
+
+                    if (is_match) {
+                        matched = comp;
+                        break;
+                    }
+                }
+            }
+
+            if (matched != nullptr) {
+                previous_data = matched;
+                previous_data_desc = matched->get_class();
+                ++it;
             }
 
             break;
