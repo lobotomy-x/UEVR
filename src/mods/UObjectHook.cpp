@@ -6735,7 +6735,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             std::shared_ptr<PersistentProperties> props{};
 
             for (const auto& existing_prop : m_persistent_properties) {
-                if (existing_prop->path.resolve() == comp) {
+                if (resolve_persistent_target(*existing_prop) == comp) {
                     props = existing_prop;
                     break;
                 }
@@ -6752,7 +6752,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             std::shared_ptr<PersistentProperties> props{};
 
             for (const auto& existing_prop : m_persistent_properties) {
-                if (existing_prop->path.resolve() == comp) {
+                if (resolve_persistent_target(*existing_prop) == comp) {
                     props = existing_prop;
                     break;
                 }
@@ -6772,7 +6772,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
 
         // Find existing one if possible
         for (const auto& existing_prop : m_persistent_properties) {
-            if (existing_prop->path.resolve() == comp) {
+            if (resolve_persistent_target(*existing_prop) == comp) {
                 props = existing_prop;
                 break;
             }
