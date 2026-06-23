@@ -1573,7 +1573,15 @@ void ScriptContext::on_pre_engine_tick(UEVR_UGameEngineHandle engine, float delt
         // and fire the corresponding callbacks only when they change. Lets scripts reapply a
         // camera mod (etc.) on the event without polling every frame in Lua.
         const auto fire_changed = [&](std::vector<sol::protected_function>& cbs, uevr::API::UObject* obj, const char* what) {
-            auto wrapped = sol::make_object(ctx->m_lua.lua_state(), obj);
+            if (cbs.empty()) {
+                return;
+            }
+            // Pass nil (not a userdata wrapping a null pointer) when the object is gone — the UObject
+            // usertype methods dereference self immediately, so a null-backed userdata would crash on
+            // the first method call. Mirrors get_local_pawn's null->nil conversion.
+            sol::object wrapped = obj != nullptr
+                ? sol::make_object(ctx->m_lua.lua_state(), obj)
+                : sol::make_object(ctx->m_lua.lua_state(), sol::lua_nil);
             for (auto& fn : cbs) {
                 try {
                     ctx->handle_protected_result(fn(wrapped));
@@ -1586,15 +1594,17 @@ void ScriptContext::on_pre_engine_tick(UEVR_UGameEngineHandle engine, float delt
         };
 
         try {
+            // Don't touch the UE API at all unless a script registered for these events. Mirrors the
+            // guards on the other stereo callbacks in this file — some games crash when probed for
+            // objects/properties they don't support, and this poll runs every tick for every context.
+            const bool any_change_cbs = !ctx->m_on_pawn_changed_callbacks.empty()
+                || !ctx->m_on_view_target_changed_callbacks.empty()
+                || !ctx->m_on_level_changed_callbacks.empty();
+
             auto& api = uevr::API::get();
-            if (api != nullptr) {
+            if (any_change_cbs && api != nullptr) {
                 auto* pc = api->get_player_controller(0);
                 auto* pawn = api->get_local_pawn(0);
-
-                if ((void*)pawn != ctx->m_last_pawn) {
-                    ctx->m_last_pawn = (void*)pawn;
-                    fire_changed(ctx->m_on_pawn_changed_callbacks, pawn, "on_pawn_changed");
-                }
 
                 uevr::API::UObject* view_target = nullptr;
                 if (pc != nullptr) {
@@ -1606,16 +1616,30 @@ void ScriptContext::on_pre_engine_tick(UEVR_UGameEngineHandle engine, float delt
                         }
                     }
                 }
-                if ((void*)view_target != ctx->m_last_view_target) {
-                    ctx->m_last_view_target = (void*)view_target;
-                    fire_changed(ctx->m_on_view_target_changed_callbacks, view_target, "on_view_target_changed");
-                }
 
                 // A PlayerController lives in the persistent level; its Outer changes on level load.
                 uevr::API::UObject* level = (pc != nullptr) ? pc->get_outer() : nullptr;
-                if ((void*)level != ctx->m_last_level) {
+
+                if (!ctx->m_change_poll_seeded) {
+                    // First poll for this context (also right after reset_scripts() rebuilds it):
+                    // record the baseline silently so the initial/unchanged state fires nothing.
+                    ctx->m_last_pawn = (void*)pawn;
+                    ctx->m_last_view_target = (void*)view_target;
                     ctx->m_last_level = (void*)level;
-                    fire_changed(ctx->m_on_level_changed_callbacks, level, "on_level_changed");
+                    ctx->m_change_poll_seeded = true;
+                } else {
+                    if ((void*)pawn != ctx->m_last_pawn) {
+                        ctx->m_last_pawn = (void*)pawn;
+                        fire_changed(ctx->m_on_pawn_changed_callbacks, pawn, "on_pawn_changed");
+                    }
+                    if ((void*)view_target != ctx->m_last_view_target) {
+                        ctx->m_last_view_target = (void*)view_target;
+                        fire_changed(ctx->m_on_view_target_changed_callbacks, view_target, "on_view_target_changed");
+                    }
+                    if ((void*)level != ctx->m_last_level) {
+                        ctx->m_last_level = (void*)level;
+                        fire_changed(ctx->m_on_level_changed_callbacks, level, "on_level_changed");
+                    }
                 }
             }
         } catch (...) {

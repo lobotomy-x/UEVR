@@ -157,6 +157,9 @@ private:
     void* m_last_pawn{nullptr};
     void* m_last_view_target{nullptr};
     void* m_last_level{nullptr};
+    // First poll records the baseline silently (no spurious "changed" fire for the initial state, and
+    // a fresh context after reset_scripts() re-seeds instead of re-firing for the unchanged pawn/level).
+    bool m_change_poll_seeded{false};
     std::vector<sol::protected_function> m_on_pre_slate_draw_window_render_thread_callbacks{};
     std::vector<sol::protected_function> m_on_post_slate_draw_window_render_thread_callbacks{};
     std::vector<sol::protected_function> m_on_early_calculate_stereo_view_offset_callbacks{};
