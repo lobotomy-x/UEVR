@@ -352,6 +352,11 @@ private:
     float m_snap_rotate{15.0f};           // Ctrl-snap step for rotate (degrees)
     float m_snap_scale{0.1f};             // Ctrl-snap step for scale
     sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
+    // Saved world positions for the "Save/Restore position" buttons. Touched from game-thread tasks
+    // (GameThreadWorker) for the actual get/set_world_location, and read from the draw thread for the
+    // button-enable check, so guard it with its own mutex (independent of m_mutex).
+    std::unordered_map<sdk::USceneComponent*, glm::vec3> m_saved_positions{};
+    std::mutex m_saved_positions_mtx{};
     sdk::AActor* m_overlap_detection_actor{nullptr};
     sdk::AActor* m_overlap_detection_actor_left{nullptr};
 

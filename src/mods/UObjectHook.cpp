@@ -5823,6 +5823,56 @@ void UObjectHook::draw_main() {
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::Separator();
 
+    // Most-recently click-selected object, pinned at the top so you can edit what you just picked
+    // without drilling the tree. Plain read of m_last_selected (aligned-pointer, benign across
+    // threads) validated via exists() before use; we never write it here.
+    if (sdk::USceneComponent* sel = m_last_selected; sel != nullptr && this->exists(sel)) {
+        std::string sel_name;
+        try { sel_name = utility::narrow(sel->get_class()->get_fname().to_string() + L" " + sel->get_fname().to_string()); }
+        catch (...) { sel_name = "<selected>"; }
+        if (ImGui::CollapsingHeader((std::string("Selected: ") + sel_name + "###lastsel").c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushID("lastsel");
+
+            // Save / restore world position. The actual get/set_world_location call into the engine
+            // (process_event), so defer to the game thread; the saved-positions map has its own mutex.
+            if (ImGui::Button("Save position")) {
+                GameThreadWorker::get().enqueue([this, sel]() {
+                    if (!this->exists(sel)) return;
+                    try {
+                        const glm::vec3 loc = sel->get_world_location();
+                        std::scoped_lock _{m_saved_positions_mtx};
+                        m_saved_positions[sel] = loc;
+                    } catch (...) {}
+                });
+            }
+            ImGui::SameLine();
+            bool has_saved = false;
+            { std::scoped_lock _{m_saved_positions_mtx}; has_saved = m_saved_positions.contains(sel); }
+            ImGui::BeginDisabled(!has_saved);
+            if (ImGui::Button("Restore position")) {
+                GameThreadWorker::get().enqueue([this, sel]() {
+                    if (!this->exists(sel)) return;
+                    glm::vec3 loc{};
+                    {
+                        std::scoped_lock _{m_saved_positions_mtx};
+                        auto it = m_saved_positions.find(sel);
+                        if (it == m_saved_positions.end()) return;
+                        loc = it->second;
+                    }
+                    try { sel->set_world_location(loc, false, false); } catch (...) {}
+                });
+            }
+            ImGui::EndDisabled();
+            ImGui::Separator();
+
+            try { ui_handle_object((sdk::UObject*)sel); }
+            catch (const std::exception& e) { ImGui::TextColored(ImVec4{1,0.3f,0.3f,1}, "selected inspector threw: %s", e.what()); }
+            catch (...) { ImGui::TextColored(ImVec4{1,0.3f,0.3f,1}, "selected inspector threw"); }
+            ImGui::PopID();
+        }
+        ImGui::Separator();
+    }
+
     // Snapshot the attached-components map under the shared lock before reading it. draw_main runs
     // with NO m_mutex held (on_draw_sidebar_entry calls on_draw_ui(), which takes AND releases the
     // shared lock, then calls draw_main), so reading/copying this map directly would race the VR tick
