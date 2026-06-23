@@ -2434,7 +2434,7 @@ void UObjectHook::add_new_object(sdk::UObjectBase* object) {
                     std::function<void(sdk::UObject*)> job{};
 
                     {
-                        std::shared_lock _{m_mutex};
+                        std::scoped_lock _{m_add_component_jobs_mtx}; // matches queue_add's writer mutex (not m_mutex)
 
                         if (auto it = this->m_on_creation_add_component_jobs.find((sdk::UClass*)super); it != this->m_on_creation_add_component_jobs.end()) {
                             job = it->second;
@@ -6109,8 +6109,16 @@ void UObjectHook::draw_main() {
                         strcpy_s(component_add_name, "Nonexistent component");
                         return;
                     }
+                    // Independent mutex (see m_add_component_jobs_mtx decl): on_draw_ui already holds
+                    // m_mutex (shared) around this whole draw, so we cannot lock m_mutex exclusively
+                    // here. This serializes the map write against the object-creation hook reader.
+                    std::scoped_lock _{m_add_component_jobs_mtx};
                     m_on_creation_add_component_jobs[uclass] = [this, component_c](sdk::UObject* object) {
-                            if (!this->exists(object)) {
+                            // Re-validate BOTH the spawned object and the captured component class:
+                            // this job lives in the map indefinitely and fires on every future spawn of
+                            // the actor class, so a class dropped from the browser (a Blueprint-generated
+                            // class can be GC'd) could otherwise become a wild pointer here.
+                            if (!this->exists(object) || !this->exists((sdk::UObjectBase*)component_c)) {
                                 return;
                             }
 

@@ -322,6 +322,11 @@ private:
     std::future<std::vector<sdk::UClass*>> m_sorting_task{};
 
     std::unordered_map<sdk::UClass*, std::function<void (sdk::UObject*)>> m_on_creation_add_component_jobs{};
+    // Own mutex (NOT m_mutex): the writer (queue_add) runs inside on_draw_ui which already holds a
+    // shared_lock on m_mutex, so taking m_mutex exclusively here would deadlock the non-recursive
+    // shared_mutex. An independent mutex serializes the map write against the object-creation hook
+    // reader without touching m_mutex.
+    std::mutex m_add_component_jobs_mtx{};
 
     std::deque<sdk::UObject*> m_most_recent_objects{};
     std::unordered_set<sdk::UObject*> m_motion_controller_attached_objects{};
