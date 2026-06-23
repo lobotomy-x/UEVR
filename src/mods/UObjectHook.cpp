@@ -5725,15 +5725,25 @@ void UObjectHook::draw_main() {
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::Separator();
 
-    if (!m_motion_controller_attached_components.empty()) {
+    // Snapshot the attached-components map under the shared lock before reading it. draw_main runs
+    // with NO m_mutex held (on_draw_sidebar_entry calls on_draw_ui(), which takes AND releases the
+    // shared lock, then calls draw_main), so reading/copying this map directly would race the VR tick
+    // thread that mutates it under m_mutex — a map copy concurrent with a rehash is UB. Iterate the
+    // snapshot.
+    decltype(m_motion_controller_attached_components) attached;
+    {
+        std::shared_lock _{m_mutex};
+        attached = m_motion_controller_attached_components;
+    }
+
+    if (!attached.empty()) {
 
         if (ImGui::TreeNode("Attached Components")) {
             if (ImGui::Button("Detach all")) {
-                // Defer to the game thread under the UNIQUE lock. This runs inside on_draw_ui, which
-                // already holds m_mutex (shared) for the whole draw, so clearing the maps directly
-                // here would be a write under a shared lock — racing the VR tick thread that
-                // reads/writes these same containers under m_mutex. The enqueued task runs with no
-                // outer lock held, so it can take the unique lock cleanly (no deadlock).
+                // Defer the clears to the game thread under the UNIQUE lock. draw_main runs with no
+                // lock held, so clearing these m_mutex-protected containers here directly would race
+                // the VR tick thread. The enqueued task runs with no outer lock, so it takes the
+                // unique lock cleanly (no deadlock).
                 GameThreadWorker::get().enqueue([this]() {
                     std::unique_lock _{m_mutex};
                     m_motion_controller_attached_components.clear();
@@ -5747,9 +5757,6 @@ void UObjectHook::draw_main() {
                     m_persistent_states.clear();
                 });
             }
-
-            // make a copy because the user could press the detach button while iterating
-            auto attached = m_motion_controller_attached_components;
 
             for (auto& it : attached) {
                 if (!this->exists_unsafe(it.first) || it.second == nullptr) {
