@@ -3640,6 +3640,15 @@ void UObjectHook::update_persistent_states() {
                         value = prop_state->data.i;
                     }
                     break;
+                case "UInt64Property"_fnv:
+                case "Int64Property"_fnv:
+                    {
+                        // The inspector lets these be saved (8-byte union) but the reapply switch
+                        // previously had no case, so they wrote to disk and never reapplied.
+                        auto& value = *(uint64_t*)(obj.as<uintptr_t>() + ((sdk::FProperty*)prop_desc)->get_offset());
+                        value = prop_state->data.u64;
+                    }
+                    break;
                 case "BoolProperty"_fnv:
                     {
                         auto boolprop = (sdk::FBoolProperty*)prop_desc;
@@ -3676,7 +3685,10 @@ void UObjectHook::update_persistent_states() {
                     }
                     break;
                 default:
-                    // OH NO!!!!! anyways
+                    // Saved to disk but no reapply path for this property class — surface it once
+                    // so a silently-ignored save is at least diagnosable in the log.
+                    SPDLOG_WARN_ONCE("[UObjectHook] persistent property '{}' has unhandled type '{}' — value saved but not reapplied",
+                                     utility::narrow(prop_state->name), utility::narrow(prop_t_name));
                     break;
                 };
             }
@@ -3807,7 +3819,11 @@ sdk::UObject* UObjectHook::StatePath::resolve_base_object() const {
         break;
     }
 
-    case "PersistentLevel"_fnv: {
+    // s_allowed_bases stores this token WITH a space ("Persistent Level"); the original switch only
+    // matched the no-space form, so this base never resolved (dead for try_get_path / level saves).
+    // Accept both spellings.
+    case "PersistentLevel"_fnv:
+    case "Persistent Level"_fnv: {
 
         auto world = engine->get_world();
         if (world == nullptr) {
@@ -7468,6 +7484,36 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
 
     auto previous_path = m_path;
 
+    // One consolidated right-click menu per property row. The scalar/struct cases draw their own
+    // popup (Save/Unsave + Edit flags); this flag tells the generic Edit-flags popup at the end of
+    // the switch to stand down for those rows. Without it, that popup re-opens on the same
+    // right-click and the Save button is never visible — the long-standing "only Edit flags shows,
+    // Save never appears" bug that made the save feature look unimplemented.
+    bool row_ctx_drawn = false;
+
+    // Resolve a savable, re-resolvable path for `object`: prefer the live navigation path when it
+    // starts from an allowed base, else brute-force one with try_get_path (the same fallback the
+    // "Save Visibility State" button already uses). nullopt => no allowed base can reach the object,
+    // so the save is refused with a hint instead of a hard-gated empty menu.
+    auto resolve_save_path = [this, &previous_path, object]() -> std::optional<std::vector<std::string>> {
+        if (previous_path.has_valid_base()) {
+            return previous_path.path();
+        }
+        // Fallback only when `object` is a real registered UObject. When ui_handle_properties is
+        // recursed into a struct, `object` is a raw struct-inner pointer that is NOT in m_objects;
+        // try_get_path would dereference it as a UObject (get_class()->get_fname()) and read garbage,
+        // so gate on exists_unsafe. Wrap in try/catch: the FName/narrow path can throw and we are
+        // inside an open ImGui popup here, where an escaping exception would skip EndPopup().
+        if (object != nullptr && exists_unsafe(reinterpret_cast<sdk::UObjectBase*>(object))) {
+            try {
+                if (auto p = try_get_path(reinterpret_cast<sdk::UObject*>(object)); p.has_value()) {
+                    return p->path();
+                }
+            } catch (...) {}
+        }
+        return std::nullopt;
+    };
+
     auto scope = m_path.enter("Properties");
 
     if (uclass == nullptr) {
@@ -7730,112 +7776,115 @@ const auto check_flags = [](uint64_t flags){
                 }
             }
         };
-        // Right-click lambda for supported properties, usually for saving.
+        // Right-click lambda for supported scalar properties: Save/Unsave + Edit flags in ONE popup.
         auto display_context = [&](auto value) {
+            row_ctx_drawn = true; // this row owns its context popup; suppress the generic one below
             if (!ImGui::BeginPopupContextItem()) {
                 return;
             }
 
-            if (!previous_path.has_valid_base()) {
-                ImGui::Text("Can't save, did not start from a valid base");
-                ImGui::EndPopup();
-                return;
-            }
+            const auto save_path = resolve_save_path();
+            if (!save_path.has_value()) {
+                ImGui::TextDisabled("Can't save: no allowed base can reach this object");
+            } else {
+                auto save_logic = [&](bool unsave = false) {
+                    std::shared_ptr<PersistentProperties> props{};
 
-            auto save_logic = [&](bool unsave = false) {
-                const auto field_name = prop->get_field_name().to_string();
-                std::shared_ptr<PersistentProperties> props{};
-
-                // Find existing one if possible
-                for (const auto& existing_prop : m_persistent_properties) {
-                    if (existing_prop->path.resolve() == object) {
-                        props = existing_prop;
-                        break;
+                    // Find existing one if possible
+                    for (const auto& existing_prop : m_persistent_properties) {
+                        if (existing_prop->path.resolve() == object) {
+                            props = existing_prop;
+                            break;
+                        }
                     }
-                }
 
-                // Add new one if necessary
-                if (props == nullptr) {
-                    props = std::make_shared<PersistentProperties>();
-                    props->path = StatePath{previous_path.path()};
-                    m_persistent_properties.push_back(props);
-                }
-
-                // Add property to list if needed
-                std::shared_ptr<PersistentProperties::PropertyState> state{};
-
-                for (const auto& existing_state : props->properties) {
-                    if (existing_state->name == prop->get_field_name().to_string()) {
-                        state = existing_state;
-                        break;
+                    // Add new one if necessary
+                    if (props == nullptr) {
+                        props = std::make_shared<PersistentProperties>();
+                        props->path = StatePath{*save_path};
+                        m_persistent_properties.push_back(props);
                     }
-                }
 
-                // Add new one if necessary
-                if (state == nullptr) {
-                    state = std::make_shared<PersistentProperties::PropertyState>();
-                    state->name = prop->get_field_name().to_string();
-                    props->properties.push_back(state);
-                }
+                    // Add property to list if needed
+                    std::shared_ptr<PersistentProperties::PropertyState> state{};
 
-                memcpy(&state->data, &value, sizeof(value));
+                    for (const auto& existing_state : props->properties) {
+                        if (existing_state->name == prop->get_field_name().to_string()) {
+                            state = existing_state;
+                            break;
+                        }
+                    }
 
-                if (unsave) {
-                    props->properties.erase(
-                        std::remove(props->properties.begin(), props->properties.end(), state),
-                        props->properties.end()
-                    );
-                }
+                    // Add new one if necessary
+                    if (state == nullptr) {
+                        state = std::make_shared<PersistentProperties::PropertyState>();
+                        state->name = prop->get_field_name().to_string();
+                        props->properties.push_back(state);
+                    }
 
-                // Concat the entire path together and hash it to get a unique name
-                std::string concat_path{};
-                for (const auto& p : previous_path.path()) {
-                    concat_path += p;
-                }
+                    memcpy(&state->data, &value, sizeof(value));
 
-                const auto hash_str = std::to_string(utility::hash(concat_path)) + "_props.json";
-                auto wanted_path = UObjectHook::get_persistent_dir() / hash_str;
+                    if (unsave) {
+                        props->properties.erase(
+                            std::remove(props->properties.begin(), props->properties.end(), state),
+                            props->properties.end()
+                        );
+                    }
 
-                if (props->path_to_json.has_value()) {
-                    wanted_path = props->path_to_json.value();
-                }
+                    // Concat the entire path together and hash it to get a unique name
+                    std::string concat_path{};
+                    for (const auto& p : *save_path) {
+                        concat_path += p;
+                    }
 
-                // Create dir if necessary
-                try {
-                    std::filesystem::create_directories(wanted_path.parent_path());
+                    const auto hash_str = std::to_string(utility::hash(concat_path)) + "_props.json";
+                    auto wanted_path = UObjectHook::get_persistent_dir() / hash_str;
 
-                    if (props->properties.empty()) {
-                        // Delete the file if it exists. Happens if we unsave.
-                        if (std::filesystem::exists(wanted_path)) {
-                            std::filesystem::remove(wanted_path);
+                    if (props->path_to_json.has_value()) {
+                        wanted_path = props->path_to_json.value();
+                    }
+
+                    // Create dir if necessary
+                    try {
+                        std::filesystem::create_directories(wanted_path.parent_path());
+
+                        if (props->properties.empty()) {
+                            // Delete the file if it exists. Happens if we unsave.
+                            if (std::filesystem::exists(wanted_path)) {
+                                std::filesystem::remove(wanted_path);
+                            }
+
+                            // Delete the property entry from m_peristent_properties.
+                            m_persistent_properties.erase(
+                                std::remove(m_persistent_properties.begin(), m_persistent_properties.end(), props),
+                                m_persistent_properties.end()
+                            );
+
+                            return;
                         }
 
-                        // Delete the property entry from m_peristent_properties.
-                        m_persistent_properties.erase(
-                            std::remove(m_persistent_properties.begin(), m_persistent_properties.end(), props),
-                            m_persistent_properties.end()
-                        );
-
-                        return;
+                        props->save_to_file(wanted_path);
+                    } catch (const std::exception& e) {
+                        SPDLOG_ERROR("[UObjectHook] Failed to save persistent properties: {}", e.what());
+                    } catch (...) {
+                        SPDLOG_ERROR("[UObjectHook] Failed to save persistent properties");
                     }
+                };
 
-                    props->save_to_file(wanted_path);
-                } catch (const std::exception& e) {
-                    SPDLOG_ERROR("[UObjectHook] Failed to save persistent properties: {}", e.what());
-                } catch (...) {
-                    SPDLOG_ERROR("[UObjectHook] Failed to save persistent properties");
+                if (ImGui::Button("Save Property")) {
+                    save_logic();
                 }
-            };
 
-            if (ImGui::Button("Save Property")) {
-                save_logic();
+                if (ImGui::Button("Unsave Property")) {
+                    save_logic(true);
+                }
+                ImGui::Separator();
             }
 
-            if (ImGui::Button("Unsave Property")) {
-                save_logic(true);
+            if (ImGui::BeginMenu("Edit flags")) {
+                edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                ImGui::EndMenu();
             }
-
-
             ImGui::EndPopup();
         };
 
@@ -7843,22 +7892,27 @@ const auto check_flags = [](uint64_t flags){
         // struct, so we snapshot the raw struct bytes into PropertyState::struct_bytes. Mirrors
         // display_context's save_logic. Also offers Edit flags so struct rows have a full menu.
         auto display_context_struct = [&](void* saddr, int32_t ssize) {
-            if (!ImGui::BeginPopupContextItem()) {
+            row_ctx_drawn = true; // this row owns its context popup; suppress the generic one below
+            // ui_try_known_struct opened "##known_struct_save" via OpenPopupOnItemClick on the value
+            // widget under PushID(addr); replay the same id seed so this BeginPopup matches it and the
+            // menu lands on the value row (not the trailing Copy button — the prior no-id binding bug).
+            ImGui::PushID(saddr);
+            utility::ScopeGuard struct_ctx_pop{[]() { ImGui::PopID(); }};
+            if (!ImGui::BeginPopup("##known_struct_save")) {
                 return;
             }
-            if (!previous_path.has_valid_base()) {
-                ImGui::Text("Can't save, did not start from a valid base");
-                ImGui::EndPopup();
-                return;
-            }
-            auto save_logic = [&](bool unsave = false) {
+            const auto save_path = resolve_save_path();
+            if (!save_path.has_value()) {
+                ImGui::TextDisabled("Can't save: no allowed base can reach this object");
+            } else {
+                auto save_logic = [&](bool unsave = false) {
                 std::shared_ptr<PersistentProperties> props{};
                 for (const auto& ep : m_persistent_properties) {
                     if (ep->path.resolve() == object) { props = ep; break; }
                 }
                 if (props == nullptr) {
                     props = std::make_shared<PersistentProperties>();
-                    props->path = StatePath{previous_path.path()};
+                    props->path = StatePath{*save_path};
                     m_persistent_properties.push_back(props);
                 }
                 std::shared_ptr<PersistentProperties::PropertyState> state{};
@@ -7879,7 +7933,7 @@ const auto check_flags = [](uint64_t flags){
                     props->properties.erase(std::remove(props->properties.begin(), props->properties.end(), state), props->properties.end());
                 }
                 std::string concat_path{};
-                for (const auto& p : previous_path.path()) concat_path += p;
+                for (const auto& p : *save_path) concat_path += p;
                 auto wanted_path = UObjectHook::get_persistent_dir() / (std::to_string(utility::hash(concat_path)) + "_props.json");
                 if (props->path_to_json.has_value()) wanted_path = props->path_to_json.value();
                 try {
@@ -7896,9 +7950,10 @@ const auto check_flags = [](uint64_t flags){
                     SPDLOG_ERROR("[UObjectHook] Failed to save persistent struct property");
                 }
             };
-            if (ImGui::Button("Save Property")) { save_logic(); }
-            if (ImGui::Button("Unsave Property")) { save_logic(true); }
-            ImGui::Separator();
+                if (ImGui::Button("Save Property")) { save_logic(); }
+                if (ImGui::Button("Unsave Property")) { save_logic(true); }
+                ImGui::Separator();
+            }
             if (ImGui::BeginMenu("Edit flags")) {
                 edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
                 ImGui::EndMenu();
@@ -7909,6 +7964,7 @@ const auto check_flags = [](uint64_t flags){
         const auto& prop_name =  utility::narrow(prop->get_field_name().to_string());
         sdk::FProperty* fprop = ((sdk::FProperty*)prop);
 
+        row_ctx_drawn = false; // reset per row; the cases that own a popup set it true
 
         switch (hash_type) {
 
@@ -8146,13 +8202,14 @@ const auto check_flags = [](uint64_t flags){
                 void* addr = (void*)((uintptr_t)object + fprop->get_offset());
                 const auto strukt = ((sdk::FStructProperty*)prop)->get_struct();
 
-                if (ui_try_known_struct(prop_name, addr, strukt)) {
+                if (ui_try_known_struct(prop_name, addr, strukt, /*top_level_save*/ true)) {
                     // Known structs (Vector/Rotator/Transform/...) render compactly + return; attach
                     // the struct-save / edit-flags right-click menu to that row so they're savable too.
                     display_context_struct(addr, strukt != nullptr ? (int32_t)strukt->get_properties_size() : 0);
                     break;
                 }
 
+                row_ctx_drawn = true; // unknown struct draws its own Copy/Edit-flags popup
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::Button("Copy Address")) {
                         const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
@@ -8238,13 +8295,19 @@ const auto check_flags = [](uint64_t flags){
             }
             break;
         };
-        std::string prop_name_edit = prop_name + "EditFlags";
-        if (ImGui::BeginPopupContextItem(prop_name_edit.c_str())){
-                if (ImGui::BeginMenu("Edit flags")) {
-                    edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
-                    ImGui::EndMenu();
-                }
-                ImGui::EndPopup();
+        // Generic Edit-flags popup for property rows that DON'T draw their own context menu above
+        // (Name/Str/Object/Array/Set/Map/etc.). Gated on row_ctx_drawn so it never re-opens on the
+        // same right-click as a Save popup and steals it — that double-open was the reason the Save
+        // button never appeared on savable rows.
+        if (!row_ctx_drawn) {
+            std::string prop_name_edit = prop_name + "EditFlags";
+            if (ImGui::BeginPopupContextItem(prop_name_edit.c_str())){
+                    if (ImGui::BeginMenu("Edit flags")) {
+                        edit_property_flags(utility::narrow(prop->get_field_name().to_string()), (sdk::FProperty*)prop);
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndPopup();
+            }
         }
     }
 }
@@ -8636,7 +8699,15 @@ static void ui_struct_clipboard(const std::string& sname, void* addr, int32_t si
     }
 }
 
-bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition) {
+bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition, bool top_level_save) {
+    // Bind the save context popup to the value widget that was just drawn (so right-clicking the
+    // Vector/Color/Transform row opens Save, not the trailing Copy button). Matched by
+    // display_context_struct via PushID(addr) + BeginPopup("##known_struct_save").
+    const auto open_save_ctx = [&]() {
+        if (top_level_save) {
+            ImGui::OpenPopupOnItemClick("##known_struct_save", ImGuiPopupFlags_MouseButtonRight);
+        }
+    };
     if (addr == nullptr || definition == nullptr) {
         return false;
     }
@@ -8668,6 +8739,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
             bytes[0] = (uint8_t)(rgba[2] * 255.0f);
             bytes[3] = (uint8_t)(rgba[3] * 255.0f);
         }
+        open_save_ctx(); // bind to the ColorEdit4 (a real item id), not the [Color] text below
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[Color]");
         return true;
@@ -8714,6 +8786,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
             ImGui::DragScalarN(label.c_str(), wide ? ImGuiDataType_Double : ImGuiDataType_Float, addr, comps, 0.1f,
                 nullptr, nullptr, "%.4g");
         }
+        open_save_ctx(); // bind to the DragScalarN value, not the trailing Copy button
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[%s]", sname.c_str());
         ui_struct_clipboard(sname, addr, total);
@@ -8722,6 +8795,7 @@ bool UObjectHook::ui_try_known_struct(const std::string& label, void* addr, sdk:
 
     if (sname == "Transform" || sname == "Transform3f" || sname == "Transform3d") {
         const bool open = ImGui::TreeNode(label.c_str());
+        open_save_ctx(); // bind to the Transform TreeNode header, not the trailing Copy button
         ImGui::SameLine();
         ImGui::TextColored(tag_color, "[Transform]");
         ui_struct_clipboard(sname, addr, total);

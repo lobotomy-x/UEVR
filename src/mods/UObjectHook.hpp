@@ -228,7 +228,11 @@ private:
     void ui_function_context_menu(sdk::UFunction* func, void* object, bool is_real_object);
     void draw_active_function_hooks();
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
-    bool ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition);
+    // top_level_save: when true, the known-struct row opens the "##known_struct_save" context popup
+    // (via OpenPopupOnItemClick on the value widget) so display_context_struct's Save/Edit menu binds
+    // to the value row rather than the trailing Copy button. Only the top-level property row passes
+    // true; nested/array/member recursions leave it false so they don't open a phantom popup.
+    bool ui_try_known_struct(const std::string& label, void* addr, sdk::UStruct* definition, bool top_level_save = false);
 
     // STUB (disabled by default, crash-prone) — render a UTexture2D/UTexture as an ImGui::Image.
     // See the context dump above its definition in UObjectHook.cpp. Gated on m_show_texture_previews.
