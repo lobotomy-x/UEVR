@@ -4080,35 +4080,53 @@ UObjectHook::ResolvedObject UObjectHook::StatePath::resolve() const {
                     return nullptr;
                 }
 
-                bool found = false;
+                sdk::UObject* matched = nullptr;
 
-                // Now look for the object in the array
+                // Pass 1: exact full (numbered) name match — disambiguates numbered array siblings,
+                // which the de-numbered prefix match below cannot (same fix as the Components case:
+                // the saved token is "<Class> <FullName>" incl. the FName number).
                 for (auto obj : arr) {
                     if (obj == nullptr) {
                         continue;
                     }
-
-                    const auto& obj_fname = obj->get_fname();
-                    const auto obj_name = obj_fname.to_string_remove_numbers();
-                    const auto obj_ends_with_number = obj_fname.get_number() != 0;
-
-                    const auto obj_expanded_name = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj_name);
-                    const auto is_match = obj_ends_with_number ? prop_it->starts_with(obj_expanded_name)
-                                                               : *prop_it == obj_expanded_name;
-
-                    if (is_match) {
-                        found = true;
-                        previous_data = obj;
-                        previous_data_desc = obj->get_class();
-                        ++it;
-                        ++it;
+                    const auto full_name = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj->get_fname().to_string());
+                    if (*prop_it == full_name) {
+                        matched = obj;
                         break;
                     }
                 }
 
-                if (!found) {
+                // Pass 2 (fallback): de-numbered match — original behavior, covers cross-session
+                // number drift where the element exists but got a different FName number this run.
+                if (matched == nullptr) {
+                    for (auto obj : arr) {
+                        if (obj == nullptr) {
+                            continue;
+                        }
+
+                        const auto& obj_fname = obj->get_fname();
+                        const auto obj_name = obj_fname.to_string_remove_numbers();
+                        const auto obj_ends_with_number = obj_fname.get_number() != 0;
+
+                        const auto obj_expanded_name = utility::narrow(obj->get_class()->get_fname().to_string() + L" " + obj_name);
+                        const auto is_match = obj_ends_with_number ? prop_it->starts_with(obj_expanded_name)
+                                                                   : *prop_it == obj_expanded_name;
+
+                        if (is_match) {
+                            matched = obj;
+                            break;
+                        }
+                    }
+                }
+
+                if (matched == nullptr) {
                     return nullptr;
                 }
+
+                previous_data = matched;
+                previous_data_desc = matched->get_class();
+                ++it;
+                ++it;
                 break;
             }
 
