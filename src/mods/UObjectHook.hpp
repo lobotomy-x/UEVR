@@ -89,6 +89,8 @@ protected:
     void draw_config();
     void draw_developer();
     void draw_main();
+    void draw_gizmo_options();  // shared gizmo/selection/snap/inspector options (Config tab + pop-out window)
+    void draw_options_window(); // dockable pop-out of draw_gizmo_options, drag-dockable next to the main view
 
     // Screen-space translate gizmo: projects each enabled component's origin +
     // world X/Y/Z axis tips through the engine's own ProjectWorldToScreen and
@@ -123,6 +125,7 @@ protected:
     std::vector<sdk::UClass*> m_open_class_inspectors{};
     bool m_show_class_browser{false};
     bool m_show_function_caller{false};
+    bool m_show_options_window{false}; // dockable pop-out of the gizmo/selection options
     // Filter buffer for the class browser (shared across tabs)
     std::string m_class_browser_filter{};
 

@@ -4180,6 +4180,11 @@ void UObjectHook::on_frame() {
         catch (const std::exception& e) { spdlog::error("[UObjectHook] function caller window threw: {}", e.what()); }
         catch (...)                     { spdlog::error("[UObjectHook] function caller window threw (unknown)"); }
     }
+    if (m_show_options_window) {
+        try { draw_options_window(); }
+        catch (const std::exception& e) { spdlog::error("[UObjectHook] options window threw: {}", e.what()); }
+        catch (...)                     { spdlog::error("[UObjectHook] options window threw (unknown)"); }
+    }
     // Class Inspector windows: one per entry in m_open_class_inspectors.
     // Iterate by index because the inspector's X-close path removes from the
     // list, and we can't mutate while iterating. Copy the snapshot up front so
@@ -5619,10 +5624,14 @@ void UObjectHook::draw_config() {
     m_attach_lerp_speed->draw("Attach Lerp Speed");
     m_keybind_toggle_uobject_hook->draw("Disable UObjectHook Key");
 
-    // Central place for the gizmo + inspector toggles that otherwise only live in the
-    // per-component gizmo Settings popup / property panel. NOTE: these are plain members, so
-    // they apply for the session but are not yet persisted across restarts — converting them
-    // to ModToggle/ModSlider would make them true saved defaults (follow-up).
+    ImGui::Checkbox("Options as separate dockable window", &m_show_options_window);
+    ImGui::Separator();
+    draw_gizmo_options();
+}
+
+// Shared gizmo/selection/snap/inspector options — drawn in the Config tab AND the pop-out window.
+// NOTE: plain members, session-scoped (not yet persisted across restarts).
+void UObjectHook::draw_gizmo_options() {
     ImGui::SeparatorText("Gizmo defaults");
     ImGui::RadioButton("Move##cfg", &m_gizmo_mode, 0); ImGui::SameLine();
     ImGui::RadioButton("Rotate##cfg", &m_gizmo_mode, 1); ImGui::SameLine();
@@ -5633,7 +5642,7 @@ void UObjectHook::draw_config() {
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
     // One-shot picker: arm with the button, click a world object, it auto-disarms (no toggle-off
-    // dance). "sticky" keeps it armed for picking several in a row. Esc also cancels.
+    // dance). "keep picking" keeps it armed for picking several in a row. Esc also cancels.
     if (m_click_select_mode) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.55f, 0.25f, 0.10f, 1.0f});
         if (ImGui::Button("Picking… click a world object (Esc to cancel)")) {
@@ -5671,6 +5680,16 @@ void UObjectHook::draw_config() {
     ImGui::SliderFloat("Property column width", &m_inspector_item_width, 0.0f, 900.0f,
                        m_inspector_item_width <= 0.0f ? "unlimited" : "%.0f px");
     ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
+}
+
+// Dockable pop-out of the options — drag its title bar onto the main UObjectHook window to dock it
+// next to / tabbed with it (ImGui docking). Same auto-dock-into-host pattern as the other windows.
+void UObjectHook::draw_options_window() {
+    uobjecthook_dock_into_host_once();
+    if (ImGui::Begin("UEVR Selection / Gizmo Options", &m_show_options_window)) {
+        draw_gizmo_options();
+    }
+    ImGui::End();
 }
 
 void UObjectHook::draw_developer() {
@@ -5893,6 +5912,8 @@ void UObjectHook::draw_main() {
     ImGui::Checkbox("Class Browser window", &m_show_class_browser);
     ImGui::SameLine();
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
+    ImGui::SameLine();
+    ImGui::Checkbox("Options window", &m_show_options_window);
     ImGui::Separator();
 
     // Most-recently click-selected object, pinned at the top so you can edit what you just picked
