@@ -549,7 +549,10 @@ private:
     // Resolve a saved property bucket to its live object: prefer the base-relative `path` (survives
     // address changes via the live walk), else fall back to the stable full-name locator. Returns a
     // null ResolvedObject when neither resolves this tick.
-    ResolvedObject resolve_persistent_target(const PersistentProperties& pp) const;
+    // use_cooldown=true (per-tick reapply): throttle the locator full-array scan after a miss.
+    // use_cooldown=false (on-click dedup/save): always do a live lookup so a present object is found
+    // even if it was briefly absent, avoiding a stale null that would spawn a duplicate bucket.
+    ResolvedObject resolve_persistent_target(const PersistentProperties& pp, bool use_cooldown = true) const;
 
     glm::vec3 m_last_camera_location{};
     bool object_from_path_or_address(std::string_view object, sdk::UObject* out);

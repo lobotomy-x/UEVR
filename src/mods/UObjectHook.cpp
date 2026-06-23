@@ -3507,7 +3507,7 @@ std::shared_ptr<UObjectHook::PersistentCameraState> UObjectHook::deserialize_cam
     return nullptr;
 }
 
-UObjectHook::ResolvedObject UObjectHook::resolve_persistent_target(const PersistentProperties& pp) const {
+UObjectHook::ResolvedObject UObjectHook::resolve_persistent_target(const PersistentProperties& pp, bool use_cooldown) const {
     // Path-based resolution takes priority: it walks live roots each call, so it survives the object
     // being reallocated at a new address, and it's cheaper than a full-name scan.
     if (auto obj = pp.path.resolve(); obj != nullptr) {
@@ -3522,14 +3522,22 @@ UObjectHook::ResolvedObject UObjectHook::resolve_persistent_target(const Persist
     // every frame. Guard that with a per-bucket cooldown: after a miss, serve null without scanning
     // for a while, so the worst case is one scan per ~cooldown ticks instead of one per frame.
     if (!pp.object_locator.empty()) {
-        if (pp.locator_miss_cooldown > 0) {
+        // Cooldown only THROTTLES the scan rate after a miss — it never hides a returned object for
+        // long: we still probe every ~20 ticks, so a reappeared object is reapplied within ~0.3s
+        // instead of being ignored for a fixed window. On-click dedup/save callers pass
+        // use_cooldown=false to force a live lookup (so they never miss a present object and spawn a
+        // duplicate bucket). A hit clears the cooldown.
+        if (use_cooldown && pp.locator_miss_cooldown > 0) {
             --pp.locator_miss_cooldown;
             return nullptr;
         }
         if (auto* o = sdk::find_uobject<sdk::UObject>(pp.object_locator); o != nullptr) {
+            pp.locator_miss_cooldown = 0;
             return ResolvedObject{o, o->get_class()};
         }
-        pp.locator_miss_cooldown = 90; // ~1.5s at 60fps before the next full-array lookup attempt
+        if (use_cooldown) {
+            pp.locator_miss_cooldown = 20; // re-probe in ~20 ticks (~0.3s) rather than every frame
+        }
     }
 
     return nullptr;
@@ -6757,7 +6765,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             std::shared_ptr<PersistentProperties> props{};
 
             for (const auto& existing_prop : m_persistent_properties) {
-                if (resolve_persistent_target(*existing_prop) == comp) {
+                if (resolve_persistent_target(*existing_prop, /*use_cooldown*/ false) == comp) {
                     props = existing_prop;
                     break;
                 }
@@ -6774,7 +6782,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             std::shared_ptr<PersistentProperties> props{};
 
             for (const auto& existing_prop : m_persistent_properties) {
-                if (resolve_persistent_target(*existing_prop) == comp) {
+                if (resolve_persistent_target(*existing_prop, /*use_cooldown*/ false) == comp) {
                     props = existing_prop;
                     break;
                 }
@@ -6794,7 +6802,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
 
         // Find existing one if possible
         for (const auto& existing_prop : m_persistent_properties) {
-            if (resolve_persistent_target(*existing_prop) == comp) {
+            if (resolve_persistent_target(*existing_prop, /*use_cooldown*/ false) == comp) {
                 props = existing_prop;
                 break;
             }
@@ -7895,7 +7903,7 @@ const auto check_flags = [](uint64_t flags){
 
                     // Find existing one if possible (path- OR locator-resolved)
                     for (const auto& existing_prop : m_persistent_properties) {
-                        if (resolve_persistent_target(*existing_prop) == object) {
+                        if (resolve_persistent_target(*existing_prop, /*use_cooldown*/ false) == object) {
                             props = existing_prop;
                             break;
                         }
@@ -8019,7 +8027,7 @@ const auto check_flags = [](uint64_t flags){
                 auto save_logic = [&](bool unsave = false) {
                 std::shared_ptr<PersistentProperties> props{};
                 for (const auto& ep : m_persistent_properties) {
-                    if (resolve_persistent_target(*ep) == object) { props = ep; break; }
+                    if (resolve_persistent_target(*ep, /*use_cooldown*/ false) == object) { props = ep; break; }
                 }
                 if (props == nullptr) {
                     props = std::make_shared<PersistentProperties>();
