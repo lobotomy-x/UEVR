@@ -526,7 +526,16 @@ private:
         std::vector<std::shared_ptr<PropertyState>> properties{};
         bool hide{false};
         bool hide_legacy{false};
+        // Stable-locator fallback: when no allowed-base path can reach the object (e.g. a
+        // click-selected world actor), we store its full name here and re-resolve it each tick via
+        // sdk::find_uobject (which caches + self-invalidates across level loads). Empty => use `path`.
+        std::wstring object_locator{};
     };
+
+    // Resolve a saved property bucket to its live object: prefer the base-relative `path` (survives
+    // address changes via the live walk), else fall back to the stable full-name locator. Returns a
+    // null ResolvedObject when neither resolves this tick.
+    ResolvedObject resolve_persistent_target(const PersistentProperties& pp) const;
 
     glm::vec3 m_last_camera_location{};
     bool object_from_path_or_address(std::string_view object, sdk::UObject* out);

@@ -3507,6 +3507,25 @@ std::shared_ptr<UObjectHook::PersistentCameraState> UObjectHook::deserialize_cam
     return nullptr;
 }
 
+UObjectHook::ResolvedObject UObjectHook::resolve_persistent_target(const PersistentProperties& pp) const {
+    // Path-based resolution takes priority: it walks live roots each call, so it survives the object
+    // being reallocated at a new address, and it's cheaper than a full-name scan.
+    if (auto obj = pp.path.resolve(); obj != nullptr) {
+        return obj;
+    }
+
+    // Stable-locator fallback for objects no allowed base can reach (e.g. click-selected world
+    // actors). sdk::find_uobject matches object->get_full_name() == locator and caches the hit with
+    // vtable+array-index validation, so repeat ticks are O(1) and it self-invalidates on level load.
+    if (!pp.object_locator.empty()) {
+        if (auto* o = sdk::find_uobject<sdk::UObject>(pp.object_locator); o != nullptr) {
+            return ResolvedObject{o, o->get_class()};
+        }
+    }
+
+    return nullptr;
+}
+
 void UObjectHook::update_persistent_states() {
     if (m_uobject_hook_disabled && m_fixed_visibilities) {
         return;
@@ -3579,7 +3598,7 @@ void UObjectHook::update_persistent_states() {
                 continue;
             }
 
-            auto obj = prop_base->path.resolve();
+            auto obj = resolve_persistent_target(*prop_base);
 
             if (obj == nullptr) {
                 continue;
@@ -7495,23 +7514,37 @@ void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
     // starts from an allowed base, else brute-force one with try_get_path (the same fallback the
     // "Save Visibility State" button already uses). nullopt => no allowed base can reach the object,
     // so the save is refused with a hint instead of a hard-gated empty menu.
-    auto resolve_save_path = [this, &previous_path, object]() -> std::optional<std::vector<std::string>> {
+    // A save target is EITHER a base-relative path (preferred — survives address changes via the
+    // live walk) or, when no allowed base can reach the object, its stable full-name locator. The
+    // locator drops the navigation-base requirement so arbitrary inspected / click-selected objects
+    // (e.g. world actors) become saveable; reapply re-resolves it via sdk::find_uobject.
+    struct SaveTarget {
+        std::vector<std::string> path{};
+        std::wstring locator{};
+        bool ok() const { return !path.empty() || !locator.empty(); }
+    };
+    auto resolve_save_target = [this, &previous_path, object]() -> SaveTarget {
         if (previous_path.has_valid_base()) {
-            return previous_path.path();
+            return SaveTarget{ previous_path.path(), {} };
         }
-        // Fallback only when `object` is a real registered UObject. When ui_handle_properties is
-        // recursed into a struct, `object` is a raw struct-inner pointer that is NOT in m_objects;
-        // try_get_path would dereference it as a UObject (get_class()->get_fname()) and read garbage,
-        // so gate on exists_unsafe. Wrap in try/catch: the FName/narrow path can throw and we are
-        // inside an open ImGui popup here, where an escaping exception would skip EndPopup().
+        // Only treat `object` as a UObject when it's actually registered. When ui_handle_properties
+        // is recursed into a struct, `object` is a raw struct-inner pointer that is NOT in m_objects;
+        // try_get_path / get_full_name dereference it as a UObject. Wrap in try/catch: the FName path
+        // can throw and we are inside an open ImGui popup, where an escaping exception skips EndPopup.
         if (object != nullptr && exists_unsafe(reinterpret_cast<sdk::UObjectBase*>(object))) {
+            auto* o = reinterpret_cast<sdk::UObject*>(object);
             try {
-                if (auto p = try_get_path(reinterpret_cast<sdk::UObject*>(object)); p.has_value()) {
-                    return p->path();
+                if (auto p = try_get_path(o); p.has_value()) {
+                    return SaveTarget{ p->path(), {} };
+                }
+            } catch (...) {}
+            try {
+                if (auto fn = o->get_full_name(); !fn.empty()) {
+                    return SaveTarget{ {}, fn };
                 }
             } catch (...) {}
         }
-        return std::nullopt;
+        return SaveTarget{};
     };
 
     auto scope = m_path.enter("Properties");
@@ -7783,16 +7816,16 @@ const auto check_flags = [](uint64_t flags){
                 return;
             }
 
-            const auto save_path = resolve_save_path();
-            if (!save_path.has_value()) {
-                ImGui::TextDisabled("Can't save: no allowed base can reach this object");
+            const auto target = resolve_save_target();
+            if (!target.ok()) {
+                ImGui::TextDisabled("Can't save: object has no stable identity");
             } else {
                 auto save_logic = [&](bool unsave = false) {
                     std::shared_ptr<PersistentProperties> props{};
 
-                    // Find existing one if possible
+                    // Find existing one if possible (path- OR locator-resolved)
                     for (const auto& existing_prop : m_persistent_properties) {
-                        if (existing_prop->path.resolve() == object) {
+                        if (resolve_persistent_target(*existing_prop) == object) {
                             props = existing_prop;
                             break;
                         }
@@ -7801,7 +7834,11 @@ const auto check_flags = [](uint64_t flags){
                     // Add new one if necessary
                     if (props == nullptr) {
                         props = std::make_shared<PersistentProperties>();
-                        props->path = StatePath{*save_path};
+                        if (!target.path.empty()) {
+                            props->path = StatePath{target.path};
+                        } else {
+                            props->object_locator = target.locator;
+                        }
                         m_persistent_properties.push_back(props);
                     }
 
@@ -7831,10 +7868,14 @@ const auto check_flags = [](uint64_t flags){
                         );
                     }
 
-                    // Concat the entire path together and hash it to get a unique name
+                    // Key the file off the path (or the full-name locator when path-less) and hash it.
                     std::string concat_path{};
-                    for (const auto& p : *save_path) {
-                        concat_path += p;
+                    if (!target.path.empty()) {
+                        for (const auto& p : target.path) {
+                            concat_path += p;
+                        }
+                    } else {
+                        concat_path = utility::narrow(target.locator);
                     }
 
                     const auto hash_str = std::to_string(utility::hash(concat_path)) + "_props.json";
@@ -7901,18 +7942,22 @@ const auto check_flags = [](uint64_t flags){
             if (!ImGui::BeginPopup("##known_struct_save")) {
                 return;
             }
-            const auto save_path = resolve_save_path();
-            if (!save_path.has_value()) {
-                ImGui::TextDisabled("Can't save: no allowed base can reach this object");
+            const auto target = resolve_save_target();
+            if (!target.ok()) {
+                ImGui::TextDisabled("Can't save: object has no stable identity");
             } else {
                 auto save_logic = [&](bool unsave = false) {
                 std::shared_ptr<PersistentProperties> props{};
                 for (const auto& ep : m_persistent_properties) {
-                    if (ep->path.resolve() == object) { props = ep; break; }
+                    if (resolve_persistent_target(*ep) == object) { props = ep; break; }
                 }
                 if (props == nullptr) {
                     props = std::make_shared<PersistentProperties>();
-                    props->path = StatePath{*save_path};
+                    if (!target.path.empty()) {
+                        props->path = StatePath{target.path};
+                    } else {
+                        props->object_locator = target.locator;
+                    }
                     m_persistent_properties.push_back(props);
                 }
                 std::shared_ptr<PersistentProperties::PropertyState> state{};
@@ -7933,7 +7978,8 @@ const auto check_flags = [](uint64_t flags){
                     props->properties.erase(std::remove(props->properties.begin(), props->properties.end(), state), props->properties.end());
                 }
                 std::string concat_path{};
-                for (const auto& p : *save_path) concat_path += p;
+                if (!target.path.empty()) { for (const auto& p : target.path) concat_path += p; }
+                else { concat_path = utility::narrow(target.locator); }
                 auto wanted_path = UObjectHook::get_persistent_dir() / (std::to_string(utility::hash(concat_path)) + "_props.json");
                 if (props->path_to_json.has_value()) wanted_path = props->path_to_json.value();
                 try {
@@ -9136,12 +9182,17 @@ void UObjectHook::PersistentProperties::save_to_file(std::optional<std::filesyst
     }
 
     if (!path.has_value()) {
-        std::string concat_path{};
+        std::string key{};
         for (const auto& p : this->path.path()) {
-            concat_path += p;
+            key += p;
+        }
+        // Locator-only buckets have an empty path; key the file off the full-name locator so two
+        // different locator saves don't collide on hash("").
+        if (key.empty() && !object_locator.empty()) {
+            key = utility::narrow(object_locator);
         }
 
-        const auto hash_str = std::to_string(utility::hash(concat_path)) + "_props.json";
+        const auto hash_str = std::to_string(utility::hash(key)) + "_props.json";
         path = UObjectHook::get_persistent_dir() / hash_str;
     }
 
@@ -9171,6 +9222,9 @@ nlohmann::json UObjectHook::PersistentProperties::to_json() const {
     json["type"] = "properties";
     json["hide"] = hide;
     json["hide_legacy"] = hide_legacy;
+    if (!object_locator.empty()) {
+        json["object_locator"] = utility::narrow(object_locator);
+    }
 
     for (const auto& prop : properties) {
         nlohmann::json pj{
@@ -9239,6 +9293,10 @@ std::shared_ptr<UObjectHook::PersistentProperties> UObjectHook::PersistentProper
         result->hide_legacy = json["hide_legacy"].get<bool>();
     } else {
         result->hide_legacy = false;
+    }
+
+    if (json.contains("object_locator") && json["object_locator"].is_string()) {
+        result->object_locator = utility::widen(json["object_locator"].get<std::string>());
     }
 
     return result;
