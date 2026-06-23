@@ -4818,6 +4818,78 @@ void UObjectHook::draw_component_gizmos() {
         dl->AddCircleFilled(sc.s_origin, center_hot ? 8.0f : 4.0f, IM_COL32(255, 255, 255, 255));
     }
 
+    // Right-click a selected object (near its w2s reticle) -> a context menu at the cursor. Right
+    // mouse is otherwise unused by the gizmo (left = drag, middle = scroll). Engine-touching actions
+    // (visibility / position / spawn call process_event) are deferred to the game thread.
+    {
+        static sdk::USceneComponent* s_ctx_comp = nullptr;
+        if (g_framework->is_drawing_ui() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive() &&
+            ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            float best = 34.0f * 34.0f; // ~34px pick radius
+            sdk::USceneComponent* hit = nullptr;
+            for (const auto& sc : screens) {
+                const float dx = io.MousePos.x - sc.s_origin.x, dy = io.MousePos.y - sc.s_origin.y;
+                const float d2 = dx * dx + dy * dy;
+                if (d2 < best) { best = d2; hit = sc.comp; }
+            }
+            if (hit != nullptr) {
+                s_ctx_comp = hit;
+                ImGui::OpenPopup("##uobj_sel_ctx");
+            }
+        }
+        if (ImGui::BeginPopup("##uobj_sel_ctx")) {
+            sdk::USceneComponent* c = s_ctx_comp;
+            if (c != nullptr && this->exists(c)) {
+                std::string cn;
+                try { cn = utility::narrow(c->get_fname().to_string()); } catch (...) {}
+                ImGui::TextDisabled("%s", cn.c_str());
+                ImGui::Separator();
+                if (ImGui::MenuItem("Inspect in main page")) {
+                    m_last_selected = c; // game thread; UI reads it benignly
+                }
+                if (ImGui::MenuItem("Show")) {
+                    GameThreadWorker::get().enqueue([this, c]() { if (this->exists(c)) try { c->set_visibility(true, true); } catch (...) {} });
+                }
+                if (ImGui::MenuItem("Hide")) {
+                    GameThreadWorker::get().enqueue([this, c]() { if (this->exists(c)) try { c->set_visibility(false, true); } catch (...) {} });
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Save position")) {
+                    GameThreadWorker::get().enqueue([this, c]() { if (this->exists(c)) try { const glm::vec3 l = c->get_world_location(); std::scoped_lock _{m_saved_positions_mtx}; m_saved_positions[c] = l; } catch (...) {} });
+                }
+                bool has_saved = false;
+                { std::scoped_lock _{m_saved_positions_mtx}; has_saved = m_saved_positions.contains(c); }
+                if (has_saved && ImGui::MenuItem("Restore position")) {
+                    GameThreadWorker::get().enqueue([this, c]() {
+                        if (!this->exists(c)) return;
+                        glm::vec3 l{};
+                        { std::scoped_lock _{m_saved_positions_mtx}; auto it = m_saved_positions.find(c); if (it == m_saved_positions.end()) return; l = it->second; }
+                        try { c->set_world_location(l, false, false); } catch (...) {}
+                    });
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Duplicate (spawn owner class here)")) {
+                    GameThreadWorker::get().enqueue([this, c]() {
+                        if (!this->exists(c)) return;
+                        try {
+                            auto* owner = c->get_owner();
+                            auto* eng = sdk::UGameEngine::get();
+                            auto* world = eng != nullptr ? eng->get_world() : nullptr;
+                            auto* ugs = sdk::UGameplayStatics::get();
+                            if (owner == nullptr || world == nullptr || ugs == nullptr) return;
+                            ugs->spawn_actor(world, owner->get_class(), c->get_world_location());
+                        } catch (...) {}
+                    });
+                }
+                if (ImGui::MenuItem("Remove from selection")) {
+                    std::unique_lock _{m_mutex};
+                    m_gizmo_components.erase(c);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
     for (auto* d : dead) {
         m_gizmo_components.erase(d);
     }
