@@ -344,6 +344,14 @@ private:
     bool m_gizmo_or_picker_busy{false};      // gizmo grabbed/hot or picker armed this frame (read by the global drag-scroll to yield in VR)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
+    float m_inspector_item_width{320.0f}; // UObjectHook property-editor max width (px); <=0 = unlimited. Keeps inherited-object rows in a readable column on a wide window.
+    bool m_click_select_single{false};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating
+    bool m_gizmo_set_movable{true};       // on click-select, set the component's Mobility to Movable(2) so StaticMeshComponents can actually be moved by the gizmo
+    bool m_highlight_selection{true};     // draw a world->screen outline over each gizmo-selected object
+    float m_snap_translate{10.0f};        // Ctrl-snap step for translate (world units)
+    float m_snap_rotate{15.0f};           // Ctrl-snap step for rotate (degrees)
+    float m_snap_scale{0.1f};             // Ctrl-snap step for scale
+    sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
     sdk::AActor* m_overlap_detection_actor{nullptr};
     sdk::AActor* m_overlap_detection_actor_left{nullptr};
 

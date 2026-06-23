@@ -2118,10 +2118,6 @@ void Framework::draw_ui() {
         get_renderer_type() == RendererType::D3D12 ? "D3D12" : "D3D11");
 
     ImGui::SetNextWindowSize(ImVec2(window_w, window_h), force_place ? ImGuiCond_Always : ImGuiCond_Once);
-    // Keep the overlay in a comfortable reading column — cap how wide it can be dragged so
-    // text/rows don't stretch into one giant line on big/VR displays (height stays free; the
-    // global drag-to-scroll handles the extra vertical content). Min keeps it usable.
-    ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 180.0f), ImVec2(900.0f, FLT_MAX));
     ImGui::Begin(UEVR_NAME.c_str(), &m_draw_ui);
 
     draw_ui_impl();

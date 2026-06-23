@@ -1,6 +1,7 @@
 #include <fstream>
 #include <algorithm>
 #include <limits>
+#include <cmath>
 #include <utility/Logging.hpp>
 #include <utility/String.hpp>
 #include <utility/ScopeGuard.hpp>
@@ -4321,7 +4322,11 @@ void UObjectHook::handle_click_select() {
             // been released, so confirm it still lives in the tracked set before inserting (and pull
             // its name from the cached meta rather than calling get_full_name on possibly-freed memory).
             if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(best))) {
+                if (m_click_select_single) {
+                    m_gizmo_components.clear(); // single-select mode: replace rather than accumulate
+                }
                 m_gizmo_components.insert(best);
+                m_last_selected = best;
                 inserted = true;
                 if (auto it = m_meta_objects.find(reinterpret_cast<sdk::UObjectBase*>(best));
                     it != m_meta_objects.end() && it->second != nullptr) {
@@ -4331,6 +4336,16 @@ void UObjectHook::handle_click_select() {
         }
         if (inserted) {
             spdlog::info("[UObjectHook] click-select added gizmo target: {} (dist {:.0f})", name, best_t);
+            // Make the component movable so the gizmo can actually translate it — StaticMeshComponents
+            // default to Static mobility and won't move otherwise. Writes the reflected Mobility enum
+            // byte = EComponentMobility::Movable(2). (handle_click_select runs on the game thread.)
+            if (m_gizmo_set_movable) {
+                try {
+                    if (auto* mob = best->get_class()->find_property(L"Mobility"); mob != nullptr) {
+                        *mob->get_data<uint8_t>(best) = 2;
+                    }
+                } catch (...) {}
+            }
             // Tell draw_component_gizmos a pick consumed this left-press, so the gizmo-axis grab is
             // suppressed this frame (the disarm below would otherwise re-enable can_start mid-frame
             // and the same click could grab an axis near the cursor).
@@ -4584,6 +4599,14 @@ void UObjectHook::draw_component_gizmos() {
     // Translate maps that to world units, rotate to degrees about the world axis,
     // scale to an additive change on that axis component.
     if (s_drag_comp != nullptr && s_drag_axis >= 0) {
+        // Hold Ctrl to snap to the configured steps. Translate/scale snap the absolute value (the
+        // gizmo translate axes are world-aligned, so only the dragged component changes); rotate is
+        // applied incrementally, so accumulate the swept angle and emit it in snap-sized chunks.
+        const bool ctrl_snap = io.KeyCtrl;
+        static float s_rot_accum = 0.0f;
+        if (!ctrl_snap) {
+            s_rot_accum = 0.0f;
+        }
         for (const auto& sc : screens) {
             if (sc.comp != s_drag_comp) continue;
             try {
@@ -4597,7 +4620,13 @@ void UObjectHook::draw_component_gizmos() {
                         if (m_gizmo_mode == 1) {
                             // Rotate: pixels -> degrees about the world axis. FRotator
                             // {Pitch=x (about Y), Yaw=y (about Z), Roll=z (about X)}.
-                            const float a = px_along * 0.5f;
+                            float a = px_along * 0.5f;
+                            if (ctrl_snap && m_snap_rotate > 0.0f) {
+                                s_rot_accum += a;
+                                a = 0.0f;
+                                while (s_rot_accum >= m_snap_rotate)  { a += m_snap_rotate; s_rot_accum -= m_snap_rotate; }
+                                while (s_rot_accum <= -m_snap_rotate) { a -= m_snap_rotate; s_rot_accum += m_snap_rotate; }
+                            }
                             glm::vec3 euler{0.0f, 0.0f, 0.0f};
                             if (s_drag_axis == 0)      euler.z = a;
                             else if (s_drag_axis == 1) euler.x = a;
@@ -4606,11 +4635,18 @@ void UObjectHook::draw_component_gizmos() {
                         } else if (m_gizmo_mode == 2) {
                             auto scale = s_drag_comp->get_relative_scale();
                             scale[s_drag_axis] += px_along * 0.01f;
+                            if (ctrl_snap && m_snap_scale > 0.0f) {
+                                scale[s_drag_axis] = std::round(scale[s_drag_axis] / m_snap_scale) * m_snap_scale;
+                            }
                             s_drag_comp->set_relative_scale(scale);
                         } else {
                             const float move = (dot / len2) * kAxisLen;
                             if (move != 0.0f) {
-                                s_drag_comp->set_world_location(sc.origin + axes[s_drag_axis].dir * move, false, false);
+                                glm::vec3 newloc = sc.origin + axes[s_drag_axis].dir * move;
+                                if (ctrl_snap && m_snap_translate > 0.0f) {
+                                    newloc[s_drag_axis] = std::round(newloc[s_drag_axis] / m_snap_translate) * m_snap_translate;
+                                }
+                                s_drag_comp->set_world_location(newloc, false, false);
                             }
                         }
                     }
@@ -4629,7 +4665,12 @@ void UObjectHook::draw_component_gizmos() {
                             const float b = (us.x * io.MouseDelta.y - io.MouseDelta.x * us.y) / det;
                             if (a != 0.0f || b != 0.0f) {
                                 const glm::vec3 mv = axes[ia].dir * (a * kAxisLen) + axes[ib].dir * (b * kAxisLen);
-                                s_drag_comp->set_world_location(sc.origin + mv, false, false);
+                                glm::vec3 newloc = sc.origin + mv;
+                                if (ctrl_snap && m_snap_translate > 0.0f) {
+                                    newloc[ia] = std::round(newloc[ia] / m_snap_translate) * m_snap_translate;
+                                    newloc[ib] = std::round(newloc[ib] / m_snap_translate) * m_snap_translate;
+                                }
+                                s_drag_comp->set_world_location(newloc, false, false);
                             }
                         }
                     }
@@ -4639,6 +4680,11 @@ void UObjectHook::draw_component_gizmos() {
                     if (delta != 0.0f) {
                         auto scale = s_drag_comp->get_relative_scale();
                         scale += glm::vec3{delta, delta, delta};
+                        if (ctrl_snap && m_snap_scale > 0.0f) {
+                            scale.x = std::round(scale.x / m_snap_scale) * m_snap_scale;
+                            scale.y = std::round(scale.y / m_snap_scale) * m_snap_scale;
+                            scale.z = std::round(scale.z / m_snap_scale) * m_snap_scale;
+                        }
                         s_drag_comp->set_relative_scale(scale);
                     }
                 }
@@ -4648,6 +4694,29 @@ void UObjectHook::draw_component_gizmos() {
     }
 
     for (const auto& sc : screens) {
+        // Selection highlight: a world->screen reticle (corner brackets + center dot) at the object's
+        // projected origin so it's obvious what's selected. On-screen only; the edge arrow below
+        // already covers the off-screen case. The most-recently-picked one gets a brighter tint.
+        if (m_highlight_selection) {
+            const auto* vp0 = ImGui::GetMainViewport();
+            const bool onscreen = sc.s_origin.x >= vp0->Pos.x && sc.s_origin.x <= vp0->Pos.x + vp0->Size.x &&
+                                  sc.s_origin.y >= vp0->Pos.y && sc.s_origin.y <= vp0->Pos.y + vp0->Size.y;
+            if (onscreen) {
+                const ImU32 hl = (sc.comp == m_last_selected) ? IM_COL32(255, 230, 90, 245) : IM_COL32(255, 170, 30, 210);
+                const ImVec2 c = sc.s_origin;
+                const float r = 16.0f, b = 7.0f; // half-box, bracket arm length
+                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r + b, c.y - r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r, c.y - r + b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r - b, c.y - r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r, c.y - r + b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r + b, c.y + r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r, c.y + r - b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r - b, c.y + r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r, c.y + r - b}, hl, 2.0f);
+                dl->AddCircleFilled(c, 2.5f, hl);
+            }
+        }
+
         // Off-screen indicator (D4): if this gizmo's origin projects outside the viewport, draw
         // an edge-clamped arrow + component name pointing toward it instead of the (invisible,
         // off-screen) gizmo, so you know which way to look. Additive; only fires when off-screen.
@@ -5503,7 +5572,7 @@ void UObjectHook::draw_config() {
         m_click_select_mode = true;
     }
     ImGui::SameLine();
-    ImGui::Checkbox("sticky##pick", &m_click_select_sticky);
+    ImGui::Checkbox("keep picking##pick", &m_click_select_sticky); // stay armed after each hit (was "sticky")
     {
         size_t n_targets = 0;
         { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }
@@ -5516,8 +5585,19 @@ void UObjectHook::draw_config() {
         ImGui::SameLine();
         ImGui::TextDisabled("%zu active", n_targets);
     }
+    ImGui::Checkbox("Single-select (pick replaces)", &m_click_select_single);
+    ImGui::SameLine();
+    ImGui::Checkbox("Highlight selection", &m_highlight_selection);
+    ImGui::Checkbox("Set Movable on select (Mobility=2)", &m_gizmo_set_movable);
+
+    ImGui::SeparatorText("Ctrl-snap steps (hold Ctrl while dragging the gizmo)");
+    ImGui::SliderFloat("Move snap (cm)", &m_snap_translate, 0.0f, 100.0f, "%.1f");
+    ImGui::SliderFloat("Rotate snap (deg)", &m_snap_rotate, 0.0f, 90.0f, "%.1f");
+    ImGui::SliderFloat("Scale snap", &m_snap_scale, 0.0f, 1.0f, "%.2f");
 
     ImGui::SeparatorText("Inspector");
+    ImGui::SliderFloat("Property column width", &m_inspector_item_width, 0.0f, 900.0f,
+                       m_inspector_item_width <= 0.0f ? "unlimited" : "%.0f px");
     ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
 }
 
@@ -7837,6 +7917,13 @@ const auto check_flags = [](uint64_t flags){
     bool cur_group_open = true;
     bool any_group_started = false;
 
+    // Cap property-editor width so inherited-object property rows stay in a readable column even when
+    // the UObjectHook window is dragged wide (this replaces the earlier whole-window width cap).
+    const bool clamp_item_width = m_inspector_item_width > 0.0f;
+    if (clamp_item_width) {
+        ImGui::PushItemWidth(m_inspector_item_width);
+    }
+
     for (auto& entry : sorted_fields) {
         auto prop = entry.prop;
         auto decl = entry.decl;
@@ -8474,6 +8561,10 @@ const auto check_flags = [](uint64_t flags){
                     ImGui::EndPopup();
             }
         }
+    }
+
+    if (clamp_item_width) {
+        ImGui::PopItemWidth();
     }
 }
 
