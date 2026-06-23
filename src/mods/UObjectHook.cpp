@@ -5729,15 +5729,23 @@ void UObjectHook::draw_main() {
 
         if (ImGui::TreeNode("Attached Components")) {
             if (ImGui::Button("Detach all")) {
-                m_motion_controller_attached_components.clear();
+                // Defer to the game thread under the UNIQUE lock. This runs inside on_draw_ui, which
+                // already holds m_mutex (shared) for the whole draw, so clearing the maps directly
+                // here would be a write under a shared lock — racing the VR tick thread that
+                // reads/writes these same containers under m_mutex. The enqueued task runs with no
+                // outer lock held, so it can take the unique lock cleanly (no deadlock).
+                GameThreadWorker::get().enqueue([this]() {
+                    std::unique_lock _{m_mutex};
+                    m_motion_controller_attached_components.clear();
 
-                for (auto persistent_state : m_persistent_states) {
-                    if (persistent_state != nullptr) {
-                        persistent_state->erase_json_file();
+                    for (auto persistent_state : m_persistent_states) {
+                        if (persistent_state != nullptr) {
+                            persistent_state->erase_json_file();
+                        }
                     }
-                }
 
-                m_persistent_states.clear();
+                    m_persistent_states.clear();
+                });
             }
 
             // make a copy because the user could press the detach button while iterating
