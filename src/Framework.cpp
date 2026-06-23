@@ -751,6 +751,39 @@ void Framework::run_imgui_frame(bool from_present) {
         ImGui::ShowMetricsWindow(&m_show_imgui_metrics);
     }
 
+    // --- Global drag-to-scroll (VR-friendly) ---------------------------------------------
+    // Left-drag the empty content of any scrollable window to pan it, instead of having to
+    // grab the thin scrollbar (which is painful with a VR laser pointer). Pairs with the
+    // width cap on windows: narrow content scrolls more, so make that scroll effortless.
+    // We flip ConfigWindowsMoveFromTitleBarOnly so a body-drag scrolls instead of moving the
+    // window; windows still move via their title bar / dock tab. Only while the menu is open.
+    if (m_draw_ui) {
+        ImGuiContext& g = *ImGui::GetCurrentContext();
+        ImGuiIO& io = g.IO;
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+        static ImGuiWindow* s_drag_scroll_win = nullptr;
+        constexpr ImGuiMouseButton kBtn = ImGuiMouseButton_Left;
+        if (s_drag_scroll_win != nullptr) {
+            if (!io.MouseDown[kBtn]) {
+                s_drag_scroll_win = nullptr;
+            } else {
+                ImGuiWindow* w = s_drag_scroll_win;
+                if (w->ScrollMax.y > 0.0f) {
+                    w->Scroll.y = ImClamp(w->Scroll.y - io.MouseDelta.y, 0.0f, w->ScrollMax.y);
+                }
+                if (w->ScrollMax.x > 0.0f) {
+                    w->Scroll.x = ImClamp(w->Scroll.x - io.MouseDelta.x, 0.0f, w->ScrollMax.x);
+                }
+            }
+        } else if (ImGui::IsMouseClicked(kBtn) && g.HoveredWindow != nullptr &&
+                   g.HoveredId == 0 && g.ActiveId == 0 && g.MovingWindow == nullptr &&
+                   (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f)) {
+            // Start a drag only over empty, scrollable content (no hovered/active widget).
+            s_drag_scroll_win = g.HoveredWindow;
+        }
+    }
+
     // Consume the reset flag once per frame after every mod has had a
     // chance to see it. Subsequent frames see is_force_reset_windows()==false
     // until the user presses PageUp again.
@@ -2077,6 +2110,10 @@ void Framework::draw_ui() {
         get_renderer_type() == RendererType::D3D12 ? "D3D12" : "D3D11");
 
     ImGui::SetNextWindowSize(ImVec2(window_w, window_h), force_place ? ImGuiCond_Always : ImGuiCond_Once);
+    // Keep the overlay in a comfortable reading column — cap how wide it can be dragged so
+    // text/rows don't stretch into one giant line on big/VR displays (height stays free; the
+    // global drag-to-scroll handles the extra vertical content). Min keeps it usable.
+    ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 180.0f), ImVec2(900.0f, FLT_MAX));
     ImGui::Begin(UEVR_NAME.c_str(), &m_draw_ui);
 
     draw_ui_impl();

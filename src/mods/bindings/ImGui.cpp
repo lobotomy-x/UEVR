@@ -1329,6 +1329,13 @@ bool begin_window(const char *name, sol::object open_obj, sol::object flags_obj)
         ImGui::SetNextWindowPos(mv->Pos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(mv->Size, ImGuiCond_Always);
     }
+    else
+    {
+        // Keep script/mod windows in a comfortable reading column on big/VR displays — cap how
+        // wide they can be dragged (height stays free; global drag-to-scroll pans the content).
+        // Canvas overlays are exempt above since they must cover the whole viewport.
+        ImGui::SetNextWindowSizeConstraints(ImVec2(180.0f, 90.0f), ImVec2(900.0f, FLT_MAX));
+    }
 
     ImGui::Begin(name, open_p, flags);
 
