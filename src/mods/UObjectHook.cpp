@@ -4389,7 +4389,14 @@ void UObjectHook::draw_component_gizmos() {
     // component a motion controller is currently adjusting, so a gizmo appears on whatever
     // you grab in VR without ticking "Show gizmo" first. Transient: never mutates
     // m_gizmo_components.
-    std::unordered_set<sdk::USceneComponent*> draw_comps = m_gizmo_components;
+    // Snapshot under the shared lock: UI-thread writers (Clear button, property checkboxes,
+    // the w2s context menu's "Remove") mutate m_gizmo_components under the unique lock, so copying
+    // it unlocked here could read the container mid-rehash (UB). Matches the mc copy just below.
+    std::unordered_set<sdk::USceneComponent*> draw_comps;
+    {
+        std::shared_lock _{m_mutex};
+        draw_comps = m_gizmo_components;
+    }
     if (m_auto_gizmo_on_adjust) {
         std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> mc;
         {
@@ -4895,8 +4902,13 @@ void UObjectHook::draw_component_gizmos() {
         }
     }
 
-    for (auto* d : dead) {
-        m_gizmo_components.erase(d);
+    // Prune components that no longer exist. This mutates m_gizmo_components from the game thread, so
+    // take the write lock (UI-thread readers use the shared lock); only when there's something to do.
+    if (!dead.empty()) {
+        std::unique_lock _{m_mutex};
+        for (auto* d : dead) {
+            m_gizmo_components.erase(d);
+        }
     }
 }
 
