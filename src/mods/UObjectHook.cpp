@@ -6661,11 +6661,21 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
     {
         bool gizmo = m_gizmo_components.contains(comp);
         if (ImGui::Checkbox("Show gizmo", &gizmo)) {
-            if (gizmo) {
-                m_gizmo_components.insert(comp);
-            } else {
-                m_gizmo_components.erase(comp);
-            }
+            // Defer the mutation to the game thread: this draw path can run under a shared_lock (e.g.
+            // the class-inspector Instances tab), so taking the unique lock here would deadlock the
+            // non-recursive shared_mutex. The worker runs with no lock held; it re-validates the object
+            // still lives via m_objects under the same lock (can't call exists() — that re-locks).
+            const bool add = gizmo;
+            GameThreadWorker::get().enqueue([this, comp, add]() {
+                std::unique_lock _{m_mutex};
+                if (add) {
+                    if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
+                        m_gizmo_components.insert(comp);
+                    }
+                } else {
+                    m_gizmo_components.erase(comp);
+                }
+            });
         }
         if (gizmo) {
             ImGui::SameLine();
@@ -7349,11 +7359,19 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
     if (auto comp = actor->get_root_component()){
    		bool gizmo = m_gizmo_components.contains(comp);
         if (ImGui::Checkbox("Show gizmo", &gizmo)) {
-            if (gizmo) {
-                m_gizmo_components.insert(comp);
-            } else {
-                m_gizmo_components.erase(comp);
-            }
+            // Deferred mutation — see the matching note in ui_handle_scene_component. This path can run
+            // under a shared_lock, so push the insert/erase to the game thread where no lock is held.
+            const bool add = gizmo;
+            GameThreadWorker::get().enqueue([this, comp, add]() {
+                std::unique_lock _{m_mutex};
+                if (add) {
+                    if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
+                        m_gizmo_components.insert(comp);
+                    }
+                } else {
+                    m_gizmo_components.erase(comp);
+                }
+            });
         }
     }
 
