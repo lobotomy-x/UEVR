@@ -751,35 +751,39 @@ void Framework::run_imgui_frame(bool from_present) {
         ImGui::ShowMetricsWindow(&m_show_imgui_metrics);
     }
 
-    // --- Global drag-to-scroll (VR-friendly) ---------------------------------------------
-    // Left-drag the empty content of any scrollable window to pan it, instead of having to
-    // grab the thin scrollbar (which is painful with a VR laser pointer). Pairs with the
-    // width cap on windows: narrow content scrolls more, so make that scroll effortless.
-    // We flip ConfigWindowsMoveFromTitleBarOnly so a body-drag scrolls instead of moving the
-    // window; windows still move via their title bar / dock tab. Only while the menu is open.
+    // --- Global drag-to-scroll ------------------------------------------------------------
+    // Touch-style drag-to-pan for any scrollable window, mirroring the per-list helper in the
+    // UObjectHook class browser (drag_scroll_current_window): MIDDLE mouse in flat (unbound, so it
+    // never collides with left-button drag-drop / right-button menus / window-move), the controller
+    // trigger (left) in VR gated on no item hovered. Same 2.5x/1.5x bias + ResizeAll cursor for the
+    // same feel. Operates on the hovered window via window->Scroll since we're outside any Begin
+    // here; windows that already call drag_scroll_current_window keep their own SetScroll target,
+    // which Begin applies next frame and overrides this write (so no double-scroll). Latches the
+    // window so a fast drag that leaves its bounds keeps scrolling until release. Menu-only.
     if (m_draw_ui) {
         ImGuiContext& g = *ImGui::GetCurrentContext();
         ImGuiIO& io = g.IO;
-        io.ConfigWindowsMoveFromTitleBarOnly = true;
+        const bool vr = VR::get()->is_hmd_active();
+        const ImGuiMouseButton kBtn = vr ? ImGuiMouseButton_Left : ImGuiMouseButton_Middle;
 
         static ImGuiWindow* s_drag_scroll_win = nullptr;
-        constexpr ImGuiMouseButton kBtn = ImGuiMouseButton_Left;
         if (s_drag_scroll_win != nullptr) {
             if (!io.MouseDown[kBtn]) {
                 s_drag_scroll_win = nullptr;
             } else {
                 ImGuiWindow* w = s_drag_scroll_win;
-                if (w->ScrollMax.y > 0.0f) {
-                    w->Scroll.y = ImClamp(w->Scroll.y - io.MouseDelta.y, 0.0f, w->ScrollMax.y);
+                if (w->ScrollMax.y > 0.0f && io.MouseDelta.y != 0.0f) {
+                    w->Scroll.y = ImClamp(w->Scroll.y - io.MouseDelta.y * 2.5f, 0.0f, w->ScrollMax.y);
                 }
-                if (w->ScrollMax.x > 0.0f) {
-                    w->Scroll.x = ImClamp(w->Scroll.x - io.MouseDelta.x, 0.0f, w->ScrollMax.x);
+                if (w->ScrollMax.x > 0.0f && io.MouseDelta.x != 0.0f) {
+                    w->Scroll.x = ImClamp(w->Scroll.x - io.MouseDelta.x * 1.5f, 0.0f, w->ScrollMax.x);
                 }
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
             }
-        } else if (ImGui::IsMouseClicked(kBtn) && g.HoveredWindow != nullptr &&
-                   g.HoveredId == 0 && g.ActiveId == 0 && g.MovingWindow == nullptr &&
-                   (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f)) {
-            // Start a drag only over empty, scrollable content (no hovered/active widget).
+        } else if (ImGui::IsMouseClicked(kBtn) && g.HoveredWindow != nullptr && g.MovingWindow == nullptr &&
+                   (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f) &&
+                   // middle button can start anywhere (it does nothing else); VR-left must avoid item drags
+                   (!vr || (g.HoveredId == 0 && g.ActiveId == 0))) {
             s_drag_scroll_win = g.HoveredWindow;
         }
     }

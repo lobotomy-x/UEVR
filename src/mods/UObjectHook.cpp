@@ -4148,6 +4148,11 @@ void UObjectHook::handle_click_select() {
     if (!g_framework->is_drawing_ui()) {
         return;
     }
+    // Esc cancels the armed pick (the natural "never mind" out).
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        m_click_select_mode = false;
+        return;
+    }
     if (ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive()) {
         return;
     }
@@ -4269,6 +4274,11 @@ void UObjectHook::handle_click_select() {
         }
         if (inserted) {
             spdlog::info("[UObjectHook] click-select added gizmo target: {} (dist {:.0f})", name, best_t);
+            // One-shot: disarm after a successful pick so there's no "remember to turn it off" step.
+            // Hold the sticky option to keep picking multiple targets in a row.
+            if (!m_click_select_sticky) {
+                m_click_select_mode = false;
+            }
         }
     }
 }
@@ -5409,11 +5419,19 @@ void UObjectHook::draw_config() {
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
-    ImGui::Checkbox("Click-to-select gizmo targets", &m_click_select_mode);
+    // One-shot picker: arm with the button, click a world object, it auto-disarms (no toggle-off
+    // dance). "sticky" keeps it armed for picking several in a row. Esc also cancels.
     if (m_click_select_mode) {
-        ImGui::SameLine();
-        ImGui::TextDisabled("(left-click the world; axis-drag disabled)");
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.55f, 0.25f, 0.10f, 1.0f});
+        if (ImGui::Button("Picking… click a world object (Esc to cancel)")) {
+            m_click_select_mode = false;
+        }
+        ImGui::PopStyleColor();
+    } else if (ImGui::Button("Pick gizmo target")) {
+        m_click_select_mode = true;
     }
+    ImGui::SameLine();
+    ImGui::Checkbox("sticky##pick", &m_click_select_sticky);
     {
         size_t n_targets = 0;
         { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }
@@ -6338,7 +6356,13 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 ImGui::SliderFloat("length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
                 ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
                 ImGui::Checkbox("Show labels", &m_gizmo_show_labels);
-                ImGui::Checkbox("Click-to-select targets", &m_click_select_mode);
+                if (m_click_select_mode) {
+                    if (ImGui::Button("Picking… (Esc to cancel)")) { m_click_select_mode = false; }
+                } else if (ImGui::Button("Pick gizmo target")) {
+                    m_click_select_mode = true;
+                }
+                ImGui::SameLine();
+                ImGui::Checkbox("sticky##pick2", &m_click_select_sticky);
                 ImGui::EndPopup();
             }
         }
@@ -8898,40 +8922,17 @@ void UObjectHook::draw_texture_preview(sdk::UObject* texture) {
     try {
         auto* utex = (sdk::UTexture*)texture;
 
-        // The SDK only captures the FRHITexture2D vtable inside UEVR's VR render-target hook, so
-        // in flat (no-VR) mode it stays null and every calibration fails ("vtable is null"). Bootstrap
-        // it here from THIS texture's resource chain: walk UTexture -> FTextureResource -> the RHI
-        // texture, recognized by its vtable living in d3d11/d3d12.dll. Self-contained, gated behind the
-        // experimental toggle, fully guarded. The SDK's own calibration then validates the offset.
+        // FRHITexture2D is a UE engine class; the SDK only captures its vtable inside UEVR's VR
+        // render-target hook, so in flat (no-VR) mode it stays null. A previous heuristic scanned the
+        // texture for a vtable living in d3d11/d3d12.dll and used it as FRHITexture2D's — but that is
+        // WRONG: UE's D3D11RHI (FD3D11Texture2D : FRHITexture2D) is compiled into the GAME module, so
+        // its vtable is NOT in Microsoft's d3d11.dll. The scan instead latched the actual
+        // ID3D11Texture2D COM vtable and stored it as FRHITexture2D's, corrupting every subsequent
+        // virtual call (get_native_resource) -> GetDesc on garbage -> crash. Until a correct flat-mode
+        // RHI hook exists, bail gracefully when the vtable wasn't captured legitimately.
         if (FRHITexture2D::get_vtable() == nullptr) {
-            const auto vtable_in_d3d = [](void* vt) -> bool {
-                if (vt == nullptr || IsBadReadPtr(vt, sizeof(void*))) return false;
-                HMODULE mod = nullptr;
-                if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                                        (LPCSTR)vt, &mod) || mod == nullptr) return false;
-                char path[MAX_PATH]{};
-                if (GetModuleFileNameA(mod, path, MAX_PATH) == 0) return false;
-                std::string p = path;
-                std::transform(p.begin(), p.end(), p.begin(), [](unsigned char c){ return (char)::tolower(c); });
-                return p.size() >= 9 && (p.compare(p.size() - 9, 9, "d3d11.dll") == 0 || p.compare(p.size() - 9, 9, "d3d12.dll") == 0);
-            };
-            const auto base = (uintptr_t)texture;
-            for (uint32_t i = sizeof(void*); i < 0x400 && FRHITexture2D::get_vtable() == nullptr; i += sizeof(void*)) {
-                if (IsBadReadPtr((void*)(base + i), sizeof(void*))) continue;
-                auto* p1 = *(void**)(base + i); // candidate FTextureResource*
-                if (p1 == nullptr || IsBadReadPtr(p1, sizeof(void*))) continue;
-                for (uint32_t j = sizeof(void*); j < 0x100; j += sizeof(void*)) {
-                    if (IsBadReadPtr((void*)((uintptr_t)p1 + j), sizeof(void*))) continue;
-                    auto* p2 = *(void**)((uintptr_t)p1 + j); // candidate FRHITexture2D*
-                    if (p2 == nullptr || IsBadReadPtr(p2, sizeof(void*))) continue;
-                    auto* vt = *(void**)p2;
-                    if (vtable_in_d3d(vt)) {
-                        FRHITexture2D::set_vtable(vt);
-                        spdlog::info("[texture preview] bootstrapped FRHITexture2D vtable from inspected texture (flat mode)");
-                        break;
-                    }
-                }
-            }
+            ImGui::TextDisabled("[texture preview unavailable in flat mode — enter VR once to capture the RHI vtable]");
+            return;
         }
 
         sdk::UTexture::update_render_resource_offset_texture2d(utex); // self-calibrate Resource offset (render thread)

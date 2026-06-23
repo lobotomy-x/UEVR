@@ -327,7 +327,8 @@ private:
     int m_gizmo_mode{0};           // 0 = translate, 1 = rotate, 2 = scale
     bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
     bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
-    bool m_click_select_mode{false};    // toggle: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while on)
+    bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
+    bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     sdk::AActor* m_overlap_detection_actor{nullptr};
