@@ -1,5 +1,6 @@
 #include <fstream>
 #include <algorithm>
+#include <limits>
 #include <utility/Logging.hpp>
 #include <utility/String.hpp>
 #include <utility/ScopeGuard.hpp>
@@ -4106,7 +4107,147 @@ void UObjectHook::on_frame() {
     catch (...)                     { spdlog::error("[UObjectHook] gizmo draw threw (unknown)"); }
 }
 
+void UObjectHook::handle_click_select() {
+    // Modal picker: only while the overlay is up and the cursor isn't over an imgui widget,
+    // and only on the frame the left button goes down (one selection per click).
+    if (!g_framework->is_drawing_ui()) {
+        return;
+    }
+    if (ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive()) {
+        return;
+    }
+    if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        return;
+    }
+
+    auto engine = sdk::UGameEngine::get();
+    auto world = engine != nullptr ? engine->get_world() : nullptr;
+    if (world == nullptr) {
+        return;
+    }
+    auto ugs = sdk::UGameplayStatics::get();
+    if (ugs == nullptr) {
+        return;
+    }
+    auto pc = ugs->get_player_controller(world, 0);
+    if (pc == nullptr) {
+        return;
+    }
+
+    // RelativeLocation offset (cached). Equals world location for unattached root components.
+    static const sdk::FProperty* s_rel_loc_prop = []() -> sdk::FProperty* {
+        auto* cls = sdk::USceneComponent::static_class();
+        return cls != nullptr ? cls->find_property(L"RelativeLocation") : nullptr;
+    }();
+    if (s_rel_loc_prop == nullptr) {
+        static bool s_warned = false;
+        if (!s_warned) { spdlog::warn("[UObjectHook] click-select: RelativeLocation property not found"); s_warned = true; }
+        return;
+    }
+    const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+        sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+
+    const auto& io = ImGui::GetIO();
+    const glm::vec2 screen_pos{io.MousePos.x, io.MousePos.y};
+
+    glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
+    glm::vec3 ray_dir{0.0f, 0.0f, 0.0f};
+    if (!ugs->screen_to_world(pc, screen_pos, &ray_origin, &ray_dir)) {
+        return;
+    }
+    const float dir_len = glm::length(ray_dir);
+    if (dir_len < 1e-6f) {
+        return;
+    }
+    ray_dir /= dir_len;
+
+    // Single pass under the shared lock: filter to scene components (via the cached super-class
+    // list — no virtual calls, no ProcessEvent), read each candidate's RelativeLocation straight
+    // from memory, and keep the front-most one inside an angular cone of the click ray. Doing the
+    // reads under the lock blocks the add/destructor hooks for the (brief) scan so we never read a
+    // component that is being freed on the game thread. RelativeLocation == world location for an
+    // unattached root component (the usual gizmo target); attached children are approximate.
+    sdk::USceneComponent* best = nullptr;
+    float best_t = std::numeric_limits<float>::max();
+    constexpr float kConeTan = 0.06f;  // ~3.4 deg half-angle of the pick cone
+    constexpr float kMinPerp = 40.0f;  // world units: always allow at least this radius up close
+    {
+        std::shared_lock _{m_mutex};
+        auto* scene_cls = sdk::USceneComponent::static_class();
+        for (auto* obj : m_objects) {
+            auto it = m_meta_objects.find(obj);
+            if (it == m_meta_objects.end() || it->second == nullptr) {
+                continue;
+            }
+            const auto& meta = it->second;
+            bool is_scene = meta->uclass == scene_cls;
+            if (!is_scene) {
+                for (auto* sc : meta->super_classes) {
+                    if (sc == scene_cls) { is_scene = true; break; }
+                }
+            }
+            if (!is_scene) {
+                continue;
+            }
+            auto* comp = reinterpret_cast<sdk::USceneComponent*>(obj);
+
+            glm::vec3 p{0.0f, 0.0f, 0.0f};
+            if (is_ue5_vec) {
+                const auto* d = s_rel_loc_prop->get_data<glm::vec<3, double>>(comp);
+                p = glm::vec3{(float)d->x, (float)d->y, (float)d->z};
+            } else {
+                p = *s_rel_loc_prop->get_data<glm::vec3>(comp);
+            }
+            const glm::vec3 v = p - ray_origin;
+            const float t = glm::dot(v, ray_dir);
+            if (t <= 1.0f) {
+                continue; // behind / on top of the camera
+            }
+            const float perp = glm::length(v - t * ray_dir);
+            const float allow = kMinPerp + kConeTan * t;
+            if (perp > allow) {
+                continue;
+            }
+            if (t < best_t) {
+                best_t = t;
+                best = comp;
+            }
+        }
+    }
+
+    if (best != nullptr) {
+        std::string name{};
+        bool inserted = false;
+        {
+            std::unique_lock _{m_mutex};
+            // Re-validate under the write lock: best was chosen under a shared lock that has since
+            // been released, so confirm it still lives in the tracked set before inserting (and pull
+            // its name from the cached meta rather than calling get_full_name on possibly-freed memory).
+            if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(best))) {
+                m_gizmo_components.insert(best);
+                inserted = true;
+                if (auto it = m_meta_objects.find(reinterpret_cast<sdk::UObjectBase*>(best));
+                    it != m_meta_objects.end() && it->second != nullptr) {
+                    name = utility::narrow(it->second->full_name);
+                }
+            }
+        }
+        if (inserted) {
+            spdlog::info("[UObjectHook] click-select added gizmo target: {} (dist {:.0f})", name, best_t);
+        }
+    }
+}
+
 void UObjectHook::draw_component_gizmos() {
+    // Click-to-select runs before the early-out below so it can seed the very first gizmo
+    // target. It only does work while m_click_select_mode is on and the left button was
+    // just pressed; otherwise it returns immediately.
+    if (m_click_select_mode) {
+        try { handle_click_select(); }
+        catch (const std::exception& e) { spdlog::error("[UObjectHook] click-select threw: {}", e.what()); }
+        catch (...)                     { spdlog::error("[UObjectHook] click-select threw (unknown)"); }
+    }
+
     // Which axis of which component is being screen-dragged. Only this function
     // touches it, so a function-local static is enough.
     static sdk::USceneComponent* s_drag_comp = nullptr;
@@ -4208,7 +4349,7 @@ void UObjectHook::draw_component_gizmos() {
     // the gizmo is visible — gating on it made the gizmo undraggable. Gating on
     // hovered/active item instead lets axis clicks land in open space while still
     // yielding to buttons/sliders. An in-flight drag keeps going regardless.
-    const bool can_start = g_framework->is_drawing_ui() &&
+    const bool can_start = g_framework->is_drawing_ui() && !m_click_select_mode &&
         !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive();
 
     // Release / invalidate an in-flight drag.
@@ -5233,6 +5374,23 @@ void UObjectHook::draw_config() {
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
+    ImGui::Checkbox("Click-to-select gizmo targets", &m_click_select_mode);
+    if (m_click_select_mode) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(left-click the world; axis-drag disabled)");
+    }
+    {
+        size_t n_targets = 0;
+        { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }
+        ImGui::BeginDisabled(n_targets == 0);
+        if (ImGui::Button("Clear gizmo targets")) {
+            std::unique_lock _{m_mutex};
+            m_gizmo_components.clear();
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::TextDisabled("%zu active", n_targets);
+    }
 
     ImGui::SeparatorText("Inspector");
     ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
@@ -6145,6 +6303,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 ImGui::SliderFloat("length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
                 ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
                 ImGui::Checkbox("Show labels", &m_gizmo_show_labels);
+                ImGui::Checkbox("Click-to-select targets", &m_click_select_mode);
                 ImGui::EndPopup();
             }
         }

@@ -90,6 +90,13 @@ protected:
     // from on_frame for every component in m_gizmo_components.
     void draw_component_gizmos();
 
+    // Click-to-select: when m_click_select_mode is on, a left click in the world (overlay up,
+    // not over a widget) deprojects the cursor to a ray and adds the front-most scene component
+    // near that ray to m_gizmo_components. Candidates come from the tracked object set; their
+    // world position is read cheaply from the reflected RelativeLocation field (no per-candidate
+    // ProcessEvent), which equals world location for unattached root components (the usual target).
+    void handle_click_select();
+
     // Dockable pop-out windows (rendered from on_frame). Toggle via
     // checkboxes at the top of draw_main. Both auto-attach to the UEVR
     // main dockspace host on first show.
@@ -316,6 +323,7 @@ private:
     int m_gizmo_mode{0};           // 0 = translate, 1 = rotate, 2 = scale
     bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
     bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
+    bool m_click_select_mode{false};    // toggle: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while on)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     sdk::AActor* m_overlap_detection_actor{nullptr};

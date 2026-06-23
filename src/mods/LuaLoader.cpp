@@ -133,6 +133,16 @@ void LuaLoader::on_frame() {
 
     m_states_to_delete.clear();
 
+    // Deferred reset requested by a script (uevr.reset_scripts()). Run it here, BEFORE the
+    // per-state on_frame loop below, so we never destroy a lua_State while it is executing.
+    // reset_scripts re-takes m_access_mutex (recursive) and rebuilds m_main_state/m_states;
+    // we return so the fresh states first run their callbacks next frame.
+    if (m_reset_requested.exchange(false)) {
+        spdlog::info("[LuaLoader] Deferred script reset requested from Lua.");
+        reset_scripts();
+        return;
+    }
+
     if (m_main_state == nullptr) {
         return;
     }
@@ -705,6 +715,11 @@ void LuaLoader::state_post_init(std::shared_ptr<ScriptState>& state) {
     };
     lua["uevr"]["run_on_game_thread"] = [this](sol::protected_function fn) {
         queue_task(fn); };
+
+    // Deferred-safe full reload of all Lua scripts (same as the overlay "Reset scripts").
+    // Safe to call from inside a running script or a menu callback: it only flags the reset,
+    // which is performed at the top of the next on_frame (outside any script execution).
+    lua["uevr"]["reset_scripts"] = [this]() { request_script_reset(); };
 
     // Lightweight log channel: routes a Lua string straight to spdlog. Useful
     // for workers (which don't have a redirected stdout, so `print()` goes

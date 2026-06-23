@@ -99,6 +99,10 @@ public:
 
     // Resets the ScriptState and runs autorun scripts again.
     void reset_scripts();
+    // Deferred-safe reset: sets a flag drained at the top of on_frame (outside any script
+    // execution), so a running Lua script can request a full reset of itself without the
+    // reset_scripts() call destroying the lua_State that is currently executing.
+    void request_script_reset() { m_reset_requested.store(true, std::memory_order_relaxed); }
     void state_post_init(std::shared_ptr<ScriptState>& state);
     void add_additional_bindings(sol::state_view& lua);
     void dispatch_event(std::string_view event_name, std::string_view event_data);
@@ -124,6 +128,8 @@ private:
     // Thread safety for tasks
     std::mutex m_task_mtx{};
     std::vector<sol::protected_function> m_tasks{};
+    // Deferred reset request (set by request_script_reset, drained at top of on_frame).
+    std::atomic<bool> m_reset_requested{false};
     // Thread safety for data sharing
     std::mutex m_data_mtx{};
 
