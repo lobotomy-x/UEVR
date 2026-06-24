@@ -4616,8 +4616,12 @@ void UObjectHook::draw_component_gizmos() {
         // applied incrementally, so accumulate the swept angle and emit it in snap-sized chunks.
         const bool ctrl_snap = io.KeyCtrl;
         static float s_rot_accum = 0.0f;
-        if (!ctrl_snap) {
+        static int s_rot_accum_axis = -1;
+        // Reset the swept-angle accumulator when Ctrl is released OR the dragged axis changes, so a
+        // leftover partial step from a previous axis doesn't bleed into the next one mid-Ctrl-hold.
+        if (!ctrl_snap || s_drag_axis != s_rot_accum_axis) {
             s_rot_accum = 0.0f;
+            s_rot_accum_axis = s_drag_axis;
         }
         for (const auto& sc : screens) {
             if (sc.comp != s_drag_comp) continue;
