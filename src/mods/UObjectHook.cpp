@@ -4421,6 +4421,12 @@ void UObjectHook::draw_component_gizmos() {
         }
     }
 
+    // Drives wants_vr_pointer(): true whenever any gizmo is shown this frame. OverlayComponent reads
+    // it to keep the VR controller pointer live (io.MousePos + clicks) even over EMPTY space, where
+    // gizmos float on the background draw-list — otherwise the pointer only updates over imgui
+    // windows and VR users can't hover/grab gizmo handles in open space.
+    m_has_gizmos = !draw_comps.empty();
+
     if (draw_comps.empty()) {
         s_drag_comp = nullptr;
         s_drag_axis = -1;

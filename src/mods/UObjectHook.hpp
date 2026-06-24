@@ -36,6 +36,10 @@ public:
     // global drag-scroll). The drag-scroll reads it to yield in VR, where it shares the left button
     // with the gizmo axis-drag. Same-thread read, so a plain bool is fine.
     bool is_gizmo_or_picker_busy() const { return m_gizmo_or_picker_busy; }
+    // True when the gizmo system needs the VR controller pointer live even over EMPTY space (any gizmo
+    // shown, or the picker armed/active). OverlayComponent reads this to inject io.MousePos + clicks
+    // off-window so VR users can hover/grab gizmo handles that float on the background draw-list.
+    bool wants_vr_pointer() const { return m_has_gizmos || m_gizmo_or_picker_busy; }
 
     std::unordered_set<sdk::UObjectBase*> get_objects_by_class(sdk::UClass* uclass) const {
         std::shared_lock _{m_mutex};
@@ -345,6 +349,7 @@ private:
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
     bool m_click_select_picked_frame{false}; // set by handle_click_select on a pick; suppresses the gizmo-axis grab on that same left-press frame
     bool m_gizmo_or_picker_busy{false};      // gizmo grabbed/hot or picker armed this frame (read by the global drag-scroll to yield in VR)
+    bool m_has_gizmos{false};                // any gizmo target is shown this frame (drives wants_vr_pointer() so the VR pointer stays live over empty space)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_gizmo_show_all_modes{false}; // D2: also draw the two inactive gizmo modes as non-interactive reference glyphs, offset in screen space
     float m_gizmo_all_modes_offset{64.0f}; // screen-px spacing between the offset reference glyphs (D2)

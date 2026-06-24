@@ -3,6 +3,7 @@
 
 #include "Framework.hpp"
 #include "../VR.hpp"
+#include "../UObjectHook.hpp"
 #include "../utility/ImGui.hpp"
 
 #include "OverlayComponent.hpp"
@@ -108,7 +109,13 @@ void OverlayComponent::update_input_mouse_emulation() {
         // lerp towards the intersection point
         m_last_mouse_pos = glm::lerp(m_last_mouse_pos, glm::vec2{x, y}, delta_f * 10.0f);
 
-        if (imgui::is_point_intersecting_any(m_last_mouse_pos.x, m_last_mouse_pos.y)) {
+        // Normally the pointer (io.MousePos + clicks) is only injected when it's over an imgui
+        // window. The UObjectHook gizmo handles draw on the background draw-list over EMPTY space, so
+        // VR users couldn't hover/grab them. Keep the pointer live off-window when the gizmo/picker
+        // wants it. Gated on that flag, so behavior is unchanged when no gizmo is active.
+        auto uoh = ::UObjectHook::get();
+        const bool gizmo_wants_pointer = uoh != nullptr && uoh->wants_vr_pointer();
+        if (gizmo_wants_pointer || imgui::is_point_intersecting_any(m_last_mouse_pos.x, m_last_mouse_pos.y)) {
             io.MousePos = ImVec2{
                 m_last_mouse_pos.x,
                 m_last_mouse_pos.y
