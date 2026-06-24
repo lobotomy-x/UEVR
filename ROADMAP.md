@@ -8,7 +8,16 @@ Build: `cmake --build build --config RelWithDebInfo --target uevr -- /m` (ignore
 
 ---
 
-## LATEST STATUS — 2026-06-23 (all committed + pushed to fork `lobotomy-x/UEVR` branch `luavrlib`, tip `2cb8e2c`; built+deployed; NOT in-headset-verified)
+## LATEST STATUS — 2026-06-24 (autonomous flat/desktop pass, branch `auto-roadmap-2026-06-24` off `luavrlib`; each item is its own atomic, revertible commit; all build clean; NOT in-game/headset verified)
+
+Four non-headset-gated gizmo items implemented, built (`cmake --build build --config RelWithDebInfo --target uevr`, exit 0 each) and committed individually so any one can be reverted in isolation:
+
+- ✅ **D1 — plane handle grabbable anywhere inside the quad** (commit `8a7b906`). Added a `point_in_quad` helper; the translate plane hit-test now accepts a click anywhere inside the plane square (ranked by distance to the quad centroid so a single-axis line running along an edge still wins when closer), instead of only near the outer corner. `draw_component_gizmos` hit-test, `UObjectHook.cpp`.
+- ✅ **D2 — show all 3 gizmo types at once** (commit `168cf37`). New toggle "Show all 3 gizmo types (offset)" + spacing slider (persisted via `UObjectHook_GizmoShowAllModes`). Draws the two inactive modes (move arrows / rotate rings / scale boxes) as compact, non-interactive reference glyphs offset in screen space from the live gizmo. Purely additive draw built from already-projected axis tips — can't affect hit-testing/drag.
+- ✅ **D4 — Recenter to camera button** (commit `bfe05de`). On the pinned "Selected:" panel: deprojects the screen centre to a camera ray (`UGameplayStatics::screen_to_world`) and places the object at POV + forward × distance (new `m_recenter_distance`, default 150 cm, with a drag field). Engine calls deferred to the game thread via `GameThreadWorker`.
+- 🟡 **#2 — highlight the adjusted axis (flat half done)** (commit `34f70af`). Dragging an X/Y/Z field of the Location/Rotation/Scale `DragFloat3` now lights up the matching gizmo handle (detected by diffing the slider value, expires ~2 frames after the last change). VR thumbstick half (E1/E2) still open.
+
+### Previous status — 2026-06-23 (all committed + pushed to fork `lobotomy-x/UEVR` branch `luavrlib`, tip `2cb8e2c`; built+deployed; NOT in-headset-verified)
 
 This supersedes the stale "Save Property" / "#1 click-select" / texture entries below. Each change-set went through adversarial multi-agent review; confirmed bugs were fixed and re-verified.
 
@@ -51,7 +60,7 @@ DONE (built+deployed):
 
 REMAINING in the epic (need design + in-game/headset verify):
 - ⏳ **#1 click-based selection of gizmo targets** — click an actor/component in the world to add it to `m_gizmo_components`. Needs DeprojectScreenToWorld + LineTraceSingle (or controller-ray in VR) → hit comp → insert. Verify picking in-game.
-- ⏳ **#2 gizmo highlights the adjusted axis when driven by thumbstick OR imgui sliders** — extend `draw_component_gizmos` hot-axis state to accept a "driven axis" set by (a) the transform DragFloat3 sliders (flat, via IsItemActive + sub-index) and (b) `vr_gizmo_stick_adjust` (VR stub). Flat half is tractable next.
+- 🟡 **#2 gizmo highlights the adjusted axis when driven by thumbstick OR imgui sliders** — ✅ **flat half DONE (2026-06-24, commit `34f70af`):** `note_driven()` in the transform editor records the dragged sub-axis (value diff) and `draw_component_gizmos`' `driven_hot()` lights the matching handle (expires ~2 frames after the last change). REMAINING: VR thumbstick half via `vr_gizmo_stick_adjust` (E1/E2, headset-gated).
 
 ## Session 2026-06-20 feedback + new asks
 
@@ -66,10 +75,10 @@ REMAINING in the epic (need design + in-game/headset verify):
 Each entry says where to add it and, for the offload-friendly ones, the empty-function signature to drop in so it builds first.
 
 ### Gizmo (flat / desktop)
-- ⏳ **D1 — multi-axis plane drag activates at the tip of the plane square, not inside it.** Plane handles already exist (`draw_component_gizmos`, `m_gizmo_mode == 0`, `sc.plane[p]` + hover test ~`hover_axis = 3+p`). Change the hit-test from "inside the quad" to "near the outer corner `sc.plane[p]`". Pure edit to the existing hover/hit code; no new function.
-- ⏳ **D2 — show all 3 gizmo types at once with offset spacing.** Today `m_gizmo_mode` picks one. Loop the three modes, offsetting each gizmo's screen origin by a fixed pixel delta. Edit in `draw_component_gizmos` draw section.
+- ✅ **D1 — plane handle now grabbable anywhere inside the quad** (DONE 2026-06-24, commit `8a7b906`, built; not in-game-verified). `point_in_quad` helper + centroid-ranked inside-hit in the `draw_component_gizmos` plane hit-test (`m_gizmo_mode == 0`); the corner tip stays grabbable and single-axis lines still win along the quad edges.
+- ✅ **D2 — show all 3 gizmo types at once with offset spacing** (DONE 2026-06-24, commit `168cf37`, built; not in-game-verified). Toggle "Show all 3 gizmo types (offset)" + spacing slider, persisted. Inactive modes drawn as compact non-interactive reference glyphs offset in screen space; additive only.
 - ✅ **D3 — AddText overlay: actor + scene-component short name + live transform metrics** (DONE 2026-06-19, built+deployed, not in-game-verified). In `draw_component_gizmos` draw loop: per gizmo, drop-shadowed `dl->AddText` at `sc.s_origin + (10,10)` showing `Actor / Component` + `P x y z / R p y r / S x y z` (from `get_owner()->get_fname()`, `get_fname()`, `sc.origin`, `get_world_rotation`, `get_relative_scale`). Additive text, try/catch-guarded, can't affect interaction.
-- 🟡 **D4 — offscreen indicator + recenter.** DONE (2026-06-19): edge-clamped arrow + component name pointing toward any gizmo whose origin projects outside the viewport (in `draw_component_gizmos` draw loop; additive, fires only when off-screen). REMAINING: behind-camera case (project() returns false → needs camera-relative direction, currently just skipped) and the "recenter object to camera/pawn" button (writes world location = camera POV + forward*N). Original stub note:
+- 🟡 **D4 — offscreen indicator + recenter.** DONE (2026-06-19): edge-clamped arrow + component name pointing toward any gizmo whose origin projects outside the viewport (in `draw_component_gizmos` draw loop; additive, fires only when off-screen). ✅ **Recenter button DONE (2026-06-24, commit `bfe05de`):** "Recenter to camera" on the Selected panel deprojects the screen centre to a camera ray and writes world location = POV + forward × `m_recenter_distance` (game-thread deferred). REMAINING: behind-camera case for the offscreen arrow (project() returns false → needs camera-relative direction, currently just skipped). Original stub note:
   STUB POINT: add
   `void UObjectHook::draw_gizmo_offscreen_indicator(const ImVec2& screen_pos, bool on_screen, sdk::USceneComponent* comp);`
   called from `draw_component_gizmos` when `project()` returns false / point is outside the viewport → draw an arrow clamped to the screen edge pointing toward it. Plus a button "Recenter object" that sets the component's world location in front of the camera (PlayerCameraManager POV + forward) or at the pawn.
