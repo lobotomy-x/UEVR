@@ -6061,6 +6061,39 @@ void UObjectHook::draw_main() {
                 });
             }
             ImGui::EndDisabled();
+
+            // D4: drop the object in front of the camera. Deproject the screen center to a camera
+            // ray (origin ~= camera POV, dir ~= forward) and place the object origin + forward*dist.
+            // screen_to_world / set_world_location are process_event calls, so run on the game thread;
+            // capture the viewport center now (ImGui must not be touched off the UI thread).
+            ImGui::SameLine();
+            if (ImGui::Button("Recenter to camera")) {
+                const auto* vp = ImGui::GetMainViewport();
+                const glm::vec2 screen_center{vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f};
+                const float dist = m_recenter_distance;
+                GameThreadWorker::get().enqueue([this, sel, screen_center, dist]() {
+                    if (!this->exists(sel)) return;
+                    try {
+                        auto engine = sdk::UGameEngine::get();
+                        auto world = engine != nullptr ? engine->get_world() : nullptr;
+                        if (world == nullptr) return;
+                        auto ugs = sdk::UGameplayStatics::get();
+                        if (ugs == nullptr) return;
+                        auto pc = ugs->get_player_controller(world, 0);
+                        if (pc == nullptr) return;
+                        glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
+                        glm::vec3 ray_dir{0.0f, 0.0f, 0.0f};
+                        if (!ugs->screen_to_world(pc, screen_center, &ray_origin, &ray_dir)) return;
+                        const float len = glm::length(ray_dir);
+                        if (len < 1e-6f) return;
+                        ray_dir /= len;
+                        sel->set_world_location(ray_origin + ray_dir * dist, false, false);
+                    } catch (...) {}
+                });
+            }
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(110.0f);
+            ImGui::DragFloat("dist (cm)##recenter", &m_recenter_distance, 1.0f, 10.0f, 5000.0f, "%.0f");
             ImGui::Separator();
 
             try { ui_handle_object((sdk::UObject*)sel); }
