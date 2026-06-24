@@ -4473,6 +4473,21 @@ void UObjectHook::draw_component_gizmos() {
         return cx * cx + cy * cy;
     };
 
+    // True if point p is inside the convex quad a->b->c->d (consistent winding).
+    // Used so the whole translate plane-handle square is grabbable (D1), not just its corner.
+    auto point_in_quad = [](const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d) -> bool {
+        auto cross = [](const ImVec2& o, const ImVec2& u, const ImVec2& v) -> float {
+            return (u.x - o.x) * (v.y - o.y) - (u.y - o.y) * (v.x - o.x);
+        };
+        const float s0 = cross(a, b, p);
+        const float s1 = cross(b, c, p);
+        const float s2 = cross(c, d, p);
+        const float s3 = cross(d, a, p);
+        const bool has_neg = (s0 < 0.0f) || (s1 < 0.0f) || (s2 < 0.0f) || (s3 < 0.0f);
+        const bool has_pos = (s0 > 0.0f) || (s1 > 0.0f) || (s2 > 0.0f) || (s3 > 0.0f);
+        return !(has_neg && has_pos);
+    };
+
     struct Axis { glm::vec3 dir; ImU32 col; };
     static const Axis axes[3] = {
         { glm::vec3{1.0f, 0.0f, 0.0f}, IM_COL32(255,  60,  60, 255) }, // X red
@@ -4584,8 +4599,24 @@ void UObjectHook::draw_component_gizmos() {
             if (m_gizmo_mode == 0) {
                 for (int p = 0; p < 3; ++p) {
                     if (!sc.plane_ok[p]) continue;
+                    const int ia = (p + 1) % 3, ib = (p + 2) % 3;
+                    // Corner-point distance (original behavior — keeps the far tip grabbable).
                     const float dx = io.MousePos.x - sc.plane[p].x, dy = io.MousePos.y - sc.plane[p].y;
-                    const float d2 = dx * dx + dy * dy;
+                    float d2 = dx * dx + dy * dy;
+                    // D1: also accept a click anywhere inside the plane quad (origin, ca, corner, cb),
+                    // so the whole square grabs the handle — not only its outer tip. Rank an inside-hit
+                    // by distance to the quad centroid so it still yields to a single-axis line that
+                    // runs closer along one of the quad's edges.
+                    if (sc.tip_ok[ia] && sc.tip_ok[ib]) {
+                        const ImVec2 ca{sc.s_origin.x + 0.4f * (sc.tip[ia].x - sc.s_origin.x), sc.s_origin.y + 0.4f * (sc.tip[ia].y - sc.s_origin.y)};
+                        const ImVec2 cb{sc.s_origin.x + 0.4f * (sc.tip[ib].x - sc.s_origin.x), sc.s_origin.y + 0.4f * (sc.tip[ib].y - sc.s_origin.y)};
+                        if (point_in_quad(io.MousePos, sc.s_origin, ca, sc.plane[p], cb)) {
+                            const ImVec2 cen{(sc.s_origin.x + ca.x + sc.plane[p].x + cb.x) * 0.25f,
+                                             (sc.s_origin.y + ca.y + sc.plane[p].y + cb.y) * 0.25f};
+                            const float dxq = io.MousePos.x - cen.x, dyq = io.MousePos.y - cen.y;
+                            d2 = std::min(d2, dxq * dxq + dyq * dyq);
+                        }
+                    }
                     if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = 3 + p; }
                 }
             } else if (m_gizmo_mode == 2) {
