@@ -346,6 +346,8 @@ private:
     bool m_click_select_picked_frame{false}; // set by handle_click_select on a pick; suppresses the gizmo-axis grab on that same left-press frame
     bool m_gizmo_or_picker_busy{false};      // gizmo grabbed/hot or picker armed this frame (read by the global drag-scroll to yield in VR)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
+    bool m_gizmo_show_all_modes{false}; // D2: also draw the two inactive gizmo modes as non-interactive reference glyphs, offset in screen space
+    float m_gizmo_all_modes_offset{64.0f}; // screen-px spacing between the offset reference glyphs (D2)
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     float m_inspector_item_width{320.0f}; // UObjectHook property-editor max width (px); <=0 = unlimited. Keeps inherited-object rows in a readable column on a wide window.
     bool m_click_select_single{false};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating

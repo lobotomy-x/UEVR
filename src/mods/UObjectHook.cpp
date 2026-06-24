@@ -2471,6 +2471,7 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<float>("UObjectHook_GizmoAxisLen")) m_gizmo_axis_len = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_GizmoShowAllModes")) m_gizmo_show_all_modes = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
         if (auto v = cfg.get<bool>("UObjectHook_ShowTexturePreviews")) m_show_texture_previews = *v;
     }
@@ -2494,6 +2495,7 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<float>("UObjectHook_GizmoAxisLen", m_gizmo_axis_len);
     cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
     cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
+    cfg.set<bool>("UObjectHook_GizmoShowAllModes", m_gizmo_show_all_modes);
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
     cfg.set<bool>("UObjectHook_ShowTexturePreviews", m_show_texture_previews);
 }
@@ -4863,6 +4865,58 @@ void UObjectHook::draw_component_gizmos() {
         const bool center_hot = m_gizmo_mode == 2 &&
             ((s_drag_comp == sc.comp && s_drag_axis == 6) || (hover_comp == sc.comp && hover_axis == 6));
         dl->AddCircleFilled(sc.s_origin, center_hot ? 8.0f : 4.0f, IM_COL32(255, 255, 255, 255));
+
+        // D2: also show the two inactive gizmo modes as compact, non-interactive reference
+        // glyphs offset to the side, so all three types (move arrows / rotate rings / scale
+        // boxes) are visible at once without overlapping the live gizmo. Purely additive draw
+        // built from the already-projected axis tips (a screen-space copy), so it can never
+        // affect hit-testing or dragging.
+        if (m_gizmo_show_all_modes) {
+            auto draw_mode_glyph = [&](const ImVec2& center, int mode) {
+                ImVec2 sv[3];
+                float maxlen = 1.0f;
+                for (int i = 0; i < 3; ++i) {
+                    sv[i] = ImVec2{sc.tip[i].x - sc.s_origin.x, sc.tip[i].y - sc.s_origin.y};
+                    const float l = ImSqrt(sv[i].x * sv[i].x + sv[i].y * sv[i].y);
+                    if (l > maxlen) maxlen = l;
+                }
+                const float k = 24.0f / maxlen; // scale the projected gizmo down to a compact glyph
+                for (int i = 0; i < 3; ++i) { sv[i].x *= k; sv[i].y *= k; }
+                const float th = 2.0f;
+                if (mode == 1) {
+                    constexpr int seg = 16;
+                    for (int i = 0; i < 3; ++i) {
+                        const ImVec2 u = sv[(i + 1) % 3], v = sv[(i + 2) % 3];
+                        ImVec2 prev{}; bool have_prev = false;
+                        for (int s = 0; s <= seg; ++s) {
+                            const float t = ((float)s / (float)seg) * 6.28318530718f;
+                            const ImVec2 pt{center.x + ImCos(t) * u.x + ImSin(t) * v.x,
+                                            center.y + ImCos(t) * u.y + ImSin(t) * v.y};
+                            if (have_prev) dl->AddLine(prev, pt, axes[i].col, th);
+                            prev = pt; have_prev = true;
+                        }
+                    }
+                } else {
+                    for (int i = 0; i < 3; ++i) {
+                        const ImVec2 tip{center.x + sv[i].x, center.y + sv[i].y};
+                        dl->AddLine(center, tip, axes[i].col, th);
+                        if (mode == 2) dl->AddRectFilled(ImVec2{tip.x - 3.0f, tip.y - 3.0f}, ImVec2{tip.x + 3.0f, tip.y + 3.0f}, axes[i].col);
+                        else           dl->AddCircleFilled(tip, 3.0f, axes[i].col);
+                    }
+                }
+                dl->AddCircleFilled(center, 2.5f, IM_COL32(255, 255, 255, 255));
+            };
+            const float off = m_gizmo_all_modes_offset;
+            int slot = 0;
+            for (int mode = 0; mode < 3; ++mode) {
+                if (mode == m_gizmo_mode) continue; // active mode already drawn live above
+                const ImVec2 c{sc.s_origin.x + off, sc.s_origin.y - off + (float)slot * off};
+                draw_mode_glyph(c, mode);
+                const char* nm = (mode == 0) ? "move" : (mode == 1) ? "rotate" : "scale";
+                dl->AddText(ImVec2{c.x + 28.0f, c.y - 6.0f}, IM_COL32(210, 210, 210, 210), nm);
+                ++slot;
+            }
+        }
     }
 
     // Right-click a selected object (near its w2s reticle) -> a context menu at the cursor. Right
@@ -5687,6 +5741,10 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
+    ImGui::Checkbox("Show all 3 gizmo types (offset)", &m_gizmo_show_all_modes);
+    if (m_gizmo_show_all_modes) {
+        ImGui::SliderFloat("All-modes spacing", &m_gizmo_all_modes_offset, 32.0f, 160.0f, "%.0f px");
+    }
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
     // One-shot picker: arm with the button, click a world object, it auto-disarms (no toggle-off
     // dance). "keep picking" keeps it armed for picking several in a row. Esc also cancels.
