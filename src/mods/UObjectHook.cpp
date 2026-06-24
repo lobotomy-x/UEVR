@@ -4490,6 +4490,15 @@ void UObjectHook::draw_component_gizmos() {
         return !(has_neg && has_pos);
     };
 
+    // #2 (flat): is gizmo axis i of component c currently being driven by an inspector transform
+    // slider? Set by note_driven() in the transform editor; expires a couple frames after the last
+    // value change so the highlight tracks active dragging regardless of UI/gizmo draw order.
+    const int gizmo_fc = ImGui::GetFrameCount();
+    auto driven_hot = [this, gizmo_fc](sdk::USceneComponent* c, int i) -> bool {
+        const int age = gizmo_fc - (int)m_driven_frame;
+        return m_driven_comp == c && m_driven_axis == i && age >= 0 && age <= 2;
+    };
+
     struct Axis { glm::vec3 dir; ImU32 col; };
     static const Axis axes[3] = {
         { glm::vec3{1.0f, 0.0f, 0.0f}, IM_COL32(255,  60,  60, 255) }, // X red
@@ -4824,7 +4833,8 @@ void UObjectHook::draw_component_gizmos() {
             // Rotate: one standard colored ring per axis (projected polyline).
             for (int i = 0; i < 3; ++i) {
                 const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
-                                 (hover_comp == sc.comp && hover_axis == i);
+                                 (hover_comp == sc.comp && hover_axis == i) ||
+                                 driven_hot(sc.comp, i);
                 const float th = hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
                 for (int s = 0; s < kRingSeg; ++s) {
                     const int s2 = (s + 1) % kRingSeg;
@@ -4836,7 +4846,8 @@ void UObjectHook::draw_component_gizmos() {
             for (int i = 0; i < 3; ++i) {
                 if (!sc.tip_ok[i]) continue;
                 const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
-                                 (hover_comp == sc.comp && hover_axis == i);
+                                 (hover_comp == sc.comp && hover_axis == i) ||
+                                 driven_hot(sc.comp, i);
                 const float th = hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
                 const float r = hot ? m_gizmo_thickness * 2.0f : m_gizmo_thickness * 1.5f;
                 dl->AddLine(sc.s_origin, sc.tip[i], axes[i].col, th);
@@ -7092,13 +7103,24 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
         else       { comp->set_world_rotation(v, true, false); }
     };
 
+    // #2 (flat): when a transform DragFloat3 sub-field is dragged, light up the matching gizmo
+    // axis (X/Y/Z field -> X/Y/Z handle) so you can see which axis you're driving from the panel.
+    // Detect the moved component by diffing before/after; the gizmo expires the highlight after a
+    // couple frames so it tracks active dragging.
+    auto note_driven = [this, comp](const glm::vec3& before, const glm::vec3& after) {
+        int idx = -1; float best = 1e-9f;
+        for (int i = 0; i < 3; ++i) { const float d = std::abs(after[i] - before[i]); if (d > best) { best = d; idx = i; } }
+        if (idx >= 0) { m_driven_comp = comp; m_driven_axis = idx; m_driven_frame = (uint32_t)ImGui::GetFrameCount(); }
+    };
+
     ImGui::PushID("location");
     if (ImGui::SmallButton("R")) { set_loc(glm::vec3{0.0f, 0.0f, 0.0f}); }
     ImGui::SameLine();
     {
+        const glm::vec3 before = loc;
         bool ch = ImGui::DragFloat3(local ? "Location" : "World Location", &loc.x, 0.1f);
         ch |= vector_copy_paste("##ctx", &loc.x, 3);
-        if (ch) { set_loc(loc); }
+        if (ch) { note_driven(before, loc); set_loc(loc); }
     }
     ImGui::PopID();
 
@@ -7106,9 +7128,10 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
     if (ImGui::SmallButton("R")) { set_rot(glm::vec3{0.0f, 0.0f, 0.0f}); }
     ImGui::SameLine();
     {
+        const glm::vec3 before = rot;
         bool ch = ImGui::DragFloat3(local ? "Rotation" : "World Rotation", &rot.x, 0.1f);
         ch |= vector_copy_paste("##ctx", &rot.x, 3);
-        if (ch) { set_rot(rot); }
+        if (ch) { note_driven(before, rot); set_rot(rot); }
     }
     {
         // FRotator (pitch=x, yaw=y, roll=z deg) -> quat with the same convention the
@@ -7133,9 +7156,10 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
     if (ImGui::SmallButton("R")) { comp->set_relative_scale(glm::vec3{1.0f, 1.0f, 1.0f}); }
     ImGui::SameLine();
     {
+        const glm::vec3 before = scale;
         bool ch = ImGui::DragFloat3("Scale", &scale.x, 0.01f);
         ch |= vector_copy_paste("##ctx", &scale.x, 3);
-        if (ch) { comp->set_relative_scale(scale); }
+        if (ch) { note_driven(before, scale); comp->set_relative_scale(scale); }
     }
     ImGui::PopID();
     ImGui::Separator();

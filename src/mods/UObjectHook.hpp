@@ -357,6 +357,9 @@ private:
     float m_snap_rotate{15.0f};           // Ctrl-snap step for rotate (degrees)
     float m_snap_scale{0.1f};             // Ctrl-snap step for scale
     float m_recenter_distance{150.0f};    // D4: distance (cm) in front of the camera the "Recenter to camera" button places the object
+    sdk::USceneComponent* m_driven_comp{nullptr}; // #2 flat: component whose transform slider is being dragged (highlight its gizmo axis)
+    int m_driven_axis{-1};                // #2 flat: sub-axis (0/1/2) the inspector slider is driving
+    uint32_t m_driven_frame{0};           // #2 flat: ImGui frame the driven axis was last set (expires after a couple frames)
     sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
     // Saved world positions for the "Save/Restore position" buttons. Touched from game-thread tasks
     // (GameThreadWorker) for the actual get/set_world_location, and read from the draw thread for the
