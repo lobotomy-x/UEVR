@@ -608,6 +608,11 @@ private:
     ModSlider::Ptr m_attach_lerp_speed{ModSlider::create(generate_name("AttachLerpSpeed"), 0.01f, 30.0f, 15.0f)};
 
     ModKey::Ptr m_keybind_toggle_uobject_hook{ModKey::create(generate_name("ToggleUObjectHookKey"))};
+    // Rebindable keys to switch the gizmo transform mode (Move/Rotate/Scale). Default unbound so they
+    // never collide with game/freecam input until the user assigns them in the gizmo options.
+    ModKey::Ptr m_keybind_gizmo_move{ModKey::create(generate_name("GizmoMoveKey"))};
+    ModKey::Ptr m_keybind_gizmo_rotate{ModKey::create(generate_name("GizmoRotateKey"))};
+    ModKey::Ptr m_keybind_gizmo_scale{ModKey::create(generate_name("GizmoScaleKey"))};
     bool m_uobject_hook_disabled{false};
     bool m_fixed_visibilities{false};
     bool m_hide_default_classes{false};
@@ -654,7 +659,10 @@ public:
             *m_enabled_at_startup,
             *m_attach_lerp_enabled,
             *m_attach_lerp_speed,
-            *m_keybind_toggle_uobject_hook
+            *m_keybind_toggle_uobject_hook,
+            *m_keybind_gizmo_move,
+            *m_keybind_gizmo_rotate,
+            *m_keybind_gizmo_scale
         };
     }
 

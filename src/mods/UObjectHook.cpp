@@ -4159,6 +4159,12 @@ void UObjectHook::on_frame() {
         set_disabled(!is_disabled());
     }
 
+    // Rebindable gizmo transform-mode keys. is_key_down_once() returns false while unbound, so these
+    // are no-ops until the user assigns them in the gizmo options — no default key collisions.
+    if (m_keybind_gizmo_move->is_key_down_once())   { m_gizmo_mode = 0; }
+    if (m_keybind_gizmo_rotate->is_key_down_once()) { m_gizmo_mode = 1; }
+    if (m_keybind_gizmo_scale->is_key_down_once())  { m_gizmo_mode = 2; }
+
     // Quick-access keybind: F2 toggles the Class Browser window whenever the
     // overlay is open (and not typing into a field), so it is reachable without
     // navigating to the UObjectHook sidebar page.
@@ -4357,9 +4363,12 @@ void UObjectHook::handle_click_select() {
             // suppressed this frame (the disarm below would otherwise re-enable can_start mid-frame
             // and the same click could grab an axis near the cursor).
             m_click_select_picked_frame = true;
-            // One-shot: disarm after a successful pick so there's no "remember to turn it off" step.
-            // Hold the sticky option to keep picking multiple targets in a row.
-            if (!m_click_select_sticky) {
+            // Stay armed in MULTI-select mode so successive world clicks keep ADDING gizmo targets —
+            // that is what "multigizmo" means, and re-arming "Pick" per object was the friction that
+            // made multi-select feel broken. Auto-disarm only in single-select mode (pick one and
+            // stop). "keep picking" forces staying armed even in single-select. Esc / the "Picking…"
+            // button still cancel at any time.
+            if (m_click_select_single && !m_click_select_sticky) {
                 m_click_select_mode = false;
             }
         }
@@ -5748,6 +5757,10 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::RadioButton("Move##cfg", &m_gizmo_mode, 0); ImGui::SameLine();
     ImGui::RadioButton("Rotate##cfg", &m_gizmo_mode, 1); ImGui::SameLine();
     ImGui::RadioButton("Scale##cfg", &m_gizmo_mode, 2);
+    // Rebindable hotkeys to switch transform mode (default unbound — assign here).
+    m_keybind_gizmo_move->draw("Move hotkey");
+    m_keybind_gizmo_rotate->draw("Rotate hotkey");
+    m_keybind_gizmo_scale->draw("Scale hotkey");
     ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
