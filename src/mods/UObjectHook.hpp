@@ -618,6 +618,7 @@ private:
     ModKey::Ptr m_keybind_gizmo_move{ModKey::create(generate_name("GizmoMoveKey"))};
     ModKey::Ptr m_keybind_gizmo_rotate{ModKey::create(generate_name("GizmoRotateKey"))};
     ModKey::Ptr m_keybind_gizmo_scale{ModKey::create(generate_name("GizmoScaleKey"))};
+    ModKey::Ptr m_keybind_gizmo_combined{ModKey::create(generate_name("GizmoCombinedKey"))};
     bool m_uobject_hook_disabled{false};
     bool m_fixed_visibilities{false};
     bool m_hide_default_classes{false};
@@ -667,7 +668,8 @@ public:
             *m_keybind_toggle_uobject_hook,
             *m_keybind_gizmo_move,
             *m_keybind_gizmo_rotate,
-            *m_keybind_gizmo_scale
+            *m_keybind_gizmo_scale,
+            *m_keybind_gizmo_combined
         };
     }
 

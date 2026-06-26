@@ -4161,9 +4161,10 @@ void UObjectHook::on_frame() {
 
     // Rebindable gizmo transform-mode keys. is_key_down_once() returns false while unbound, so these
     // are no-ops until the user assigns them in the gizmo options — no default key collisions.
-    if (m_keybind_gizmo_move->is_key_down_once())   { m_gizmo_mode = 0; }
-    if (m_keybind_gizmo_rotate->is_key_down_once()) { m_gizmo_mode = 1; }
-    if (m_keybind_gizmo_scale->is_key_down_once())  { m_gizmo_mode = 2; }
+    if (m_keybind_gizmo_move->is_key_down_once())     { m_gizmo_mode = 0; }
+    if (m_keybind_gizmo_rotate->is_key_down_once())   { m_gizmo_mode = 1; }
+    if (m_keybind_gizmo_scale->is_key_down_once())    { m_gizmo_mode = 2; }
+    if (m_keybind_gizmo_combined->is_key_down_once()) { m_gizmo_mode = 3; }
 
     // Quick-access keybind: F2 toggles the Class Browser window whenever the
     // overlay is open (and not typing into a field), so it is reachable without
@@ -4505,6 +4506,19 @@ void UObjectHook::draw_component_gizmos() {
         return !(has_neg && has_pos);
     };
 
+    // Combined ("Blender-style") gizmo (m_gizmo_mode == 3) packs translate arrows, rotate rings and
+    // scale handles onto ONE interactive gizmo. To stop the handles overlapping they sit at distinct
+    // radii: center(0) < translate arrow[0.18..0.82] < scale square(tip) < rotate ring(1.28). scaled_pt
+    // pushes a projected point toward/away from the screen origin by a factor — a cheap screen-space
+    // scale, exact enough since hit-test and draw use the SAME factor. The drag math is unaffected (it
+    // uses each axis's full screen direction, not the visual handle length).
+    constexpr float kRingScaleCombined = 1.28f; // rotate rings: just outside the axis tips
+    constexpr float kArrowBaseT = 0.18f;        // translate arrow starts off-center (frees the center)
+    constexpr float kArrowTipT = 0.70f;         // ...and ends well before the tip (clear gap to the scale square)
+    auto scaled_pt = [](const ImVec2& origin, const ImVec2& p, float s) -> ImVec2 {
+        return ImVec2{origin.x + (p.x - origin.x) * s, origin.y + (p.y - origin.y) * s};
+    };
+
     // #2 (flat): is gizmo axis i of component c currently being driven by an inspector transform
     // slider? Set by note_driven() in the transform editor; expires a couple frames after the last
     // value change so the highlight tracks active dragging regardless of UI/gizmo draw order.
@@ -4586,7 +4600,7 @@ void UObjectHook::draw_component_gizmos() {
                 sc.plane_ok[p] = project(sc.origin + (ua + ub) * (kAxisLen * 0.4f), sc.plane[p]);
             }
         }
-        if (m_gizmo_mode == 1) {
+        if (m_gizmo_mode == 1 || m_gizmo_mode == 3) { // rotate rings: pure-rotate mode AND combined
             for (int i = 0; i < 3; ++i) {
                 const glm::vec3& u = axes[(i + 1) % 3].dir;
                 const glm::vec3& v = axes[(i + 2) % 3].dir;
@@ -4606,6 +4620,33 @@ void UObjectHook::draw_component_gizmos() {
     if (can_start && s_drag_comp == nullptr) {
         float best = kHitPx2;
         for (const auto& sc : screens) {
+            if (m_gizmo_mode == 3) {
+                // Combined gizmo: hit-test every handle type with distinct codes — translate arrows
+                // (0..2), rotate rings (10..12), scale squares (20..22), uniform center (6).
+                for (int i = 0; i < 3; ++i) {
+                    if (sc.tip_ok[i]) {
+                        const ImVec2 ab = scaled_pt(sc.s_origin, sc.tip[i], kArrowBaseT);
+                        const ImVec2 at = scaled_pt(sc.s_origin, sc.tip[i], kArrowTipT);
+                        const float da = seg_dist2(io.MousePos, ab, at);
+                        if (da < best) { best = da; hover_comp = sc.comp; hover_axis = i; }
+                        const float dxs = io.MousePos.x - sc.tip[i].x, dys = io.MousePos.y - sc.tip[i].y;
+                        const float ds = dxs * dxs + dys * dys; // scale square at the tip
+                        if (ds < best) { best = ds; hover_comp = sc.comp; hover_axis = 20 + i; }
+                    }
+                    for (int s = 0; s < kRingSeg; ++s) {
+                        const int s2 = (s + 1) % kRingSeg;
+                        if (!sc.ring_ok[i][s] || !sc.ring_ok[i][s2]) continue;
+                        const float d2 = seg_dist2(io.MousePos,
+                            scaled_pt(sc.s_origin, sc.ring[i][s], kRingScaleCombined),
+                            scaled_pt(sc.s_origin, sc.ring[i][s2], kRingScaleCombined));
+                        if (d2 < best) { best = d2; hover_comp = sc.comp; hover_axis = 10 + i; }
+                    }
+                }
+                const float dxc = io.MousePos.x - sc.s_origin.x, dyc = io.MousePos.y - sc.s_origin.y;
+                const float dc = dxc * dxc + dyc * dyc; // center = uniform scale
+                if (dc < best) { best = dc; hover_comp = sc.comp; hover_axis = 6; }
+                continue;
+            }
             for (int i = 0; i < 3; ++i) {
                 if (m_gizmo_mode == 1) {
                     for (int s = 0; s < kRingSeg; ++s) {
@@ -4683,14 +4724,23 @@ void UObjectHook::draw_component_gizmos() {
         for (const auto& sc : screens) {
             if (sc.comp != s_drag_comp) continue;
             try {
-                if (s_drag_axis < 3 && sc.tip_ok[s_drag_axis]) {
-                    // Single-axis: translate/rotate/scale along axis s_drag_axis.
-                    const ImVec2 d{sc.tip[s_drag_axis].x - sc.s_origin.x, sc.tip[s_drag_axis].y - sc.s_origin.y};
+                // Decode the grabbed handle into (action, axis). Codes 0..2 take their action from the
+                // current mode (combined mode 3 -> translate); combined mode also emits 10..12 (rotate)
+                // and 20..22 (scale-axis). Codes 3..5 (plane) and 6 (uniform) are handled below.
+                int act = -1; // 0 translate, 1 rotate, 2 scale-axis
+                int ax = -1;
+                if (s_drag_axis >= 0 && s_drag_axis < 3)        { ax = s_drag_axis;      act = (m_gizmo_mode == 1) ? 1 : (m_gizmo_mode == 2) ? 2 : 0; }
+                else if (s_drag_axis >= 10 && s_drag_axis < 13) { ax = s_drag_axis - 10; act = 1; }
+                else if (s_drag_axis >= 20 && s_drag_axis < 23) { ax = s_drag_axis - 20; act = 2; }
+
+                if (act >= 0 && sc.tip_ok[ax]) {
+                    // Single-axis: translate/rotate/scale along axis ax (screen-space mapping).
+                    const ImVec2 d{sc.tip[ax].x - sc.s_origin.x, sc.tip[ax].y - sc.s_origin.y};
                     const float len2 = d.x * d.x + d.y * d.y;
                     if (len2 > 1.0f) {
                         const float dot = io.MouseDelta.x * d.x + io.MouseDelta.y * d.y;
                         const float px_along = dot / ImSqrt(len2);
-                        if (m_gizmo_mode == 1) {
+                        if (act == 1) {
                             // Rotate: pixels -> degrees about the world axis. FRotator
                             // {Pitch=x (about Y), Yaw=y (about Z), Roll=z (about X)}.
                             float a = px_along * 0.5f;
@@ -4701,23 +4751,23 @@ void UObjectHook::draw_component_gizmos() {
                                 while (s_rot_accum <= -m_snap_rotate) { a -= m_snap_rotate; s_rot_accum += m_snap_rotate; }
                             }
                             glm::vec3 euler{0.0f, 0.0f, 0.0f};
-                            if (s_drag_axis == 0)      euler.z = a;
-                            else if (s_drag_axis == 1) euler.x = a;
-                            else                       euler.y = a;
+                            if (ax == 0)      euler.z = a;
+                            else if (ax == 1) euler.x = a;
+                            else              euler.y = a;
                             if (a != 0.0f) s_drag_comp->add_world_rotation(euler, false, false);
-                        } else if (m_gizmo_mode == 2) {
+                        } else if (act == 2) {
                             auto scale = s_drag_comp->get_relative_scale();
-                            scale[s_drag_axis] += px_along * 0.01f;
+                            scale[ax] += px_along * 0.01f;
                             if (ctrl_snap && m_snap_scale > 0.0f) {
-                                scale[s_drag_axis] = std::round(scale[s_drag_axis] / m_snap_scale) * m_snap_scale;
+                                scale[ax] = std::round(scale[ax] / m_snap_scale) * m_snap_scale;
                             }
                             s_drag_comp->set_relative_scale(scale);
                         } else {
                             const float move = (dot / len2) * kAxisLen;
                             if (move != 0.0f) {
-                                glm::vec3 newloc = sc.origin + axes[s_drag_axis].dir * move;
+                                glm::vec3 newloc = sc.origin + axes[ax].dir * move;
                                 if (ctrl_snap && m_snap_translate > 0.0f) {
-                                    newloc[s_drag_axis] = std::round(newloc[s_drag_axis] / m_snap_translate) * m_snap_translate;
+                                    newloc[ax] = std::round(newloc[ax] / m_snap_translate) * m_snap_translate;
                                 }
                                 s_drag_comp->set_world_location(newloc, false, false);
                             }
@@ -4844,7 +4894,35 @@ void UObjectHook::draw_component_gizmos() {
             vr_gizmo_stick_adjust(sc.comp);
         }
 
-        if (m_gizmo_mode == 1) {
+        if (m_gizmo_mode == 3) {
+            // Combined ("Blender-style") gizmo: rotate rings (outer) + translate arrows + scale
+            // squares (at the tips), all on one interactive gizmo. Handle codes: arrow i, ring 10+i,
+            // square 20+i, uniform center 6 (white dot drawn below).
+            for (int i = 0; i < 3; ++i) {
+                const bool ring_hot = (s_drag_comp == sc.comp && s_drag_axis == 10 + i) ||
+                                      (hover_comp == sc.comp && hover_axis == 10 + i) || driven_hot(sc.comp, i);
+                const float rth = ring_hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
+                for (int s = 0; s < kRingSeg; ++s) {
+                    const int s2 = (s + 1) % kRingSeg;
+                    if (!sc.ring_ok[i][s] || !sc.ring_ok[i][s2]) continue;
+                    dl->AddLine(scaled_pt(sc.s_origin, sc.ring[i][s], kRingScaleCombined),
+                                scaled_pt(sc.s_origin, sc.ring[i][s2], kRingScaleCombined), axes[i].col, rth);
+                }
+                if (!sc.tip_ok[i]) continue;
+                const bool arrow_hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
+                                       (hover_comp == sc.comp && hover_axis == i) || driven_hot(sc.comp, i);
+                const float ath = arrow_hot ? m_gizmo_thickness * 1.6f : m_gizmo_thickness;
+                const ImVec2 ab = scaled_pt(sc.s_origin, sc.tip[i], kArrowBaseT);
+                const ImVec2 at = scaled_pt(sc.s_origin, sc.tip[i], kArrowTipT);
+                dl->AddLine(ab, at, axes[i].col, ath);                                     // translate shaft
+                dl->AddCircleFilled(at, arrow_hot ? m_gizmo_thickness * 2.0f : m_gizmo_thickness * 1.5f, axes[i].col); // arrow head
+                const bool sq_hot = (s_drag_comp == sc.comp && s_drag_axis == 20 + i) ||
+                                    (hover_comp == sc.comp && hover_axis == 20 + i);
+                const float r = sq_hot ? m_gizmo_thickness * 2.4f : m_gizmo_thickness * 1.8f;
+                dl->AddRectFilled(ImVec2{sc.tip[i].x - r, sc.tip[i].y - r},
+                                  ImVec2{sc.tip[i].x + r, sc.tip[i].y + r}, axes[i].col);   // scale box at tip
+            }
+        } else if (m_gizmo_mode == 1) {
             // Rotate: one standard colored ring per axis (projected polyline).
             for (int i = 0; i < 3; ++i) {
                 const bool hot = (s_drag_comp == sc.comp && s_drag_axis == i) ||
@@ -4888,7 +4966,7 @@ void UObjectHook::draw_component_gizmos() {
                 }
             }
         }
-        const bool center_hot = m_gizmo_mode == 2 &&
+        const bool center_hot = (m_gizmo_mode == 2 || m_gizmo_mode == 3) &&
             ((s_drag_comp == sc.comp && s_drag_axis == 6) || (hover_comp == sc.comp && hover_axis == 6));
         dl->AddCircleFilled(sc.s_origin, center_hot ? 8.0f : 4.0f, IM_COL32(255, 255, 255, 255));
 
@@ -5762,11 +5840,14 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SeparatorText("Gizmo defaults");
     ImGui::RadioButton("Move##cfg", &m_gizmo_mode, 0); ImGui::SameLine();
     ImGui::RadioButton("Rotate##cfg", &m_gizmo_mode, 1); ImGui::SameLine();
-    ImGui::RadioButton("Scale##cfg", &m_gizmo_mode, 2);
+    ImGui::RadioButton("Scale##cfg", &m_gizmo_mode, 2); ImGui::SameLine();
+    ImGui::RadioButton("All (Blender)##cfg", &m_gizmo_mode, 3);
+    ImGui::TextDisabled("All = combined gizmo: rings rotate, arrows move, tip boxes scale, center = uniform scale.");
     // Rebindable hotkeys to switch transform mode (default unbound — assign here).
     m_keybind_gizmo_move->draw("Move hotkey");
     m_keybind_gizmo_rotate->draw("Rotate hotkey");
     m_keybind_gizmo_scale->draw("Scale hotkey");
+    m_keybind_gizmo_combined->draw("All (Blender) hotkey");
     ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
