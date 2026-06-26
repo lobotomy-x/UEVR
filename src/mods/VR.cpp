@@ -5105,7 +5105,11 @@ void VR::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
     // Some Supermassive camera paths rewrite crop/aspect state during engine
     // tick. Reapply the opt-in compatibility after game tick, but keep it to
     // the active camera only; broad object sweeps caused cadence/flicker issues.
-    update_fullscreen_16x9_camera_compatibility(engine);
+    //
+    // DISABLED (decluttered: joeyhodge experimental): on ValorMortis this was active and forced the
+    // game camera to aspect ~0.928, distorting the VR projection -> "extreme scaling". Re-enable the
+    // line below only if a specific game's letterboxed camera genuinely needs it.
+    // update_fullscreen_16x9_camera_compatibility(engine);
 }
 
 void VR::update_shf_auto_2d_mode(sdk::UGameEngine* engine) {
@@ -8057,7 +8061,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Motion Controller Aim Offsets")) {
+        if (false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::TreeNode("Motion Controller Aim Offsets")) {
             ImGui::TextWrapped("Default zero values preserve the raw controller pose.");
 
             float left_controller_rotation_offset[] = {
@@ -8213,7 +8217,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         }
 
         ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
-        if (ImGui::TreeNode("Game FOV")) {
+        if (false /*decluttered: joeyhodge experimental camera/FOV tree, hidden*/ && ImGui::TreeNode("Game FOV")) {
             m_match_game_fov->draw("Match Game FOV");
 
             if (m_match_game_fov->value()) {
