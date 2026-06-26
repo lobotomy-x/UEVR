@@ -372,6 +372,10 @@ private:
     sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
     char m_pick_class_filter[128]{}; // picker: restrict candidates to those whose full name contains this (case-insensitive)
     int  m_pick_cycle{0};            // picker: which of the overlapping candidates under the cursor is the active one (scroll to cycle)
+    // Cached candidate list so the per-frame overlay doesn't re-scan m_objects (+ screen_to_world
+    // ProcessEvent) every frame while the picker is armed — rebuilt only when the cursor moves / the
+    // wheel turns / a click happens. Touched only on the draw thread in handle_click_select.
+    std::vector<std::pair<sdk::USceneComponent*, std::string>> m_pick_cache{};
     // Saved world positions for the "Save/Restore position" buttons. Touched from game-thread tasks
     // (GameThreadWorker) for the actual get/set_world_location, and read from the draw thread for the
     // button-enable check, so guard it with its own mutex (independent of m_mutex).

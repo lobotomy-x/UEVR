@@ -1201,14 +1201,20 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
             // Non-numeric struct (has Object/Name/Str/Enum/Array/... members): edit it generically via
             // ui_handle_struct on a per-param scratch buffer sized to the struct. encode_param memcpys
             // that buffer into the params blob. (The all-numeric fast path below stays for math structs.)
-            size_t sz = (size_t)strukt->get_struct_size();
-            if (sz == 0) sz = (size_t)strukt->get_properties_size();
-            if (sz == 0) {
-                ImGui::TextDisabled("[%s] %s — zero-size struct", sname.c_str(), prop_name_narrow.c_str());
+            // Size the scratch by get_properties_size() (the REFLECTED layout) — ui_handle_struct
+            // writes members by their reflected offset, which lives within PropertiesSize. struct_size
+            // (StructOps.size) is resolved via a brute-forced offset the SDK warns is "not correct
+            // always", so trusting it could undersize the buffer and let a member write corrupt the
+            // heap. Prefer properties_size; fall back to struct_size only if 0; cap to reject garbage.
+            size_t sz = (size_t)strukt->get_properties_size();
+            if (sz == 0) sz = (size_t)strukt->get_struct_size();
+            if (sz == 0 || sz > (1u << 20)) {
+                ImGui::TextDisabled("[%s] %s — unusable struct size (%zu)", sname.c_str(), prop_name_narrow.c_str(), sz);
                 break;
             }
             auto& buf = s.struct_bytes[prop_name_narrow];
-            if (buf.size() != sz) buf.assign(sz, 0);
+            try { if (buf.size() != sz) buf.assign(sz, 0); }
+            catch (...) { ImGui::TextDisabled("[%s] %s — struct alloc failed", sname.c_str(), prop_name_narrow.c_str()); break; }
             ImGui::Text("[%s] %s", sname.c_str(), prop_name_narrow.c_str());
             ImGui::Indent();
             if (auto uoh = UObjectHook::get(); uoh != nullptr) {
@@ -4265,6 +4271,46 @@ void UObjectHook::handle_click_select() {
     // gather the overlapping candidates under the cursor, let the scroll wheel cycle through them, and
     // draw a w2s list. The actual selection happens only on the left click (gated below).
     const bool clicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+    const auto& io = ImGui::GetIO();
+
+    // Candidate overlay (header + capped scrollable list, active row highlighted). Shared by the
+    // cached-redraw path and the fresh-scan path.
+    auto draw_pick_overlay = [](const ImVec2& mouse, const std::vector<std::pair<sdk::USceneComponent*, std::string>>& list, int active) {
+        if (list.empty()) return;
+        auto* dl = ImGui::GetForegroundDrawList();
+        const ImVec2 b{mouse.x + 16.0f, mouse.y - 6.0f};
+        const int n = (int)list.size();
+        char hdr[96];
+        snprintf(hdr, sizeof(hdr), "pick %d/%d  (scroll to cycle, click to select)", active + 1, n);
+        dl->AddText(ImVec2{b.x, b.y - 16.0f}, IM_COL32(255, 220, 90, 235), hdr);
+        const int kShow = 8;
+        int start = active - kShow / 2;
+        if (start < 0) start = 0;
+        if (n > kShow && start > n - kShow) start = n - kShow;
+        for (int k = start; k < n && k < start + kShow; ++k) {
+            const bool act = (k == active);
+            const float y = b.y + (k - start) * 16.0f;
+            const std::string row = (act ? "> " : "  ") + list[k].second;
+            dl->AddText(ImVec2{b.x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), row.c_str());
+            dl->AddText(ImVec2{b.x, y}, act ? IM_COL32(120, 255, 120, 255) : IM_COL32(210, 210, 210, 220), row.c_str());
+        }
+    };
+
+    // Re-scan m_objects (+ the screen_to_world ProcessEvent) only when the cursor moved / the wheel
+    // turned / a click happened — otherwise redraw the cached overlay. Keeps an armed-but-idle picker
+    // off the per-frame hot path (the scan holds a shared_lock the game-thread add/destroy hooks want).
+    static ImVec2 s_last_pick_mouse{-1e9f, -1e9f};
+    const bool pick_moved = std::fabs(io.MousePos.x - s_last_pick_mouse.x) > 0.5f ||
+                            std::fabs(io.MousePos.y - s_last_pick_mouse.y) > 0.5f;
+    if (!(pick_moved || io.MouseWheel != 0.0f || clicked || m_pick_cache.empty())) {
+        if (!m_pick_cache.empty()) {
+            const int n = (int)m_pick_cache.size();
+            m_pick_cycle = ((m_pick_cycle % n) + n) % n;
+            draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
+        }
+        return;
+    }
+    s_last_pick_mouse = io.MousePos;
 
     auto engine = sdk::UGameEngine::get();
     auto world = engine != nullptr ? engine->get_world() : nullptr;
@@ -4293,7 +4339,6 @@ void UObjectHook::handle_click_select() {
     const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
         sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
 
-    const auto& io = ImGui::GetIO();
     const glm::vec2 screen_pos{io.MousePos.x, io.MousePos.y};
 
     glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
@@ -4353,7 +4398,12 @@ void UObjectHook::handle_click_select() {
     }
     std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.t < b.t; });
 
-    if (cands.empty()) {
+    // Commit to the frame-persistent cache so an armed-but-idle picker can redraw without re-scanning.
+    m_pick_cache.clear();
+    m_pick_cache.reserve(cands.size());
+    for (auto& c : cands) m_pick_cache.push_back({c.comp, std::move(c.name)});
+
+    if (m_pick_cache.empty()) {
         m_pick_cycle = 0;
         auto* dl = ImGui::GetForegroundDrawList();
         dl->AddText(ImVec2{io.MousePos.x + 16.0f, io.MousePos.y + 2.0f}, IM_COL32(255, 180, 60, 230),
@@ -4361,35 +4411,15 @@ void UObjectHook::handle_click_select() {
         return;
     }
 
-    // Scroll to cycle which overlapping candidate is active (wheel up = nearer/previous).
-    const int n = (int)cands.size();
-    if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1);
+    const int n = (int)m_pick_cache.size();
+    if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1); // wheel up = nearer/previous
     m_pick_cycle = ((m_pick_cycle % n) + n) % n; // wrap
-
-    // w2s overlay: a small list around the active candidate (capped), active row highlighted.
-    {
-        auto* dl = ImGui::GetForegroundDrawList();
-        const ImVec2 base{io.MousePos.x + 16.0f, io.MousePos.y - 6.0f};
-        char hdr[96];
-        snprintf(hdr, sizeof(hdr), "pick %d/%d  (scroll to cycle, click to select)", m_pick_cycle + 1, n);
-        dl->AddText(ImVec2{base.x, base.y - 16.0f}, IM_COL32(255, 220, 90, 235), hdr);
-        const int kShow = 8;
-        int start = m_pick_cycle - kShow / 2;
-        if (start < 0) start = 0;
-        if (n > kShow && start > n - kShow) start = n - kShow;
-        for (int k = start; k < n && k < start + kShow; ++k) {
-            const bool active = (k == m_pick_cycle);
-            const float y = base.y + (k - start) * 16.0f;
-            const std::string row = (active ? "> " : "  ") + cands[k].name;
-            dl->AddText(ImVec2{base.x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), row.c_str());
-            dl->AddText(ImVec2{base.x, y}, active ? IM_COL32(120, 255, 120, 255) : IM_COL32(210, 210, 210, 220), row.c_str());
-        }
-    }
+    draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
 
     if (!clicked) {
         return; // overlay + scroll only; the click below commits the selection
     }
-    sdk::USceneComponent* best = cands[m_pick_cycle].comp;
+    sdk::USceneComponent* best = m_pick_cache[m_pick_cycle].first;
     const float best_t = cands[m_pick_cycle].t;
 
     if (best != nullptr) {
