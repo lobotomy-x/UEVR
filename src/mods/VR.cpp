@@ -8261,7 +8261,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 }
 
                 if (is_prospi_executable() && m_match_game_fov_dolly->value() &&
-                    ImGui::CollapsingHeader("ProSpi Actual FOV Clamp", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::CollapsingHeader("ProSpi Actual FOV Clamp", ImGuiTreeNodeFlags_DefaultOpen)) {
                     m_match_game_fov_prospi_actual_clamp->draw("Clamp Actual Game FOV (ProSpi)");
                     if (m_match_game_fov_prospi_actual_clamp->value()) {
                         m_match_game_fov_prospi_actual_min->draw("Default ProSpi Actual Minimum FOV");
@@ -8273,7 +8273,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 }
 
                 if (is_prospi_executable() &&
-                    ImGui::CollapsingHeader("ProSpi Telephoto Performance", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::CollapsingHeader("ProSpi Telephoto Performance", ImGuiTreeNodeFlags_DefaultOpen)) {
                     m_match_game_fov_prospi_telephoto_perf_override->draw("Enable Telephoto Performance Override");
                     if (m_match_game_fov_prospi_telephoto_perf_override->value()) {
                         m_match_game_fov_prospi_telephoto_perf_trigger_fov->draw("Telephoto Trigger FOV");
@@ -8284,7 +8284,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 }
 
                 if (is_prospi_executable() && m_match_game_fov_dolly->value() &&
-                    ImGui::CollapsingHeader("ProSpi Dolly Overrides", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::CollapsingHeader("ProSpi Dolly Overrides", ImGuiTreeNodeFlags_DefaultOpen)) {
                     m_match_game_fov_prospi_tv_dolly_override->draw("Auto Override TV View Dolly");
                     if (m_match_game_fov_prospi_tv_dolly_override->value()) {
                         m_match_game_fov_prospi_tv_dolly_distance->draw_drag("TV View Dolly Distance", 10.0f, "%.0f");
@@ -8405,7 +8405,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                     }
                 }
 
-                if (ImGui::CollapsingHeader("Live Status", ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::CollapsingHeader("Live Status", ImGuiTreeNodeFlags_DefaultOpen)) {
                     const auto fov = get_game_fov();
                     const auto raw_fov = m_game_fov_raw.load(std::memory_order_relaxed);
                     const bool fov_valid = m_game_fov_valid.load(std::memory_order_relaxed);
@@ -8433,7 +8433,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 }
 
                 if (is_prospi_executable() && m_match_game_fov_dolly->value() &&
-                    ImGui::CollapsingHeader("ProSpi Live Status", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    false /*decluttered: joeyhodge experimental, hidden*/ && ImGui::CollapsingHeader("ProSpi Live Status", ImGuiTreeNodeFlags_DefaultOpen)) {
                     const auto preset = (ProSpiCameraPreset)m_match_game_fov_prospi_preset.load(std::memory_order_relaxed);
                     const auto active_min = m_match_game_fov_prospi_actual_min_active.load(std::memory_order_relaxed);
                     const auto calibration_applied = m_match_game_fov_prospi_calibration_applied.load(std::memory_order_relaxed);
