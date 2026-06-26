@@ -5106,10 +5106,11 @@ void VR::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
     // tick. Reapply the opt-in compatibility after game tick, but keep it to
     // the active camera only; broad object sweeps caused cadence/flicker issues.
     //
-    // DISABLED (decluttered: joeyhodge experimental): on ValorMortis this was active and forced the
-    // game camera to aspect ~0.928, distorting the VR projection -> "extreme scaling". Re-enable the
-    // line below only if a specific game's letterboxed camera genuinely needs it.
-    // update_fullscreen_16x9_camera_compatibility(engine);
+    // KEEP: this is REQUIRED for ValorMortis to render the game into the VR view -- it sets
+    // bUse16_9CamerasAsFullscreen so the camera renders fullscreen instead of letterboxed.
+    // Disabling it gave "overlay shows but no game in VR". The aspect it applies (~0.928 =
+    // per-eye RT 3056/3292) is expected; if scaling looks wrong, fix world-scale/projection, not this.
+    update_fullscreen_16x9_camera_compatibility(engine);
 }
 
 void VR::update_shf_auto_2d_mode(sdk::UGameEngine* engine) {
