@@ -619,6 +619,7 @@ private:
     ModKey::Ptr m_keybind_gizmo_rotate{ModKey::create(generate_name("GizmoRotateKey"))};
     ModKey::Ptr m_keybind_gizmo_scale{ModKey::create(generate_name("GizmoScaleKey"))};
     ModKey::Ptr m_keybind_gizmo_combined{ModKey::create(generate_name("GizmoCombinedKey"))};
+    ModKey::Ptr m_keybind_pick{ModKey::create(generate_name("PickModeKey"))}; // toggle the click-select picker
     bool m_uobject_hook_disabled{false};
     bool m_fixed_visibilities{false};
     bool m_hide_default_classes{false};
@@ -669,7 +670,8 @@ public:
             *m_keybind_gizmo_move,
             *m_keybind_gizmo_rotate,
             *m_keybind_gizmo_scale,
-            *m_keybind_gizmo_combined
+            *m_keybind_gizmo_combined,
+            *m_keybind_pick
         };
     }
 

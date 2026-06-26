@@ -386,7 +386,7 @@ sdk::UClass* resolve_class_query(std::string_view query_raw) {
 // kSlotCount slots and any change in one surface is immediately visible in
 // the other.
 // -----------------------------------------------------------------------------
-constexpr int kLiveCallerSlotCount = 4;
+constexpr int kLiveCallerSlotCount = 2;
 struct LiveSlot {
     sdk::UObject* target{};
     std::string target_text;          // text-input fallback for the target
@@ -416,7 +416,6 @@ void render_live_caller_slots() {
         utility::ScopeGuard pop_id{[]() { ImGui::PopID(); }};
 
         ImGui::Text("Slot %d", i + 1);
-        ImGui::Indent();
 
         auto& slot = s_live_slots[i];
         // Universal picker drives the target: drop / type / pick / common-object
@@ -430,6 +429,8 @@ void render_live_caller_slots() {
             slot.resolve_error.clear();
         }
 
+		ImGui::Indent();
+
         // Function picker: ONE combo. Preview = the selected function; open it
         // for a filter box + the target's functions. Clicking one selects AND
         // resolves it — no separate text field or Resolve step.
@@ -438,7 +439,8 @@ void render_live_caller_slots() {
         } else {
             const char* preview = slot.fn_name.empty() ? "select function..." : slot.fn_name.c_str();
             static char s_fn_filter[kLiveCallerSlotCount][128]{};
-            if (ImGui::BeginCombo("function", preview, ImGuiComboFlags_HeightLargest)) {
+            ImGui::TextUnformatted(preview); // selected function (the list box below doesn't show a preview)
+            if (ImGui::BeginListBox("##function", ImVec2(-FLT_MIN, 180.0f))) {
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 ImGui::InputTextWithHint("##fnfilter", "filter...", s_fn_filter[i], sizeof(s_fn_filter[i]));
                 std::string needle = s_fn_filter[i];
@@ -474,7 +476,7 @@ void render_live_caller_slots() {
                         }
                     }
                 }
-                ImGui::EndCombo();
+                ImGui::EndListBox();
             }
         }
 
@@ -4165,6 +4167,7 @@ void UObjectHook::on_frame() {
     if (m_keybind_gizmo_rotate->is_key_down_once())   { m_gizmo_mode = 1; }
     if (m_keybind_gizmo_scale->is_key_down_once())    { m_gizmo_mode = 2; }
     if (m_keybind_gizmo_combined->is_key_down_once()) { m_gizmo_mode = 3; }
+    if (m_keybind_pick->is_key_down_once())           { m_click_select_mode = !m_click_select_mode; }
 
     // Quick-access keybind: F2 toggles the Class Browser window whenever the
     // overlay is open (and not typing into a field), so it is reachable without
@@ -4512,9 +4515,12 @@ void UObjectHook::draw_component_gizmos() {
     // pushes a projected point toward/away from the screen origin by a factor — a cheap screen-space
     // scale, exact enough since hit-test and draw use the SAME factor. The drag math is unaffected (it
     // uses each axis's full screen direction, not the visual handle length).
-    constexpr float kRingScaleCombined = 1.28f; // rotate rings: just outside the axis tips
-    constexpr float kArrowBaseT = 0.18f;        // translate arrow starts off-center (frees the center)
-    constexpr float kArrowTipT = 0.70f;         // ...and ends well before the tip (clear gap to the scale square)
+    // Radial layout (swapped vs the first cut so translate is the long OUTER arrow, Blender-like, and
+    // scale the inner box): center(0) < scale box(0.45) < translate arrow[0.62..1.0] < rotate ring(1.4).
+    constexpr float kRingScaleCombined = 1.40f; // rotate rings: outer
+    constexpr float kScaleHandleT = 0.45f;      // scale squares: inner (closer to center than the arrows)
+    constexpr float kArrowBaseT = 0.62f;        // translate arrow starts past the scale box
+    constexpr float kArrowTipT = 1.0f;          // ...and runs out to the axis tip
     auto scaled_pt = [](const ImVec2& origin, const ImVec2& p, float s) -> ImVec2 {
         return ImVec2{origin.x + (p.x - origin.x) * s, origin.y + (p.y - origin.y) * s};
     };
@@ -4629,8 +4635,9 @@ void UObjectHook::draw_component_gizmos() {
                         const ImVec2 at = scaled_pt(sc.s_origin, sc.tip[i], kArrowTipT);
                         const float da = seg_dist2(io.MousePos, ab, at);
                         if (da < best) { best = da; hover_comp = sc.comp; hover_axis = i; }
-                        const float dxs = io.MousePos.x - sc.tip[i].x, dys = io.MousePos.y - sc.tip[i].y;
-                        const float ds = dxs * dxs + dys * dys; // scale square at the tip
+                        const ImVec2 sq = scaled_pt(sc.s_origin, sc.tip[i], kScaleHandleT); // scale box (inner)
+                        const float dxs = io.MousePos.x - sq.x, dys = io.MousePos.y - sq.y;
+                        const float ds = dxs * dxs + dys * dys;
                         if (ds < best) { best = ds; hover_comp = sc.comp; hover_axis = 20 + i; }
                     }
                     for (int s = 0; s < kRingSeg; ++s) {
@@ -4919,8 +4926,8 @@ void UObjectHook::draw_component_gizmos() {
                 const bool sq_hot = (s_drag_comp == sc.comp && s_drag_axis == 20 + i) ||
                                     (hover_comp == sc.comp && hover_axis == 20 + i);
                 const float r = sq_hot ? m_gizmo_thickness * 2.4f : m_gizmo_thickness * 1.8f;
-                dl->AddRectFilled(ImVec2{sc.tip[i].x - r, sc.tip[i].y - r},
-                                  ImVec2{sc.tip[i].x + r, sc.tip[i].y + r}, axes[i].col);   // scale box at tip
+                const ImVec2 sq = scaled_pt(sc.s_origin, sc.tip[i], kScaleHandleT);
+                dl->AddRectFilled(ImVec2{sq.x - r, sq.y - r}, ImVec2{sq.x + r, sq.y + r}, axes[i].col); // scale box (inner)
             }
         } else if (m_gizmo_mode == 1) {
             // Rotate: one standard colored ring per axis (projected polyline).
@@ -4975,7 +4982,7 @@ void UObjectHook::draw_component_gizmos() {
         // boxes) are visible at once without overlapping the live gizmo. Purely additive draw
         // built from the already-projected axis tips (a screen-space copy), so it can never
         // affect hit-testing or dragging.
-        if (m_gizmo_show_all_modes) {
+        if (m_gizmo_show_all_modes && m_gizmo_mode != 3) { // combined mode already shows all 3 — skip the offset reference glyphs
             auto draw_mode_glyph = [&](const ImVec2& center, int mode) {
                 ImVec2 sv[3];
                 float maxlen = 1.0f;
@@ -5870,6 +5877,7 @@ void UObjectHook::draw_gizmo_options() {
     }
     ImGui::SameLine();
     ImGui::Checkbox("keep picking##pick", &m_click_select_sticky); // stay armed after each hit (was "sticky")
+    m_keybind_pick->draw("Pick mode hotkey"); // toggle the picker without reaching for the button
     {
         size_t n_targets = 0;
         { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }
