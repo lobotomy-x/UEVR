@@ -4597,7 +4597,7 @@ void UObjectHook::draw_component_gizmos() {
         for (int i = 0; i < 3; ++i) {
             sc.tip_ok[i] = project(sc.origin + axes[i].dir * kAxisLen, sc.tip[i]);
         }
-        if (m_gizmo_mode == 0) {
+        if (m_gizmo_mode == 0 || m_gizmo_mode == 3) { // translate plane handles AND combined-mode scale-plane handles
             // Plane handle p sits in the plane of axes (p+1) and (p+2), offset a bit
             // out from the origin along both.
             for (int p = 0; p < 3; ++p) {
@@ -4652,6 +4652,12 @@ void UObjectHook::draw_component_gizmos() {
                 const float dxc = io.MousePos.x - sc.s_origin.x, dyc = io.MousePos.y - sc.s_origin.y;
                 const float dc = dxc * dxc + dyc * dyc; // center = uniform scale
                 if (dc < best) { best = dc; hover_comp = sc.comp; hover_axis = 6; }
+                for (int p = 0; p < 3; ++p) { // scale-plane handles (multiaxis scale): codes 30..32
+                    if (!sc.plane_ok[p]) continue;
+                    const float dxp = io.MousePos.x - sc.plane[p].x, dyp = io.MousePos.y - sc.plane[p].y;
+                    const float dp = dxp * dxp + dyp * dyp;
+                    if (dp < best) { best = dp; hover_comp = sc.comp; hover_axis = 30 + p; }
+                }
                 continue;
             }
             for (int i = 0; i < 3; ++i) {
@@ -4817,6 +4823,28 @@ void UObjectHook::draw_component_gizmos() {
                         }
                         s_drag_comp->set_relative_scale(scale);
                     }
+                } else if (s_drag_axis >= 30 && s_drag_axis < 33) {
+                    // Scale-plane handle (multiaxis scale): scale the two in-plane axes together by the
+                    // drag along the plane handle's diagonal screen direction.
+                    const int p = s_drag_axis - 30;
+                    const int ia = (p + 1) % 3, ib = (p + 2) % 3;
+                    if (sc.plane_ok[p]) {
+                        const ImVec2 d{sc.plane[p].x - sc.s_origin.x, sc.plane[p].y - sc.s_origin.y};
+                        const float len2 = d.x * d.x + d.y * d.y;
+                        if (len2 > 1.0f) {
+                            const float px_along = (io.MouseDelta.x * d.x + io.MouseDelta.y * d.y) / ImSqrt(len2);
+                            if (px_along != 0.0f) {
+                                auto scale = s_drag_comp->get_relative_scale();
+                                scale[ia] += px_along * 0.01f;
+                                scale[ib] += px_along * 0.01f;
+                                if (ctrl_snap && m_snap_scale > 0.0f) {
+                                    scale[ia] = std::round(scale[ia] / m_snap_scale) * m_snap_scale;
+                                    scale[ib] = std::round(scale[ib] / m_snap_scale) * m_snap_scale;
+                                }
+                                s_drag_comp->set_relative_scale(scale);
+                            }
+                        }
+                    }
                 }
             } catch (...) {}
             break;
@@ -4928,6 +4956,17 @@ void UObjectHook::draw_component_gizmos() {
                 const float r = sq_hot ? m_gizmo_thickness * 2.4f : m_gizmo_thickness * 1.8f;
                 const ImVec2 sq = scaled_pt(sc.s_origin, sc.tip[i], kScaleHandleT);
                 dl->AddRectFilled(ImVec2{sq.x - r, sq.y - r}, ImVec2{sq.x + r, sq.y + r}, axes[i].col); // scale box (inner)
+            }
+            // Scale-plane handles (multiaxis scale): a small dark-outlined box at each plane position,
+            // tinted by the axis it is perpendicular to (codes 30..32 -> scale the other two axes).
+            for (int p = 0; p < 3; ++p) {
+                if (!sc.plane_ok[p]) continue;
+                const bool hot = (s_drag_comp == sc.comp && s_drag_axis == 30 + p) ||
+                                 (hover_comp == sc.comp && hover_axis == 30 + p);
+                const float r = hot ? m_gizmo_thickness * 2.2f : m_gizmo_thickness * 1.6f;
+                const ImU32 col = (axes[p].col & 0x00FFFFFF) | ((ImU32)(hot ? 255 : 200) << IM_COL32_A_SHIFT);
+                dl->AddRectFilled(ImVec2{sc.plane[p].x - r, sc.plane[p].y - r}, ImVec2{sc.plane[p].x + r, sc.plane[p].y + r}, col);
+                dl->AddRect(ImVec2{sc.plane[p].x - r, sc.plane[p].y - r}, ImVec2{sc.plane[p].x + r, sc.plane[p].y + r}, IM_COL32(20, 20, 20, 220));
             }
         } else if (m_gizmo_mode == 1) {
             // Rotate: one standard colored ring per axis (projected polyline).
@@ -5077,6 +5116,23 @@ void UObjectHook::draw_component_gizmos() {
                         glm::vec3 l{};
                         { std::scoped_lock _{m_saved_positions_mtx}; auto it = m_saved_positions.find(c); if (it == m_saved_positions.end()) return; l = it->second; }
                         try { c->set_world_location(l, false, false); } catch (...) {}
+                    });
+                }
+                ImGui::Separator();
+                // Attach / detach. Intuitive two-object attach: pick the intended PARENT first (it
+                // becomes last-selected), then right-click the CHILD here and "Attach to last-selected".
+                if (sdk::USceneComponent* parent = m_last_selected; parent != nullptr && parent != c && this->exists(parent)) {
+                    std::string pn;
+                    try { pn = utility::narrow(parent->get_fname().to_string()); } catch (...) { pn = "<last-selected>"; }
+                    if (ImGui::MenuItem(("Attach to last-selected: " + pn).c_str())) {
+                        GameThreadWorker::get().enqueue([this, c, parent]() {
+                            if (this->exists(c) && this->exists(parent)) try { c->attach_to(parent, L"None", 0, true); } catch (...) {}
+                        });
+                    }
+                }
+                if (ImGui::MenuItem("Detach from parent")) {
+                    GameThreadWorker::get().enqueue([this, c]() {
+                        if (this->exists(c)) try { c->detach_from_parent(true, true); } catch (...) {}
                     });
                 }
                 ImGui::Separator();
