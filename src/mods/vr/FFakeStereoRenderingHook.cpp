@@ -9197,79 +9197,63 @@ bool FFakeStereoRenderingHook::setup_view_extensions() try {
                 return EXCEPTION_CONTINUE_SEARCH;
             }
 
-            if (previous_instruction->instrux.Operands[0].Type != ND_OP_REG ||
-                previous_instruction->instrux.Operands[0].Info.Register.Reg != op2.Info.Memory.Base)
-            {
-                const auto can_use_stalker2_backscan = stalker2_is_current_game() && is_ue_5_1_dx12_backend();
-
-                if (!can_use_stalker2_backscan) {
-                    SPDLOG_ERROR("Previous instruction does not use the same register as the dereference");
-                    return EXCEPTION_CONTINUE_SEARCH;
+            // Confirm the faulting register was loaded from [engine + potential_hmd_device_offset]
+            // (the XRSystem/HMDDevice slot) before we NOP anything. The immediately-previous
+            // instruction is the common case, but some games emit an intermediate deref first --
+            // e.g. UE5.7 (Sprawl Zero / Silas): `mov rax,[engine+off]; mov rax,[rax]; mov rcx,[rax+N]`,
+            // so the instruction right before the fault is `mov rax,[rax]` (same register, NO
+            // displacement) rather than the slot-load. Stalker2/UE5.1 has the same shape. When the
+            // adjacent instruction isn't the slot-load, scan a short window backward for it. The
+            // `disp == potential_hmd_device_offset` requirement means this can only ever match the
+            // real XRSystem/HMDDevice load, so it never patches an unrelated null dereference.
+            const auto is_xrsystem_slot_load = [&](const utility::Resolved& insn) -> bool {
+                const auto& ix = insn.instrux;
+                if (ix.OperandsCount < 2 ||
+                    ix.Operands[0].Type != ND_OP_REG ||
+                    ix.Operands[0].Info.Register.Reg != op2.Info.Memory.Base)
+                {
+                    return false;
                 }
 
+                const auto& o2 = ix.Operands[1];
+                return o2.Type == ND_OP_MEM &&
+                       o2.Info.Memory.HasBase &&
+                       o2.Info.Memory.HasDisp &&
+                       o2.Info.Memory.Disp == potential_hmd_device_offset;
+            };
+
+            if (!is_xrsystem_slot_load(*previous_instruction)) {
                 std::optional<utility::Resolved> xr_hmd_load{};
                 const auto prior_instructions = utility::get_disassembly_behind(exception_address);
 
                 for (auto it = prior_instructions.rbegin(); it != prior_instructions.rend(); ++it) {
-                    const auto& candidate = *it;
-                    const auto& candidate_ix = candidate.instrux;
-
-                    if ((exception_address - candidate.addr) > 0x40) {
+                    if ((exception_address - it->addr) > 0x40) {
                         break;
                     }
 
-                    if (candidate_ix.OperandsCount < 2 ||
-                        candidate_ix.Operands[0].Type != ND_OP_REG ||
-                        candidate_ix.Operands[0].Info.Register.Reg != op2.Info.Memory.Base)
-                    {
-                        continue;
-                    }
-
-                    const auto& candidate_op2 = candidate_ix.Operands[1];
-
-                    if (candidate_op2.Type == ND_OP_MEM &&
-                        candidate_op2.Info.Memory.HasBase &&
-                        candidate_op2.Info.Memory.HasDisp &&
-                        candidate_op2.Info.Memory.Disp == potential_hmd_device_offset)
-                    {
-                        xr_hmd_load = candidate;
+                    if (is_xrsystem_slot_load(*it)) {
+                        xr_hmd_load = *it;
                         break;
                     }
                 }
 
                 if (!xr_hmd_load) {
-                    SPDLOG_ERROR("Previous instruction does not use the same register as the dereference");
+                    SPDLOG_ERROR(
+                        "Could not find the XRSystem/HMDDevice slot load (disp {:x}) behind null dereference at {:x}",
+                        potential_hmd_device_offset, exception_address);
                     return EXCEPTION_CONTINUE_SEARCH;
                 }
 
                 SPDLOG_INFO(
-                    "[Stalker2][UE5.1] Matched non-adjacent XRSystem/HMDDevice load at {:x} for null dereference at {:x}",
+                    "Matched non-adjacent XRSystem/HMDDevice load at {:x} for null dereference at {:x}",
                     xr_hmd_load->addr,
                     exception_address);
 
                 previous_instruction = *xr_hmd_load;
             }
 
-            const auto prev_op2 = previous_instruction->instrux.Operands[1];
-
-            if (previous_instruction->instrux.OperandsCount < 2 ||
-                prev_op2.Type != ND_OP_MEM ||
-                !prev_op2.Info.Memory.HasBase)
-            {
-                SPDLOG_ERROR("Previous instruction is not a memory dereference");
-                return EXCEPTION_CONTINUE_SEARCH;
-            }
-
-            if (!prev_op2.Info.Memory.HasDisp) {
-                SPDLOG_ERROR("Previous instruction does not have a displacement");
-                return EXCEPTION_CONTINUE_SEARCH;
-            }
-
-            if (prev_op2.Info.Memory.Disp != potential_hmd_device_offset) {
-                SPDLOG_ERROR("Previous instruction is not the XRSystem or HMDDevice dereference");
-                return EXCEPTION_CONTINUE_SEARCH;
-            }
-
+            // previous_instruction is now confirmed to load the null pointer from
+            // [base + potential_hmd_device_offset] -- the XRSystem or HMDDevice slot.
             SPDLOG_INFO("Found the dereference of the XRSystem or HMDDevice at {:x}", previous_instruction->addr);
 
             // Patch the initial instruction that caused the crash
