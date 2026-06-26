@@ -1318,15 +1318,35 @@ int ScriptContext::setup_bindings() {
     out["params"] = m_plugin_initialize_param;
     out["api"] = uevr::API::get().get();
 
+    // Resolve a Lua value to a raw address: pass through a numeric address, or unwrap a
+    // void*/lightuserdata (e.g. UFunction:get_native_function()). Returns 0 on anything else.
+    // Lets reflection-derived pointers feed the address-based hook / call_function / read-write APIs.
+    out["to_address"] = [](sol::object p) -> uintptr_t {
+        if (p.is<uintptr_t>()) return p.as<uintptr_t>();
+        if (p.get_type() == sol::type::lightuserdata) return reinterpret_cast<uintptr_t>(p.as<void*>());
+        return 0;
+    };
+
     // Top-level inline-hook helpers (live under uevr.hook_create_mid / uevr.hook_remove_mid).
-    out["hook_create_mid"] = [this](sol::this_state s, uintptr_t target, sol::protected_function cb) -> sol::object {
+    // target may be a numeric address OR a void*/lightuserdata (e.g. UFunction:get_native_function()).
+    out["hook_create_mid"] = [this](sol::this_state s, sol::object target_obj, sol::protected_function cb) -> sol::object {
+        const uintptr_t target = target_obj.is<uintptr_t>() ? target_obj.as<uintptr_t>()
+            : (target_obj.get_type() == sol::type::lightuserdata ? reinterpret_cast<uintptr_t>(target_obj.as<void*>()) : 0);
+        if (target == 0) {
+            return sol::make_object(s, sol::lua_nil);
+        }
         auto hook = create_mid_hook(target, std::move(cb));
         if (hook == nullptr) {
             return sol::make_object(s, sol::lua_nil);
         }
         return sol::make_object(s, hook);
     };
-    out["hook_remove_mid"] = [this](uintptr_t target) -> bool {
+    out["hook_remove_mid"] = [this](sol::object target_obj) -> bool {
+        const uintptr_t target = target_obj.is<uintptr_t>() ? target_obj.as<uintptr_t>()
+            : (target_obj.get_type() == sol::type::lightuserdata ? reinterpret_cast<uintptr_t>(target_obj.as<void*>()) : 0);
+        if (target == 0) {
+            return false;
+        }
         return remove_mid_hook(target);
     };
 
