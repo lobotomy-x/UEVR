@@ -82,6 +82,11 @@ constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
 inline void drag_scroll_current_window() {
     auto& io = ImGui::GetIO();
     const bool vr = VR::get()->is_hmd_active();
+    // In VR the controller trigger maps to the LEFT mouse button, which is also imgui's
+    // window-move button -- a trigger-drag on the list body would drag the whole window instead
+    // of scrolling it. Restrict window moves to the title bar while in VR so body drags are free
+    // to scroll; flat keeps full-body window moves (it scrolls with the middle button, no clash).
+    io.ConfigWindowsMoveFromTitleBarOnly = vr;
     const ImGuiMouseButton btn = vr ? ImGuiMouseButton_Left : ImGuiMouseButton_Middle;
     const ImGuiID id = ImGui::GetID("##dragscroll");
     static ImGuiID s_active = 0;
