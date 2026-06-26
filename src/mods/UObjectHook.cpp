@@ -336,8 +336,8 @@ sdk::UObject* resolve_object_query(std::string_view query_raw) {
                 const auto ccount = carr->get_object_count();
                 for (int32_t i = 0; i < ccount; ++i) {
                     auto item = carr->get_object(i);
-                    if (item == nullptr || item->object == nullptr) continue;
-                    auto obj = reinterpret_cast<sdk::UObject*>(item->object);
+                    if (item == nullptr || item->get_object() == nullptr) continue;
+                    auto obj = reinterpret_cast<sdk::UObject*>(item->get_object());
                     try {
                         if (auto c = obj->get_class(); c != nullptr && c->is_a(uclass_t)) {
                             s_class_name_cache.emplace(obj->get_fname().to_string(), obj);
@@ -358,8 +358,8 @@ sdk::UObject* resolve_object_query(std::string_view query_raw) {
     const auto count = arr->get_object_count();
     for (int32_t i = 0; i < count; ++i) {
         auto item = arr->get_object(i);
-        if (item == nullptr || item->object == nullptr) continue;
-        auto obj = reinterpret_cast<sdk::UObject*>(item->object);
+        if (item == nullptr || item->get_object() == nullptr) continue;
+        auto obj = reinterpret_cast<sdk::UObject*>(item->get_object());
         try {
             if (obj->get_fname().to_string() == wq) {
                 return obj;
@@ -622,8 +622,8 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
         const int kCap = has_filter ? 5000 : 1500;
         for (int32_t i = 0; i < count && shown < kCap; ++i) {
             auto item = arr->get_object(i);
-            if (item == nullptr || item->object == nullptr) continue;
-            auto obj = (sdk::UObject*)item->object;
+            if (item == nullptr || item->get_object() == nullptr) continue;
+            auto obj = (sdk::UObject*)item->get_object();
             auto cls = obj->get_class();
             if (list_classes) {
                 // Class mode: only objects that ARE UClasses. Type filter is
@@ -767,8 +767,8 @@ std::vector<std::pair<std::string, sdk::UObject*>>& gather_function_libraries() 
         const auto count = arr ? arr->get_object_count() : 0;
         for (int32_t i = 0; i < count; ++i) {
             auto item = arr->get_object(i);
-            if (item == nullptr || item->object == nullptr) continue;
-            auto o = (sdk::UObject*)item->object;
+            if (item == nullptr || item->get_object() == nullptr) continue;
+            auto o = (sdk::UObject*)item->get_object();
             auto oc = o->get_class();
             if (oc == nullptr || !oc->is_a(uclass_t)) continue; // o is a UClass
             auto cls = (sdk::UClass*)o;
@@ -1316,7 +1316,7 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
         const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC); // UObjectBase::InternalIndex
         raw[0] = obj_index;
         if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-            raw[1] = item->serial_number;
+            raw[1] = item->get_serial_number();
         } else {
             raw[1] = 0;
         }
@@ -1336,7 +1336,7 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
         const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
         raw[0] = obj_index;
         if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-            raw[1] = item->serial_number;
+            raw[1] = item->get_serial_number();
         } else {
             raw[1] = 0;
         }
@@ -1354,7 +1354,7 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
         const auto obj_index = *(int32_t*)((uintptr_t)target + 0xC);
         raw[0] = obj_index;
         if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-            raw[1] = item->serial_number;
+            raw[1] = item->get_serial_number();
         } else {
             raw[1] = 0;
         }
@@ -1445,13 +1445,13 @@ std::string format_script_delegate(const uint8_t* d) {
         return (fn.empty() || fn == "None") ? "<unbound>" : "<unbound>::" + fn;
     }
     auto item = sdk::FUObjectArray::get()->get_object(obj_index);
-    if (item == nullptr || item->object == nullptr) {
+    if (item == nullptr || item->get_object() == nullptr) {
         return std::format("<stale idx={}>::{}", obj_index, fn);
     }
     try {
-        return utility::narrow(((sdk::UObject*)item->object)->get_full_name()) + "::" + fn;
+        return utility::narrow(((sdk::UObject*)item->get_object())->get_full_name()) + "::" + fn;
     } catch (...) {
-        return std::format("[{:#x}]::{}", (uintptr_t)item->object, fn);
+        return std::format("[{:#x}]::{}", (uintptr_t)item->get_object(), fn);
     }
 }
 
@@ -1559,16 +1559,16 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
         const auto serial = raw[1];
         if (obj_index <= 0) return "nullptr";
         auto item = sdk::FUObjectArray::get()->get_object(obj_index);
-        if (item == nullptr || item->object == nullptr) {
+        if (item == nullptr || item->get_object() == nullptr) {
             return std::format("<dead weak: idx={}>", obj_index);
         }
-        if (item->serial_number != serial) {
-            return std::format("<stale weak: idx={}, expected_serial={}, got={}>", obj_index, serial, item->serial_number);
+        if (item->get_serial_number() != serial) {
+            return std::format("<stale weak: idx={}, expected_serial={}, got={}>", obj_index, serial, item->get_serial_number());
         }
         try {
-            return std::format("[{:#x}] {} (weak)", (uintptr_t)item->object, utility::narrow(((sdk::UObject*)item->object)->get_full_name()));
+            return std::format("[{:#x}] {} (weak)", (uintptr_t)item->get_object(), utility::narrow(((sdk::UObject*)item->get_object())->get_full_name()));
         } catch (...) {
-            return std::format("[{:#x}] (weak)", (uintptr_t)item->object);
+            return std::format("[{:#x}] (weak)", (uintptr_t)item->get_object());
         }
     }
     case L"SoftObjectProperty"_fnv:
@@ -1581,11 +1581,11 @@ std::string format_return_value(sdk::FProperty* prop, const uint8_t* params, siz
         const auto serial = raw[1];
         if (obj_index > 0) {
             auto item = sdk::FUObjectArray::get()->get_object(obj_index);
-            if (item != nullptr && item->object != nullptr && item->serial_number == serial) {
+            if (item != nullptr && item->get_object() != nullptr && item->get_serial_number() == serial) {
                 try {
-                    return std::format("[{:#x}] {} (soft, loaded)", (uintptr_t)item->object, utility::narrow(((sdk::UObject*)item->object)->get_full_name()));
+                    return std::format("[{:#x}] {} (soft, loaded)", (uintptr_t)item->get_object(), utility::narrow(((sdk::UObject*)item->get_object())->get_full_name()));
                 } catch (...) {
-                    return std::format("[{:#x}] (soft)", (uintptr_t)item->object);
+                    return std::format("[{:#x}] (soft)", (uintptr_t)item->get_object());
                 }
             }
         }
@@ -2144,11 +2144,11 @@ void UObjectHook::hook() {
     for (auto i = 0; i < uobjectarray->get_object_count(); ++i) {
         auto object = uobjectarray->get_object(i);
 
-        if (object == nullptr || object->object == nullptr) {
+        if (object == nullptr || object->get_object() == nullptr) {
             continue;
         }
 
-        add_new_object(object->object);
+        add_new_object(object->get_object());
     }
 
     SPDLOG_INFO("[UObjectHook] Added {} existing objects", m_objects.size());
@@ -2184,8 +2184,8 @@ void UObjectHook::hook_process_event() {
     for (auto i = 0; i < uobjectarray->get_object_count(); ++i) {
         const auto object = uobjectarray->get_object(i);
 
-        if (object != nullptr && object->object != nullptr) {
-            first_obj = (sdk::UObject*)object->object;
+        if (object != nullptr && object->get_object() != nullptr) {
+            first_obj = (sdk::UObject*)object->get_object();
             break;
         }
     }
@@ -5544,8 +5544,8 @@ void UObjectHook::draw_class_browser_window() {
                 int shown = 0;
                 for (int32_t i = 0; i < count && shown < 5000; ++i) {
                     auto item = arr->get_object(i);
-                    if (item == nullptr || item->object == nullptr) continue;
-                    auto obj = (sdk::UObject*)item->object;
+                    if (item == nullptr || item->get_object() == nullptr) continue;
+                    auto obj = (sdk::UObject*)item->get_object();
                     auto cls = obj->get_class();
                     if (cls == nullptr || !cls->is_a(script_struct_class)) continue;
                     std::wstring full;
@@ -5597,8 +5597,8 @@ void UObjectHook::draw_class_browser_window() {
                 int shown = 0;
                 for (int32_t i = 0; i < count && shown < 5000; ++i) {
                     auto item = arr->get_object(i);
-                    if (item == nullptr || item->object == nullptr) continue;
-                    auto obj = (sdk::UObject*)item->object;
+                    if (item == nullptr || item->get_object() == nullptr) continue;
+                    auto obj = (sdk::UObject*)item->get_object();
                     auto cls = obj->get_class();
                     if (cls == nullptr || !cls->is_a(enum_class)) continue;
                     std::wstring full;
@@ -5655,8 +5655,8 @@ void UObjectHook::draw_class_browser_window() {
             const int kFnCap = has_filter ? 5000 : 500;
             for (int32_t i = 0; i < count && shown < kFnCap; ++i) {
                 auto item = arr->get_object(i);
-                if (item == nullptr || item->object == nullptr) continue;
-                auto obj = (sdk::UObject*)item->object;
+                if (item == nullptr || item->get_object() == nullptr) continue;
+                auto obj = (sdk::UObject*)item->get_object();
                 auto cls = obj->get_class();
                 if (cls == nullptr || !cls->is_a(func_class)) continue;
                 std::wstring full;
@@ -8907,8 +8907,8 @@ const auto check_flags = [](uint64_t flags){
                 bool stale = false;
                 if (obj_index > 0) {
                     if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-                        if (item->object != nullptr && item->serial_number == serial) {
-                            resolved = (sdk::UObject*)item->object;
+                        if (item->get_object() != nullptr && item->get_serial_number() == serial) {
+                            resolved = (sdk::UObject*)item->get_object();
                         } else {
                             stale = true;
                         }
@@ -8944,8 +8944,8 @@ const auto check_flags = [](uint64_t flags){
                 sdk::UObject* resolved = nullptr;
                 if (obj_index > 0) {
                     if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-                        if (item->object != nullptr && item->serial_number == serial) {
-                            resolved = (sdk::UObject*)item->object;
+                        if (item->get_object() != nullptr && item->get_serial_number() == serial) {
+                            resolved = (sdk::UObject*)item->get_object();
                         }
                     }
                 }
@@ -9246,11 +9246,11 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
                 continue;
             }
             auto item = sdk::FUObjectArray::get()->get_object(obj_index);
-            if (item == nullptr || item->object == nullptr || item->serial_number != serial) {
+            if (item == nullptr || item->get_object() == nullptr || item->get_serial_number() != serial) {
                 ImGui::BulletText("[%d] <stale weak idx=%d>", i, obj_index);
                 continue;
             }
-            auto obj = (sdk::UObject*)item->object;
+            auto obj = (sdk::UObject*)item->get_object();
             const auto label = std::format("[{}] {} {}", i,
                 utility::narrow(obj->get_class()->get_fname().to_string()),
                 utility::narrow(obj->get_fname().to_string()));
@@ -9276,8 +9276,8 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             sdk::UObject* resolved = nullptr;
             if (obj_index > 0) {
                 if (auto item = sdk::FUObjectArray::get()->get_object(obj_index); item != nullptr) {
-                    if (item->object != nullptr && item->serial_number == serial) {
-                        resolved = (sdk::UObject*)item->object;
+                    if (item->get_object() != nullptr && item->get_serial_number() == serial) {
+                        resolved = (sdk::UObject*)item->get_object();
                     }
                 }
             }
