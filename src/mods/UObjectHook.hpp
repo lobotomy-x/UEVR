@@ -240,7 +240,11 @@ private:
     void ui_handle_functions(void* object, sdk::UStruct* definition);
     void ui_function_context_menu(sdk::UFunction* func, void* object, bool is_real_object);
     void draw_active_function_hooks();
+public:
+    // Public: the free-function param editor (render_param_editor) reuses this generic struct editor
+    // to make non-numeric StructProperty function parameters editable.
     void ui_handle_struct(void* addr, sdk::UStruct* definition);
+private:
     // top_level_save: when true, the known-struct row opens the "##known_struct_save" context popup
     // (via OpenPopupOnItemClick on the value widget) so display_context_struct's Save/Edit menu binds
     // to the value row rather than the trailing Copy button. Only the top-level property row passes

@@ -178,6 +178,11 @@ struct ParamEditState {
     // whose leaves are all numeric — FVector/FRotator/FQuat/FTransform/FColor/
     // FIntPoint/FMatrix/... — without hardcoding per-engine offsets.
     std::unordered_map<std::string, std::vector<double>> struct_scratch;
+    // Generic struct scratch for NON-numeric struct params (members that are Object/Name/Str/Enum/
+    // Array/...): a raw byte buffer sized to the UScriptStruct, edited in place by ui_handle_struct
+    // (the same generic per-member editor used for live objects). encode_param memcpys it into the
+    // params blob. Keyed by prop name so each struct param keeps its own buffer across frames.
+    std::unordered_map<std::string, std::vector<uint8_t>> struct_bytes;
     // Per-slot universal-picker state for UObject-typed params (T63).
     std::unordered_map<std::string, PickerState>     pickers;
     // Inline-Lua fallback (T64): editable snippet + lazy-init flag, run via
@@ -1193,7 +1198,24 @@ void render_param_editor(ParamEditState& s, sdk::FProperty* prop, const std::str
         std::vector<StructLeaf> leaves;
         const bool ok = collect_struct_leaves(strukt, 0, "", leaves);
         if (!ok || leaves.empty()) {
-            ImGui::TextDisabled("[%s] %s — non-numeric struct; use 'Call via Lua' below", sname.c_str(), prop_name_narrow.c_str());
+            // Non-numeric struct (has Object/Name/Str/Enum/Array/... members): edit it generically via
+            // ui_handle_struct on a per-param scratch buffer sized to the struct. encode_param memcpys
+            // that buffer into the params blob. (The all-numeric fast path below stays for math structs.)
+            size_t sz = (size_t)strukt->get_struct_size();
+            if (sz == 0) sz = (size_t)strukt->get_properties_size();
+            if (sz == 0) {
+                ImGui::TextDisabled("[%s] %s — zero-size struct", sname.c_str(), prop_name_narrow.c_str());
+                break;
+            }
+            auto& buf = s.struct_bytes[prop_name_narrow];
+            if (buf.size() != sz) buf.assign(sz, 0);
+            ImGui::Text("[%s] %s", sname.c_str(), prop_name_narrow.c_str());
+            ImGui::Indent();
+            if (auto uoh = UObjectHook::get(); uoh != nullptr) {
+                try { uoh->ui_handle_struct(buf.data(), strukt); }
+                catch (...) { ImGui::TextDisabled("(struct editor threw)"); }
+            }
+            ImGui::Unindent();
             break;
         }
         auto& scratch = s.struct_scratch[prop_name_narrow];
@@ -1342,7 +1364,15 @@ bool encode_param(ParamEditState& s, sdk::FProperty* prop, const std::string& na
         if (strukt == nullptr) return false;
         std::vector<StructLeaf> leaves;
         if (!collect_struct_leaves(strukt, 0, "", leaves) || leaves.empty()) {
-            return false; // non-numeric struct — Lua fallback only
+            // Non-numeric struct: the generic editor wrote into s.struct_bytes[name]; copy the whole
+            // struct into the params blob (bounds-checked). This is what makes StructProperty params
+            // with Object/Name/Enum/... members callable instead of zeroed.
+            auto it = s.struct_bytes.find(name);
+            if (it == s.struct_bytes.end() || it->second.empty()) return false;
+            const size_t sz = it->second.size();
+            if ((size_t)offset + sz > params_size) return false;
+            std::memcpy(params + (size_t)offset, it->second.data(), sz);
+            return true;
         }
         const auto& scratch = s.struct_scratch[name];
         for (size_t i = 0; i < leaves.size(); ++i) {
