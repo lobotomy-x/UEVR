@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\EXAMPLES\LUA_IMGUI_PLUGIN\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/examples/lua_imgui_plugin -BI:/code/lobotomy-x/UEVR/build-lua-imgui --check-stamp-file I:/code/lobotomy-x/UEVR/build-lua-imgui/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\allocator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\easy.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\inline_hook.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\mid_hook.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\os.linux.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\os.windows.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\utility.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\src\vmt_hook.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{EFF69D27-C576-395A-8A3B-A0643070B511}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

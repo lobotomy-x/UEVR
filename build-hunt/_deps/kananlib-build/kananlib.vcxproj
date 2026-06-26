@@ -1,0 +1,354 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7FB6B5C8-0DEA-3EB3-A8FD-D76EF9753EC7}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>kananlib</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">kananlib.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">kananlib</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">kananlib.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">kananlib</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">kananlib.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">kananlib</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">kananlib.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">kananlib</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Address.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Config.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Emulation.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Input.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Memory.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Module.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\PDB.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Patch.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Pattern.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\PointerHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\RTTI.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Registry.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Scan.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\String.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\Thread.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\src\VtableHook.cpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Address.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Benchmark.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Config.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Emulation.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Input.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Logging.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Memory.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Module.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\PDB.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Patch.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Pattern.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\PointerHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\RTTI.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Registry.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Scan.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\ScopeGuard.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\String.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\Thread.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\VtableHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\thirdparty\InstructionSet.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include\utility\thirdparty\parallel-util.hpp" />
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\cmake.toml">
+    </None>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\ZERO_CHECK.vcxproj">
+      <Project>{1FC658BA-BE47-3A7E-990D-A3118BE102F8}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bddisasm.vcxproj">
+      <Project>{B2461738-9183-3D3B-AAC0-A2EEAD40D0E0}</Project>
+      <Name>bddisasm</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bdshemu.vcxproj">
+      <Project>{4DED582C-63D1-355A-8231-347779894CEF}</Project>
+      <Name>bdshemu</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\spdlog.vcxproj">
+      <Project>{5AAAC1E4-472E-3135-B93E-BD6DAC600D2B}</Project>
+      <Name>spdlog</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

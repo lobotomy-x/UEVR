@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\android_utilities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\api_layer_interface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_instance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_logger_recorders.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\manifest_file.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\runtime_interface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\xr_generated_dispatch_table.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\xr_generated_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\common\object_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\external\jsoncpp\src\lib_json\json_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\external\jsoncpp\src\lib_json\json_value.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\external\jsoncpp\src\lib_json\json_writer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\common\filesystem_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\android_utilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\api_layer_interface.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_instance.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_logger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader_logger_recorders.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\manifest_file.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\runtime_interface.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\xr_generated_dispatch_table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\xr_generated_loader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\common\hex_and_handles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\common\object_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\common\platform_utils.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src\loader\loader.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{D368983D-D3C8-3B4D-8A03-AA8325D8299F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{2B89130B-9FFE-3E1B-B6C9-C14DD02C91EB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

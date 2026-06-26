@@ -1,0 +1,786 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1DE1B2BB-C349-3090-B617-0A83E4E843ED}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>DirectXTK12</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\CMake\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DirectXTK12.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DirectXTK12</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\CMake\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DirectXTK12.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DirectXTK12</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\CMake\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">DirectXTK12.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">DirectXTK12</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\CMake\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">DirectXTK12.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">DirectXTK12</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /ZH:SHA_256 /Zc:lambda /Zc:templateScope /Zc:templateScope-</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>5104;5105;5262</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/Debug/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SDLCheck>true</SDLCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /ZH:SHA_256 /Zc:lambda /Zc:templateScope /Zc:templateScope-</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ConformanceMode>true</ConformanceMode>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>5104;5105;5262</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/Release/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SDLCheck>true</SDLCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /ZH:SHA_256 /Zc:lambda /Zc:templateScope /Zc:templateScope-</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ConformanceMode>true</ConformanceMode>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DisableSpecificWarnings>5104;5105;5262</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/MinSizeRel/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SDLCheck>true</SDLCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /ZH:SHA_256 /Zc:lambda /Zc:templateScope /Zc:templateScope-</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ConformanceMode>true</ConformanceMode>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>5104;5105;5262</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/RelWithDebInfo/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SDLCheck>true</SDLCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;_UNICODE;UNICODE;_WIN32_WINNT=0x0A00;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\CompileShaders.cmd">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating HLSL shaders...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E env CompileShadersOutput="I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled"  CompileShaders.cmd dxil &gt; I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled/compileshaders.log
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\AlphaTestEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\BasicEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DebugEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DualTextureEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\EnvironmentMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\GenerateMips.hlsl;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\NormalMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBREffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PostProcess.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\RootSig.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SkinnedEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SpriteEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\ToneMap.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Common.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Lighting.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBRCommon.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PixelPacking_Velocity.hlsli;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Skinning.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Structures.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Utilities.fxh;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating HLSL shaders...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E env CompileShadersOutput="I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled"  CompileShaders.cmd dxil &gt; I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled/compileshaders.log
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\AlphaTestEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\BasicEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DebugEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DualTextureEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\EnvironmentMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\GenerateMips.hlsl;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\NormalMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBREffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PostProcess.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\RootSig.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SkinnedEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SpriteEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\ToneMap.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Common.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Lighting.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBRCommon.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PixelPacking_Velocity.hlsli;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Skinning.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Structures.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Utilities.fxh;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating HLSL shaders...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E env CompileShadersOutput="I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled"  CompileShaders.cmd dxil &gt; I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled/compileshaders.log
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\AlphaTestEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\BasicEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DebugEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DualTextureEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\EnvironmentMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\GenerateMips.hlsl;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\NormalMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBREffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PostProcess.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\RootSig.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SkinnedEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SpriteEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\ToneMap.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Common.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Lighting.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBRCommon.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PixelPacking_Velocity.hlsli;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Skinning.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Structures.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Utilities.fxh;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating HLSL shaders...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E env CompileShadersOutput="I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled"  CompileShaders.cmd dxil &gt; I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled/compileshaders.log
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\AlphaTestEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\BasicEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DebugEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\DualTextureEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\EnvironmentMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\GenerateMips.hlsl;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\NormalMapEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBREffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PostProcess.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\RootSig.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SkinnedEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\SpriteEffect.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\ToneMap.fx;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Common.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Lighting.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PBRCommon.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\PixelPacking_Velocity.hlsli;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Skinning.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Structures.fxh;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\Utilities.fxh;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTest.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestTargets.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestUseLaunchers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\DartConfiguration.tcl.in;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\build\DirectXTK12-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTest.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestTargets.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestUseLaunchers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\DartConfiguration.tcl.in;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\build\DirectXTK12-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTest.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestTargets.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestUseLaunchers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\DartConfiguration.tcl.in;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\build\DirectXTK12-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-src/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTest.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestTargets.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CTestUseLaunchers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\DartConfiguration.tcl.in;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\build\DirectXTK12-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\cmake_pch.cxx">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/Debug/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/Release/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/MinSizeRel/cmake_pch.pch</PrecompiledHeaderOutputFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/DirectXTK12.dir/RelWithDebInfo/cmake_pch.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\AlphaTestEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BasicEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BasicPostProcess.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BufferHelpers.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\CommonStates.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\d3dx12.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DDSTextureLoader.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DebugEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DescriptorHeap.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DirectXHelpers.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DualPostProcess.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DualTextureEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectCommon.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectCommon.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectFactory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectPipelineStateDescription.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectTextureFactory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EnvironmentMapEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GeometricPrimitive.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GraphicsMemory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LinearAllocator.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LinearAllocator.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Model.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadCMO.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadSDKMESH.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadVBO.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\NormalMapEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PBREffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PBREffectFactory.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\pch.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PrimitiveBatch.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ResourceUploadBatch.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ScreenGrab.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SkinnedEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SpriteBatch.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SpriteFont.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ToneMapPostProcess.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\VertexTypes.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\WICTextureLoader.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BinaryReader.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GamePad.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Geometry.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Keyboard.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Mouse.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SimpleMath.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\AlignedNew.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Bezier.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BinaryReader.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DDS.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DemandCreate.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Geometry.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LoaderHelpers.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PlatformHelpers.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SDKMesh.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SharedResourcePool.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\vbo.h" />
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\TeapotData.inc">
+    </None>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\AudioEngine.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\DynamicSoundEffectInstance.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundCommon.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundCommon.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundEffect.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundEffectInstance.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundStreamInstance.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBank.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBankReader.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBankReader.h" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WAVFileReader.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Debug/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/Release/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/MinSizeRel/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/CMakeFiles/DirectXTK12.dir/RelWithDebInfo/cmake_pch.hxx;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WAVFileReader.h" />
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc">
+    </None>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\BufferHelpers.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\CommonStates.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DDSTextureLoader.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DescriptorHeap.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DirectXHelpers.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Effects.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\EffectPipelineStateDescription.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GeometricPrimitive.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GraphicsMemory.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Model.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\PostProcess.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\PrimitiveBatch.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\RenderTargetState.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\ResourceUploadBatch.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\ScreenGrab.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SpriteBatch.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SpriteFont.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\VertexTypes.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\WICTextureLoader.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GamePad.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Keyboard.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Mouse.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SimpleMath.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SimpleMath.inl" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Audio.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\Debug\cmake_pch.hxx" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\Release\cmake_pch.hxx" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\MinSizeRel\cmake_pch.hxx" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\RelWithDebInfo\cmake_pch.hxx" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\ZERO_CHECK.vcxproj">
+      <Project>{1FC658BA-BE47-3A7E-990D-A3118BE102F8}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

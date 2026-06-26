@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\lua-api\Main.cpp">
+      <Filter>lua-api</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="lua-api">
+      <UniqueIdentifier>{749BF324-1914-3B9F-BF0E-3F74CFED2590}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

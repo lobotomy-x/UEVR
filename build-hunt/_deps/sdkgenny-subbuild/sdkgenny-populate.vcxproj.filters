@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\0eb022b51e44dfbc01a434b9ab551387\sdkgenny-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\7f8ad6a05bf99cf7d51bb1005491cc79\sdkgenny-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\afcc1bfaf9f27ddaca9cf56fa9595d68\sdkgenny-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-subbuild\CMakeFiles\sdkgenny-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{4A0BE63A-792C-3CAA-A2A9-EC0327C7D7D0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\cimgui.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_demo.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_draw.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_dx11.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_dx12.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_win32.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_tables.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_widgets.cpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\rendering\d3d11.cpp">
+      <Filter>examples\renderlib\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\renderlib\rendering\d3d12.cpp">
+      <Filter>examples\renderlib\rendering</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\font_robotomedium.hpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\re2_imconfig.hpp">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\rendering\d3d11.hpp">
+      <Filter>examples\renderlib\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\rendering\d3d12.hpp">
+      <Filter>examples\renderlib\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\rendering\shared.hpp">
+      <Filter>examples\renderlib\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\cimgui.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imconfig.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_dx11.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_dx12.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_impl_win32.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imgui_internal.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imstb_rectpack.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imstb_textedit.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\examples\renderlib\imgui\imstb_truetype.h">
+      <Filter>examples\renderlib\imgui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="examples">
+      <UniqueIdentifier>{E513E48A-3DC7-39C9-A35C-CDC2E3DC7683}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="examples\renderlib">
+      <UniqueIdentifier>{DFC3E16F-DBEC-3F66-96F9-D75CFC662B64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="examples\renderlib\imgui">
+      <UniqueIdentifier>{7D1A9CA3-1D8F-3685-A213-C8D7CE7EDAC9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="examples\renderlib\rendering">
+      <UniqueIdentifier>{7E9ACB8B-4063-3798-99E3-00C8A79CBBB8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

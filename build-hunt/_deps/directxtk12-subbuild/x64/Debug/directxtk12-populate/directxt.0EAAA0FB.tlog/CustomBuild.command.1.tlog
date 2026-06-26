@@ -1,0 +1,150 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/tmp/directxtk12-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-DOWNLOAD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/tmp/directxtk12-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-UPDATE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/tmp/directxtk12-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-CONFIGURE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-BUILD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-INSTALL.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\941BDDCD602CD7E356666B5C0D331C34\DIRECTXTK12-POPULATE-TEST.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\58F67AA1CB95F069D2F1A673FB2B9F6E\DIRECTXTK12-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/Debug/directxtk12-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/directxtk12-populate-prefix/src/directxtk12-populate-stamp/Debug/directxtk12-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKEFILES\1C107D00C098641EC14D2018D0EC3674\DIRECTXTK12-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK12-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

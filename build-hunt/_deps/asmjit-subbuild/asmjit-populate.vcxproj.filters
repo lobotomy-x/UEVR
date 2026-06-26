@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\64bd190dff24e2e90223c6a5f630c67c\asmjit-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\71a66b14c7ecaeb2011b8090f30ed459\asmjit-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\a11d73edc833d6abb989034c25dfea89\asmjit-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-subbuild\CMakeFiles\asmjit-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{E8A5B5C7-F403-30CD-842F-52F5AD9B234C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/safetyhook-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/b7cc9f9ceea35c46253e8d6a2a6f35db/safetyhook-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/3aa0761de49c089de4b6951c087ae6c2/safetyhook-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/safetyhook-subbuild/CMakeFiles/520dd53499a6b7e5ebc4cbc4da5b788d/safetyhook-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"safetyhook-populate"
+		],
+		"name" : "safetyhook-populate"
+	}
+}

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-lua-imgui\CMakeFiles\92ee47a55f3ab75c4407f011d320cadd\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B06846B7-B7F8-3BE1-A294-332377FFD573}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "uevr": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "I:/code/lobotomy-x/uevr-mcp/mcp-server/bin/Release/net9.0/UevrMcpServer.dll"
+      ]
+    }
+  }
+}

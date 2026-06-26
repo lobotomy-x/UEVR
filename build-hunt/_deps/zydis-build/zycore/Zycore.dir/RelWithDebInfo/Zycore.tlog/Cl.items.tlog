@@ -1,0 +1,13 @@
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\API\Memory.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Memory.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\API\Process.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Process.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\API\Synchronization.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Synchronization.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\API\Terminal.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Terminal.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\API\Thread.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Thread.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\Allocator.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Allocator.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\ArgParse.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\ArgParse.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\Bitset.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Bitset.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\Format.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Format.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\List.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\List.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\String.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\String.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\Vector.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Vector.obj
+I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\src\Zycore.c;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.dir\RelWithDebInfo\Zycore.obj

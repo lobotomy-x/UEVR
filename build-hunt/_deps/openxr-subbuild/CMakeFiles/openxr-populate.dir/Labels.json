@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/openxr-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/be6cbce981119d110b09a269f95788e5/openxr-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/0cfff434d4404645c7155c31a4bec61e/openxr-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/834c5662fdd0942885e97a65be206130/openxr-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"openxr-populate"
+		],
+		"name" : "openxr-populate"
+	}
+}

@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\834c5662fdd0942885e97a65be206130\openxr-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\0cfff434d4404645c7155c31a4bec61e\openxr-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\be6cbce981119d110b09a269f95788e5\openxr-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-subbuild\CMakeFiles\openxr-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{F159D4B2-FB57-31C5-9D6C-7A6B0B42A7CC}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

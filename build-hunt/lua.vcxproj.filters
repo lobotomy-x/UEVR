@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lapi.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lauxlib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lbaselib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lcode.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lcorolib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lctype.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ldblib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ldebug.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ldo.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ldump.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lfunc.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lgc.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\linit.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\liolib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\llex.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lmathlib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lmem.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\loadlib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lobject.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lopcodes.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\loslib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lparser.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lstate.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lstring.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lstrlib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ltable.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ltablib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ltests.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\ltm.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lua.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lundump.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lutf8lib.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lvm.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\lua\src\lzio.c">
+      <Filter>dependencies\lua\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{6026BA26-B92C-3FFD-B981-B148AF9DEA54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\lua">
+      <UniqueIdentifier>{2B59C194-AA82-3A2D-BE46-564AD2CC1DB8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\lua\src">
+      <UniqueIdentifier>{A65292D8-5BA7-3BA2-ADE1-C84DA2F6240F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/kananlib-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/ad6ebea0a36d9c089415fa008dd771f3/kananlib-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/48b8ec5ca6e20e377f7404ad601e06c7/kananlib-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/kananlib-subbuild/CMakeFiles/cf283f17b505310fb24c617f80040590/kananlib-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"kananlib-populate"
+		],
+		"name" : "kananlib-populate"
+	}
+}

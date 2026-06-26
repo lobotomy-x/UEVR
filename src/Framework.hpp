@@ -198,6 +198,11 @@ public:
 
     void set_draw_ui(bool state, bool should_save = true);
 
+    // Ported from joeyhodge ue57performance — his UE5.7 VR rework calls these for the hook watchdog
+    // (notify_render_activity) and to detect a stalled game thread (get_last_framework_on_frame_time).
+    void notify_render_activity();
+    const auto& get_last_framework_on_frame_time() const { return m_last_framework_on_frame; }
+
     auto& get_hook_monitor_mutex() {
         return m_hook_monitor_mutex;
     }
@@ -403,6 +408,7 @@ private:
     std::chrono::steady_clock::time_point m_last_message_time{};
     std::chrono::steady_clock::time_point m_last_sendmessage_time{};
     std::chrono::steady_clock::time_point m_last_chance_time{};
+    std::chrono::steady_clock::time_point m_last_framework_on_frame{}; // ported: joeyhodge ue57performance VR watchdog
     std::chrono::steady_clock::time_point m_last_page_dec_time{};
     std::chrono::steady_clock::time_point m_last_page_inc_time{};
     uint32_t m_frames_since_init{0};

@@ -1,0 +1,24 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK-SRC\SRC\SHADERS\COMPILESHADERS.CMD
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Src\Shaders
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E env CompileShadersOutput="I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled" CompileShaders.cmd > I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled/compileshaders.log
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK-SRC\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

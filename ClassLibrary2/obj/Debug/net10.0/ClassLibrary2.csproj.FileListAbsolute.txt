@@ -1,0 +1,12 @@
+I:\code\lobotomy-x\UEVR\ClassLibrary2\bin\Debug\net10.0\ClassLibrary2.deps.json
+I:\code\lobotomy-x\UEVR\ClassLibrary2\bin\Debug\net10.0\ClassLibrary2.dll
+I:\code\lobotomy-x\UEVR\ClassLibrary2\bin\Debug\net10.0\ClassLibrary2.pdb
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.GeneratedMSBuildEditorConfig.editorconfig
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.AssemblyInfoInputs.cache
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.AssemblyInfo.cs
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.csproj.CoreCompileInputs.cache
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.sourcelink.json
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.dll
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\refint\ClassLibrary2.dll
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ClassLibrary2.pdb
+I:\code\lobotomy-x\UEVR\ClassLibrary2\obj\Debug\net10.0\ref\ClassLibrary2.dll

@@ -1,0 +1,3 @@
+I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild/CMakeFiles/directxtk-populate.dir
+I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild/CMakeFiles/ALL_BUILD.dir
+I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild/CMakeFiles/ZERO_CHECK.dir

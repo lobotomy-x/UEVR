@@ -1,0 +1,330 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\cmake_pch.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\AlphaTestEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BasicEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BasicPostProcess.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BufferHelpers.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\CommonStates.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DDSTextureLoader.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DebugEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DescriptorHeap.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DirectXHelpers.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DualPostProcess.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DualTextureEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectCommon.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectFactory.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectPipelineStateDescription.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectTextureFactory.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EnvironmentMapEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GeometricPrimitive.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GraphicsMemory.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LinearAllocator.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Model.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadCMO.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadSDKMESH.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ModelLoadVBO.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\NormalMapEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PBREffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PBREffectFactory.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PrimitiveBatch.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ResourceUploadBatch.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ScreenGrab.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SkinnedEffect.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SpriteBatch.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SpriteFont.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\ToneMapPostProcess.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\VertexTypes.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\WICTextureLoader.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BinaryReader.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\GamePad.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Geometry.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Keyboard.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Mouse.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SimpleMath.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\AudioEngine.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\DynamicSoundEffectInstance.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundCommon.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundEffect.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundEffectInstance.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundStreamInstance.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBank.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBankReader.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WAVFileReader.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\d3dx12.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\EffectCommon.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LinearAllocator.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\pch.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\AlignedNew.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Bezier.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\BinaryReader.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DDS.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\DemandCreate.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Geometry.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\LoaderHelpers.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\PlatformHelpers.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SDKMesh.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\SharedResourcePool.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\vbo.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\SoundCommon.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WaveBankReader.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Audio\WAVFileReader.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\BufferHelpers.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\CommonStates.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DDSTextureLoader.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DescriptorHeap.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\DirectXHelpers.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Effects.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\EffectPipelineStateDescription.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GeometricPrimitive.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GraphicsMemory.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Model.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\PostProcess.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\PrimitiveBatch.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\RenderTargetState.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\ResourceUploadBatch.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\ScreenGrab.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SpriteBatch.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SpriteFont.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\VertexTypes.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\WICTextureLoader.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\GamePad.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Keyboard.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Mouse.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SimpleMath.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\SimpleMath.inl">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc\Audio.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\Debug\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\Release\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\MinSizeRel\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\CMakeFiles\DirectXTK12.dir\RelWithDebInfo\cmake_pch.hxx">
+      <Filter>Precompile Header File</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\Shaders\CompileShaders.cmd">
+      <Filter>Src</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Src\TeapotData.inc">
+      <Filter>Src</Filter>
+    </None>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Audio">
+      <UniqueIdentifier>{B759CE87-36F5-3162-B2C4-6A67EFF08A0E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc">
+      <UniqueIdentifier>{19DD6F03-DFEC-3C91-9B1F-02413E9D6EB6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Precompile Header File">
+      <UniqueIdentifier>{C9CD8621-F8A5-3A42-90AB-D7D4E7502FD5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{2B89130B-9FFE-3E1B-B6C9-C14DD02C91EB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{8E29E313-99F6-3647-9C87-5110E0E27B60}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

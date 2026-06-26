@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>IDA - InnocentAssault-Win64-Shipping.exe.i64 (InnocentAssault-Win64-Shipping.exe) E:\Innocent Assault 1.0.2\InnocentAssault\Binaries\Win64\InnocentAssault-Win64-Shipping.exe.i64</title>
+</head>
+<body class="c41">
+<span style="white-space: pre; font-family: Consolas,monospace;" class="c1 c41">
+<span class="c23">__int64 __fastcall FPakPlatformFile::IsNonPakFilenameAllowed</span><span class="c9">(</span><span class="c23">__int64 a1, __int64 a2</span><span class="c9">)
+{
+  </span><span class="c33">__int64 Extension</span><span class="c9">; </span><span class="c24">// rax
+  </span><span class="c33">const wchar_t *p_String</span><span class="c9">; </span><span class="c24">// rbp
+  </span><span class="c33">const wchar_t *p_String_1</span><span class="c9">; </span><span class="c24">// rdx
+  </span><span class="c23">__int64 v7</span><span class="c9">; </span><span class="c24">// rdi
+  </span><span class="c23">int TypeHash_4</span><span class="c9">; </span><span class="c24">// eax
+  </span><span class="c23">__int64 v9</span><span class="c9">; </span><span class="c24">// r8
+  </span><span class="c23">__int64 v10</span><span class="c9">; </span><span class="c24">// rax
+  </span><span class="c33">int v11</span><span class="c9">; </span><span class="c24">// ebx
+  </span><span class="c23">__int64 v12</span><span class="c9">; </span><span class="c24">// rcx
+  </span><span class="c33">__int64 v13</span><span class="c9">; </span><span class="c24">// rsi
+  </span><span class="c23">_QWORD v15[5]</span><span class="c9">; </span><span class="c24">// [rsp+20h] [rbp-28h] BYREF
+  </span><span class="c23">__int64 v16</span><span class="c9">; </span><span class="c24">// [rsp+50h] [rbp+8h] BYREF
+  </span><span class="c23">__int64 v17</span><span class="c9">; </span><span class="c24">// [rsp+60h] [rbp+18h]
+
+  Extension </span><span class="c9">= </span><span class="c8">FPaths::GetExtension</span><span class="c9">(</span><span class="c24">v15</span><span class="c9">, </span><span class="c24">a2</span><span class="c9">, </span><span class="c32">0LL</span><span class="c9">);
+  </span><span class="c24">p_String </span><span class="c9">= &amp;</span><span class="c8">String</span><span class="c9">;
+  </span><span class="c32">if </span><span class="c9">( *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">Extension </span><span class="c9">+ </span><span class="c32">8</span><span class="c9">) )
+    </span><span class="c24">p_String_1 </span><span class="c9">= *(</span><span class="c23">const wchar_t **</span><span class="c9">)</span><span class="c24">Extension</span><span class="c9">;
+  </span><span class="c32">else
+    </span><span class="c24">p_String_1 </span><span class="c9">= &amp;</span><span class="c8">String</span><span class="c9">;
+  </span><span class="c8">FName::FName_5</span><span class="c9">(&amp;</span><span class="c24">v16</span><span class="c9">, </span><span class="c24">p_String_1</span><span class="c9">, </span><span class="c32">1LL</span><span class="c9">);
+  </span><span class="c32">if </span><span class="c9">( </span><span class="c24">v15</span><span class="c9">[</span><span class="c32">0</span><span class="c9">] )
+    </span><span class="c8">FMemory::Free</span><span class="c9">();
+  </span><span class="c24">v7 </span><span class="c9">= </span><span class="c24">v16</span><span class="c9">;
+  </span><span class="c32">if </span><span class="c9">( *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">104</span><span class="c9">) == *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">148</span><span class="c9">) )
+    </span><span class="c32">goto LABEL_13</span><span class="c9">;
+  </span><span class="c24">v17 </span><span class="c9">= </span><span class="c24">v16</span><span class="c9">;
+  </span><span class="c24">TypeHash_4 </span><span class="c9">= </span><span class="c8">GetTypeHash_4</span><span class="c9">((</span><span class="c23">unsigned int</span><span class="c9">)</span><span class="c24">v16</span><span class="c9">);
+  </span><span class="c24">v9 </span><span class="c9">= </span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">152</span><span class="c9">;
+  </span><span class="c24">v10 </span><span class="c9">= </span><span class="c8">HIDWORD</span><span class="c9">(</span><span class="c24">v17</span><span class="c9">) + </span><span class="c24">TypeHash_4</span><span class="c9">;
+  </span><span class="c32">if </span><span class="c9">( *(</span><span class="c23">_QWORD *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">160</span><span class="c9">) )
+    </span><span class="c24">v9 </span><span class="c9">= *(</span><span class="c23">_QWORD *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">160</span><span class="c9">);
+  </span><span class="c24">v11 </span><span class="c9">= *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">v9 </span><span class="c9">+ </span><span class="c32">4 </span><span class="c9">* (</span><span class="c24">v10 &amp; </span><span class="c9">(*(</span><span class="c23">int *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">168</span><span class="c9">) - </span><span class="c32">1LL</span><span class="c9">)));
+  </span><span class="c32">if </span><span class="c9">( </span><span class="c24">v11 </span><span class="c9">== </span><span class="c32">-1 </span><span class="c9">)
+  {
+</span><span class="c32">LABEL_13</span><span class="c9">:
+    </span><span class="c24">v11 </span><span class="c9">= </span><span class="c32">-1</span><span class="c9">;
+  </span><span class="c32"></span><span class="c9">}
+  </span><span class="c32">else
+  </span><span class="c9">{
+    </span><span class="c24">v12 </span><span class="c9">= *(</span><span class="c23">_QWORD *</span><span class="c9">)(</span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">96</span><span class="c9">);
+    </span><span class="c32">while </span><span class="c9">( *(</span><span class="c23">_QWORD *</span><span class="c9">)(</span><span class="c24">v12 </span><span class="c9">+ </span><span class="c32">16LL </span><span class="c9">* </span><span class="c24">v11</span><span class="c9">) != </span><span class="c24">v7 </span><span class="c9">)
+    {
+      </span><span class="c24">v11 </span><span class="c9">= *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">v12 </span><span class="c9">+ </span><span class="c32">16LL </span><span class="c9">* </span><span class="c24">v11 </span><span class="c9">+ </span><span class="c32">8</span><span class="c9">);
+      </span><span class="c32">if </span><span class="c9">( </span><span class="c24">v11 </span><span class="c9">== </span><span class="c32">-1 </span><span class="c9">)
+        </span><span class="c32">goto LABEL_13</span><span class="c9">;
+    </span><span class="c32"></span><span class="c9">}
+  </span><span class="c1"></span><span class="c9">}
+  </span><span class="c8">FString::EndsWith</span><span class="c9">(</span><span class="c24">a2</span><span class="c9">, </span><span class="c24">a1 </span><span class="c9">+ </span><span class="c32">176</span><span class="c9">, </span><span class="c32">1LL</span><span class="c9">);
+  </span><span class="c24">v13 </span><span class="c9">= </span><span class="c32">0LL</span><span class="c9">;
+  </span><span class="c32">if </span><span class="c9">( </span><span class="c8">dword_14494E790 &gt; </span><span class="c9">*(</span><span class="c23">_DWORD *</span><span class="c9">)(*((</span><span class="c23">_QWORD *</span><span class="c9">)</span><span class="c8">NtCurrentTeb</span><span class="c9">()-&gt;ThreadLocalStoragePointer + (</span><span class="c23">unsigned int</span><span class="c9">)</span><span class="c8">TlsIndex</span><span class="c9">)
+                                   + </span><span class="c32">264LL</span><span class="c9">) )
+  {
+    </span><span class="c8">Init_thread_header</span><span class="c9">(&amp;</span><span class="c8">dword_14494E790</span><span class="c9">);
+    </span><span class="c32">if </span><span class="c9">( </span><span class="c8">dword_14494E790 </span><span class="c9">== </span><span class="c32">-1 </span><span class="c9">)
+    {
+      </span><span class="c8">qword_14494E780 </span><span class="c9">= </span><span class="c32">0LL</span><span class="c9">;
+      </span><span class="c8">dword_14494E788 </span><span class="c9">= </span><span class="c32">0</span><span class="c9">;
+      </span><span class="c8">atexit</span><span class="c9">(</span><span class="c8">sub_1435D5C30</span><span class="c9">);
+      </span><span class="c8">Init_thread_footer</span><span class="c9">(&amp;</span><span class="c8">dword_14494E790</span><span class="c9">);
+    </span><span class="c9"></span><span class="c9">}
+  </span><span class="c1"></span><span class="c9">}
+  </span><span class="c32">if </span><span class="c9">( </span><span class="c24">v11 </span><span class="c9">!= </span><span class="c32">-1
+    </span><span class="c9">|| !</span><span class="c8">dword_14494E788
+    </span><span class="c9">|| !</span><span class="c8">qword_14494E780
+    </span><span class="c9">|| !(*(</span><span class="c23">unsigned __int8 (__fastcall **)(__int64)</span><span class="c9">)(*(</span><span class="c23">_QWORD *</span><span class="c9">)</span><span class="c8">qword_14494E780 </span><span class="c9">+ </span><span class="c32">48LL</span><span class="c9">))(</span><span class="c8">qword_14494E780</span><span class="c9">) )
+  {
+    </span><span class="c32">return </span><span class="c24">v11 </span><span class="c9">== </span><span class="c32">-1</span><span class="c9">;
+  </span><span class="c32"></span><span class="c9">}
+  </span><span class="c32">if </span><span class="c9">( *(</span><span class="c23">_DWORD *</span><span class="c9">)(</span><span class="c24">a2 </span><span class="c9">+ </span><span class="c32">8</span><span class="c9">) )
+    </span><span class="c24">p_String </span><span class="c9">= *(</span><span class="c23">const wchar_t **</span><span class="c9">)</span><span class="c24">a2</span><span class="c9">;
+  </span><span class="c32">if </span><span class="c9">( </span><span class="c8">dword_14494E788 </span><span class="c9">)
+    </span><span class="c24">v13 </span><span class="c9">= </span><span class="c8">qword_14494E780</span><span class="c9">;
+  </span><span class="c32">return </span><span class="c9">(*(</span><span class="c23">__int64 (__fastcall **)(__int64, const wchar_t *)</span><span class="c9">)(*(</span><span class="c23">_QWORD *</span><span class="c9">)</span><span class="c24">v13 </span><span class="c9">+ </span><span class="c32">72LL</span><span class="c9">))(</span><span class="c24">v13</span><span class="c9">, </span><span class="c24">p_String</span><span class="c9">);
+</span><span class="c9"></span><span class="c9">}
+</span>
+</span><style type="text/css">
+/* line-fg-default */
+.c1 { color: #AAAAAA; }
+/* line-bg-default */
+.c41 { background-color: #2D2D2D; }
+/* line-fg-hidden */
+.c23 { color: #FFD200; }
+/* line-fg-punctuation */
+.c9 { color: silver; }
+/* line-fg-register-name */
+.c33 { color: #73ADAD; }
+/* line-fg-libfunc */
+.c24 { color: aqua; }
+/* line-fg-demangled-name */
+.c8 { color: #FFECBB; }
+/* line-fg-keyword */
+.c32 { color: #ABABAB; }
+</style></body></html>

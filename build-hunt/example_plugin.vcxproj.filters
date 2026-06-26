@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\examples\example_plugin\Plugin.cpp">
+      <Filter>examples\example_plugin</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="examples">
+      <UniqueIdentifier>{E513E48A-3DC7-39C9-A35C-CDC2E3DC7683}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="examples\example_plugin">
+      <UniqueIdentifier>{C3D2CB63-CF3D-361B-88E0-5013B823218E}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

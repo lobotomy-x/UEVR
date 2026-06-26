@@ -1,0 +1,65 @@
+```json
+{
+  "newCards": [
+    {
+      "id": "class-browser",
+      "title": "Class Browser dockable window",
+      "status": "shipped",
+      "group": "uobject-hook",
+      "tags": ["ui", "dockable", "introspection"],
+      "blurb": "Dockable window for browsing Classes, ScriptStructs, Enums, Functions with filtering.",
+      "detail": "Open via checkbox at top of UObjectHook → Main. Tab bar for Classes / ScriptStructs / Enums / Functions; filter input; each row is a drag source.",
+      "files": [{"path": "UObjectHook", "domain": "ui", "changeCount": 1, "changes": ["c7f2cf1"]}]
+    },
+    {
+      "id": "function-caller-window",
+      "title": "Function Caller dockable window",
+      "status": "shipped",
+      "group": "uobject-hook",
+      "tags": ["ui", "dockable", "caller"],
+      "blurb": "Dockable window with state shared between inline and detached surfaces.",
+      "detail": "Open via 'Function Caller window' checkbox. Same slots as inline caller; state synchronized between both UI surfaces.",
+      "files": [{"path": "UObjectHook", "domain": "ui", "changeCount": 1, "changes": ["c7f2cf1"]}]
+    },
+    {
+      "id": "text-input-fallback",
+      "title": "Text-input fallback on every drop target",
+      "status": "shipped",
+      "group": "uobject-hook",
+      "tags": ["ux", "drop-target", "fallback"],
+      "blurb": "Type short name, full Class path, or hex address as text fallback for drag targets.",
+      "detail": "Mirrors user's Scripts/ImGui.lua object_lookup pattern. Available next to any drop target; hit Enter to resolve.",
+      "files": [{"path": "UObjectHook", "domain": "ui", "changeCount": 1, "changes": ["c7f2cf1"]}]
+    },
+    {
+      "id": "black-popup-fix",
+      "title": "Black-popup regression fix",
+      "status": "shipped",
+      "group": "multi-viewport",
+      "tags": ["bugfix", "rendering", "popup"],
+      "blurb": "Dragged panels now render content instead of black screen.",
+      "detail": "Caused by post-Present message pumping; fixed by pumping BEFORE UpdatePlatformWindows + WM_PAINT no-op in PlatformWindow WndProc.",
+      "files": [{"path": "Multi-viewport", "domain": "rendering", "changeCount": 1, "changes": ["3dd718a"]}]
+    },
+    {
+      "id": "dockspace-host-autodock",
+      "title": "Main dockspace host + auto-dock",
+      "status": "shipped",
+      "group": "multi-viewport",
+      "tags": ["ui", "docking", "workspace"],
+      "blurb": "All Lua imgui windows auto-dock to host workspace; user can still drag-detach.",
+      "detail": "All imgui.begin_window() calls now SetNextWindowDockID(host, FirstUseEver). New panels attach to host covering game window.",
+      "files": [{"path": "Multi-viewport", "domain": "ui", "changeCount": 1, "changes": ["3dd718a"]}]
+    }
+  ],
+  "newPlanItems": [
+    {
+      "step": 1,
+      "title": "Inline Lua hook writing UI",
+      "detail": "Let user paste Lua callback in-tree for a UFunction and have in-game caller hook it. uevr.hook_create_mid exists for raw addresses; missing piece is per-UFunction inline editing widgets in UObjectHook caller.",
+      "state": "open"
+    },
+    {
+      "step": 2,
+      "title": "Function-flag / property-flag editing UI",
+      "detail": "edit_property_flags exists; needs

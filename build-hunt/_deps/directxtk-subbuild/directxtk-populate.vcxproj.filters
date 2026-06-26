@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\832fb16130473c880e465f9de4b89478\directxtk-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\1be4d5851ef2b81c3a1df64573feb275\directxtk-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\1229432b524950beb9c27f8ce463f26b\directxtk-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-subbuild\CMakeFiles\directxtk-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{1377ADC6-FD7C-380B-8D83-1600B010D5D2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

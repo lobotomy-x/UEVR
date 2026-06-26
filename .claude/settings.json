@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --build *)",
+      "Bash(reg query *)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_list",
+      "mcp__ccd_session__mark_chapter",
+      "mcp__uevr__uevr_is_ready",
+      "mcp__uevr__uevr_screenshot",
+      "mcp__uevr__uevr_wait_for_plugin",
+      "mcp__uevr__uevr_get_status",
+      "mcp__uevr__uevr_get_cvar",
+      "mcp__uevr__uevr_get_log",
+      "mcp__uevr__uevr_get_diagnostics",
+      "mcp__uevr__uevr_get_callback_health"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\d04de7c2ab7a379459973ea19b8cd49b\bddisasm-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\54da7a7d217cd13e626def7dd1887f0e\bddisasm-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\200e19403866f8f26cb189f8490eee02\bddisasm-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-subbuild\CMakeFiles\bddisasm-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{5A4051D8-C247-34E8-8510-15FFA62348A5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

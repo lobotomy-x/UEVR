@@ -1,9 +1,13 @@
+#include <algorithm>
+#include <cmath>
+#include <optional>
+#include <string>
+
 #include <glm/gtx/intersect.hpp>
 #include <imgui_internal.h>
 
 #include "Framework.hpp"
 #include "../VR.hpp"
-#include "../UObjectHook.hpp"
 #include "../utility/ImGui.hpp"
 
 #include "OverlayComponent.hpp"
@@ -109,13 +113,7 @@ void OverlayComponent::update_input_mouse_emulation() {
         // lerp towards the intersection point
         m_last_mouse_pos = glm::lerp(m_last_mouse_pos, glm::vec2{x, y}, delta_f * 10.0f);
 
-        // Normally the pointer (io.MousePos + clicks) is only injected when it's over an imgui
-        // window. The UObjectHook gizmo handles draw on the background draw-list over EMPTY space, so
-        // VR users couldn't hover/grab them. Keep the pointer live off-window when the gizmo/picker
-        // wants it. Gated on that flag, so behavior is unchanged when no gizmo is active.
-        auto uoh = ::UObjectHook::get();
-        const bool gizmo_wants_pointer = uoh != nullptr && uoh->wants_vr_pointer();
-        if (gizmo_wants_pointer || imgui::is_point_intersecting_any(m_last_mouse_pos.x, m_last_mouse_pos.y)) {
+        if (imgui::is_point_intersecting_any(m_last_mouse_pos.x, m_last_mouse_pos.y)) {
             io.MousePos = ImVec2{
                 m_last_mouse_pos.x,
                 m_last_mouse_pos.y
@@ -173,21 +171,13 @@ void OverlayComponent::update_input_mouse_emulation() {
             }
 
             const auto right_stick_axis = vr->get_right_stick_axis();
-           float deadzone = 0.15f;
-           float stick_y = right_stick_axis.y;
-
-            if (fabsf(stick_y) > deadzone) {
-                float normalized_y = (stick_y > 0) ? (stick_y - deadzone) : (stick_y + deadzone);
-                normalized_y /= (1.0f - deadzone);
-                float accelerated_val = normalized_y * fabsf(normalized_y) * fabsf(normalized_y);
-                io.MouseWheel += accelerated_val * delta_f * 25.0f;
-            }
-/*            // Mousewheel
+            
+            // Mousewheel
             if (right_stick_axis.y > 0.5f) {
                 io.MouseWheel += right_stick_axis.y * delta_f * 10.0f;
             } else if (right_stick_axis.y < -0.5f) {
                 io.MouseWheel += right_stick_axis.y * delta_f * 10.0f;
-            }*/
+            }
 
             VR::get()->set_aim_allowed(false);
             m_forced_aim = true;
@@ -238,27 +228,16 @@ void OverlayComponent::on_draw_ui() {
         m_slate_distance->draw("UI Distance");
         m_slate_size->draw("UI Size");
         m_ui_follows_view->draw("UI Follows View");
-        ImGui::SameLine();
         m_ui_invert_alpha->draw("UI Invert Alpha");
-        
-     
+
         m_framework_distance->draw("Framework Distance");
         m_framework_size->draw("Framework Size");
-        if (VR::get()->get_runtime()->is_openvr()) {
-            m_framework_curvature->draw("Framework Curvature");
-        }
         m_framework_ui_follows_view->draw("Framework Follows View");
         if (VR::get()->get_runtime()->is_openvr()) {
             ImGui::SameLine();
             m_framework_wrist_ui->draw("Framework Wrist UI");
         }
         m_framework_mouse_emulation->draw("Framework Mouse Emulation");
-       /* if (g_framework->get_renderer_type() == 1) {
-            auto float[] color = m_ui_clear_color;
-                     if (ImGui::ColorEdit4("UI Clear Color",color, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_Float)) {
-                                          m_ui_clear_color  = color;
-            }
-    }*/
         ImGui::TreePop();
     }
 }
@@ -277,7 +256,8 @@ void OverlayComponent::update_input_openvr() {
     const auto is_initial_frame = !vr->is_using_afr() || vr->get_frame_count() % 2 == vr->m_left_eye_interval;
 
     // Restore the previous frame's input state
-/*    memcpy(io.KeysDown, m_initial_imgui_input_state.KeysDown, sizeof(io.KeysDown));*/
+    // NOTE: io.KeysDown[] was removed in our newer imgui (f386a76); keyboard-state restore across the
+    // AFR frame is skipped here. Mouse state (the primary VR-overlay input) is still restored below.
     memcpy(io.MouseDown, m_initial_imgui_input_state.MouseDown, sizeof(io.MouseDown));
     io.MousePos = m_initial_imgui_input_state.MousePos;
     io.MouseWheel = m_initial_imgui_input_state.MouseWheel;
@@ -310,12 +290,10 @@ void OverlayComponent::update_input_openvr() {
             case vr::VREvent_MouseButtonDown:
                 m_initial_imgui_input_state.MouseDown[0] = true;
                 io.MouseDown[0] = true;
-                io.AddMouseButtonEvent(0, true);
                 break;
             case vr::VREvent_MouseButtonUp:
                 m_initial_imgui_input_state.MouseDown[0] = false;
                 io.MouseDown[0] = false;
-                io.AddMouseButtonEvent(0, false);
                 break;
             case vr::VREvent_MouseMove: {
                 const std::array<float, 2> raw_coords { event.data.mouse.x, event.data.mouse.y };
@@ -642,68 +620,6 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
     return should_show_overlay;
 }
 
-ImVec2 OverlayComponent::transform_world_aligned_to_overlay(const ImVec2& slate_px) const {
-    // While the UI is CLOSED the imgui texture is shown on the slate overlay, whose
-    // placement (distance m_slate_distance, size m_slate_size, scale_factor 1, plus the
-    // slate x/y offsets) makes a flat ProjectWorldToScreen pixel already line up with
-    // the world. Opening the UI swaps to the framework overlay (distance
-    // m_framework_distance, size m_framework_size * rt_width/1920, no x/y offset) so the
-    // SAME pixel now subtends a different angle and world-aligned content (gizmos, Lua
-    // overlays) drifts. We rescale about screen-centre by the inverse angular ratio so
-    // it re-aligns. Identity when the UI is closed.
-    //
-    // Flat-quad approximation: ignores m_framework_curvature (error grows toward the
-    // periphery when curvature > 0) and treats the slate overlay as flat. Good enough to
-    // restore centre alignment; fine-tune in-headset if curvature is non-zero.
-    if (!g_framework->is_drawing_ui()) {
-        return slate_px; // slate overlay is already world-aligned
-    }
-
-    const auto is_d3d12 = g_framework->get_renderer_type() == Framework::RendererType::D3D12;
-    const auto size = is_d3d12 ? g_framework->get_d3d12_rt_size() : g_framework->get_d3d11_rt_size();
-    if (size.x <= 0.0f || size.y <= 0.0f) {
-        return slate_px;
-    }
-
-    const float aspect = size.x / size.y;
-    const float scale_factor = size.x / 1920.0f; // mirrors update_overlay_openvr framework path
-
-    const float slate_dist = m_slate_distance->value() - 0.01f; // matches slate placement
-    const float fw_dist    = m_framework_distance->value();
-    const float slate_sz   = m_slate_size->value();
-    const float fw_sz      = m_framework_size->value() * scale_factor;
-    if (slate_dist <= 0.0f || fw_dist <= 0.0f || fw_sz <= 0.0f) {
-        return slate_px;
-    }
-
-    // Uniform scale about centre; aspect cancels because both quads share it.
-    const float S = (slate_sz * fw_dist) / (slate_dist * fw_sz);
-
-    // Live, headset-tunable knobs (see OverlayComponent.hpp): blend the computed
-    // correction by _Correction (0 = identity/no remap, 1 = full, >1 = over-correct) and
-    // apply a raw catch-all multiplier _Scale on top.
-    const float strength = m_framework_gizmo_correction->value();
-    const float extra    = m_framework_gizmo_scale->value();
-    const float S_eff = (1.0f + (S - 1.0f) * strength) * extra;
-
-    // Slate x/y offsets shift the slate quad centre (metres along right/up); fold their
-    // apparent-angle contribution in (scaled by strength so _Correction=0 is true
-    // identity). Framework placement has no x/y offset. y is +up in world but +down in
-    // screen space, hence the negative sign on Oy.
-    const float fw_w_m = fw_sz * aspect; // framework quad width in metres-basis
-    const float fw_h_m = fw_sz;          // framework quad height in metres-basis
-    const float Ox =  (m_slate_x_offset->value() * fw_dist) / (slate_dist * fw_w_m) * strength;
-    const float Oy = -(m_slate_y_offset->value() * fw_dist) / (slate_dist * fw_h_m) * strength;
-
-    const float ux = slate_px.x / size.x - 0.5f;
-    const float uy = slate_px.y / size.y - 0.5f;
-
-    const float ux2 = ux * S_eff + Ox;
-    const float uy2 = uy * S_eff + Oy;
-
-    return ImVec2{ (ux2 + 0.5f) * size.x, (uy2 + 0.5f) * size.y };
-}
-
 void OverlayComponent::update_overlay_openvr() {
     if (!VR::get()->get_runtime()->is_openvr()) {
         return;
@@ -821,9 +737,6 @@ void OverlayComponent::update_overlay_openvr() {
         const auto height_meters = adjusted_size_meters;
 
         vr::VROverlay()->SetOverlayWidthInMeters(m_overlay_handle, width_meters);
-        // Curve the menu around the viewer when drawing the framework UI so it can
-        // reach the periphery; flat (0) for the game-slate pass.
-        vr::VROverlay()->SetOverlayCurvature(m_overlay_handle, g_framework->is_drawing_ui() ? m_framework_curvature->value() : 0.0f);
 
         if (is_d3d11) {
             vr::Texture_t imgui_tex{(void*)g_framework->get_rendertarget_d3d11().Get(), vr::TextureType_DirectX, vr::ColorSpace_Auto};
@@ -899,9 +812,45 @@ void OverlayComponent::update_overlay_openvr() {
     }
 }
 
+namespace {
+glm::quat make_slate_stage_rotation(VR* vr, const glm::quat& rotation_offset, const glm::quat& pre_flattened_rotation) {
+    if (vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()) {
+        const auto pre_flat_pitch = utility::math::pitch_only(pre_flattened_rotation);
+        return glm::normalize(glm::inverse(pre_flat_pitch * rotation_offset));
+    }
+
+    return glm::normalize(glm::inverse(rotation_offset));
+}
+
+const char* get_ui_layer_pose_refusal_reason(const UILayerPoseBasis* pose_basis, bool follows_view, bool stabilizer_enabled) {
+    if (follows_view) {
+        return "view_space";
+    }
+
+    if (!stabilizer_enabled) {
+        return "disabled";
+    }
+
+    if (pose_basis == nullptr) {
+        return "no_basis";
+    }
+
+    if (!pose_basis->valid) {
+        return "invalid_basis";
+    }
+
+    if (!pose_basis->stabilizer_allowed) {
+        return "not_allowed";
+    }
+
+    return "none";
+}
+}
+
 std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::OpenXR::generate_slate_quad(
     runtimes::OpenXR::SwapchainIndex swapchain, 
-    XrEyeVisibility eye) 
+    XrEyeVisibility eye,
+    const UILayerPoseBasis* pose_basis)
 {
     auto& vr = VR::get();
 
@@ -929,22 +878,29 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
     layer.eyeVisibility = eye;
 
     auto glm_matrix = glm::identity<glm::mat4>();
+    const auto follows_view = vr->m_overlay_component.m_ui_follows_view->value();
+    const auto pose_tracking_enabled = pose_basis != nullptr || vr->is_ui_layer_pose_telemetry_enabled() || vr->is_ui_layer_pose_stabilizer_enabled();
+    const auto hmd_rotation = pose_tracking_enabled ? glm::quat{vr->get_rotation(0)} : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
+    const auto live_pre_flattened_rotation = vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()
+        ? vr->get_pre_flattened_rotation()
+        : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
+    const auto live_ui_rotation = make_slate_stage_rotation(vr.get(), vr->get_rotation_offset(), live_pre_flattened_rotation);
+    auto applied_ui_rotation = live_ui_rotation;
+    auto standing_origin = vr->get_standing_origin();
+    bool stabilizer_used = false;
+    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, vr->is_ui_layer_pose_stabilizer_enabled());
 
-    if (vr->m_overlay_component.m_ui_follows_view->value()) {
+    if (follows_view) {
         layer.space = vr->m_openxr->view_space;
     } else {
-        auto rotation_offset = glm::inverse(vr->get_rotation_offset());
-
-        if (vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()) {
-            const auto pre_flat_rotation = vr->get_pre_flattened_rotation();
-            const auto pre_flat_pitch = utility::math::pitch_only(pre_flat_rotation);
-
-            // Add the inverse of the pitch rotation to the rotation offset
-            rotation_offset = glm::normalize(glm::inverse(pre_flat_pitch * vr->get_rotation_offset()));
+        if (pose_basis != nullptr && pose_basis->stabilizer_allowed) {
+            applied_ui_rotation = make_slate_stage_rotation(vr.get(), pose_basis->rotation_offset, pose_basis->pre_flattened_rotation);
+            standing_origin = pose_basis->standing_origin;
+            stabilizer_used = true;
         }
 
-        glm_matrix = Matrix4x4f{rotation_offset};   
-        glm_matrix[3] += vr->get_standing_origin();
+        glm_matrix = Matrix4x4f{applied_ui_rotation};
+        glm_matrix[3] += standing_origin;
         layer.space = vr->m_openxr->stage_space;
     }
 
@@ -960,6 +916,17 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 
     layer.pose.orientation = runtimes::OpenXR::to_openxr(glm::quat_cast(glm_matrix));
     layer.pose.position = runtimes::OpenXR::to_openxr(glm_matrix[3]);
+
+    vr->record_ui_layer_pose_sample(
+        pose_basis,
+        swapchain,
+        eye,
+        follows_view,
+        stabilizer_used,
+        hmd_rotation,
+        live_ui_rotation,
+        applied_ui_rotation,
+        refusal_reason);
 
     // Check if the controller pointer intersects with the quad, and we can use this to emulate the mouse
     if (vr->is_using_controllers()) {
@@ -1009,7 +976,8 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 
 std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComponent::OpenXR::generate_slate_cylinder(
     runtimes::OpenXR::SwapchainIndex swapchain, 
-    XrEyeVisibility eye) 
+    XrEyeVisibility eye,
+    const UILayerPoseBasis* pose_basis)
 {
     auto& vr = VR::get();
 
@@ -1036,22 +1004,29 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     layer.eyeVisibility = eye;
     
     auto glm_matrix = glm::identity<glm::mat4>();
+    const auto follows_view = vr->m_overlay_component.m_ui_follows_view->value();
+    const auto pose_tracking_enabled = pose_basis != nullptr || vr->is_ui_layer_pose_telemetry_enabled() || vr->is_ui_layer_pose_stabilizer_enabled();
+    const auto hmd_rotation = pose_tracking_enabled ? glm::quat{vr->get_rotation(0)} : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
+    const auto live_pre_flattened_rotation = vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()
+        ? vr->get_pre_flattened_rotation()
+        : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
+    const auto live_ui_rotation = make_slate_stage_rotation(vr.get(), vr->get_rotation_offset(), live_pre_flattened_rotation);
+    auto applied_ui_rotation = live_ui_rotation;
+    auto standing_origin = vr->get_standing_origin();
+    bool stabilizer_used = false;
+    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, vr->is_ui_layer_pose_stabilizer_enabled());
 
-    if (vr->m_overlay_component.m_ui_follows_view->value()) {
+    if (follows_view) {
         layer.space = vr->m_openxr->view_space;
     } else {
-        auto rotation_offset = glm::inverse(vr->get_rotation_offset());
-
-        if (vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()) {
-            const auto pre_flat_rotation = vr->get_pre_flattened_rotation();
-            const auto pre_flat_pitch = utility::math::pitch_only(pre_flat_rotation);
-
-            // Add the inverse of the pitch rotation to the rotation offset
-            rotation_offset = glm::normalize(glm::inverse(pre_flat_pitch * vr->get_rotation_offset()));
+        if (pose_basis != nullptr && pose_basis->stabilizer_allowed) {
+            applied_ui_rotation = make_slate_stage_rotation(vr.get(), pose_basis->rotation_offset, pose_basis->pre_flattened_rotation);
+            standing_origin = pose_basis->standing_origin;
+            stabilizer_used = true;
         }
 
-        glm_matrix = Matrix4x4f{rotation_offset};   
-        glm_matrix[3] += vr->get_standing_origin();
+        glm_matrix = Matrix4x4f{applied_ui_rotation};
+        glm_matrix[3] += standing_origin;
         layer.space = vr->m_openxr->stage_space;
     }
 
@@ -1076,31 +1051,43 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     layer.pose.orientation = runtimes::OpenXR::to_openxr(glm::quat_cast(glm_matrix));
     layer.pose.position = runtimes::OpenXR::to_openxr(glm_matrix[3]);
 
+    vr->record_ui_layer_pose_sample(
+        pose_basis,
+        swapchain,
+        eye,
+        follows_view,
+        stabilizer_used,
+        hmd_rotation,
+        live_ui_rotation,
+        applied_ui_rotation,
+        refusal_reason);
+
     return layer;
 }
 
 std::optional<std::reference_wrapper<XrCompositionLayerBaseHeader>> OverlayComponent::OpenXR::generate_slate_layer(
     runtimes::OpenXR::SwapchainIndex swapchain, 
-    XrEyeVisibility eye)
+    XrEyeVisibility eye,
+    const UILayerPoseBasis* pose_basis)
 {
     switch ((OverlayComponent::OverlayType)m_parent->m_slate_overlay_type->value()) {
     default:
     case OverlayComponent::OverlayType::QUAD:
-        if (auto result = generate_slate_quad(swapchain, eye); result.has_value()) {
+        if (auto result = generate_slate_quad(swapchain, eye, pose_basis); result.has_value()) {
             return *(XrCompositionLayerBaseHeader*)&result.value().get();
         }
 
         return std::nullopt;
     case OverlayComponent::OverlayType::CYLINDER:
         if (!VR::get()->get_runtime()->is_cylinder_layer_allowed()) {
-            if (auto result = generate_slate_quad(swapchain, eye); result.has_value()) {
+            if (auto result = generate_slate_quad(swapchain, eye, pose_basis); result.has_value()) {
                 return *(XrCompositionLayerBaseHeader*)&result.value().get();
             }
 
             return std::nullopt;
         }
 
-        if (auto result = generate_slate_cylinder(swapchain, eye); result.has_value()) {
+        if (auto result = generate_slate_cylinder(swapchain, eye, pose_basis); result.has_value()) {
             return *(XrCompositionLayerBaseHeader*)&result.value().get();
         }
 

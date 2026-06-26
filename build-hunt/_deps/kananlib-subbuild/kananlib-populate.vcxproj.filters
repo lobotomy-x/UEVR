@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\cf283f17b505310fb24c617f80040590\kananlib-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\48b8ec5ca6e20e377f7404ad601e06c7\kananlib-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\ad6ebea0a36d9c089415fa008dd771f3\kananlib-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-subbuild\CMakeFiles\kananlib-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{5E23E3C7-1639-3EB3-B0DA-46ABFD317AF7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

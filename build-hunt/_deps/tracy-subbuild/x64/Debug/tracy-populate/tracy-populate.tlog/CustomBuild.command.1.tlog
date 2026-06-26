@@ -1,0 +1,150 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/tmp/tracy-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-DOWNLOAD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/tmp/tracy-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-UPDATE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/tmp/tracy-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-CONFIGURE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-BUILD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-INSTALL.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\3238A4E610BE852AC895B88D8ADF12D2\TRACY-POPULATE-TEST.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\5EC0F603CE47DDC7A7BF01F6F1918A5C\TRACY-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/CMakeFiles/Debug/tracy-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/tracy-populate-prefix/src/tracy-populate-stamp/Debug/tracy-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKEFILES\27B4BCC2ADAC3E974551725D19FA47A7\TRACY-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\TRACY-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

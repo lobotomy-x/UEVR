@@ -1486,9 +1486,11 @@ void ScriptContext::global_mid_hook_dispatcher(safetyhook::Context& ctx) {
     {
         std::shared_lock _{s_all_mid_hooks_mtx};
         for (auto& h : s_all_mid_hooks) {
-            const auto& tramp = h->hook.trampoline();
-            const auto base = tramp.address();
-            if (ctx.rip >= base && ctx.rip < base + tramp.size()) {
+            // safetyhook's MidHook sets ctx.rip to the target address (the hooked location) when the
+            // mid-fn fires, so match on that. (Older safetyhook exposed MidHook::trampoline(); the
+            // version this branch vendors no longer does — the trampoline is only used internally for
+            // the jump-back.)
+            if (ctx.rip == h->hook.target_address()) {
                 hook = h;
                 break;
             }

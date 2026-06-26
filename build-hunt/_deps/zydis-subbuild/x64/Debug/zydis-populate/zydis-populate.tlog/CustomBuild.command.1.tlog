@@ -1,0 +1,150 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/tmp/zydis-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-DOWNLOAD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/tmp/zydis-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-UPDATE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/tmp/zydis-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-CONFIGURE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-BUILD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-INSTALL.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\8FF3EC126E259DFE4E4B7EFF1802CCED\ZYDIS-POPULATE-TEST.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\B52100E5291D32AE02B7A85B55DB6C0A\ZYDIS-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/Debug/zydis-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate-prefix/src/zydis-populate-stamp/Debug/zydis-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\6B50ED57746C849FDA9F340D9EEBB1DA\ZYDIS-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

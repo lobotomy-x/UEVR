@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/sdkgenny-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/afcc1bfaf9f27ddaca9cf56fa9595d68/sdkgenny-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/7f8ad6a05bf99cf7d51bb1005491cc79/sdkgenny-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/CMakeFiles/0eb022b51e44dfbc01a434b9ab551387/sdkgenny-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"sdkgenny-populate"
+		],
+		"name" : "sdkgenny-populate"
+	}
+}

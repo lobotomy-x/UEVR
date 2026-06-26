@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>I:\code\lobotomy-x\UEVR\build-hunt\x64\RelWithDebInfo\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include\openxr\x64\RelWithDebInfo\generate_openxr_header</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\src\x64\RelWithDebInfo\xr_global_generated_files</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

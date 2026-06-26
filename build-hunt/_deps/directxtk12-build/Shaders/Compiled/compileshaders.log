@@ -1,0 +1,310 @@
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSAlphaTest "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTest.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTest.pdb" /VnAlphaTestEffect_VSAlphaTest
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSAlphaTestNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestNoFog.pdb" /VnAlphaTestEffect_VSAlphaTestNoFog
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSAlphaTestVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVc.pdb" /VnAlphaTestEffect_VSAlphaTestVc
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSAlphaTestVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.pdb" /VnAlphaTestEffect_VSAlphaTestVcNoFog
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSAlphaTestLtGt "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGt.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGt.pdb" /VnAlphaTestEffect_PSAlphaTestLtGt
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSAlphaTestLtGtNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.pdb" /VnAlphaTestEffect_PSAlphaTestLtGtNoFog
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSAlphaTestEqNe "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNe.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNe.pdb" /VnAlphaTestEffect_PSAlphaTestEqNe
+
+dxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSAlphaTestEqNeNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.pdb" /VnAlphaTestEffect_PSAlphaTestEqNeNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasic.pdb" /VnBasicEffect_VSBasic
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicNoFog.pdb" /VnBasicEffect_VSBasicNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVc.pdb" /VnBasicEffect_VSBasicVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVcNoFog.pdb" /VnBasicEffect_VSBasicVcNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTx.pdb" /VnBasicEffect_VSBasicTx
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxNoFog.pdb" /VnBasicEffect_VSBasicTxNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxVc.pdb" /VnBasicEffect_VSBasicTxVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicTxVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicTxVcNoFog.pdb" /VnBasicEffect_VSBasicTxVcNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLighting.pdb" /VnBasicEffect_VSBasicVertexLighting
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingBn.pdb" /VnBasicEffect_VSBasicVertexLightingBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVc.pdb" /VnBasicEffect_VSBasicVertexLightingVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVcBn.pdb" /VnBasicEffect_VSBasicVertexLightingVcBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTx.pdb" /VnBasicEffect_VSBasicVertexLightingTx
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxBn.pdb" /VnBasicEffect_VSBasicVertexLightingTxBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVc.pdb" /VnBasicEffect_VSBasicVertexLightingTxVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicVertexLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.pdb" /VnBasicEffect_VSBasicVertexLightingTxVcBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLighting.pdb" /VnBasicEffect_VSBasicPixelLighting
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingBn.pdb" /VnBasicEffect_VSBasicPixelLightingBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVc.pdb" /VnBasicEffect_VSBasicPixelLightingVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVcBn.pdb" /VnBasicEffect_VSBasicPixelLightingVcBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTx.pdb" /VnBasicEffect_VSBasicPixelLightingTx
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxBn.pdb" /VnBasicEffect_VSBasicPixelLightingTxBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVc.pdb" /VnBasicEffect_VSBasicPixelLightingTxVc
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSBasicPixelLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.pdb" /VnBasicEffect_VSBasicPixelLightingTxVcBn
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasic.pdb" /VnBasicEffect_PSBasic
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicNoFog.pdb" /VnBasicEffect_PSBasicNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicTx.pdb" /VnBasicEffect_PSBasicTx
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicTxNoFog.pdb" /VnBasicEffect_PSBasicTxNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLighting.pdb" /VnBasicEffect_PSBasicVertexLighting
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicVertexLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingNoFog.pdb" /VnBasicEffect_PSBasicVertexLightingNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicVertexLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTx.pdb" /VnBasicEffect_PSBasicVertexLightingTx
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicVertexLightingTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.pdb" /VnBasicEffect_PSBasicVertexLightingTxNoFog
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicPixelLighting.pdb" /VnBasicEffect_PSBasicPixelLighting
+
+dxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBasicPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\BasicEffect_PSBasicPixelLightingTx.pdb" /VnBasicEffect_PSBasicPixelLightingTx
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDualTexture "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTexture.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTexture.pdb" /VnDualTextureEffect_VSDualTexture
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDualTextureNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureNoFog.pdb" /VnDualTextureEffect_VSDualTextureNoFog
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDualTextureVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVc.pdb" /VnDualTextureEffect_VSDualTextureVc
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDualTextureVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVcNoFog.pdb" /VnDualTextureEffect_VSDualTextureVcNoFog
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSDualTexture "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_PSDualTexture.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_PSDualTexture.pdb" /VnDualTextureEffect_PSDualTexture
+
+dxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSDualTextureNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_PSDualTextureNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DualTextureEffect_PSDualTextureNoFog.pdb" /VnDualTextureEffect_PSDualTextureNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMap.pdb" /VnEnvironmentMapEffect_VSEnvMap
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMapBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapBn.pdb" /VnEnvironmentMapEffect_VSEnvMapBn
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMapFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnel.pdb" /VnEnvironmentMapEffect_VSEnvMapFresnel
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMapFresnelBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.pdb" /VnEnvironmentMapEffect_VSEnvMapFresnelBn
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMapPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLighting
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSEnvMapPixelLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLightingBn
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMap.pdb" /VnEnvironmentMapEffect_PSEnvMap
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpecular "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecular.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecular.pdb" /VnEnvironmentMapEffect_PSEnvMapSpecular
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpecularNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpecularNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLighting
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapPixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapPixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingFresnel
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapPixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpherePixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLighting
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpherePixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpherePixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapSpherePixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapDualParabolaPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapDualParabolaPixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapDualParabolaPixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel
+
+dxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSEnvMapDualParabolaPixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedVertexLightingFourBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingFourBones
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedVertexLightingFourBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingFourBonesBn
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingFourBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingFourBones
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingFourBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingFourBonesBn
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSkinnedVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLighting.pdb" /VnSkinnedEffect_PSSkinnedVertexLighting
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSkinnedVertexLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.pdb" /VnSkinnedEffect_PSSkinnedVertexLightingNoFog
+
+dxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSkinnedPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SkinnedEffect_PSSkinnedPixelLighting.pdb" /VnSkinnedEffect_PSSkinnedPixelLighting
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTx.pdb" /VnNormalMapEffect_VSNormalPixelLightingTx
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVc
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxNoSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpec.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxNoSpec
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxNoSpecBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxNoSpecBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcNoSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpec.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcNoSpec
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcNoSpecBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxBnInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcBnInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxNoSpecInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxNoSpecInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxNoSpecBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxNoSpecBnInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcNoSpecInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcNoSpecInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSNormalPixelLightingTxVcNoSpecBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcNoSpecBnInst
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTx
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTxBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingTxNoSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxNoSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxNoSpec.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTxNoSpec
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedPixelLightingTxNoSpecBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxNoSpecBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxNoSpecBn.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTxNoSpecBn
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSNormalPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTx.pdb" /VnNormalMapEffect_PSNormalPixelLightingTx
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSNormalPixelLightingTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoFog
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSNormalPixelLightingTxNoSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoSpec
+
+dxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSNormalPixelLightingTxNoFogSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoFogSpec
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstant "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstant.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstant.pdb" /VnPBREffect_VSConstant
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstantInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantInst.pdb" /VnPBREffect_VSConstantInst
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstantVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantVelocity.pdb" /VnPBREffect_VSConstantVelocity
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstantBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantBn.pdb" /VnPBREffect_VSConstantBn
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstantBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantBnInst.pdb" /VnPBREffect_VSConstantBnInst
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSConstantVelocityBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantVelocityBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSConstantVelocityBn.pdb" /VnPBREffect_VSConstantVelocityBn
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinned "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSSkinned.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSSkinned.pdb" /VnPBREffect_VSSkinned
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSSkinnedBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSSkinnedBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_VSSkinnedBn.pdb" /VnPBREffect_VSSkinnedBn
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSConstant "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSConstant.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSConstant.pdb" /VnPBREffect_PSConstant
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSTextured "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTextured.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTextured.pdb" /VnPBREffect_PSTextured
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSTexturedEmissive "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedEmissive.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedEmissive.pdb" /VnPBREffect_PSTexturedEmissive
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSTexturedVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedVelocity.pdb" /VnPBREffect_PSTexturedVelocity
+
+dxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSTexturedEmissiveVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedEmissiveVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PBREffect_PSTexturedEmissiveVelocity.pdb" /VnPBREffect_PSTexturedEmissiveVelocity
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebug "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebug.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebug.pdb" /VnDebugEffect_VSDebug
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugBn.pdb" /VnDebugEffect_VSDebugBn
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVc.pdb" /VnDebugEffect_VSDebugVc
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcBn.pdb" /VnDebugEffect_VSDebugVcBn
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugInst.pdb" /VnDebugEffect_VSDebugInst
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugBnInst.pdb" /VnDebugEffect_VSDebugBnInst
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugVcInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcInst.pdb" /VnDebugEffect_VSDebugVcInst
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSDebugVcBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_VSDebugVcBnInst.pdb" /VnDebugEffect_VSDebugVcBnInst
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSHemiAmbient "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSHemiAmbient.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSHemiAmbient.pdb" /VnDebugEffect_PSHemiAmbient
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSRGBNormals "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBNormals.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBNormals.pdb" /VnDebugEffect_PSRGBNormals
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSRGBTangents "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBTangents.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBTangents.pdb" /VnDebugEffect_PSRGBTangents
+
+dxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSRGBBiTangents "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBBiTangents.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\DebugEffect_PSRGBBiTangents.pdb" /VnDebugEffect_PSRGBBiTangents
+
+dxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /ESpriteVertexShader "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpriteVertexShader.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpriteVertexShader.pdb" /VnSpriteEffect_SpriteVertexShader
+
+dxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /ESpritePixelShader "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpritePixelShader.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpritePixelShader.pdb" /VnSpriteEffect_SpritePixelShader
+
+dxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /ESpriteVertexShaderHeap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpriteVertexShaderHeap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpriteVertexShaderHeap.pdb" /VnSpriteEffect_SpriteVertexShaderHeap
+
+dxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /ESpritePixelShaderHeap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpritePixelShaderHeap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\SpriteEffect_SpritePixelShaderHeap.pdb" /VnSpriteEffect_SpritePixelShaderHeap
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSQuad "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuad.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuad.pdb" /VnPostProcess_VSQuad
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSQuadNoCB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuadNoCB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuadNoCB.pdb" /VnPostProcess_VSQuadNoCB
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSQuadDual "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuadDual.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_VSQuadDual.pdb" /VnPostProcess_VSQuadDual
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSCopy "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSCopy.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSCopy.pdb" /VnPostProcess_PSCopy
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSMonochrome "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSMonochrome.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSMonochrome.pdb" /VnPostProcess_PSMonochrome
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSepia "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSSepia.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSSepia.pdb" /VnPostProcess_PSSepia
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSDownScale2x2 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSDownScale2x2.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSDownScale2x2.pdb" /VnPostProcess_PSDownScale2x2
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSDownScale4x4 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSDownScale4x4.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSDownScale4x4.pdb" /VnPostProcess_PSDownScale4x4
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSGaussianBlur5x5 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSGaussianBlur5x5.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSGaussianBlur5x5.pdb" /VnPostProcess_PSGaussianBlur5x5
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBloomExtract "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomExtract.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomExtract.pdb" /VnPostProcess_PSBloomExtract
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBloomBlur "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomBlur.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomBlur.pdb" /VnPostProcess_PSBloomBlur
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSMerge "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSMerge.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSMerge.pdb" /VnPostProcess_PSMerge
+
+dxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSBloomCombine "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomCombine.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\PostProcess_PSBloomCombine.pdb" /VnPostProcess_PSBloomCombine
+
+dxc.exe "GenerateMips.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tcs_6_0 /Emain "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\GenerateMips_main.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\GenerateMips_main.pdb" /VnGenerateMips_main
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_6_0 /EVSQuad "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_VSQuad.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_VSQuad.pdb" /VnToneMap_VSQuad
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSCopy "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSCopy.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSCopy.pdb" /VnToneMap_PSCopy
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSaturate "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSSaturate.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSSaturate.pdb" /VnToneMap_PSSaturate
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSReinhard "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSReinhard.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSReinhard.pdb" /VnToneMap_PSReinhard
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSACESFilmic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSACESFilmic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSACESFilmic.pdb" /VnToneMap_PSACESFilmic
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPS_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PS_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PS_SRGB.pdb" /VnToneMap_PS_SRGB
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSSaturate_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSSaturate_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSSaturate_SRGB.pdb" /VnToneMap_PSSaturate_SRGB
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSReinhard_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSReinhard_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSReinhard_SRGB.pdb" /VnToneMap_PSReinhard_SRGB
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSACESFilmic_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSACESFilmic_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSACESFilmic_SRGB.pdb" /VnToneMap_PSACESFilmic_SRGB
+
+dxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_6_0 /EPSHDR10 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSHDR10.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-build/Shaders/Compiled\ToneMap_PSHDR10.pdb" /VnToneMap_PSHDR10
+
+Shaders compiled ok

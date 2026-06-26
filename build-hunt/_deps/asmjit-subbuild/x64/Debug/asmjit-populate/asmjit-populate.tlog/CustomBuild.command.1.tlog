@@ -1,0 +1,150 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/tmp/asmjit-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-DOWNLOAD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/tmp/asmjit-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-UPDATE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/tmp/asmjit-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-CONFIGURE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-BUILD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-INSTALL.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\64BD190DFF24E2E90223C6A5F630C67C\ASMJIT-POPULATE-TEST.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\71A66B14C7ECAEB2011B8090F30ED459\ASMJIT-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/CMakeFiles/Debug/asmjit-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/asmjit-populate-prefix/src/asmjit-populate-stamp/Debug/asmjit-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKEFILES\A11D73EDC833D6ABB989034C25DFEA89\ASMJIT-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ASMJIT-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/asmjit-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

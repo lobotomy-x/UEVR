@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\vr-plugin-nullifier\Main.cpp">
+      <Filter>vr-plugin-nullifier</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="vr-plugin-nullifier">
+      <UniqueIdentifier>{F9E0C3BF-5232-38C9-A745-457862F76CE7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

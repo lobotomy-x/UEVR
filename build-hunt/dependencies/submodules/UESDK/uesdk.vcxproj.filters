@@ -1,0 +1,444 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AActor.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AHUD.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APawn.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerCameraManager.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerController.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\CVar.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ConsoleManager.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\DynamicRHI.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\EngineModule.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FArrayProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FBoolProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FCommandLine.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FEnumProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FField.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FMalloc.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FName.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FObjectProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTarget.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTargetPool.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FScene.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneRenderer.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneView.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneViewFamily.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FStructProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTexture.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureRenderTargetResource.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewport.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewportInfo.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Globals.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\KismetSystemLibrary.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptMatrix.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptRotator.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptTransform.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptVector.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Slate.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\StereoStuff.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UActorComponent.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UCameraComponent.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UClass.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEngine.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEnum.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UFunction.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameEngine.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameViewportClient.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameplayStatics.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UHeadMountedDisplayFunctionLibrary.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UKismetRenderingLibrary.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UMotionControllerComponent.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObject.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectArray.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectBase.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectHashTables.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UPrimitiveComponent.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UProperty.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneCaptureComponent2D.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneComponent.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UTexture.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Utility.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AActor.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AHUD.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APawn.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerCameraManager.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerController.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\CVar.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ConsoleManager.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\DynamicRHI.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\EngineModule.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FArrayProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FBoolProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FCommandLine.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FEnumProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FField.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FFieldClass.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FMalloc.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FName.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FObjectProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderResource.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTarget.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTargetPool.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FScene.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneRenderer.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneView.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneViewFamily.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FStructProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTexture.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureRenderTargetResource.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureResource.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewport.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewportInfo.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Globals.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\KismetSystemLibrary.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Math.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\RHICommandList.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptMatrix.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptRotator.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptTransform.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptVector.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Slate.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\StereoStuff.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\TArray.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UActorComponent.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UCameraComponent.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UClass.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEngine.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEnum.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UFunction.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameEngine.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameViewportClient.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameplayStatics.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UHeadMountedDisplayFunctionLibrary.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UKismetRenderingLibrary.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UMotionControllerComponent.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObject.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectArray.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectBase.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectHashTables.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectReference.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UPrimitiveComponent.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UProperty.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneCaptureComponent2D.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneComponent.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UTexture.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UWorld.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Utility.hpp">
+      <Filter>src\sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\common\UFunctionError.hpp">
+      <Filter>src\sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\Enums.hpp">
+      <Filter>src\sdk\structures</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FGuid.hpp">
+      <Filter>src\sdk\structures</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FXRHMDData.hpp">
+      <Filter>src\sdk\structures</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FXRMotionControllerData.hpp">
+      <Filter>src\sdk\structures</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\GameThreadWorker.hpp">
+      <Filter>src\sdk\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\RHIThreadWorker.hpp">
+      <Filter>src\sdk\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\RenderThreadWorker.hpp">
+      <Filter>src\sdk\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\ThreadWorker.hpp">
+      <Filter>src\sdk\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\vtables\IXRTrackingSystemVTables.hpp">
+      <Filter>src\sdk\vtables</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\nlohmann_json.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{EFF69D27-C576-395A-8A3B-A0643070B511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sdk">
+      <UniqueIdentifier>{58BF9A7D-B52A-3997-8E3E-C1FCB8A84FD5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sdk\common">
+      <UniqueIdentifier>{DBED169D-F53B-36D2-B478-D29078CD37BF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sdk\structures">
+      <UniqueIdentifier>{BFCD5C72-61E8-3B66-8727-1A40262E4538}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sdk\threading">
+      <UniqueIdentifier>{E168CF96-0495-33A9-B0C6-A07D150590A9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sdk\vtables">
+      <UniqueIdentifier>{9E1CCB0F-B12F-3624-9534-2B8C6767E5DB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

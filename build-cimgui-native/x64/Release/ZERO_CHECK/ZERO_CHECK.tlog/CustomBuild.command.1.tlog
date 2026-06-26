@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-CIMGUI-NATIVE\CMAKEFILES\9F9BE87906638D72DFECA66382EF3F14\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/examples/cimgui_native_plugin -BI:/code/lobotomy-x/UEVR/build-cimgui-native --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file I:/code/lobotomy-x/UEVR/build-cimgui-native/cimgui_native_plugin.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

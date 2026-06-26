@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\SDKGENNY-SUBBUILD\CMAKEFILES\AFCC1BFAF9F27DDACA9CF56FA9595D68\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/sdkgenny-subbuild/sdkgenny-populate.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

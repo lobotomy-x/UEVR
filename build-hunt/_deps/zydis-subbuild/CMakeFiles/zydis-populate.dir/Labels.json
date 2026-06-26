@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/zydis-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/6b50ed57746c849fda9f340d9eebb1da/zydis-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/b52100e5291d32ae02b7a85b55db6c0a/zydis-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/CMakeFiles/8ff3ec126e259dfe4e4b7eff1802cced/zydis-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"zydis-populate"
+		],
+		"name" : "zydis-populate"
+	}
+}

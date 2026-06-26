@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\ZYDIS-SUBBUILD\CMAKEFILES\6B50ED57746C849FDA9F340D9EEBB1DA\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-subbuild/zydis-populate.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,150 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/tmp/openxr-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-DOWNLOAD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/tmp/openxr-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-UPDATE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/tmp/openxr-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-CONFIGURE.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-BUILD.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-INSTALL.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\834C5662FDD0942885E97A65BE206130\OPENXR-POPULATE-TEST.RULE
+setlocal
+cd I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build
+if %errorlevel% neq 0 goto :cmEnd
+I:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\0CFFF434D4404645C7155C31A4BEC61E\OPENXR-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/Debug/openxr-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/openxr-populate-prefix/src/openxr-populate-stamp/Debug/openxr-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKEFILES\BE6CBCE981119D110B09A269F95788E5\OPENXR-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\OPENXR-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

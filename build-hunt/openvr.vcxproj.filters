@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\jsoncpp.cpp">
+      <Filter>dependencies\openvr\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\openvr_api_public.cpp">
+      <Filter>dependencies\openvr\src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\dirtools_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\envvartools_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\hmderrors_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\pathtools_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\sharedlibtools_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\strtools_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\openvr\src\vrcommon\vrpathregistry_public.cpp">
+      <Filter>dependencies\openvr\src\vrcommon</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{6026BA26-B92C-3FFD-B981-B148AF9DEA54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\openvr">
+      <UniqueIdentifier>{50EB97B1-3E04-3644-8AA6-6E565362D87E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\openvr\src">
+      <UniqueIdentifier>{7445AE54-1FEE-33F4-8FCD-38B3031EE419}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\openvr\src\vrcommon">
+      <UniqueIdentifier>{6FD768D6-6E72-3F81-97B2-C91C71857CAF}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

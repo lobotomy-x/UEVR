@@ -1,0 +1,471 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{39679A1F-EC58-327F-82F4-68AAF091730B}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>uesdk</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">uesdk.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">uesdk</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\lib\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">uesdk.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">uesdk</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">uesdk.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">uesdk</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\lib\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">uesdk.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">uesdk</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/dependencies/submodules/UESDK/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/dependencies/submodules/UESDK/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/dependencies/submodules/UESDK/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/dependencies/submodules/UESDK/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/dependencies/submodules/UESDK/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/dependencies/submodules/UESDK/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/dependencies/submodules/UESDK/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/dependencies/submodules/UESDK/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AActor.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AHUD.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APawn.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerCameraManager.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerController.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\CVar.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ConsoleManager.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\DynamicRHI.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\EngineModule.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FArrayProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FBoolProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FCommandLine.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FEnumProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FField.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FMalloc.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FName.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FObjectProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTarget.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTargetPool.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FScene.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneRenderer.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneView.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneViewFamily.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FStructProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTexture.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureRenderTargetResource.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewport.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewportInfo.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Globals.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\KismetSystemLibrary.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptMatrix.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptRotator.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptTransform.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptVector.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Slate.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\StereoStuff.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UActorComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UCameraComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UClass.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEngine.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEnum.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UFunction.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameEngine.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameViewportClient.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameplayStatics.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UHeadMountedDisplayFunctionLibrary.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UKismetRenderingLibrary.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UMotionControllerComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObject.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectArray.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectBase.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectHashTables.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UPrimitiveComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UProperty.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneCaptureComponent2D.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UTexture.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Utility.cpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AActor.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\AHUD.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APawn.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerCameraManager.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\APlayerController.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\CVar.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ConsoleManager.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\DynamicRHI.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\EngineModule.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FArrayProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FBoolProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FCommandLine.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FEnumProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FField.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FFieldClass.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FMalloc.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FName.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FObjectProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderResource.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTarget.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FRenderTargetPool.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FScene.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneRenderer.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneView.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FSceneViewFamily.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FStructProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTexture.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureRenderTargetResource.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FTextureResource.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewport.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\FViewportInfo.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Globals.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\KismetSystemLibrary.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Math.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\RHICommandList.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptMatrix.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptRotator.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptTransform.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\ScriptVector.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Slate.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\StereoStuff.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\TArray.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UActorComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UCameraComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UClass.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEngine.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UEnum.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UFunction.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameEngine.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameViewportClient.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UGameplayStatics.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UHeadMountedDisplayFunctionLibrary.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UKismetRenderingLibrary.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UMotionControllerComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObject.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectArray.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectBase.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectHashTables.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UObjectReference.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UPrimitiveComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UProperty.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneCaptureComponent2D.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\USceneComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UTexture.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\UWorld.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\Utility.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\common\UFunctionError.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\Enums.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FGuid.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FXRHMDData.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\structures\FXRMotionControllerData.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\GameThreadWorker.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\RHIThreadWorker.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\RenderThreadWorker.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\threading\ThreadWorker.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src\sdk\vtables\IXRTrackingSystemVTables.hpp" />
+    <None Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\cmake.toml">
+    </None>
+    <Natvis Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\nlohmann_json.natvis">
+    </Natvis>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\ZERO_CHECK.vcxproj">
+      <Project>{1FC658BA-BE47-3A7E-990D-A3118BE102F8}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build\TracyClient.vcxproj">
+      <Project>{67B7F4C0-F0F3-3A0D-AD8D-49D332F3A57A}</Project>
+      <Name>TracyClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bddisasm.vcxproj">
+      <Project>{B2461738-9183-3D3B-AAC0-A2EEAD40D0E0}</Project>
+      <Name>bddisasm</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bdshemu.vcxproj">
+      <Project>{4DED582C-63D1-355A-8231-347779894CEF}</Project>
+      <Name>bdshemu</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\glm.vcxproj">
+      <Project>{B1F6B5F7-6DDB-37EF-A191-4CFD7B5AA44D}</Project>
+      <Name>glm</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\kananlib.vcxproj">
+      <Project>{7FB6B5C8-0DEA-3EB3-A8FD-D76EF9753EC7}</Project>
+      <Name>kananlib</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\spdlog.vcxproj">
+      <Project>{5AAAC1E4-472E-3135-B93E-BD6DAC600D2B}</Project>
+      <Name>spdlog</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

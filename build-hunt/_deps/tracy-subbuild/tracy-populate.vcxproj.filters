@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\3238a4e610be852ac895b88d8adf12d2\tracy-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\5ec0f603ce47ddc7a7bf01f6f1918a5c\tracy-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\27b4bcc2adac3e974551725d19fa47a7\tracy-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-subbuild\CMakeFiles\tracy-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{2D14F0D2-3B9B-3E02-B8A9-11BDF390D680}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,750 @@
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSAlphaTest "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTest.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTest.pdb" /VnAlphaTestEffect_VSAlphaTest
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTest.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTest.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSAlphaTestNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestNoFog.pdb" /VnAlphaTestEffect_VSAlphaTestNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestNoFog.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSAlphaTestVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVc.pdb" /VnAlphaTestEffect_VSAlphaTestVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestVc.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSAlphaTestVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.pdb" /VnAlphaTestEffect_VSAlphaTestVcNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_VSAlphaTestVcNoFog.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSAlphaTestLtGt "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGt.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGt.pdb" /VnAlphaTestEffect_PSAlphaTestLtGt
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestLtGt.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestLtGt.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSAlphaTestLtGtNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.pdb" /VnAlphaTestEffect_PSAlphaTestLtGtNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestLtGtNoFog.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSAlphaTestEqNe "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNe.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNe.pdb" /VnAlphaTestEffect_PSAlphaTestEqNe
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestEqNe.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestEqNe.inc
+
+fxc.exe "AlphaTestEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSAlphaTestEqNeNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.pdb" /VnAlphaTestEffect_PSAlphaTestEqNeNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\AlphaTestEffect_PSAlphaTestEqNeNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasic.pdb" /VnBasicEffect_VSBasic
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasic.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasic.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicNoFog.pdb" /VnBasicEffect_VSBasicNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVc.pdb" /VnBasicEffect_VSBasicVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVcNoFog.pdb" /VnBasicEffect_VSBasicVcNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVcNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVcNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTx.pdb" /VnBasicEffect_VSBasicTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxNoFog.pdb" /VnBasicEffect_VSBasicTxNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxVc.pdb" /VnBasicEffect_VSBasicTxVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicTxVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicTxVcNoFog.pdb" /VnBasicEffect_VSBasicTxVcNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxVcNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicTxVcNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLighting.pdb" /VnBasicEffect_VSBasicVertexLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLighting.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingBn.pdb" /VnBasicEffect_VSBasicVertexLightingBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVc.pdb" /VnBasicEffect_VSBasicVertexLightingVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingVcBn.pdb" /VnBasicEffect_VSBasicVertexLightingVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTx.pdb" /VnBasicEffect_VSBasicVertexLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxBn.pdb" /VnBasicEffect_VSBasicVertexLightingTxBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVc.pdb" /VnBasicEffect_VSBasicVertexLightingTxVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicVertexLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.pdb" /VnBasicEffect_VSBasicVertexLightingTxVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicVertexLightingTxVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLight "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLight.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLight.pdb" /VnBasicEffect_VSBasicOneLight
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLight.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLight.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightBn.pdb" /VnBasicEffect_VSBasicOneLightBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightVc.pdb" /VnBasicEffect_VSBasicOneLightVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightVcBn.pdb" /VnBasicEffect_VSBasicOneLightVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTx.pdb" /VnBasicEffect_VSBasicOneLightTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxBn.pdb" /VnBasicEffect_VSBasicOneLightTxBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxVc.pdb" /VnBasicEffect_VSBasicOneLightTxVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicOneLightTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicOneLightTxVcBn.pdb" /VnBasicEffect_VSBasicOneLightTxVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicOneLightTxVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLighting.pdb" /VnBasicEffect_VSBasicPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLighting.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingBn.pdb" /VnBasicEffect_VSBasicPixelLightingBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVc.pdb" /VnBasicEffect_VSBasicPixelLightingVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingVcBn.pdb" /VnBasicEffect_VSBasicPixelLightingVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTx.pdb" /VnBasicEffect_VSBasicPixelLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxBn.pdb" /VnBasicEffect_VSBasicPixelLightingTxBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVc.pdb" /VnBasicEffect_VSBasicPixelLightingTxVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxVc.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSBasicPixelLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.pdb" /VnBasicEffect_VSBasicPixelLightingTxVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_VSBasicPixelLightingTxVcBn.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasic.pdb" /VnBasicEffect_PSBasic
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasic.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasic.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicNoFog.pdb" /VnBasicEffect_PSBasicNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicTx.pdb" /VnBasicEffect_PSBasicTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicTxNoFog.pdb" /VnBasicEffect_PSBasicTxNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicTxNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicTxNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLighting.pdb" /VnBasicEffect_PSBasicVertexLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLighting.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicVertexLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingNoFog.pdb" /VnBasicEffect_PSBasicVertexLightingNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicVertexLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTx.pdb" /VnBasicEffect_PSBasicVertexLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingTx.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicVertexLightingTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.pdb" /VnBasicEffect_PSBasicVertexLightingTxNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicVertexLightingTxNoFog.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicPixelLighting.pdb" /VnBasicEffect_PSBasicPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicPixelLighting.inc
+
+fxc.exe "BasicEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSBasicPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\BasicEffect_PSBasicPixelLightingTx.pdb" /VnBasicEffect_PSBasicPixelLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicPixelLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\BasicEffect_PSBasicPixelLightingTx.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSDualTexture "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTexture.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTexture.pdb" /VnDualTextureEffect_VSDualTexture
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTexture.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTexture.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSDualTextureNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureNoFog.pdb" /VnDualTextureEffect_VSDualTextureNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureNoFog.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSDualTextureVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVc.pdb" /VnDualTextureEffect_VSDualTextureVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureVc.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSDualTextureVcNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVcNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_VSDualTextureVcNoFog.pdb" /VnDualTextureEffect_VSDualTextureVcNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureVcNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_VSDualTextureVcNoFog.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSDualTexture "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_PSDualTexture.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_PSDualTexture.pdb" /VnDualTextureEffect_PSDualTexture
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_PSDualTexture.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_PSDualTexture.inc
+
+fxc.exe "DualTextureEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSDualTextureNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_PSDualTextureNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DualTextureEffect_PSDualTextureNoFog.pdb" /VnDualTextureEffect_PSDualTextureNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_PSDualTextureNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DualTextureEffect_PSDualTextureNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMap.pdb" /VnEnvironmentMapEffect_VSEnvMap
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMap.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMap.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapBn.pdb" /VnEnvironmentMapEffect_VSEnvMapBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapBn.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnel.pdb" /VnEnvironmentMapEffect_VSEnvMapFresnel
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapFresnel.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapFresnel.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapFresnelBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.pdb" /VnEnvironmentMapEffect_VSEnvMapFresnelBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapFresnelBn.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapOneLight "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLight.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLight.pdb" /VnEnvironmentMapEffect_VSEnvMapOneLight
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLight.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLight.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapOneLightBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightBn.pdb" /VnEnvironmentMapEffect_VSEnvMapOneLightBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightBn.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapOneLightFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnel.pdb" /VnEnvironmentMapEffect_VSEnvMapOneLightFresnel
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnel.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnel.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapOneLightFresnelBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnelBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnelBn.pdb" /VnEnvironmentMapEffect_VSEnvMapOneLightFresnelBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnelBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapOneLightFresnelBn.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLighting.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSEnvMapPixelLightingBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLightingBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBn.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSEnvMapPixelLightingSM4 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingSM4.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingSM4.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLightingSM4
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingSM4.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingSM4.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSEnvMapPixelLightingBnSM4 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBnSM4.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBnSM4.pdb" /VnEnvironmentMapEffect_VSEnvMapPixelLightingBnSM4
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBnSM4.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_VSEnvMapPixelLightingBnSM4.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMap "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMap.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMap.pdb" /VnEnvironmentMapEffect_PSEnvMap
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMap.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMap.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpecular "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecular.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecular.pdb" /VnEnvironmentMapEffect_PSEnvMapSpecular
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpecular.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpecular.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpecularNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpecularNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpecularNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLighting.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapPixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapPixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingFresnel
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnel.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapPixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapPixelLightingFresnelNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpherePixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLighting.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpherePixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpherePixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnel.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSEnvMapSpherePixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapSpherePixelLightingFresnelNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSEnvMapDualParabolaPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLighting.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSEnvMapDualParabolaPixelLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingNoFog.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSEnvMapDualParabolaPixelLightingFresnel "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnel.inc
+
+fxc.exe "EnvironmentMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSEnvMapDualParabolaPixelLightingFresnelNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.pdb" /VnEnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\EnvironmentMapEffect_PSEnvMapDualParabolaPixelLightingFresnelNoFog.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingOneBone "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBone.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBone.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingOneBone
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBone.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBone.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingOneBoneBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBoneBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBoneBn.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingOneBoneBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBoneBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingOneBoneBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingTwoBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBones.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingTwoBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingTwoBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBonesBn.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingTwoBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingTwoBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingFourBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingFourBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedVertexLightingFourBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.pdb" /VnSkinnedEffect_VSSkinnedVertexLightingFourBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedVertexLightingFourBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightOneBone "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightOneBone.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightOneBone.pdb" /VnSkinnedEffect_VSSkinnedOneLightOneBone
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightOneBone.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightOneBone.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightOneBoneBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightOneBoneBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightOneBoneBn.pdb" /VnSkinnedEffect_VSSkinnedOneLightOneBoneBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightOneBoneBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightOneBoneBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightTwoBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightTwoBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightTwoBones.pdb" /VnSkinnedEffect_VSSkinnedOneLightTwoBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightTwoBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightTwoBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightTwoBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightTwoBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightTwoBonesBn.pdb" /VnSkinnedEffect_VSSkinnedOneLightTwoBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightTwoBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightTwoBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightFourBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightFourBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightFourBones.pdb" /VnSkinnedEffect_VSSkinnedOneLightFourBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightFourBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightFourBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedOneLightFourBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightFourBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedOneLightFourBonesBn.pdb" /VnSkinnedEffect_VSSkinnedOneLightFourBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightFourBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedOneLightFourBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingOneBone "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBone.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBone.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingOneBone
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBone.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBone.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingOneBoneBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBoneBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBoneBn.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingOneBoneBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBoneBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingOneBoneBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingTwoBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBones.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingTwoBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingTwoBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBonesBn.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingTwoBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingTwoBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingFourBones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingFourBones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBones.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EVSSkinnedPixelLightingFourBonesBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.pdb" /VnSkinnedEffect_VSSkinnedPixelLightingFourBonesBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_VSSkinnedPixelLightingFourBonesBn.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSSkinnedVertexLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLighting.pdb" /VnSkinnedEffect_PSSkinnedVertexLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedVertexLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedVertexLighting.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSSkinnedVertexLightingNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.pdb" /VnSkinnedEffect_PSSkinnedVertexLightingNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedVertexLightingNoFog.inc
+
+fxc.exe "SkinnedEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EPSSkinnedPixelLighting "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedPixelLighting.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SkinnedEffect_PSSkinnedPixelLighting.pdb" /VnSkinnedEffect_PSSkinnedPixelLighting
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedPixelLighting.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SkinnedEffect_PSSkinnedPixelLighting.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTx.pdb" /VnNormalMapEffect_VSNormalPixelLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTx.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxBn.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVc.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBn.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxInst.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxBnInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxBnInst.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxVcInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcInst.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSNormalPixelLightingTxVcBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.pdb" /VnNormalMapEffect_VSNormalPixelLightingTxVcBnInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSNormalPixelLightingTxVcBnInst.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSSkinnedPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSSkinnedPixelLightingTx.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSSkinnedPixelLightingTxBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.pdb" /VnNormalMapEffect_VSSkinnedPixelLightingTxBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_VSSkinnedPixelLightingTxBn.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSNormalPixelLightingTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTx.pdb" /VnNormalMapEffect_PSNormalPixelLightingTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTx.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSNormalPixelLightingTxNoFog "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoFog
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFog.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSNormalPixelLightingTxNoSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoSpec
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoSpec.inc
+
+fxc.exe "NormalMapEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSNormalPixelLightingTxNoFogSpec "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.pdb" /VnNormalMapEffect_PSNormalPixelLightingTxNoFogSpec
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\NormalMapEffect_PSNormalPixelLightingTxNoFogSpec.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstant "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstant.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstant.pdb" /VnPBREffect_VSConstant
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstant.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstant.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstantInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantInst.pdb" /VnPBREffect_VSConstantInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantInst.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstantVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantVelocity.pdb" /VnPBREffect_VSConstantVelocity
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantVelocity.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantVelocity.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstantBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantBn.pdb" /VnPBREffect_VSConstantBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantBn.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstantBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantBnInst.pdb" /VnPBREffect_VSConstantBnInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantBnInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantBnInst.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSConstantVelocityBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantVelocityBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSConstantVelocityBn.pdb" /VnPBREffect_VSConstantVelocityBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantVelocityBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSConstantVelocityBn.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSSkinned "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSSkinned.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSSkinned.pdb" /VnPBREffect_VSSkinned
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSSkinned.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSSkinned.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSSkinnedBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSSkinnedBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_VSSkinnedBn.pdb" /VnPBREffect_VSSkinnedBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSSkinnedBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_VSSkinnedBn.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSConstant "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSConstant.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSConstant.pdb" /VnPBREffect_PSConstant
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSConstant.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSConstant.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSTextured "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTextured.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTextured.pdb" /VnPBREffect_PSTextured
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTextured.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTextured.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSTexturedEmissive "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedEmissive.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedEmissive.pdb" /VnPBREffect_PSTexturedEmissive
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedEmissive.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedEmissive.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSTexturedVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedVelocity.pdb" /VnPBREffect_PSTexturedVelocity
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedVelocity.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedVelocity.inc
+
+fxc.exe "PBREffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSTexturedEmissiveVelocity "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedEmissiveVelocity.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PBREffect_PSTexturedEmissiveVelocity.pdb" /VnPBREffect_PSTexturedEmissiveVelocity
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedEmissiveVelocity.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PBREffect_PSTexturedEmissiveVelocity.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebug "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebug.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebug.pdb" /VnDebugEffect_VSDebug
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebug.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebug.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugBn.pdb" /VnDebugEffect_VSDebugBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugBn.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVc.pdb" /VnDebugEffect_VSDebugVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVc.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugVcBn "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcBn.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcBn.pdb" /VnDebugEffect_VSDebugVcBn
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcBn.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcBn.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugInst.pdb" /VnDebugEffect_VSDebugInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugInst.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugBnInst.pdb" /VnDebugEffect_VSDebugBnInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugBnInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugBnInst.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugVcInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcInst.pdb" /VnDebugEffect_VSDebugVcInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcInst.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSDebugVcBnInst "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcBnInst.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_VSDebugVcBnInst.pdb" /VnDebugEffect_VSDebugVcBnInst
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcBnInst.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_VSDebugVcBnInst.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSHemiAmbient "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSHemiAmbient.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSHemiAmbient.pdb" /VnDebugEffect_PSHemiAmbient
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSHemiAmbient.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSHemiAmbient.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSRGBNormals "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBNormals.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBNormals.pdb" /VnDebugEffect_PSRGBNormals
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBNormals.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBNormals.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSRGBTangents "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBTangents.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBTangents.pdb" /VnDebugEffect_PSRGBTangents
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBTangents.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBTangents.inc
+
+fxc.exe "DebugEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSRGBBiTangents "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBBiTangents.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DebugEffect_PSRGBBiTangents.pdb" /VnDebugEffect_PSRGBBiTangents
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBBiTangents.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DebugEffect_PSRGBBiTangents.inc
+
+fxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /ESpriteVertexShader "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SpriteEffect_SpriteVertexShader.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SpriteEffect_SpriteVertexShader.pdb" /VnSpriteEffect_SpriteVertexShader
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SpriteEffect_SpriteVertexShader.inc
+
+fxc.exe "SpriteEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /ESpritePixelShader "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SpriteEffect_SpritePixelShader.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\SpriteEffect_SpritePixelShader.pdb" /VnSpriteEffect_SpritePixelShader
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SpriteEffect_SpritePixelShader.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\SpriteEffect_SpritePixelShader.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main.pdb" /VnDGSLEffect_main
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /EmainVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_mainVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_mainVc.pdb" /VnDGSLEffect_mainVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_mainVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_mainVc.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain1Bones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main1Bones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main1Bones.pdb" /VnDGSLEffect_main1Bones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main1Bones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main1Bones.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain1BonesVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main1BonesVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main1BonesVc.pdb" /VnDGSLEffect_main1BonesVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main1BonesVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main1BonesVc.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain2Bones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main2Bones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main2Bones.pdb" /VnDGSLEffect_main2Bones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main2Bones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main2Bones.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain2BonesVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main2BonesVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main2BonesVc.pdb" /VnDGSLEffect_main2BonesVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main2BonesVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main2BonesVc.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain4Bones "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main4Bones.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main4Bones.pdb" /VnDGSLEffect_main4Bones
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main4Bones.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main4Bones.inc
+
+fxc.exe "DGSLEffect.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0_level_9_1 /Emain4BonesVc "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main4BonesVc.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLEffect_main4BonesVc.pdb" /VnDGSLEffect_main4BonesVc
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main4BonesVc.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLEffect_main4BonesVc.inc
+
+fxc.exe "DGSLUnlit.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /Emain "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_main.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_main.pdb" /VnDGSLUnlit_main
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_main.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_main.inc
+
+fxc.exe "DGSLLambert.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /Emain "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_main.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_main.pdb" /VnDGSLLambert_main
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_main.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_main.inc
+
+fxc.exe "DGSLPhong.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /Emain "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_main.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_main.pdb" /VnDGSLPhong_main
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_main.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_main.inc
+
+fxc.exe "DGSLUnlit.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTk.pdb" /VnDGSLUnlit_mainTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTk.inc
+
+fxc.exe "DGSLLambert.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTk.pdb" /VnDGSLLambert_mainTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTk.inc
+
+fxc.exe "DGSLPhong.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTk.pdb" /VnDGSLPhong_mainTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTk.inc
+
+fxc.exe "DGSLUnlit.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTx.pdb" /VnDGSLUnlit_mainTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTx.inc
+
+fxc.exe "DGSLLambert.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTx.pdb" /VnDGSLLambert_mainTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTx.inc
+
+fxc.exe "DGSLPhong.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTx "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTx.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTx.pdb" /VnDGSLPhong_mainTx
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTx.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTx.inc
+
+fxc.exe "DGSLUnlit.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTxTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTxTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLUnlit_mainTxTk.pdb" /VnDGSLUnlit_mainTxTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTxTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLUnlit_mainTxTk.inc
+
+fxc.exe "DGSLLambert.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTxTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTxTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLLambert_mainTxTk.pdb" /VnDGSLLambert_mainTxTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTxTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLLambert_mainTxTk.inc
+
+fxc.exe "DGSLPhong.hlsl" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0_level_9_1 /EmainTxTk "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTxTk.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\DGSLPhong_mainTxTk.pdb" /VnDGSLPhong_mainTxTk
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTxTk.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\DGSLPhong_mainTxTk.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSQuad "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_VSQuad.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_VSQuad.pdb" /VnPostProcess_VSQuad
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_VSQuad.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_VSQuad.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSCopy "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSCopy.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSCopy.pdb" /VnPostProcess_PSCopy
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSCopy.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSCopy.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSMonochrome "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSMonochrome.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSMonochrome.pdb" /VnPostProcess_PSMonochrome
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSMonochrome.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSMonochrome.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSSepia "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSSepia.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSSepia.pdb" /VnPostProcess_PSSepia
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSSepia.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSSepia.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSDownScale2x2 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSDownScale2x2.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSDownScale2x2.pdb" /VnPostProcess_PSDownScale2x2
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSDownScale2x2.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSDownScale2x2.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSDownScale4x4 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSDownScale4x4.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSDownScale4x4.pdb" /VnPostProcess_PSDownScale4x4
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSDownScale4x4.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSDownScale4x4.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSGaussianBlur5x5 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSGaussianBlur5x5.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSGaussianBlur5x5.pdb" /VnPostProcess_PSGaussianBlur5x5
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSGaussianBlur5x5.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSGaussianBlur5x5.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSBloomExtract "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomExtract.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomExtract.pdb" /VnPostProcess_PSBloomExtract
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomExtract.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomExtract.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSBloomBlur "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomBlur.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomBlur.pdb" /VnPostProcess_PSBloomBlur
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomBlur.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomBlur.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSMerge "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSMerge.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSMerge.pdb" /VnPostProcess_PSMerge
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSMerge.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSMerge.inc
+
+fxc.exe "PostProcess.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSBloomCombine "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomCombine.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\PostProcess_PSBloomCombine.pdb" /VnPostProcess_PSBloomCombine
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomCombine.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\PostProcess_PSBloomCombine.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tvs_4_0 /EVSQuad "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_VSQuad.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_VSQuad.pdb" /VnToneMap_VSQuad
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_VSQuad.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_VSQuad.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSCopy "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSCopy.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSCopy.pdb" /VnToneMap_PSCopy
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSCopy.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSCopy.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSSaturate "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSSaturate.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSSaturate.pdb" /VnToneMap_PSSaturate
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSSaturate.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSSaturate.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSReinhard "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSReinhard.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSReinhard.pdb" /VnToneMap_PSReinhard
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSReinhard.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSReinhard.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSACESFilmic "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSACESFilmic.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSACESFilmic.pdb" /VnToneMap_PSACESFilmic
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSACESFilmic.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSACESFilmic.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPS_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PS_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PS_SRGB.pdb" /VnToneMap_PS_SRGB
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PS_SRGB.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PS_SRGB.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSSaturate_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSSaturate_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSSaturate_SRGB.pdb" /VnToneMap_PSSaturate_SRGB
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSSaturate_SRGB.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSSaturate_SRGB.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSReinhard_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSReinhard_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSReinhard_SRGB.pdb" /VnToneMap_PSReinhard_SRGB
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSReinhard_SRGB.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSReinhard_SRGB.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSACESFilmic_SRGB "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSACESFilmic_SRGB.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSACESFilmic_SRGB.pdb" /VnToneMap_PSACESFilmic_SRGB
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSACESFilmic_SRGB.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSACESFilmic_SRGB.inc
+
+fxc.exe "ToneMap.fx" /nologo /WX /Ges /Zi /Zpc /Qstrip_reflect /Qstrip_debug /Tps_4_0 /EPSHDR10 "/FhI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSHDR10.inc" "/FdI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-build/Shaders/Compiled\ToneMap_PSHDR10.pdb" /VnToneMap_PSHDR10
+compilation PDB save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSHDR10.pdb
+compilation header save succeeded; see I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\Shaders\Compiled\ToneMap_PSHDR10.inc
+
+Shaders compiled ok

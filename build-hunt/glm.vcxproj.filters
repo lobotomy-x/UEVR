@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\dependencies\submodules\glm\glm\detail\glm.cpp">
+      <Filter>dependencies\submodules\glm\glm\detail</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{6026BA26-B92C-3FFD-B981-B148AF9DEA54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\submodules">
+      <UniqueIdentifier>{E95134E1-CC79-38CA-B4E0-82D406F4591F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\submodules\glm">
+      <UniqueIdentifier>{5AAE9875-3ED7-3345-ABE3-E0A77190B655}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\submodules\glm\glm">
+      <UniqueIdentifier>{498168C1-2FE6-3882-ACCA-855A15F9CAAF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\submodules\glm\glm\detail">
+      <UniqueIdentifier>{88673010-F732-3B62-86EE-8C10A48703B1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

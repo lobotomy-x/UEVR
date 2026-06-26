@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/directxtk12-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/1c107d00c098641ec14d2018d0ec3674/directxtk12-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/58f67aa1cb95f069d2f1a673fb2b9f6e/directxtk12-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk12-subbuild/CMakeFiles/941bddcd602cd7e356666b5c0d331c34/directxtk12-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"directxtk12-populate"
+		],
+		"name" : "directxtk12-populate"
+	}
+}

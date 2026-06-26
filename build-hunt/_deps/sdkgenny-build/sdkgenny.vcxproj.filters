@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\array.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\class.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\constant.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\detail\indent.cpp">
+      <Filter>src\detail</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\enum.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\enum_class.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\function.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\generic_type.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\namespace.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\object.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\parameter.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\pointer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\reference.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\sdk.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\static_function.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\struct.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\type.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\typename.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\variable.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\src\virtual_function.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\array.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\class.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\constant.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\detail\indent.hpp">
+      <Filter>include\sdkgenny\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\enum.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\enum_class.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\function.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\generic_type.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\namespace.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\object.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\parameter.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\pointer.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\reference.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\sdk.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\static_function.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\struct.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\type.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\typename.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\variable.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny\virtual_function.hpp">
+      <Filter>include\sdkgenny</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny_ida.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include\sdkgenny_parser.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{9F588CA8-8D1A-3C97-88FD-4B835C454379}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\sdkgenny">
+      <UniqueIdentifier>{BAD76497-32F1-3866-B002-74159EB389C4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\sdkgenny\detail">
+      <UniqueIdentifier>{2A9667D1-63C4-3416-846B-665EAEB39406}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{EFF69D27-C576-395A-8A3B-A0643070B511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\detail">
+      <UniqueIdentifier>{11441C9A-15E7-306A-82FF-044C652B9C3D}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

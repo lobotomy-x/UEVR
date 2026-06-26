@@ -1,0 +1,3 @@
+[mcp_servers.uevr]
+command = "dotnet"
+args = ["I:/code/lobotomy-x/uevr-mcp/mcp-server/bin/Release/net9.0/UevrMcpServer.dll"]

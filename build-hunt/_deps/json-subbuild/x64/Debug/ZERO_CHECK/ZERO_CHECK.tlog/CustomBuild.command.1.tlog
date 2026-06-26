@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\JSON-SUBBUILD\CMAKEFILES\E1250E1914188F319AC79F8EC0CF638E\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/json-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/json-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/json-subbuild/json-populate.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

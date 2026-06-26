@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\side-projects\sdk-test\Main.cpp">
+      <Filter>side-projects\sdk-test</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\nlohmann_json.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="side-projects">
+      <UniqueIdentifier>{1E59962D-8425-3538-A7C7-4387C608F41D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="side-projects\sdk-test">
+      <UniqueIdentifier>{E9284755-3EF9-3F5E-9AEE-35E1CC00965E}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

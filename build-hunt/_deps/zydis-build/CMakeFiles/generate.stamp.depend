@@ -1,0 +1,7 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-3.31/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
+C:/Program Files/CMake/share/cmake-3.31/Modules/CMakePackageConfigHelpers.cmake
+C:/Program Files/CMake/share/cmake-3.31/Modules/GNUInstallDirs.cmake
+C:/Program Files/CMake/share/cmake-3.31/Modules/WriteBasicConfigVersionFile.cmake
+I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-src/CMakeLists.txt
+I:/code/lobotomy-x/UEVR/build-hunt/_deps/zydis-src/cmake/zydis-config.cmake.in

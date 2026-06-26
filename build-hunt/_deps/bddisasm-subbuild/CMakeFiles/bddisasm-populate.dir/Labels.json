@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/bddisasm-populate"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/200e19403866f8f26cb189f8490eee02/bddisasm-populate.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/54da7a7d217cd13e626def7dd1887f0e/bddisasm-populate-complete.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-build.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-configure.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-download.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-install.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-mkdir.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-patch.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-test.rule"
+		},
+		{
+			"file" : "I:/code/lobotomy-x/UEVR/build-hunt/_deps/bddisasm-subbuild/CMakeFiles/d04de7c2ab7a379459973ea19b8cd49b/bddisasm-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"bddisasm-populate"
+		],
+		"name" : "bddisasm-populate"
+	}
+}

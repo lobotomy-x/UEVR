@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-subbuild\CMakeFiles\b7cc9f9ceea35c46253e8d6a2a6f35db\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B882AD3E-7695-3502-ABB1-1FF3AF7E20FC}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

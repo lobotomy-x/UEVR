@@ -1,0 +1,814 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      The system is: Windows - 10.0.26100 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 17.14.40+3e7442088 for .NET Framework
+      Build started 5/28/2026 10:36:26 PM.
+      
+      Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdC\\CompilerIdC.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdC.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+        CMakeCCompilerId.c
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
+        CompilerIdC.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdC\\CompilerIdC.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_C_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate".
+      Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdC\\CompilerIdC.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:00.51
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      
+      The C compiler identification is MSVC, found in:
+        I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/3.31.4/CompilerIdC/CompilerIdC.exe
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 17.14.40+3e7442088 for .NET Framework
+      Build started 5/28/2026 10:36:27 PM.
+      
+      Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\3.31.4\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:00.49
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/3.31.4/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-jl9s4k"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-jl9s4k"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-jl9s4k'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_895d0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:36:27 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-jl9s4k\\cmTC_895d0.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_895d0.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-jl9s4k\\Debug\\".
+          Creating directory "cmTC_895d0.dir\\Debug\\cmTC_895d0.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_895d0.dir\\Debug\\cmTC_895d0.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_895d0.dir\\Debug\\cmTC_895d0.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_895d0.dir\\Debug\\\\" /Fd"cmTC_895d0.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_895d0.dir\\Debug\\\\" /Fd"cmTC_895d0.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCCompilerABI.c"
+          CMakeCCompilerABI.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-jl9s4k\\Debug\\cmTC_895d0.exe" /INCREMENTAL /ILK:"cmTC_895d0.dir\\Debug\\cmTC_895d0.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-jl9s4k/Debug/cmTC_895d0.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-jl9s4k/Debug/cmTC_895d0.lib" /MACHINE:X64  /machine:x64 cmTC_895d0.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_895d0.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-jl9s4k\\Debug\\cmTC_895d0.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_895d0.dir\\Debug\\cmTC_895d0.tlog\\unsuccessfulbuild".
+          Touching "cmTC_895d0.dir\\Debug\\cmTC_895d0.tlog\\cmTC_895d0.lastbuildstate".
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-jl9s4k\\cmTC_895d0.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.50
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'C': C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Running the C compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.38.33145.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-qz9n02"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-qz9n02"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /GR /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-qz9n02'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_d293e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:36:28 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-qz9n02\\cmTC_d293e.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_d293e.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-qz9n02\\Debug\\".
+          Creating directory "cmTC_d293e.dir\\Debug\\cmTC_d293e.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_d293e.dir\\Debug\\cmTC_d293e.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_d293e.dir\\Debug\\cmTC_d293e.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_d293e.dir\\Debug\\\\" /Fd"cmTC_d293e.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_d293e.dir\\Debug\\\\" /Fd"cmTC_d293e.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-3.31\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-qz9n02\\Debug\\cmTC_d293e.exe" /INCREMENTAL /ILK:"cmTC_d293e.dir\\Debug\\cmTC_d293e.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-qz9n02/Debug/cmTC_d293e.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-qz9n02/Debug/cmTC_d293e.lib" /MACHINE:X64  /machine:x64 cmTC_d293e.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_d293e.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-qz9n02\\Debug\\cmTC_d293e.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_d293e.dir\\Debug\\cmTC_d293e.tlog\\unsuccessfulbuild".
+          Touching "cmTC_d293e.dir\\Debug\\cmTC_d293e.tlog\\cmTC_d293e.lastbuildstate".
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-qz9n02\\cmTC_d293e.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.50
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:40 (project)"
+    message: |
+      Running the CXX compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.38.33145.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "build-hunt/_deps/bddisasm-src/CMakeLists.txt:114 (check_function_exists)"
+    checks:
+      - "Looking for vsnprintf"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-zb2ia0"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-zb2ia0"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    buildResult:
+      variable: "HAS_VSNPRINTF"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-zb2ia0'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_2dca3.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:14 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_2dca3.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\Debug\\".
+          Creating directory "cmTC_2dca3.dir\\Debug\\cmTC_2dca3.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_2dca3.dir\\Debug\\cmTC_2dca3.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_2dca3.dir\\Debug\\cmTC_2dca3.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=vsnprintf /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_2dca3.dir\\Debug\\\\" /Fd"cmTC_2dca3.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=vsnprintf /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_2dca3.dir\\Debug\\\\" /Fd"cmTC_2dca3.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\Debug\\cmTC_2dca3.exe" /INCREMENTAL /ILK:"cmTC_2dca3.dir\\Debug\\cmTC_2dca3.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-zb2ia0/Debug/cmTC_2dca3.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-zb2ia0/Debug/cmTC_2dca3.lib" /MACHINE:X64  /machine:x64 cmTC_2dca3.dir\\Debug\\CheckFunctionExists.obj
+        LIBCMTD.lib(vsnprintf.obj) : error LNK2001: unresolved external symbol _vsnprintf [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj]
+        I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\Debug\\cmTC_2dca3.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          LIBCMTD.lib(vsnprintf.obj) : error LNK2001: unresolved external symbol _vsnprintf [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj]
+          I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\Debug\\cmTC_2dca3.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-zb2ia0\\cmTC_2dca3.vcxproj]
+        
+            0 Warning(s)
+            2 Error(s)
+        
+        Time Elapsed 00:00:00.49
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "build-hunt/_deps/bddisasm-src/CMakeLists.txt:119 (check_symbol_exists)"
+    checks:
+      - "Looking for vsnprintf"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-eb0g20"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-eb0g20"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    buildResult:
+      variable: "HAS_VSNPRINTF_SYMBOL"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-eb0g20'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_25eeb.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:15 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\cmTC_25eeb.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_25eeb.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\Debug\\".
+          Creating directory "cmTC_25eeb.dir\\Debug\\cmTC_25eeb.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_25eeb.dir\\Debug\\cmTC_25eeb.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_25eeb.dir\\Debug\\cmTC_25eeb.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_25eeb.dir\\Debug\\\\" /Fd"cmTC_25eeb.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\CheckSymbolExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_25eeb.dir\\Debug\\\\" /Fd"cmTC_25eeb.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\CheckSymbolExists.c"
+          CheckSymbolExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\Debug\\cmTC_25eeb.exe" /INCREMENTAL /ILK:"cmTC_25eeb.dir\\Debug\\cmTC_25eeb.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-eb0g20/Debug/cmTC_25eeb.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-eb0g20/Debug/cmTC_25eeb.lib" /MACHINE:X64  /machine:x64 cmTC_25eeb.dir\\Debug\\CheckSymbolExists.obj
+          cmTC_25eeb.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\Debug\\cmTC_25eeb.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_25eeb.dir\\Debug\\cmTC_25eeb.tlog\\unsuccessfulbuild".
+          Touching "cmTC_25eeb.dir\\Debug\\cmTC_25eeb.tlog\\cmTC_25eeb.lastbuildstate".
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-eb0g20\\cmTC_25eeb.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.67
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "build-hunt/_deps/bddisasm-src/CMakeLists.txt:127 (check_function_exists)"
+    checks:
+      - "Looking for memset"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tvb7d9"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tvb7d9"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    buildResult:
+      variable: "HAS_MEMSET"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tvb7d9'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_daa2b.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:16 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\cmTC_daa2b.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_daa2b.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\Debug\\".
+          Creating directory "cmTC_daa2b.dir\\Debug\\cmTC_daa2b.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_daa2b.dir\\Debug\\cmTC_daa2b.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_daa2b.dir\\Debug\\cmTC_daa2b.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=memset /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_daa2b.dir\\Debug\\\\" /Fd"cmTC_daa2b.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=memset /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_daa2b.dir\\Debug\\\\" /Fd"cmTC_daa2b.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\Debug\\cmTC_daa2b.exe" /INCREMENTAL /ILK:"cmTC_daa2b.dir\\Debug\\cmTC_daa2b.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tvb7d9/Debug/cmTC_daa2b.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tvb7d9/Debug/cmTC_daa2b.lib" /MACHINE:X64  /machine:x64 cmTC_daa2b.dir\\Debug\\CheckFunctionExists.obj
+          cmTC_daa2b.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\Debug\\cmTC_daa2b.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_daa2b.dir\\Debug\\cmTC_daa2b.tlog\\unsuccessfulbuild".
+          Touching "cmTC_daa2b.dir\\Debug\\cmTC_daa2b.tlog\\cmTC_daa2b.lastbuildstate".
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tvb7d9\\cmTC_daa2b.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.65
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:91 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-53l146"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-53l146"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-53l146'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_3d885.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:53 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\cmTC_3d885.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_3d885.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\Debug\\".
+          Creating directory "cmTC_3d885.dir\\Debug\\cmTC_3d885.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_3d885.dir\\Debug\\cmTC_3d885.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_3d885.dir\\Debug\\cmTC_3d885.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_3d885.dir\\Debug\\\\" /Fd"cmTC_3d885.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\src.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_3d885.dir\\Debug\\\\" /Fd"cmTC_3d885.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\src.c"
+          src.c
+        I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\src.c(1,10): error C1083: Cannot open include file: 'pthread.h': No such file or directory [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\cmTC_3d885.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\cmTC_3d885.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\cmTC_3d885.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\src.c(1,10): error C1083: Cannot open include file: 'pthread.h': No such file or directory [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-53l146\\cmTC_3d885.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.28
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:175 (_threads_check_lib)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:91 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthreads"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tb1ir8"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tb1ir8"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREADS_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tb1ir8'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_1780e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:54 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\cmTC_1780e.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_1780e.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\Debug\\".
+          Creating directory "cmTC_1780e.dir\\Debug\\cmTC_1780e.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_1780e.dir\\Debug\\cmTC_1780e.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_1780e.dir\\Debug\\cmTC_1780e.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_1780e.dir\\Debug\\\\" /Fd"cmTC_1780e.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_1780e.dir\\Debug\\\\" /Fd"cmTC_1780e.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\Debug\\cmTC_1780e.exe" /INCREMENTAL /ILK:"cmTC_1780e.dir\\Debug\\cmTC_1780e.ilk" /NOLOGO pthreads.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tb1ir8/Debug/cmTC_1780e.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-tb1ir8/Debug/cmTC_1780e.lib" /MACHINE:X64  /machine:x64 cmTC_1780e.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\cmTC_1780e.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\cmTC_1780e.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\cmTC_1780e.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-tb1ir8\\cmTC_1780e.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.37
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:112 (CHECK_LIBRARY_EXISTS)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/FindThreads.cmake:176 (_threads_check_lib)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:91 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthread"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-sgucr0"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-sgucr0"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREAD_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-sgucr0'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_83df7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:54 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\cmTC_83df7.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_83df7.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\Debug\\".
+          Creating directory "cmTC_83df7.dir\\Debug\\cmTC_83df7.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_83df7.dir\\Debug\\cmTC_83df7.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_83df7.dir\\Debug\\cmTC_83df7.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_83df7.dir\\Debug\\\\" /Fd"cmTC_83df7.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_83df7.dir\\Debug\\\\" /Fd"cmTC_83df7.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\Debug\\cmTC_83df7.exe" /INCREMENTAL /ILK:"cmTC_83df7.dir\\Debug\\cmTC_83df7.ilk" /NOLOGO pthread.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-sgucr0/Debug/cmTC_83df7.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-sgucr0/Debug/cmTC_83df7.lib" /MACHINE:X64  /machine:x64 cmTC_83df7.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthread.lib' [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\cmTC_83df7.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\cmTC_83df7.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\cmTC_83df7.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthread.lib' [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-sgucr0\\cmTC_83df7.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.33
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:295 (check_function_exists)"
+    checks:
+      - "Looking for secure_getenv"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-7shfxb"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-7shfxb"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_SECURE_GETENV"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-7shfxb'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_ab5dc.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:55 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_ab5dc.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\Debug\\".
+          Creating directory "cmTC_ab5dc.dir\\Debug\\cmTC_ab5dc.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_ab5dc.dir\\Debug\\cmTC_ab5dc.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_ab5dc.dir\\Debug\\cmTC_ab5dc.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=secure_getenv /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_ab5dc.dir\\Debug\\\\" /Fd"cmTC_ab5dc.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=secure_getenv /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_ab5dc.dir\\Debug\\\\" /Fd"cmTC_ab5dc.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\Debug\\cmTC_ab5dc.exe" /INCREMENTAL /ILK:"cmTC_ab5dc.dir\\Debug\\cmTC_ab5dc.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-7shfxb/Debug/cmTC_ab5dc.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-7shfxb/Debug/cmTC_ab5dc.lib" /MACHINE:X64  /machine:x64 cmTC_ab5dc.dir\\Debug\\CheckFunctionExists.obj
+        CheckFunctionExists.obj : error LNK2019: unresolved external symbol secure_getenv referenced in function main [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj]
+        I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\Debug\\cmTC_ab5dc.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          CheckFunctionExists.obj : error LNK2019: unresolved external symbol secure_getenv referenced in function main [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj]
+          I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\Debug\\cmTC_ab5dc.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-7shfxb\\cmTC_ab5dc.vcxproj]
+        
+            0 Warning(s)
+            2 Error(s)
+        
+        Time Elapsed 00:00:00.48
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:296 (check_function_exists)"
+    checks:
+      - "Looking for __secure_getenv"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-2l13dx"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-2l13dx"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE___SECURE_GETENV"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-2l13dx'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_5f6c9.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:56 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_5f6c9.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\Debug\\".
+          Creating directory "cmTC_5f6c9.dir\\Debug\\cmTC_5f6c9.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_5f6c9.dir\\Debug\\cmTC_5f6c9.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_5f6c9.dir\\Debug\\cmTC_5f6c9.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=__secure_getenv /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_5f6c9.dir\\Debug\\\\" /Fd"cmTC_5f6c9.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=__secure_getenv /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_5f6c9.dir\\Debug\\\\" /Fd"cmTC_5f6c9.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\Debug\\cmTC_5f6c9.exe" /INCREMENTAL /ILK:"cmTC_5f6c9.dir\\Debug\\cmTC_5f6c9.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-2l13dx/Debug/cmTC_5f6c9.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-2l13dx/Debug/cmTC_5f6c9.lib" /MACHINE:X64  /machine:x64 cmTC_5f6c9.dir\\Debug\\CheckFunctionExists.obj
+        CheckFunctionExists.obj : error LNK2019: unresolved external symbol __secure_getenv referenced in function main [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj]
+        I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\Debug\\cmTC_5f6c9.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj]
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          CheckFunctionExists.obj : error LNK2019: unresolved external symbol __secure_getenv referenced in function main [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj]
+          I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\Debug\\cmTC_5f6c9.exe : fatal error LNK1120: 1 unresolved externals [I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-2l13dx\\cmTC_5f6c9.vcxproj]
+        
+            0 Warning(s)
+            2 Error(s)
+        
+        Time Elapsed 00:00:00.49
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "build-hunt/_deps/openxr-src/src/CMakeLists.txt:304 (check_symbol_exists)"
+    checks:
+      - "Looking for timespec_get"
+    directories:
+      source: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-ac0csp"
+      binary: "I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-ac0csp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /MP"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "I:/code/lobotomy-x/UEVR/build-hunt/_deps/openxr-src/src/cmake"
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_TIMESPEC_GET"
+      cached: true
+      stdout: |
+        Change Dir: 'I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-ac0csp'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_32137.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        MSBuild version 17.14.40+3e7442088 for .NET Framework
+        Build started 5/28/2026 10:37:56 PM.
+        
+        Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\cmTC_32137.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_32137.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\Debug\\".
+          Creating directory "cmTC_32137.dir\\Debug\\cmTC_32137.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_32137.dir\\Debug\\cmTC_32137.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_32137.dir\\Debug\\cmTC_32137.tlog\\unsuccessfulbuild".
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_32137.dir\\Debug\\\\" /Fd"cmTC_32137.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\CheckSymbolExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33145 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /MP /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_32137.dir\\Debug\\\\" /Fd"cmTC_32137.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\CheckSymbolExists.c"
+          CheckSymbolExists.c
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\Debug\\cmTC_32137.exe" /INCREMENTAL /ILK:"cmTC_32137.dir\\Debug\\cmTC_32137.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-ac0csp/Debug/cmTC_32137.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/CMakeScratch/TryCompile-ac0csp/Debug/cmTC_32137.lib" /MACHINE:X64  /machine:x64 cmTC_32137.dir\\Debug\\CheckSymbolExists.obj
+          cmTC_32137.vcxproj -> I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\Debug\\cmTC_32137.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_32137.dir\\Debug\\cmTC_32137.tlog\\unsuccessfulbuild".
+          Touching "cmTC_32137.dir\\Debug\\cmTC_32137.tlog\\cmTC_32137.lastbuildstate".
+        Done Building Project "I:\\code\\lobotomy-x\\UEVR\\build-hunt\\CMakeFiles\\CMakeScratch\\TryCompile-ac0csp\\cmTC_32137.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.68
+        
+      exitCode: 0
+...

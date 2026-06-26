@@ -1,0 +1,696 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7424259E-F0F1-3173-A492-E44922E6503D}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>uevr</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">uevr.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">UEVRBackend</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\uevr\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">uevr.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">UEVRBackend</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">uevr.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">UEVRBackend</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\bin\uevr\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">uevr.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">UEVRBackend</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /bigobj /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG="I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="Debug";uevr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG=\"I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp\";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"Debug\";uevr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PreBuildEvent>
+      <Message>	</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Compiling shaders for UEVR..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR/src/mods/vr/shaders I:/code/lobotomy-x/UEVR/src/mods/vr/shaders/compile_shaders.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Generating commit hash..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR I:/code/lobotomy-x/UEVR/MakeCommitHash.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Message></Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different I:/code/lobotomy-x/UEVR/build-hunt/Debug/openvr_api.dll I:/code/lobotomy-x/UEVR/build-hunt/Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;d3d11.lib;d3d12.lib;_deps\safetyhook-build\Debug\safetyhook.lib;Debug\glm.lib;Debug\imgui.lib;Debug\openvr_api.lib;_deps\openxr-build\src\loader\Debug\openxr_loaderd.lib;Version.lib;_deps\tracy-build\Debug\TracyClient.lib;bin\CMake\Debug\DirectXTK.lib;bin\CMake\Debug\DirectXTK12.lib;_deps\sdkgenny-build\Debug\sdkgenny.lib;_deps\asmjit-build\Debug\asmjit.lib;Debug\luavrlib.lib;_deps\kananlib-build\Debug\kananlib.lib;dependencies\submodules\UESDK\Debug\uesdk.lib;advapi32.lib;_deps\safetyhook-build\Debug\safetyhook.lib;_deps\zydis-build\Debug\Zydis.lib;_deps\zydis-build\zycore\Debug\Zycore.lib;_deps\asmjit-build\Debug\asmjit.lib;Debug\lua.lib;Debug\glm.lib;_deps\tracy-build\Debug\TracyClient.lib;_deps\kananlib-build\Debug\kananlib.lib;shlwapi.lib;_deps\bddisasm-build\Debug\bdshemu.lib;_deps\bddisasm-build\Debug\bddisasm.lib;Debug\spdlog.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>openvr_api.dll</DelayLoadDLLs>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>I:/code/lobotomy-x/UEVR/build-hunt/Debug/UEVRBackend.lib</ImportLibrary>
+      <ProgramDataBaseFile>I:/code/lobotomy-x/UEVR/build-hunt/Debug/UEVRBackend.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /bigobj /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG="I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="Release";uevr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG=\"I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp\";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"Release\";uevr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PreBuildEvent>
+      <Message>	</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Compiling shaders for UEVR..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR/src/mods/vr/shaders I:/code/lobotomy-x/UEVR/src/mods/vr/shaders/compile_shaders.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Generating commit hash..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR I:/code/lobotomy-x/UEVR/MakeCommitHash.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Message></Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different I:/code/lobotomy-x/UEVR/build-hunt/Release/openvr_api.dll I:/code/lobotomy-x/UEVR/build-hunt/bin/uevr
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;d3d11.lib;d3d12.lib;_deps\safetyhook-build\Release\safetyhook.lib;Release\glm.lib;Release\imgui.lib;Release\openvr_api.lib;_deps\openxr-build\src\loader\Release\openxr_loader.lib;Version.lib;_deps\tracy-build\Release\TracyClient.lib;bin\CMake\Release\DirectXTK.lib;bin\CMake\Release\DirectXTK12.lib;_deps\sdkgenny-build\Release\sdkgenny.lib;_deps\asmjit-build\Release\asmjit.lib;Release\luavrlib.lib;_deps\kananlib-build\Release\kananlib.lib;lib\uesdk.lib;advapi32.lib;_deps\safetyhook-build\Release\safetyhook.lib;_deps\zydis-build\Release\Zydis.lib;_deps\zydis-build\zycore\Release\Zycore.lib;_deps\asmjit-build\Release\asmjit.lib;Release\lua.lib;Release\glm.lib;_deps\tracy-build\Release\TracyClient.lib;_deps\kananlib-build\Release\kananlib.lib;shlwapi.lib;_deps\bddisasm-build\Release\bdshemu.lib;_deps\bddisasm-build\Release\bddisasm.lib;Release\spdlog.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>openvr_api.dll</DelayLoadDLLs>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>I:/code/lobotomy-x/UEVR/build-hunt/lib/uevr/UEVRBackend.lib</ImportLibrary>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>I:/code/lobotomy-x/UEVR/build-hunt/bin/uevr/UEVRBackend.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /bigobj /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG="I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="MinSizeRel";uevr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG=\"I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp\";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"MinSizeRel\";uevr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PreBuildEvent>
+      <Message>	</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Compiling shaders for UEVR..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR/src/mods/vr/shaders I:/code/lobotomy-x/UEVR/src/mods/vr/shaders/compile_shaders.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Generating commit hash..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR I:/code/lobotomy-x/UEVR/MakeCommitHash.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Message></Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different I:/code/lobotomy-x/UEVR/build-hunt/MinSizeRel/openvr_api.dll I:/code/lobotomy-x/UEVR/build-hunt/MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;d3d11.lib;d3d12.lib;_deps\safetyhook-build\MinSizeRel\safetyhook.lib;MinSizeRel\glm.lib;MinSizeRel\imgui.lib;MinSizeRel\openvr_api.lib;_deps\openxr-build\src\loader\MinSizeRel\openxr_loader.lib;Version.lib;_deps\tracy-build\MinSizeRel\TracyClient.lib;bin\CMake\MinSizeRel\DirectXTK.lib;bin\CMake\MinSizeRel\DirectXTK12.lib;_deps\sdkgenny-build\MinSizeRel\sdkgenny.lib;_deps\asmjit-build\MinSizeRel\asmjit.lib;MinSizeRel\luavrlib.lib;_deps\kananlib-build\MinSizeRel\kananlib.lib;dependencies\submodules\UESDK\MinSizeRel\uesdk.lib;advapi32.lib;_deps\safetyhook-build\MinSizeRel\safetyhook.lib;_deps\zydis-build\MinSizeRel\Zydis.lib;_deps\zydis-build\zycore\MinSizeRel\Zycore.lib;_deps\asmjit-build\MinSizeRel\asmjit.lib;MinSizeRel\lua.lib;MinSizeRel\glm.lib;_deps\tracy-build\MinSizeRel\TracyClient.lib;_deps\kananlib-build\MinSizeRel\kananlib.lib;shlwapi.lib;_deps\bddisasm-build\MinSizeRel\bdshemu.lib;_deps\bddisasm-build\MinSizeRel\bddisasm.lib;MinSizeRel\spdlog.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>openvr_api.dll</DelayLoadDLLs>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>I:/code/lobotomy-x/UEVR/build-hunt/MinSizeRel/UEVRBackend.lib</ImportLibrary>
+      <ProgramDataBaseFile>I:/code/lobotomy-x/UEVR/build-hunt/MinSizeRel/UEVRBackend.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /external:I "I:/code/lobotomy-x/UEVR/build-hunt/_deps/tracy-src/public" /bigobj /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4201</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG="I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR="RelWithDebInfo";uevr_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ASMJIT_STATIC;ZYDIS_STATIC_BUILD;ZYCORE_STATIC_BUILD;IMGUI_USER_CONFIG=\"I:/code/lobotomy-x/UEVR/src/uevr-imgui/uevr_imconfig.hpp\";VR_API_PUBLIC;WIN64;BDDISASM_HAS_VSNPRINTF;BDDISASM_HAS_MEMSET;SPDLOG_COMPILED_LIB;FMT_UNICODE=0;CMAKE_INTDIR=\"RelWithDebInfo\";uevr_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>I:\code\lobotomy-x\UEVR\shared;I:\code\lobotomy-x\UEVR\src;I:\code\lobotomy-x\UEVR\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-src\dependencies\zycore\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore;I:\code\lobotomy-x\UEVR\dependencies\submodules\glm;I:\code\lobotomy-x\UEVR\dependencies\submodules\imgui;I:\code\lobotomy-x\UEVR\src\uevr-imgui;I:\code\lobotomy-x\UEVR\dependencies\openvr\headers;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-src\Inc;I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-src\src;I:\code\lobotomy-x\UEVR\lua-api\lib\include;I:\code\lobotomy-x\UEVR\dependencies\lua\src;I:\code\lobotomy-x\UEVR\dependencies\sol2\single\single\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-src\include;I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-src\inc;I:\code\lobotomy-x\UEVR\dependencies\submodules\spdlog\include;I:\code\lobotomy-x\UEVR\dependencies\submodules\UESDK\src;I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-src\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PreBuildEvent>
+      <Message>	</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Compiling shaders for UEVR..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR/src/mods/vr/shaders I:/code/lobotomy-x/UEVR/src/mods/vr/shaders/compile_shaders.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo "Generating commit hash..."
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E chdir I:/code/lobotomy-x/UEVR I:/code/lobotomy-x/UEVR/MakeCommitHash.bat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Message></Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different I:/code/lobotomy-x/UEVR/build-hunt/RelWithDebInfo/openvr_api.dll I:/code/lobotomy-x/UEVR/build-hunt/bin/uevr
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>shlwapi.lib;d3d11.lib;d3d12.lib;_deps\safetyhook-build\RelWithDebInfo\safetyhook.lib;RelWithDebInfo\glm.lib;RelWithDebInfo\imgui.lib;RelWithDebInfo\openvr_api.lib;_deps\openxr-build\src\loader\RelWithDebInfo\openxr_loader.lib;Version.lib;_deps\tracy-build\RelWithDebInfo\TracyClient.lib;bin\CMake\RelWithDebInfo\DirectXTK.lib;bin\CMake\RelWithDebInfo\DirectXTK12.lib;_deps\sdkgenny-build\RelWithDebInfo\sdkgenny.lib;_deps\asmjit-build\RelWithDebInfo\asmjit.lib;RelWithDebInfo\luavrlib.lib;_deps\kananlib-build\RelWithDebInfo\kananlib.lib;lib\uesdk.lib;advapi32.lib;_deps\safetyhook-build\RelWithDebInfo\safetyhook.lib;_deps\zydis-build\RelWithDebInfo\Zydis.lib;_deps\zydis-build\zycore\RelWithDebInfo\Zycore.lib;_deps\asmjit-build\RelWithDebInfo\asmjit.lib;RelWithDebInfo\lua.lib;RelWithDebInfo\glm.lib;_deps\tracy-build\RelWithDebInfo\TracyClient.lib;_deps\kananlib-build\RelWithDebInfo\kananlib.lib;shlwapi.lib;_deps\bddisasm-build\RelWithDebInfo\bdshemu.lib;_deps\bddisasm-build\RelWithDebInfo\bddisasm.lib;RelWithDebInfo\spdlog.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>openvr_api.dll</DelayLoadDLLs>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>I:/code/lobotomy-x/UEVR/build-hunt/lib/uevr/UEVRBackend.lib</ImportLibrary>
+      <ProgramDataBaseFile>I:/code/lobotomy-x/UEVR/build-hunt/bin/uevr/UEVRBackend.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent\CMakeLists.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCXXCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeRCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeSystem.cmake;I:\code\lobotomy-x\UEVR\cmake.toml;I:\code\lobotomy-x\UEVR\cmkr.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent\CMakeLists.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCXXCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeRCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeSystem.cmake;I:\code\lobotomy-x\UEVR\cmake.toml;I:\code\lobotomy-x\UEVR\cmkr.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent\CMakeLists.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCXXCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeRCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeSystem.cmake;I:\code\lobotomy-x\UEVR\cmake.toml;I:\code\lobotomy-x\UEVR\cmkr.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule I:/code/lobotomy-x/UEVR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR -BI:/code/lobotomy-x/UEVR/build-hunt --check-stamp-file I:/code/lobotomy-x/UEVR/build-hunt/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FetchContent\CMakeLists.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeCXXCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeRCCompiler.cmake;I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\3.31.4\CMakeSystem.cmake;I:\code\lobotomy-x\UEVR\cmake.toml;I:\code\lobotomy-x\UEVR\cmkr.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">I:\code\lobotomy-x\UEVR\build-hunt\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\ExceptionHandler.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\Framework.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\Main.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\Mod.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\Mods.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\WindowFilter.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\hooks\D3D11Hook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\hooks\D3D12Hook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\hooks\DInputHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\hooks\WindowsMessageHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\hooks\XInputHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\FrameworkConfig.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\ImGuiThemeHelpers.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\LuaLoader.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\PluginLoader.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\SDK.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\UObjectHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\VR.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\FS.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\ImGui.cpp">
+      <ObjectFileName>$(IntDir)/src/mods/bindings/ImGui.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\Json.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FFakeStereoRenderingFunctions.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FRHITexture2DFunctions.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FRenderTargetPoolHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FUObjectArrayFunctions.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\UScriptStructFunctions.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\uobjecthook\SDKDumper.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\Bindings.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\CVarManager.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\D3D11Component.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\D3D12Component.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\FFakeStereoRenderingHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\IXRTrackingSystemHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\OverlayComponent.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\RenderTargetPoolHook.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\CommandContext.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\DirectXTK.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\TextureContext.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\runtimes\OpenVR.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\mods\vr\runtimes\OpenXR.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_dx12.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="I:\code\lobotomy-x\UEVR\src\utility\ImGui.cpp">
+      <ObjectFileName>$(IntDir)/src/utility/ImGui.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\ExceptionHandler.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\Framework.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\LicenseStrings.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\Mod.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\Mods.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\WindowFilter.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\hooks\D3D11Hook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\hooks\D3D12Hook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\hooks\DInputHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\hooks\WindowsMessageHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\hooks\XInputHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\FrameworkConfig.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\ImGuiThemeHelpers.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\LuaLoader.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\PluginLoader.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\SDK.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\UObjectHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\VR.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\FS.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\ImGui.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\bindings\Json.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FFakeStereoRenderingFunctions.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FRHITexture2DFunctions.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FRenderTargetPoolHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\FUObjectArrayFunctions.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\pluginloader\UScriptStructFunctions.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\uobjecthook\SDKDumper.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\CVarManager.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\D3D11Component.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\D3D12Component.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\FFakeStereoRenderingHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\IXRTrackingSystemHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\OverlayComponent.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\RenderTargetPoolHook.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\ComPtr.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\CommandContext.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\DirectXTK.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\d3d12\TextureContext.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\runtimes\OpenVR.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\runtimes\OpenXR.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\runtimes\VRRuntime.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\shaders\ps.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\mods\vr\shaders\vs.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\font_robotomedium.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\uevr_imconfig.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\utility\ImGui.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\utility\Logging.hpp" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_dx12.h" />
+    <ClInclude Include="I:\code\lobotomy-x\UEVR\src\uevr-imgui\imgui_impl_win32.h" />
+    <None Include="I:\code\lobotomy-x\UEVR\cmake.toml">
+    </None>
+    <Natvis Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\json-src\nlohmann_json.natvis">
+    </Natvis>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\ZERO_CHECK.vcxproj">
+      <Project>{1FC658BA-BE47-3A7E-990D-A3118BE102F8}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk-build\DirectXTK.vcxproj">
+      <Project>{1EA2573C-199D-3E0E-BD67-CDA411D0BD89}</Project>
+      <Name>DirectXTK</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\directxtk12-build\DirectXTK12.vcxproj">
+      <Project>{1DE1B2BB-C349-3090-B617-0A83E4E843ED}</Project>
+      <Name>DirectXTK12</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\tracy-build\TracyClient.vcxproj">
+      <Project>{67B7F4C0-F0F3-3A0D-AD8D-49D332F3A57A}</Project>
+      <Name>TracyClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\zycore\Zycore.vcxproj">
+      <Project>{7423ABE1-16E3-3090-8CC1-2909FD98C2B1}</Project>
+      <Name>Zycore</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-build\Zydis.vcxproj">
+      <Project>{64333717-6964-3DA7-AEF4-3B0C73712A5B}</Project>
+      <Name>Zydis</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\asmjit-build\asmjit.vcxproj">
+      <Project>{EC007014-F8CE-35D4-8737-32E2B6F83192}</Project>
+      <Name>asmjit</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bddisasm.vcxproj">
+      <Project>{B2461738-9183-3D3B-AAC0-A2EEAD40D0E0}</Project>
+      <Name>bddisasm</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\bddisasm-build\bdshemu.vcxproj">
+      <Project>{4DED582C-63D1-355A-8231-347779894CEF}</Project>
+      <Name>bdshemu</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\glm.vcxproj">
+      <Project>{B1F6B5F7-6DDB-37EF-A191-4CFD7B5AA44D}</Project>
+      <Name>glm</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\imgui.vcxproj">
+      <Project>{FBADDDA7-DAB4-39B5-A0AA-E2923851582F}</Project>
+      <Name>imgui</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\kananlib-build\kananlib.vcxproj">
+      <Project>{7FB6B5C8-0DEA-3EB3-A8FD-D76EF9753EC7}</Project>
+      <Name>kananlib</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\lua.vcxproj">
+      <Project>{03CE5648-D799-3DFF-BEAF-D5C3E0BD8691}</Project>
+      <Name>lua</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\luavrlib.vcxproj">
+      <Project>{B29BC4A1-7F31-3342-BE80-A8D6245CFB3B}</Project>
+      <Name>luavrlib</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\openvr.vcxproj">
+      <Project>{9DBC3787-D03C-3F3E-BB4F-AA8976AB77E7}</Project>
+      <Name>openvr</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\openxr-build\src\loader\openxr_loader.vcxproj">
+      <Project>{AC21A53E-5B2F-39E8-97E4-96D4729FFF74}</Project>
+      <Name>openxr_loader</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\safetyhook-build\safetyhook.vcxproj">
+      <Project>{5FDDCC17-A71A-395C-9299-70F61E70C1D8}</Project>
+      <Name>safetyhook</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\sdkgenny-build\sdkgenny.vcxproj">
+      <Project>{EEC0254D-7F59-30C7-B7D4-8AC2A813F105}</Project>
+      <Name>sdkgenny</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\spdlog.vcxproj">
+      <Project>{5AAAC1E4-472E-3135-B93E-BD6DAC600D2B}</Project>
+      <Name>spdlog</Name>
+    </ProjectReference>
+    <ProjectReference Include="I:\code\lobotomy-x\UEVR\build-hunt\dependencies\submodules\UESDK\uesdk.vcxproj">
+      <Project>{39679A1F-EC58-327F-82F4-68AAF091730B}</Project>
+      <Name>uesdk</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

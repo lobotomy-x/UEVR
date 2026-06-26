@@ -1,0 +1,10 @@
+^I:\CODE\LOBOTOMY-X\UEVR\BUILD-HUNT\_DEPS\DIRECTXTK-SUBBUILD\CMAKEFILES\1229432B524950BEB9C27F8CE463F26B\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild -BI:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file I:/code/lobotomy-x/UEVR/build-hunt/_deps/directxtk-subbuild/directxtk-populate.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

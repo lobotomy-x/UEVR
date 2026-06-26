@@ -2484,7 +2484,19 @@ bool Framework::first_frame_initialize() {
     return true;
 }
 
+void Framework::notify_render_activity() {
+    // Ported from joeyhodge ue57performance — pokes the hook watchdog so it doesn't tear down hooks
+    // while the UE5.7 stereo path is mid-init.
+    const auto now = std::chrono::steady_clock::now();
+    std::scoped_lock _{ m_hook_monitor_mutex };
+    m_last_present_time = now;
+    m_last_message_time = now;
+    m_last_chance_time = now + std::chrono::seconds(1);
+    m_has_last_chance = true;
+}
+
 void Framework::call_on_frame() {
+    m_last_framework_on_frame = std::chrono::steady_clock::now(); // ported: joeyhodge VR stall detection
     const bool is_init_ok = m_error.empty() && m_game_data_initialized && m_mods_fully_initialized;
 
     if (is_init_ok) {

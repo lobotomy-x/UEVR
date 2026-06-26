@@ -4569,7 +4569,9 @@ void UObjectHook::draw_component_gizmos() {
         }
         out = ImVec2{sp.x, sp.y};
         if (remap_overlay) {
-            out = vr->get_overlay_component().transform_world_aligned_to_overlay(out);
+            // Disabled on joeyhodge's UE5.7 OverlayComponent (it doesn't expose
+            // transform_world_aligned_to_overlay). The gizmo still projects via world_to_screen above;
+            // only the UI-open overlay-quad remap refinement is skipped. TODO: re-port the remap.
         }
         return true;
     };

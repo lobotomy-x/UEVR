@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\8ff3ec126e259dfe4e4b7eff1802cced\zydis-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\b52100e5291d32ae02b7a85b55db6c0a\zydis-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\6b50ed57746c849fda9f340d9eebb1da\zydis-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="I:\code\lobotomy-x\UEVR\build-hunt\_deps\zydis-subbuild\CMakeFiles\zydis-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{CF8A44F6-79E0-330A-B178-E3A289AE6540}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
