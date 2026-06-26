@@ -4261,9 +4261,10 @@ void UObjectHook::handle_click_select() {
     if (ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive()) {
         return;
     }
-    if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        return;
-    }
+    // NOTE: we no longer early-out on "no click" — the picker runs every frame while armed so it can
+    // gather the overlapping candidates under the cursor, let the scroll wheel cycle through them, and
+    // draw a w2s list. The actual selection happens only on the left click (gated below).
+    const bool clicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 
     auto engine = sdk::UGameEngine::get();
     auto world = engine != nullptr ? engine->get_world() : nullptr;
@@ -4312,53 +4313,84 @@ void UObjectHook::handle_click_select() {
     // reads under the lock blocks the add/destructor hooks for the (brief) scan so we never read a
     // component that is being freed on the game thread. RelativeLocation == world location for an
     // unattached root component (the usual gizmo target); attached children are approximate.
-    sdk::USceneComponent* best = nullptr;
-    float best_t = std::numeric_limits<float>::max();
     constexpr float kConeTan = 0.06f;  // ~3.4 deg half-angle of the pick cone
     constexpr float kMinPerp = 40.0f;  // world units: always allow at least this radius up close
+
+    std::string class_filter = m_pick_class_filter;
+    for (auto& ch : class_filter) ch = (char)std::tolower((unsigned char)ch);
+
+    // Gather ALL candidates inside the pick cone (front-most first), optionally class-filtered, so the
+    // user can scroll/swipe to cycle through overlapping objects instead of always getting the nearest.
+    struct Cand { float t; sdk::USceneComponent* comp; std::string name; };
+    std::vector<Cand> cands;
     {
         std::shared_lock _{m_mutex};
         auto* scene_cls = sdk::USceneComponent::static_class();
         for (auto* obj : m_objects) {
             auto it = m_meta_objects.find(obj);
-            if (it == m_meta_objects.end() || it->second == nullptr) {
-                continue;
-            }
+            if (it == m_meta_objects.end() || it->second == nullptr) continue;
             const auto& meta = it->second;
             bool is_scene = meta->uclass == scene_cls;
-            if (!is_scene) {
-                for (auto* sc : meta->super_classes) {
-                    if (sc == scene_cls) { is_scene = true; break; }
-                }
-            }
-            if (!is_scene) {
-                continue;
-            }
+            if (!is_scene) for (auto* sc : meta->super_classes) { if (sc == scene_cls) { is_scene = true; break; } }
+            if (!is_scene) continue;
             auto* comp = reinterpret_cast<sdk::USceneComponent*>(obj);
-
             glm::vec3 p{0.0f, 0.0f, 0.0f};
-            if (is_ue5_vec) {
-                const auto* d = s_rel_loc_prop->get_data<glm::vec<3, double>>(comp);
-                p = glm::vec3{(float)d->x, (float)d->y, (float)d->z};
-            } else {
-                p = *s_rel_loc_prop->get_data<glm::vec3>(comp);
-            }
+            if (is_ue5_vec) { const auto* d = s_rel_loc_prop->get_data<glm::vec<3, double>>(comp); p = glm::vec3{(float)d->x, (float)d->y, (float)d->z}; }
+            else            { p = *s_rel_loc_prop->get_data<glm::vec3>(comp); }
             const glm::vec3 v = p - ray_origin;
             const float t = glm::dot(v, ray_dir);
-            if (t <= 1.0f) {
-                continue; // behind / on top of the camera
-            }
+            if (t <= 1.0f) continue; // behind / on top of the camera
             const float perp = glm::length(v - t * ray_dir);
-            const float allow = kMinPerp + kConeTan * t;
-            if (perp > allow) {
-                continue;
+            if (perp > kMinPerp + kConeTan * t) continue;
+            std::string fn = utility::narrow(meta->full_name);
+            if (!class_filter.empty()) { // case-insensitive substring of the cached full name
+                std::string fl = fn;
+                for (auto& ch : fl) ch = (char)std::tolower((unsigned char)ch);
+                if (fl.find(class_filter) == std::string::npos) continue;
             }
-            if (t < best_t) {
-                best_t = t;
-                best = comp;
-            }
+            cands.push_back({t, comp, std::move(fn)});
         }
     }
+    std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.t < b.t; });
+
+    if (cands.empty()) {
+        m_pick_cycle = 0;
+        auto* dl = ImGui::GetForegroundDrawList();
+        dl->AddText(ImVec2{io.MousePos.x + 16.0f, io.MousePos.y + 2.0f}, IM_COL32(255, 180, 60, 230),
+                    class_filter.empty() ? "(no object under cursor)" : "(no match for filter)");
+        return;
+    }
+
+    // Scroll to cycle which overlapping candidate is active (wheel up = nearer/previous).
+    const int n = (int)cands.size();
+    if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1);
+    m_pick_cycle = ((m_pick_cycle % n) + n) % n; // wrap
+
+    // w2s overlay: a small list around the active candidate (capped), active row highlighted.
+    {
+        auto* dl = ImGui::GetForegroundDrawList();
+        const ImVec2 base{io.MousePos.x + 16.0f, io.MousePos.y - 6.0f};
+        char hdr[96];
+        snprintf(hdr, sizeof(hdr), "pick %d/%d  (scroll to cycle, click to select)", m_pick_cycle + 1, n);
+        dl->AddText(ImVec2{base.x, base.y - 16.0f}, IM_COL32(255, 220, 90, 235), hdr);
+        const int kShow = 8;
+        int start = m_pick_cycle - kShow / 2;
+        if (start < 0) start = 0;
+        if (n > kShow && start > n - kShow) start = n - kShow;
+        for (int k = start; k < n && k < start + kShow; ++k) {
+            const bool active = (k == m_pick_cycle);
+            const float y = base.y + (k - start) * 16.0f;
+            const std::string row = (active ? "> " : "  ") + cands[k].name;
+            dl->AddText(ImVec2{base.x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), row.c_str());
+            dl->AddText(ImVec2{base.x, y}, active ? IM_COL32(120, 255, 120, 255) : IM_COL32(210, 210, 210, 220), row.c_str());
+        }
+    }
+
+    if (!clicked) {
+        return; // overlay + scroll only; the click below commits the selection
+    }
+    sdk::USceneComponent* best = cands[m_pick_cycle].comp;
+    const float best_t = cands[m_pick_cycle].t;
 
     if (best != nullptr) {
         std::string name{};
@@ -5964,6 +5996,11 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SameLine();
     ImGui::Checkbox("keep picking##pick", &m_click_select_sticky); // stay armed after each hit (was "sticky")
     m_keybind_pick->draw("Pick mode hotkey"); // toggle the picker without reaching for the button
+    ImGui::SetNextItemWidth(240.0f);
+    ImGui::InputTextWithHint("Pick class filter", "substring of class/full name...", m_pick_class_filter, sizeof(m_pick_class_filter));
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("While picking: scroll to cycle through overlapping objects under the cursor.\nThis filter restricts candidates by name (case-insensitive).");
+    }
     {
         size_t n_targets = 0;
         { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }

@@ -370,6 +370,8 @@ private:
     int m_driven_axis{-1};                // #2 flat: sub-axis (0/1/2) the inspector slider is driving
     uint32_t m_driven_frame{0};           // #2 flat: ImGui frame the driven axis was last set (expires after a couple frames)
     sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
+    char m_pick_class_filter[128]{}; // picker: restrict candidates to those whose full name contains this (case-insensitive)
+    int  m_pick_cycle{0};            // picker: which of the overlapping candidates under the cursor is the active one (scroll to cycle)
     // Saved world positions for the "Save/Restore position" buttons. Touched from game-thread tasks
     // (GameThreadWorker) for the actual get/set_world_location, and read from the draw thread for the
     // button-enable check, so guard it with its own mutex (independent of m_mutex).
