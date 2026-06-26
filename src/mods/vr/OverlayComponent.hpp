@@ -63,6 +63,11 @@ public:
         return std::clamp(m_ui_invert_alpha->value(), 0.0f, 1.0f);
     }
 
+    // Remaps a world-aligned slate-space pixel (e.g. a gizmo handle from ProjectWorldToScreen)
+    // to where it lands once the framework overlay quad is swapped in while the UI is open.
+    // Identity when the UI is closed. See the .cpp for the math. (Restored after the UE5.7 merge.)
+    ImVec2 transform_world_aligned_to_overlay(const ImVec2& slate_px) const;
+
 private:
     // Cached data for imgui VR overlay so we know when we need to update it
     // instead of doing it constantly every frame
@@ -131,8 +136,17 @@ private:
     const ModToggle::Ptr m_framework_wrist_ui{ ModToggle::create("UI_Framework_WristUI", false) };
     const ModToggle::Ptr m_framework_mouse_emulation{ ModToggle::create("UI_Framework_MouseEmulation", true) };
 
+    // Restored after the UE5.7 merge (dropped when his OverlayComponent was taken wholesale).
+    // OpenVR framework-overlay curvature (0 = flat quad, 1 = full cylinder wrap).
+    const ModSlider::Ptr m_framework_curvature{ ModSlider::create("UI_Framework_Curvature", 0.0f, 1.0f, 0.0f) };
+    // Live tuning for transform_world_aligned_to_overlay (the gizmo/overlay remap):
+    //   _Correction 0 = identity, 1 = full computed correction, >1 = over-correct.
+    //   _Scale      raw uniform multiplier about screen-centre (catch-all fudge).
+    const ModSlider::Ptr m_framework_gizmo_correction{ ModSlider::create("UI_Framework_Gizmo_Correction", 0.0f, 2.0f, 1.0f) };
+    const ModSlider::Ptr m_framework_gizmo_scale{ ModSlider::create("UI_Framework_Gizmo_Scale", 0.25f, 4.0f, 1.0f) };
+
 public:
-    OverlayComponent() 
+    OverlayComponent()
         : m_openxr{this}
     {
         m_options = { 
@@ -146,6 +160,9 @@ public:
             *m_ui_invert_alpha,
             *m_framework_distance,
             *m_framework_size,
+            *m_framework_curvature,
+            *m_framework_gizmo_correction,
+            *m_framework_gizmo_scale,
             *m_framework_ui_follows_view,
             *m_framework_wrist_ui,
             *m_framework_mouse_emulation
