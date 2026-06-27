@@ -1380,42 +1380,9 @@ WindroseMetaUiClass windrose_classify_hfsm_meta_ui(std::wstring_view self_name) 
 }
 
 void windrose_note_hfsm_transition(void* object, bool entering, const char* source) {
-    if (!windrose_is_current_game()) {
-        return;
-    }
-
-    const auto name = windrose_object_full_name(object);
-    if (name.empty()) {
-        return;
-    }
-
-    const auto self_name = windrose_hfsm_self_name(name);
-    const bool interesting = windrose_hfsm_name_is_interesting(name);
-    const auto meta_ui_class = windrose_classify_hfsm_meta_ui(self_name);
-
-    if (interesting || meta_ui_class != WindroseMetaUiClass::Ignored) {
-        SPDLOG_INFO(
-            "[Windrose][HFSM] {} {} class={} self={} object={}",
-            source != nullptr ? source : "unknown",
-            entering ? "enter" : "exit",
-            windrose_meta_ui_class_label(meta_ui_class),
-            utility::narrow(self_name),
-            utility::narrow(name));
-    }
-
-    if (meta_ui_class == WindroseMetaUiClass::Ignored) {
-        return;
-    }
-
-    auto& vr = VR::get();
-    if (vr != nullptr) {
-        vr->set_windrose_meta_ui_2d_state_active(
-            utility::narrow(self_name.empty() ? name : self_name),
-            reinterpret_cast<uintptr_t>(object),
-            source != nullptr ? source : "unknown",
-            meta_ui_class == WindroseMetaUiClass::HardMenu,
-            entering);
-    }
+    // Windrose MetaUI 2D compat removed (joeyhodge per-game compat strip). No-op kept so the
+    // existing HFSM-transition call sites still link; the call sites + helpers are dead now.
+    (void)object; (void)entering; (void)source;
 }
 
 std::optional<uintptr_t> windrose_resolve_hfsm_symbol(

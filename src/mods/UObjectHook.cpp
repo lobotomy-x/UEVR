@@ -81,18 +81,18 @@ constexpr const char* kDragPayloadUClass  = "UEVR_UClass";
 // Vertically biased + faster than 1:1 (lists are tall; 1:1 felt sluggish).
 inline void drag_scroll_current_window() {
     auto& io = ImGui::GetIO();
-    const bool vr = VR::get()->is_hmd_active();
-    // In VR the controller trigger maps to the LEFT mouse button, which is also imgui's
-    // window-move button -- a trigger-drag on the list body would drag the whole window instead
-    // of scrolling it. Restrict window moves to the title bar while in VR so body drags are free
-    // to scroll; flat keeps full-body window moves (it scrolls with the middle button, no clash).
-    io.ConfigWindowsMoveFromTitleBarOnly = vr;
-    const ImGuiMouseButton btn = vr ? ImGuiMouseButton_Left : ImGuiMouseButton_Middle;
+    // In VR, scrolling is done with the thumbstick: the overlay mouse-emulation feeds the right
+    // stick into io.MouseWheel, which imgui uses to scroll the hovered window -- no window-move
+    // clash. So in VR we do NOT do a trigger-drag here (the trigger is the left mouse button, which
+    // imgui also uses to move the window). Only the flat (real-mouse) path keeps middle-button pan.
+    if (VR::get()->is_hmd_active()) {
+        return;
+    }
+    const ImGuiMouseButton btn = ImGuiMouseButton_Middle;
     const ImGuiID id = ImGui::GetID("##dragscroll");
     static ImGuiID s_active = 0;
 
-    if (s_active == 0 && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(btn)
-        && (!vr || !ImGui::IsAnyItemHovered())) {
+    if (s_active == 0 && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(btn)) {
         s_active = id;
     }
 
