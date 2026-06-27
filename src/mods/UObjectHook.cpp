@@ -5353,6 +5353,178 @@ void UObjectHook::pump_class_sort_task() {
     m_last_sort_time = now;
 }
 
+namespace {
+// ---- SDK JSON dump engine -------------------------------------------------
+// Self-contained reflection -> JSON (no external json lib). Feeds the Class
+// Browser "Export -> JSON" button. Emits per-property name/type/offset + raw
+// PropertyFlags (hex) and decoded flag names, and per-function FunctionFlags
+// (hex + names) with the param list.
+std::string sdk_json_escape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size() + 8);
+    for (char c : s) {
+        switch (c) {
+        case '"':  out += "\\\""; break;
+        case '\\': out += "\\\\"; break;
+        case '\n': out += "\\n"; break;
+        case '\r': out += "\\r"; break;
+        case '\t': out += "\\t"; break;
+        default:
+            if (static_cast<unsigned char>(c) < 0x20) {
+                char buf[8];
+                std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                out += buf;
+            } else {
+                out += c;
+            }
+        }
+    }
+    return out;
+}
+
+std::string sdk_json_str_array(const std::vector<std::string>& v) {
+    std::string out = "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        if (i) out += ",";
+        out += "\"" + sdk_json_escape(v[i]) + "\"";
+    }
+    out += "]";
+    return out;
+}
+
+// Well-known EPropertyFlags bits. The raw hex is always emitted too, so an
+// unrecognised bit is never lost -- this just adds human-readable names.
+std::vector<std::string> sdk_decode_property_flags(uint64_t f) {
+    static const std::pair<uint64_t, const char*> table[] = {
+        {0x1ull, "Edit"}, {0x2ull, "ConstParm"}, {0x4ull, "BlueprintVisible"}, {0x8ull, "ExposeOnSpawn"},
+        {0x10ull, "BlueprintReadOnly"}, {0x20ull, "Net"}, {0x40ull, "EditFixedSize"}, {0x80ull, "Parm"},
+        {0x100ull, "OutParm"}, {0x200ull, "ZeroConstructor"}, {0x400ull, "ReturnParm"}, {0x800ull, "DisableEditOnTemplate"},
+        {0x2000ull, "Transient"}, {0x4000ull, "Config"}, {0x10000ull, "DisableEditOnInstance"}, {0x20000ull, "EditConst"},
+        {0x40000ull, "GlobalConfig"}, {0x80000ull, "InstancedReference"}, {0x200000ull, "DuplicateTransient"},
+        {0x2000000ull, "SaveGame"}, {0x4000000ull, "NoClear"}, {0x10000000ull, "ReferenceParm"},
+        {0x20000000ull, "BlueprintAssignable"}, {0x40000000ull, "Deprecated"}, {0x80000000ull, "IsPlainOldData"},
+        {0x100000000ull, "RepSkip"}, {0x200000000ull, "RepNotify"}, {0x400000000ull, "Interp"}, {0x800000000ull, "NonTransactional"},
+        {0x1000000000ull, "EditorOnly"}, {0x2000000000ull, "NoDestructor"}, {0x8000000000ull, "AutoWeak"},
+        {0x10000000000ull, "ContainsInstancedReference"}, {0x20000000000ull, "AssetRegistrySearchable"},
+        {0x40000000000ull, "SimpleDisplay"}, {0x80000000000ull, "AdvancedDisplay"}, {0x100000000000ull, "Protected"},
+        {0x200000000000ull, "BlueprintCallable"}, {0x400000000000ull, "BlueprintAuthorityOnly"}, {0x800000000000ull, "TextExportTransient"},
+        {0x1000000000000ull, "NonPIEDuplicateTransient"}, {0x4000000000000ull, "PersistentInstance"},
+        {0x8000000000000ull, "UObjectWrapper"}, {0x10000000000000ull, "HasGetValueTypeHash"},
+    };
+    std::vector<std::string> names;
+    for (const auto& [bit, name] : table) {
+        if (f & bit) names.emplace_back(name);
+    }
+    return names;
+}
+
+// EFunctionFlags via the UFunction is_* helpers (authoritative for this SDK).
+std::vector<std::string> sdk_decode_function_flags(sdk::UFunction* fn) {
+    std::vector<std::string> n;
+    auto add = [&](bool b, const char* s) { if (b) n.emplace_back(s); };
+    add(fn->is_final(), "Final");                          add(fn->is_required_api(), "RequiredAPI");
+    add(fn->is_blueprint_authority_only(), "BlueprintAuthorityOnly"); add(fn->is_blueprint_cosmetic(), "BlueprintCosmetic");
+    add(fn->is_net(), "Net");                              add(fn->is_net_reliable(), "NetReliable");
+    add(fn->is_net_request(), "NetRequest");               add(fn->is_exec(), "Exec");
+    add(fn->is_native(), "Native");                        add(fn->is_event(), "Event");
+    add(fn->is_net_response(), "NetResponse");             add(fn->is_static(), "Static");
+    add(fn->is_net_multicast(), "NetMulticast");           add(fn->is_ubergraph_function(), "UbergraphFunction");
+    add(fn->is_multicast_delegate(), "MulticastDelegate"); add(fn->is_public(), "Public");
+    add(fn->is_private(), "Private");                      add(fn->is_protected(), "Protected");
+    add(fn->is_delegate(), "Delegate");                    add(fn->is_net_server(), "NetServer");
+    add(fn->has_out_params(), "HasOutParms");              add(fn->has_defaults(), "HasDefaults");
+    add(fn->is_net_client(), "NetClient");                 add(fn->is_dll_import(), "DLLImport");
+    add(fn->is_blueprint_callable(), "BlueprintCallable"); add(fn->is_blueprint_event(), "BlueprintEvent");
+    add(fn->is_blueprint_pure(), "BlueprintPure");         add(fn->is_editor_only(), "EditorOnly");
+    add(fn->is_const(), "Const");                          add(fn->is_net_validate(), "NetValidate");
+    return n;
+}
+
+std::string sdk_dump_property_json(sdk::FProperty* prop) {
+    std::string name = "?", type = "?";
+    try { name = utility::narrow(prop->get_field_name().to_string()); } catch (...) {}
+    try { type = utility::narrow(prop->get_class()->get_name().to_string()); } catch (...) {}
+    uint64_t flags = 0; int32_t offset = 0;
+    try { flags = prop->get_property_flags(); } catch (...) {}
+    try { offset = prop->get_offset(); } catch (...) {}
+    char fbuf[24];
+    std::snprintf(fbuf, sizeof(fbuf), "0x%llx", static_cast<unsigned long long>(flags));
+    return std::string("{\"name\":\"") + sdk_json_escape(name) + "\",\"type\":\"" + sdk_json_escape(type) +
+        "\",\"offset\":" + std::to_string(offset) + ",\"flags\":\"" + fbuf +
+        "\",\"flag_names\":" + sdk_json_str_array(sdk_decode_property_flags(flags)) + "}";
+}
+
+// Dump a UStruct (UClass or UScriptStruct). include_inherited walks the super
+// chain for properties/functions; false = declared members only.
+std::string sdk_dump_ustruct_json(sdk::UStruct* strukt, bool include_inherited) {
+    static const auto ufunction_t = sdk::UFunction::static_class();
+    std::string name, full, super;
+    try { name = utility::narrow(strukt->get_fname().to_string()); } catch (...) {}
+    try { full = utility::narrow(strukt->get_full_name()); } catch (...) {}
+    if (auto s = strukt->get_super_struct(); s != nullptr) {
+        try { super = utility::narrow(s->get_fname().to_string()); } catch (...) {}
+    }
+
+    std::string out = "{\"name\":\"" + sdk_json_escape(name) + "\",\"full_name\":\"" + sdk_json_escape(full) +
+        "\",\"super\":\"" + sdk_json_escape(super) + "\",\"properties_size\":" +
+        std::to_string(static_cast<int>(strukt->get_properties_size())) + ",\"properties\":[";
+
+    bool first = true;
+    for (auto super_s = strukt; super_s != nullptr; super_s = super_s->get_super_struct()) {
+        for (auto f = super_s->get_child_properties(); f != nullptr; f = f->get_next()) {
+            if (!first) out += ","; first = false;
+            out += sdk_dump_property_json(reinterpret_cast<sdk::FProperty*>(f));
+        }
+        if (!include_inherited) break;
+    }
+    out += "],\"functions\":[";
+
+    first = true;
+    for (auto super_s = strukt; super_s != nullptr; super_s = super_s->get_super_struct()) {
+        for (auto child = super_s->get_children(); child != nullptr; child = child->get_next()) {
+            if (child->get_class() == nullptr || !child->get_class()->is_a(ufunction_t)) continue;
+            auto* fn = reinterpret_cast<sdk::UFunction*>(child);
+            std::string fn_name;
+            uint32_t fflags = 0;
+            try { fn_name = utility::narrow(fn->get_fname().to_string()); } catch (...) {}
+            try { fflags = fn->get_function_flags(); } catch (...) {}
+            char fbuf[16];
+            std::snprintf(fbuf, sizeof(fbuf), "0x%x", fflags);
+            if (!first) out += ","; first = false;
+            out += "{\"name\":\"" + sdk_json_escape(fn_name) + "\",\"flags\":\"" + fbuf +
+                   "\",\"flag_names\":" + sdk_json_str_array(sdk_decode_function_flags(fn)) + ",\"params\":[";
+            bool pfirst = true;
+            for (auto p = fn->get_child_properties(); p != nullptr; p = p->get_next()) {
+                if (!pfirst) out += ","; pfirst = false;
+                out += sdk_dump_property_json(reinterpret_cast<sdk::FProperty*>(p));
+            }
+            out += "]}";
+        }
+        if (!include_inherited) break;
+    }
+    out += "]}";
+    return out;
+}
+
+std::string sdk_dump_uenum_json(sdk::UEnum* uenum) {
+    std::string name, full;
+    try { name = utility::narrow(uenum->get_fname().to_string()); } catch (...) {}
+    try { full = utility::narrow(uenum->get_full_name()); } catch (...) {}
+    std::string out = "{\"name\":\"" + sdk_json_escape(name) + "\",\"full_name\":\"" + sdk_json_escape(full) +
+        "\",\"kind\":\"enum\",\"values\":[";
+    try {
+        auto names = uenum->get_names();
+        for (size_t i = 0; i < names.size(); ++i) {
+            if (i) out += ",";
+            out += "{\"name\":\"" + sdk_json_escape(names[i].first) + "\",\"value\":" +
+                   std::to_string(names[i].second) + "}";
+        }
+    } catch (...) {}
+    out += "]}";
+    return out;
+}
+} // namespace
+
 void UObjectHook::draw_class_browser_window() {
     uobjecthook_dock_into_host_once();
     if (!ImGui::Begin("UEVR Class Browser", &m_show_class_browser)) {
@@ -5395,6 +5567,51 @@ void UObjectHook::draw_class_browser_window() {
     }
     const auto wfilter = utility::widen(m_class_browser_filter);
     const bool has_filter = !wfilter.empty();
+
+    // Specific-or-batch JSON dump: exports every class currently matching the
+    // filter (filter to one name for a single class) from the already-validated
+    // m_sorted_classes, so there's no FUObjectArray re-classification. Each class
+    // carries its declared properties (name/type/offset + PropertyFlags hex+names)
+    // and functions (FunctionFlags hex+names + params).
+    if (ImGui::SmallButton("Export -> JSON")) {
+        std::vector<sdk::UClass*> to_dump;
+        {
+            std::shared_lock _{m_mutex};
+            to_dump.reserve(m_sorted_classes.size());
+            for (auto* uclass : m_sorted_classes) {
+                if (uclass == nullptr) continue;
+                if (has_filter) {
+                    auto it = m_meta_objects.find(uclass);
+                    if (it == m_meta_objects.end() || it->second == nullptr) continue;
+                    if (it->second->full_name.find(wfilter) == std::wstring::npos) continue;
+                }
+                to_dump.push_back(uclass);
+            }
+        }
+        std::vector<std::string> parts;
+        parts.reserve(to_dump.size());
+        for (auto* uclass : to_dump) {
+            try { parts.push_back(sdk_dump_ustruct_json(reinterpret_cast<sdk::UStruct*>(uclass), false)); }
+            catch (...) {}
+        }
+        std::string doc = "{\"classes\":[";
+        for (size_t i = 0; i < parts.size(); ++i) { if (i) doc += ","; doc += parts[i]; }
+        doc += "]}";
+        try {
+            const auto dir = Framework::get_persistent_dir() / "sdk_dump";
+            std::filesystem::create_directories(dir);
+            const auto path = dir / "sdk_dump_classes.json";
+            std::ofstream f{path, std::ios::binary | std::ios::trunc};
+            f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
+            spdlog::info("[UObjectHook] Exported {} classes -> {}", parts.size(), path.string());
+        } catch (const std::exception& e) {
+            spdlog::error("[UObjectHook] SDK JSON export failed: {}", e.what());
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Dump the filtered class list (properties+offset+flags,\n"
+                          "functions+flags+params) to\n<profile>/sdk_dump/sdk_dump_classes.json");
+    }
 
     if (!ImGui::BeginTabBar("ClassBrowserTabs")) {
         return;
