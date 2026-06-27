@@ -633,24 +633,6 @@ bool is_daysgone_executable() {
     return is_daysgone;
 }
 
-bool is_windrose_executable() {
-    static const bool is_windrose = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        auto filename = std::filesystem::path{*module_path}.filename().wstring();
-        std::transform(filename.begin(), filename.end(), filename.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return filename == L"windrose-win64-shipping.exe";
-    }();
-
-    return is_windrose;
-}
-
 bool contains_case_insensitive(std::wstring_view value, std::wstring_view needle) {
     auto value_lower = std::wstring{value};
     auto needle_lower = std::wstring{needle};
