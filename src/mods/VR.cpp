@@ -290,98 +290,17 @@ float normalize_angle_delta(float a, float b) {
 
 
 
-bool nearly_equal(float value, float target, float tolerance) {
-    return std::abs(value - target) <= tolerance;
-}
-
-int quantize_camera_value(float value, float step) {
-    return static_cast<int>(std::round(value / step) * step);
-}
 
 
 
 
 
-float smoothstep01(float t) {
-    t = std::clamp(t, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
-}
 
-float lerp_float(float a, float b, float t) {
-    return a + (b - a) * t;
-}
 
-std::optional<float> get_runtime_cvar_float(std::wstring_view name) {
-    static constexpr std::wstring_view modules[]{
-        L"Renderer",
-        L"Engine",
-        L"Core",
-        L"SlateRHIRenderer",
-        L"Slate"
-    };
 
-    for (const auto module : modules) {
-        if (auto value = sdk::get_cvar_float(module, name); value.has_value()) {
-            return value;
-        }
-    }
 
-    return std::nullopt;
-}
 
-std::optional<int> get_runtime_cvar_int(std::wstring_view name) {
-    static constexpr std::wstring_view modules[]{
-        L"Renderer",
-        L"Engine",
-        L"Core",
-        L"SlateRHIRenderer",
-        L"Slate"
-    };
 
-    for (const auto module : modules) {
-        if (auto value = sdk::get_cvar_int(module, name); value.has_value()) {
-            return value;
-        }
-    }
-
-    return std::nullopt;
-}
-
-bool set_runtime_cvar_float(std::wstring_view name, float value) {
-    static constexpr std::wstring_view modules[]{
-        L"Renderer",
-        L"Engine",
-        L"Core",
-        L"SlateRHIRenderer",
-        L"Slate"
-    };
-
-    for (const auto module : modules) {
-        if (sdk::set_cvar_float(module, name, value)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool set_runtime_cvar_int(std::wstring_view name, int value) {
-    static constexpr std::wstring_view modules[]{
-        L"Renderer",
-        L"Engine",
-        L"Core",
-        L"SlateRHIRenderer",
-        L"Slate"
-    };
-
-    for (const auto module : modules) {
-        if (sdk::set_cvar_int(module, name, value)) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 
 bool resolve_game_fov_offsets() {
