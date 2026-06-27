@@ -9205,9 +9205,49 @@ bool FFakeStereoRenderingHook::setup_view_extensions() try {
                 }
 
                 if (!xr_hmd_load) {
+                    // Diagnostics: when the slot-load heuristic misses we currently bail and the AV
+                    // propagates (crash). Log enough to reconstruct how the null pointer was produced
+                    // on this engine build -- the faulting module + RVA, the faulting instruction, and
+                    // the disp/base of every preceding load -- so the next crash log tells us exactly
+                    // which displacement/path to teach the heuristic. (UE5.7 / Sprawl Zero hunt.)
+                    const auto faulting_module = utility::get_module_within(exception_address).value_or(nullptr);
+                    std::string module_name = "unknown";
+                    uintptr_t module_rva = 0;
+                    if (faulting_module != nullptr) {
+                        if (auto path = utility::get_module_path(faulting_module)) {
+                            module_name = *path;
+                        }
+                        module_rva = exception_address - reinterpret_cast<uintptr_t>(faulting_module);
+                    }
+
                     SPDLOG_ERROR(
-                        "Could not find the XRSystem/HMDDevice slot load (disp {:x}) behind null dereference at {:x}",
-                        potential_hmd_device_offset, exception_address);
+                        "Could not find the XRSystem/HMDDevice slot load (disp {:x}) behind null dereference at {:x} "
+                        "[module={} rva={:x} fault_target={:x} insn={} base_reg={}]",
+                        potential_hmd_device_offset, exception_address,
+                        module_name, module_rva, fault_target,
+                        decoded->Mnemonic, (int)op2.Info.Memory.Base);
+
+                    for (auto it = prior_instructions.rbegin(); it != prior_instructions.rend(); ++it) {
+                        const auto delta = exception_address - it->addr;
+                        if (delta > 0x40) {
+                            break;
+                        }
+
+                        const auto& ix = it->instrux;
+                        if (ix.OperandsCount >= 2 &&
+                            ix.Operands[1].Type == ND_OP_MEM &&
+                            ix.Operands[1].Info.Memory.HasBase) {
+                            SPDLOG_ERROR("  [-{:x}] {:x}: {} src=[base_reg={} disp={:x} hasdisp={}]",
+                                delta, it->addr, ix.Mnemonic,
+                                (int)ix.Operands[1].Info.Memory.Base,
+                                (uint64_t)ix.Operands[1].Info.Memory.Disp,
+                                ix.Operands[1].Info.Memory.HasDisp);
+                        } else {
+                            SPDLOG_ERROR("  [-{:x}] {:x}: {} (ops={})",
+                                delta, it->addr, ix.Mnemonic, ix.OperandsCount);
+                        }
+                    }
+
                     return EXCEPTION_CONTINUE_SEARCH;
                 }
 
