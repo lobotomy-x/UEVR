@@ -6631,12 +6631,16 @@ void UObjectHook::draw_main() {
     // remove rows.
     // Toggle buttons for the dockable pop-out windows. Both can be open
     // simultaneously and dock anywhere via the host dockspace.
+    ImGui::SeparatorText("Windows");
     ImGui::Checkbox("Class Browser window", &m_show_class_browser);
     ImGui::SameLine();
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::SameLine();
     ImGui::Checkbox("Options window", &m_show_options_window);
-    ImGui::Separator();
+    // Labelled section header so the user-curated objects below (selected pick, MC-attached
+    // components, attached camera, overlapped) are visually distinct from the "Browse all
+    // objects" trees further down.
+    ImGui::SeparatorText("Selected / attached objects");
 
     // Most-recently click-selected object, pinned at the top so you can edit what you just picked
     // without drilling the tree. Plain read of m_last_selected (aligned-pointer, benign across
@@ -6853,6 +6857,7 @@ void UObjectHook::draw_main() {
         }
     }
 
+    ImGui::SeparatorText("Browse all objects");
     ImGui::Text("Objects: %zu (%zu actual)", m_objects.size(), sdk::FUObjectArray::get()->get_object_count());
     static auto m_ObjectsByClass = false;
 
