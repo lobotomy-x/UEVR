@@ -1564,25 +1564,63 @@ bool VR::is_controller_camera_conflict_guard_active() const {
 std::optional<std::string> VR::clean_initialize() try {
     ZoneScopedN(__FUNCTION__);
 
-    auto openvr_error = initialize_openvr();
+    // Pick which runtime to try first, then fall back to the other if it fails. Order of preference:
+    //   1) whatever the frontend explicitly requested (m_requested_runtime_name)
+    //   2) whichever loader is already injected into the process
+    //   3) OpenVR by default
+    // Either runtime can satisfy VR; trying both means a missing/broken one no longer means no VR.
+    const bool openxr_injected = GetModuleHandleW(L"openxr_loader.dll") != nullptr;
+    const bool openvr_injected = GetModuleHandleW(L"openvr_api.dll") != nullptr;
+    const auto requested = m_requested_runtime_name->value();
+    const bool prefer_openxr =
+        requested == "openxr_loader.dll" ||
+        (requested != "openvr_api.dll" && openxr_injected && !openvr_injected);
 
-    if (openvr_error || !m_openvr->loaded) {
-        if (m_openvr->error) {
-            spdlog::info("OpenVR failed to load: {}", *m_openvr->error);
+    SPDLOG_INFO("[VR] Runtime select: requested='{}' openvr_injected={} openxr_injected={} prefer={}",
+        requested, openvr_injected, openxr_injected, prefer_openxr ? "openxr" : "openvr");
+
+    auto try_openvr = [&]() -> bool {
+        auto err = initialize_openvr();
+        if (err || !m_openvr->loaded) {
+            if (m_openvr->error) {
+                spdlog::info("[VR] OpenVR failed to load: {}", *m_openvr->error);
+            }
+            m_openvr->is_hmd_active = false;
+            m_openvr->was_hmd_active = false;
+            m_openvr->needs_pose_update = false;
+            return false;
         }
+        spdlog::info("[VR] OpenVR runtime active.");
+        return true;
+    };
 
-        m_openvr->is_hmd_active = false;
-        m_openvr->was_hmd_active = false;
-        m_openvr->needs_pose_update = false;
-
-        // Attempt to load OpenXR instead
-        auto openxr_error = initialize_openxr();
-
-        if (openxr_error || !m_openxr->loaded) {
+    auto try_openxr = [&]() -> bool {
+        auto err = initialize_openxr();
+        if (err || !m_openxr->loaded) {
+            if (m_openxr->error) {
+                spdlog::info("[VR] OpenXR failed to load: {}", *m_openxr->error);
+            }
             m_openxr->needs_pose_update = false;
+            return false;
+        }
+        spdlog::info("[VR] OpenXR runtime active.");
+        return true;
+    };
+
+    if (prefer_openxr) {
+        if (try_openxr()) {
+            m_openvr->error = "OpenXR loaded first.";
+        } else {
+            spdlog::info("[VR] OpenXR unavailable; falling back to OpenVR.");
+            try_openvr();
         }
     } else {
-        m_openxr->error = "OpenVR loaded first.";
+        if (try_openvr()) {
+            m_openxr->error = "OpenVR loaded first.";
+        } else {
+            spdlog::info("[VR] OpenVR unavailable; falling back to OpenXR.");
+            try_openxr();
+        }
     }
 
     if (!get_runtime()->loaded) {
@@ -1630,26 +1668,10 @@ std::optional<std::string> VR::initialize_openvr() {
     m_openvr = std::make_shared<runtimes::OpenVR>();
     m_openvr->loaded = false;
 
-    const auto wants_openxr = m_requested_runtime_name->value() == "openxr_loader.dll";
-
-    SPDLOG_INFO("[VR] Requested runtime: {}", m_requested_runtime_name->value());
-
-    if (wants_openxr && GetModuleHandleW(L"openxr_loader.dll") != nullptr) {
-        // pre-injected
-        m_openvr->dll_missing = true;
-        m_openvr->error = "OpenXR already loaded";
-        return Mod::on_initialize();
-    }
-
+    // Runtime selection/ordering is owned by clean_initialize() now; this function just brings up
+    // OpenVR. If openvr_api.dll isn't available we report dll_missing and the dispatcher falls back
+    // to OpenXR (and vice-versa). This makes a single bad/absent runtime no longer mean "no VR".
     if (GetModuleHandleW(L"openvr_api.dll") == nullptr) {
-        // pre-injected
-        if (GetModuleHandleW(L"openxr_loader.dll") != nullptr) {
-            m_openvr->dll_missing = true;
-            m_openvr->error = "OpenXR already loaded";
-            return Mod::on_initialize();
-        }
-
-
         if (utility::load_module_from_current_directory(L"openvr_api.dll") == nullptr) {
             spdlog::info("[VR] Could not load openvr_api.dll");
 
