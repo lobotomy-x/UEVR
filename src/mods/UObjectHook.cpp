@@ -5523,6 +5523,27 @@ std::string sdk_dump_uenum_json(sdk::UEnum* uenum) {
     out += "]}";
     return out;
 }
+
+// Join already-dumped JSON object strings into a {"<key>":[...]} document and
+// write it to <profile>/sdk_dump/<filename>, logging the count + path.
+void sdk_write_dump(const char* filename, const char* key, const std::vector<std::string>& parts) {
+    std::string doc = std::string("{\"") + key + "\":[";
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i) doc += ",";
+        doc += parts[i];
+    }
+    doc += "]}";
+    try {
+        const auto dir = Framework::get_persistent_dir() / "sdk_dump";
+        std::filesystem::create_directories(dir);
+        const auto path = dir / filename;
+        std::ofstream f{path, std::ios::binary | std::ios::trunc};
+        f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
+        spdlog::info("[UObjectHook] Exported {} {} -> {}", parts.size(), key, path.string());
+    } catch (const std::exception& e) {
+        spdlog::error("[UObjectHook] SDK JSON export ({}) failed: {}", key, e.what());
+    }
+}
 } // namespace
 
 void UObjectHook::draw_class_browser_window() {
@@ -5594,19 +5615,7 @@ void UObjectHook::draw_class_browser_window() {
             try { parts.push_back(sdk_dump_ustruct_json(reinterpret_cast<sdk::UStruct*>(uclass), false)); }
             catch (...) {}
         }
-        std::string doc = "{\"classes\":[";
-        for (size_t i = 0; i < parts.size(); ++i) { if (i) doc += ","; doc += parts[i]; }
-        doc += "]}";
-        try {
-            const auto dir = Framework::get_persistent_dir() / "sdk_dump";
-            std::filesystem::create_directories(dir);
-            const auto path = dir / "sdk_dump_classes.json";
-            std::ofstream f{path, std::ios::binary | std::ios::trunc};
-            f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
-            spdlog::info("[UObjectHook] Exported {} classes -> {}", parts.size(), path.string());
-        } catch (const std::exception& e) {
-            spdlog::error("[UObjectHook] SDK JSON export failed: {}", e.what());
-        }
+        sdk_write_dump("sdk_dump_classes.json", "classes", parts);
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Dump the filtered class list (properties+offset+flags,\n"
@@ -5820,6 +5829,16 @@ void UObjectHook::draw_class_browser_window() {
 
         ImGui::TextDisabled("%zu UScriptStructs%s", items.size(),
             truncated ? " (capped at 5000 — narrow filter)" : "");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Export -> JSON##ss")) {
+            std::vector<std::string> parts;
+            parts.reserve(items.size());
+            for (const auto& it : items) {
+                try { parts.push_back(sdk_dump_ustruct_json(reinterpret_cast<sdk::UStruct*>(it.obj), false)); }
+                catch (...) {}
+            }
+            sdk_write_dump("sdk_dump_scriptstructs.json", "scriptstructs", parts);
+        }
 
         if (ImGui::BeginTabBar("ScriptStructSubTabs")) {
             // By Package is the default view (matches the Classes tab).
@@ -5893,6 +5912,26 @@ void UObjectHook::draw_class_browser_window() {
     if (ImGui::BeginTabItem("Enums")) {
         static const auto enum_class = sdk::find_uobject<sdk::UClass>(L"Class /Script/CoreUObject.Enum");
         ImGui::TextDisabled("walks FUObjectArray looking for UEnum instances");
+        ImGui::SameLine();
+        if (enum_class != nullptr && ImGui::SmallButton("Export -> JSON##enums")) {
+            std::vector<std::string> parts;
+            auto arr = sdk::FUObjectArray::get();
+            const auto count = arr ? arr->get_object_count() : 0;
+            for (int32_t i = 0; i < count; ++i) {
+                auto item = arr->get_object(i);
+                if (item == nullptr || item->get_object() == nullptr) continue;
+                auto obj = (sdk::UObject*)item->get_object();
+                auto cls = obj->get_class();
+                if (cls == nullptr || !cls->is_a(enum_class)) continue;
+                if (has_filter) {
+                    std::wstring full;
+                    try { full = obj->get_full_name(); } catch (...) { continue; }
+                    if (full.find(wfilter) == std::wstring::npos) continue;
+                }
+                try { parts.push_back(sdk_dump_uenum_json((sdk::UEnum*)obj)); } catch (...) {}
+            }
+            sdk_write_dump("sdk_dump_enums.json", "enums", parts);
+        }
         if (ImGui::BeginChild("enum_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
             drag_scroll_current_window();
             if (enum_class == nullptr) {
