@@ -5856,22 +5856,6 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             if (m_compatibility_ui_layer_pose_stabilizer->value()) {
                 ImGui::TextWrapped("OpenXR UE5.7+: latches game UI layer pose to the same frame basis used for scene submit.");
             }
-            m_compatibility_fullscreen_16x9_cameras->draw("Fullscreen 16:9 Cameras");
-            if (m_compatibility_fullscreen_16x9_cameras->value()) {
-                m_compatibility_fullscreen_16x9_camera_aspect->draw("Fullscreen Camera Aspect Override");
-                ImGui::TextWrapped("For SMG/Supermassive camera managers: 0 uses the current per-eye HMD aspect; otherwise this writes the selected aspect and disables camera aspect constraints/remap.");
-            }
-            m_compatibility_subnautica2_native_water->draw("Subnautica 2 Native Water Compatibility");
-            if (m_compatibility_subnautica2_native_water->value()) {
-                m_subnautica2_native_water_mode->draw("Subnautica 2 Native Water Mode");
-                ImGui::TextWrapped("Subnautica 2 only: applies in DX12 Native Stereo with Native Stereo Fix off. Safe Reflections keeps SingleLayerWater enabled and disables native-stereo-sensitive tiled/reflection history paths. Synced/AFR restores previous values.");
-            }
-            if (is_1666amsterdam_executable()) {
-                m_compatibility_1666amsterdam_native_postprocess->draw("1666 Amsterdam Native Post-Process Compatibility");
-                if (m_compatibility_1666amsterdam_native_postprocess->value()) {
-                    ImGui::TextWrapped("1666 Amsterdam only: in DX12 Native Stereo with Native Stereo Fix off, keeps full tonemapping but replaces the broken temporal history/upscaler path with FXAA. Enable before injection or restart after changing it.");
-                }
-            }
             m_compatibility_daysgone_bend_ui_placement_fix->draw("Days Gone Bend UI Placement Fix");
             if (m_compatibility_daysgone_bend_ui_placement_fix->value()) {
                 ImGui::TextWrapped("Days Gone only: keeps Bend's in-scene 3D menu path and applies controlled BP_Menu3D/BendWidgetMain placement overrides. Tuning controls are shown below.");
@@ -5882,12 +5866,6 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             m_compatibility_daysgone_gbuffer_safe_mode->draw("Days Gone GBuffer Safe Mode");
             if (m_compatibility_daysgone_gbuffer_safe_mode->value()) {
                 ImGui::TextWrapped("Days Gone DX11 only: applies r.GBuffer=0 to avoid Bend deferred/GBuffer black road/terrain patches. It is opt-in and restored when disabled.");
-            }
-            if (is_everspace2_executable_cached()) {
-                m_compatibility_everspace2_remove_cinematic_bars->draw("Everspace 2 Remove Cinematic Bars");
-                if (m_compatibility_everspace2_remove_cinematic_bars->value()) {
-                    ImGui::TextWrapped("Everspace 2 only: removes the exact WG_Ingame_HUD top and bottom cinematic-bar Image widgets once per HUD instance. Disabling does not restore bars already removed from the current HUD.");
-                }
             }
             m_sceneview_compatibility_mode->draw("SceneView Compatibility Mode");
             m_extreme_compat_mode->draw("Extreme Compatibility Mode");
