@@ -227,23 +227,6 @@ bool is_everspace2_executable_cached() {
     return is_everspace2;
 }
 
-bool is_directive8020_executable_cached() {
-    static const bool is_directive8020 = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        if (!exe_path) {
-            return false;
-        }
-
-        auto lowered = *exe_path;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t c) {
-            return (wchar_t)std::towlower(c);
-        });
-
-        return lowered.find(L"directive8020") != std::wstring::npos;
-    }();
-
-    return is_directive8020;
-}
 
 bool should_defer_stalker2_very_late_openxr_wait(const VRRuntime* runtime, bool is_d3d12) {
     if (runtime == nullptr || !is_d3d12 || !runtime->is_openxr() || !is_stalker2_executable_cached()) {
@@ -682,23 +665,6 @@ std::optional<float> read_default_fov(sdk::APlayerCameraManager* pcm) {
     return fov;
 }
 
-bool is_shf_executable() {
-    static const bool is_shf = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        auto lowered = *module_path;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return lowered.find(L"shf-win64-shipping") != std::wstring::npos;
-    }();
-
-    return is_shf;
-}
 
 bool is_avowed_executable() {
     static const bool is_avowed = []() {
@@ -713,41 +679,7 @@ bool is_avowed_executable() {
     return is_avowed;
 }
 
-bool is_dispatch_executable() {
-    static const bool is_dispatch = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
 
-        auto lowered = *module_path;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return lowered.find(L"dispatch-win64-shipping") != std::wstring::npos;
-    }();
-
-    return is_dispatch;
-}
-
-bool is_mixtape_executable() {
-    static const bool is_mixtape = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        auto lowered = *module_path;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return lowered.find(L"mixtape-win64-shipping") != std::wstring::npos;
-    }();
-
-    return is_mixtape;
-}
 
 bool is_subnautica2_executable() {
     static const bool is_subnautica2 = []() {
@@ -768,23 +700,6 @@ bool is_subnautica2_executable() {
     return is_subnautica2;
 }
 
-bool is_1666amsterdam_executable() {
-    static const bool is_1666amsterdam = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        auto filename = std::filesystem::path{*module_path}.filename().wstring();
-        std::transform(filename.begin(), filename.end(), filename.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return filename == L"1666amsterdam.exe";
-    }();
-
-    return is_1666amsterdam;
-}
 
 bool is_daysgone_executable() {
     static const bool is_daysgone = []() {
