@@ -1660,6 +1660,50 @@ std::optional<std::string> VR::clean_initialize() try {
     return Mod::on_initialize();
 }
 
+// The OpenVR/OpenXR loader DLLs ship next to UEVRBackend.dll (and in the global UEVR profile
+// dir). load_module_from_current_directory() only searches the *game* executable's directory,
+// which for injected setups usually doesn't contain them -- so a stock install reports
+// "Could not load openvr_api.dll" and falls through to "no VR" even though the loader is sitting
+// right next to the backend. Search the backend dir + profile dirs first, then fall back to the
+// legacy game-exe-dir behaviour.
+static HMODULE load_vr_runtime_dll(const wchar_t* name) {
+    if (auto existing = GetModuleHandleW(name)) {
+        return existing;
+    }
+
+    std::vector<std::filesystem::path> candidates{};
+
+    if (auto backend = GetModuleHandleW(L"UEVRBackend.dll")) {
+        if (auto dir = utility::get_module_directoryw(backend)) {
+            candidates.emplace_back(std::filesystem::path{*dir} / name);
+        }
+    }
+
+    try {
+        const auto persistent = Framework::get_persistent_dir();
+        candidates.emplace_back(persistent / name);
+        candidates.emplace_back(persistent.parent_path() / "UEVR" / name);
+    } catch (...) {
+    }
+
+    for (const auto& path : candidates) {
+        std::error_code ec{};
+        if (!std::filesystem::exists(path, ec)) {
+            continue;
+        }
+
+        if (auto h = LoadLibraryW(path.wstring().c_str())) {
+            spdlog::info("[VR] Loaded VR runtime DLL from {}", path.string());
+            return h;
+        }
+
+        spdlog::warn("[VR] Found {} but LoadLibrary failed (err {})", path.string(), GetLastError());
+    }
+
+    // Legacy fallback: game executable directory.
+    return utility::load_module_from_current_directory(name);
+}
+
 std::optional<std::string> VR::initialize_openvr() {
     ZoneScopedN(__FUNCTION__);
 
@@ -1672,7 +1716,7 @@ std::optional<std::string> VR::initialize_openvr() {
     // OpenVR. If openvr_api.dll isn't available we report dll_missing and the dispatcher falls back
     // to OpenXR (and vice-versa). This makes a single bad/absent runtime no longer mean "no VR".
     if (GetModuleHandleW(L"openvr_api.dll") == nullptr) {
-        if (utility::load_module_from_current_directory(L"openvr_api.dll") == nullptr) {
+        if (load_vr_runtime_dll(L"openvr_api.dll") == nullptr) {
             spdlog::info("[VR] Could not load openvr_api.dll");
 
             m_openvr->dll_missing = true;
@@ -1801,7 +1845,7 @@ std::optional<std::string> VR::initialize_openxr() {
     spdlog::info("[VR] Initializing OpenXR");
 
     if (GetModuleHandleW(L"openxr_loader.dll") == nullptr) {
-        if (utility::load_module_from_current_directory(L"openxr_loader.dll") == nullptr) {
+        if (load_vr_runtime_dll(L"openxr_loader.dll") == nullptr) {
             spdlog::info("[VR] Could not load openxr_loader.dll");
 
             m_openxr->loaded = false;
