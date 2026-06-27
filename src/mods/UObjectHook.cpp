@@ -4223,6 +4223,12 @@ void UObjectHook::on_frame() {
     // We draw them every imgui frame instead, gated on their toggle bools.
     // Both windows auto-attach to Framework's main dockspace via
     // SetNextWindowDockID(FirstUseEver) just like Lua imgui.begin_window.
+    //
+    // Gate on is_drawing_ui() so these windows share the overlay's lifecycle:
+    // closing the UEVR UI closes the Class Browser / Function Caller / Options /
+    // Class Inspector windows too (toggle bools are preserved, so reopening the
+    // overlay restores whatever was open). World-space gizmos below stay live.
+    if (g_framework->is_drawing_ui()) {
     if (m_show_class_browser) {
         try { draw_class_browser_window(); }
         catch (const std::exception& e) { spdlog::error("[UObjectHook] class browser threw: {}", e.what()); }
@@ -4252,6 +4258,7 @@ void UObjectHook::on_frame() {
             catch (...)                     { spdlog::error("[UObjectHook] class inspector threw (unknown)"); }
         }
     }
+    } // end is_drawing_ui() gate for pop-out imgui windows
 
     try { draw_component_gizmos(); }
     catch (const std::exception& e) { spdlog::error("[UObjectHook] gizmo draw threw: {}", e.what()); }
@@ -4606,13 +4613,13 @@ void UObjectHook::draw_component_gizmos() {
         return !(has_neg && has_pos);
     };
 
-    // Combined ("Blender-style") gizmo (m_gizmo_mode == 3) packs translate arrows, rotate rings and
+    // Combined (all-in-one) gizmo (m_gizmo_mode == 3) packs translate arrows, rotate rings and
     // scale handles onto ONE interactive gizmo. To stop the handles overlapping they sit at distinct
     // radii: center(0) < translate arrow[0.18..0.82] < scale square(tip) < rotate ring(1.28). scaled_pt
     // pushes a projected point toward/away from the screen origin by a factor — a cheap screen-space
     // scale, exact enough since hit-test and draw use the SAME factor. The drag math is unaffected (it
     // uses each axis's full screen direction, not the visual handle length).
-    // Radial layout (swapped vs the first cut so translate is the long OUTER arrow, Blender-like, and
+    // Radial layout (swapped vs the first cut so translate is the long OUTER arrow, and
     // scale the inner box): center(0) < scale box(0.45) < translate arrow[0.62..1.0] < rotate ring(1.4).
     constexpr float kRingScaleCombined = 1.40f; // rotate rings: outer
     constexpr float kScaleHandleT = 0.45f;      // scale squares: inner (closer to center than the arrows)
@@ -5027,7 +5034,7 @@ void UObjectHook::draw_component_gizmos() {
         }
 
         if (m_gizmo_mode == 3) {
-            // Combined ("Blender-style") gizmo: rotate rings (outer) + translate arrows + scale
+            // Combined (all-in-one) gizmo: rotate rings (outer) + translate arrows + scale
             // squares (at the tips), all on one interactive gizmo. Handle codes: arrow i, ring 10+i,
             // square 20+i, uniform center 6 (white dot drawn below).
             for (int i = 0; i < 3; ++i) {
@@ -5997,22 +6004,22 @@ void UObjectHook::draw_config() {
 // Shared gizmo/selection/snap/inspector options — drawn in the Config tab AND the pop-out window.
 // NOTE: plain members, session-scoped (not yet persisted across restarts).
 void UObjectHook::draw_gizmo_options() {
-    ImGui::SeparatorText("Gizmo defaults");
+    ImGui::SeparatorText("Gizmo mode");
     ImGui::RadioButton("Move##cfg", &m_gizmo_mode, 0); ImGui::SameLine();
     ImGui::RadioButton("Rotate##cfg", &m_gizmo_mode, 1); ImGui::SameLine();
     ImGui::RadioButton("Scale##cfg", &m_gizmo_mode, 2); ImGui::SameLine();
-    ImGui::RadioButton("All (Blender)##cfg", &m_gizmo_mode, 3);
-    ImGui::TextDisabled("All = combined gizmo: rings rotate, arrows move, tip boxes scale, center = uniform scale.");
+    ImGui::RadioButton("Combined##cfg", &m_gizmo_mode, 3);
+    ImGui::TextDisabled("Combined = one gizmo with all handles: rings rotate, arrows move, tip boxes scale, center dot = uniform scale.");
     // Rebindable hotkeys to switch transform mode (default unbound — assign here).
     m_keybind_gizmo_move->draw("Move hotkey");
     m_keybind_gizmo_rotate->draw("Rotate hotkey");
     m_keybind_gizmo_scale->draw("Scale hotkey");
-    m_keybind_gizmo_combined->draw("All (Blender) hotkey");
+    m_keybind_gizmo_combined->draw("Combined hotkey");
     ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
-    ImGui::Checkbox("Show all 3 gizmo types (offset)", &m_gizmo_show_all_modes);
+    ImGui::Checkbox("Show separate Move/Rotate/Scale gizmos (offset)", &m_gizmo_show_all_modes);
     if (m_gizmo_show_all_modes) {
         ImGui::SliderFloat("All-modes spacing", &m_gizmo_all_modes_offset, 32.0f, 160.0f, "%.0f px");
     }
