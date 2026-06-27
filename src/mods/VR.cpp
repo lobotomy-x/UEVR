@@ -3614,6 +3614,134 @@ void VR::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
     }
 }
 
+void VR::update_fullscreen_16x9_camera_compatibility(sdk::UGameEngine* engine) {
+    if (!m_compatibility_fullscreen_16x9_cameras->value()) {
+        m_fullscreen_16x9_camera_compat = {};
+        return;
+    }
+
+    constexpr auto camera_poll_interval = std::chrono::milliseconds(100);
+    constexpr auto transition_burst_duration = std::chrono::milliseconds(500);
+    constexpr auto keepalive_interval = std::chrono::milliseconds(1000);
+    const auto now = std::chrono::steady_clock::now();
+
+    auto world = engine != nullptr ? engine->get_world() : nullptr;
+    auto gameplay = sdk::UGameplayStatics::get();
+
+    if (world == nullptr || gameplay == nullptr) {
+        return;
+    }
+
+    auto pc = gameplay->get_player_controller(world, 0);
+    if (pc == nullptr) {
+        return;
+    }
+
+    auto pcm = pc->get_player_camera_manager();
+    if (pcm == nullptr) {
+        return;
+    }
+
+    auto aspect_ratio = m_compatibility_fullscreen_16x9_camera_aspect->value();
+    if (!std::isfinite(aspect_ratio) || aspect_ratio <= 0.1f) {
+        const auto runtime = get_runtime();
+        if (runtime != nullptr && runtime->get_height() > 0) {
+            aspect_ratio = (float)runtime->get_width() / (float)runtime->get_height();
+        } else {
+            aspect_ratio = 16.0f / 9.0f;
+        }
+    }
+
+    aspect_ratio = std::clamp(aspect_ratio, 0.5f, 4.0f);
+
+    auto& state = m_fullscreen_16x9_camera_compat;
+    const bool just_enabled = !state.was_enabled;
+    const bool pcm_changed = state.last_pcm != pcm;
+    const bool aspect_changed = std::abs(state.last_aspect - aspect_ratio) > 0.001f;
+    const bool should_poll_camera =
+        just_enabled ||
+        pcm_changed ||
+        aspect_changed ||
+        state.last_camera_poll.time_since_epoch().count() == 0 ||
+        now - state.last_camera_poll >= camera_poll_interval ||
+        now < state.burst_until;
+
+    sdk::UObject* current_camera = (sdk::UObject*)state.last_camera;
+    sdk::UObject* camera_component = (sdk::UObject*)state.last_camera_component;
+
+    if (should_poll_camera) {
+        state.last_camera_poll = now;
+
+        if (auto camera = call_object_object_function((sdk::UObject*)pcm, L"GetCurrentCamera"); camera.has_value()) {
+            current_camera = *camera;
+        } else {
+            current_camera = nullptr;
+        }
+
+        if (current_camera != nullptr) {
+            if (auto component = read_object_property(current_camera, L"CameraComponent"); component.has_value()) {
+                camera_component = *component;
+            } else {
+                camera_component = nullptr;
+            }
+        } else {
+            camera_component = nullptr;
+        }
+    }
+
+    const bool camera_changed = state.last_camera != current_camera;
+    const bool component_changed = state.last_camera_component != camera_component;
+    const bool keepalive_due =
+        state.last_apply.time_since_epoch().count() == 0 ||
+        now - state.last_apply >= keepalive_interval;
+    const bool in_transition_burst = now < state.burst_until;
+
+    if (just_enabled || pcm_changed || camera_changed || component_changed || aspect_changed) {
+        state.burst_until = now + transition_burst_duration;
+    }
+
+    const bool should_apply =
+        just_enabled ||
+        pcm_changed ||
+        camera_changed ||
+        component_changed ||
+        aspect_changed ||
+        in_transition_burst ||
+        keepalive_due;
+
+    state.was_enabled = true;
+    state.last_pcm = pcm;
+    state.last_camera = current_camera;
+    state.last_camera_component = camera_component;
+    state.last_aspect = aspect_ratio;
+
+    if (!should_apply) {
+        return;
+    }
+
+    bool wrote_any = false;
+    wrote_any |= write_object_bool_property((sdk::UObject*)pcm, L"bUse16_9CamerasAsFullscreen", true);
+    wrote_any |= write_object_bool_property((sdk::UObject*)pcm, L"bForceOutputToConstraintXFov", false);
+    wrote_any |= write_game_camera_aspect_constraints(pcm, aspect_ratio);
+
+    if (current_camera != nullptr) {
+        wrote_any |= write_object_bool_property(current_camera, L"bEnableCameraViewportRemapPPMI", false);
+
+        if (camera_component != nullptr) {
+            wrote_any |= write_camera_component_fullscreen_aspect(camera_component, aspect_ratio);
+        }
+    }
+
+    state.last_apply = now;
+
+
+    if (wrote_any) {
+        SPDLOG_INFO_ONCE("[Compatibility] Fullscreen 16:9 Cameras active; aspect={:.3f}, camera constraints/remap disabled where available", aspect_ratio);
+    } else {
+        SPDLOG_WARN_ONCE("[Compatibility] Fullscreen 16:9 Cameras is enabled, but no supported camera/aspect fields were found");
+    }
+}
+
 void VR::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
     ZoneScopedN(__FUNCTION__);
 
@@ -3621,6 +3749,7 @@ void VR::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
         return;
     }
 
+    update_fullscreen_16x9_camera_compatibility(engine);
 }
 
 void VR::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
