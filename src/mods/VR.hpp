@@ -892,8 +892,6 @@ private:
     void restore_subnautica2_native_water_cvars();
     void update_1666amsterdam_native_postprocess_compatibility(sdk::UGameEngine* engine);
     void restore_1666amsterdam_native_postprocess_cvars();
-    void update_daysgone_gbuffer_compatibility(sdk::UGameEngine* engine);
-    void restore_daysgone_gbuffer_cvar();
     void update_everspace2_cinematic_bars(sdk::UGameEngine* engine);
     struct HitchSnapshotDumpRequest;
     void record_hitch_snapshot_sample(std::chrono::steady_clock::time_point now);
@@ -1610,23 +1608,9 @@ private:
     void load_cameras();
     void load_camera(int index);
     void save_camera(int index);
-    void save_prospi_camera_calibrations();
-    void load_prospi_camera_calibrations();
-    void save_current_prospi_camera_calibration();
-    void clear_current_prospi_camera_calibration();
-    void clear_current_prospi_preset_calibrations();
-    std::string get_current_prospi_camera_id();
-    void save_generic_camera_presets();
-    void load_generic_camera_presets();
-    void save_current_generic_camera_preset();
-    void clear_current_generic_camera_preset();
     std::string get_current_game_camera_id();
 
     void update_fullscreen_16x9_camera_compatibility(sdk::UGameEngine* engine);
-    void update_game_fov();
-    float get_game_fov() const;
-    float get_game_fov_scale(float base_half_fov) const;
-    float get_game_fov_dolly_offset() const;
     auto get_desktop_mirror_mode() const { return static_cast<DesktopMirrorMode>(m_desktop_mirror_mode->value()); }
 
 public:
@@ -1864,7 +1848,6 @@ private:
     const ModToggle::Ptr m_show_statistics{ ModToggle::create(generate_name("ShowStatsOverlay"), false) };
     bool m_show_statistics_state{ false };
 
-    void update_statistics_overlay(sdk::UGameEngine* engine);
     
 
     int m_game_frame_count{};
