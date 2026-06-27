@@ -5545,53 +5545,130 @@ void UObjectHook::draw_class_browser_window() {
     // ---- ScriptStructs tab -------------------------------------------------
     if (ImGui::BeginTabItem("ScriptStructs")) {
         static const auto script_struct_class = sdk::UScriptStruct::static_class();
-        ImGui::TextDisabled("walks FUObjectArray looking for UScriptStruct instances");
-        if (ImGui::BeginChild("ss_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
-            drag_scroll_current_window();
-            if (script_struct_class == nullptr) {
-                ImGui::Text("UScriptStruct::static_class() returned null");
-            } else {
-                auto arr = sdk::FUObjectArray::get();
-                const auto count = arr ? arr->get_object_count() : 0;
-                int shown = 0;
-                for (int32_t i = 0; i < count && shown < 5000; ++i) {
-                    auto item = arr->get_object(i);
-                    if (item == nullptr || item->get_object() == nullptr) continue;
-                    auto obj = (sdk::UObject*)item->get_object();
-                    auto cls = obj->get_class();
-                    if (cls == nullptr || !cls->is_a(script_struct_class)) continue;
-                    std::wstring full;
-                    try { full = obj->get_full_name(); } catch (...) { continue; }
-                    if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
-                    const auto narrow = utility::narrow(full);
-                    // Short label (tail after the last '.') keeps the row compact;
-                    // the full path follows dimmed for context.
-                    const auto sp = narrow.find(' ');
-                    const auto path = (sp != std::string::npos) ? narrow.substr(sp + 1) : narrow;
-                    const auto dot = path.find_last_of('.');
-                    const auto short_nm = (dot != std::string::npos) ? path.substr(dot + 1) : path;
-                    ImGui::PushID(obj);
-                    const bool node_open = ImGui::TreeNode((void*)obj, "%s", short_nm.c_str());
-                    if (ImGui::BeginDragDropSource()) {
-                        // UScriptStruct is a UObject, publish as UObject so
-                        // generic Object drop targets accept it. Specialised
-                        // struct-drop targets can sniff is_a(UScriptStruct).
-                        ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
-                        ImGui::Text("UScriptStruct: %s", narrow.c_str());
-                        ImGui::EndDragDropSource();
-                    }
-                    if (node_open) {
-                        try { ui_handle_struct(nullptr, (sdk::UStruct*)obj); }
-                        catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display struct>"); }
-                        ImGui::TreePop();
-                    }
-                    ImGui::PopID();
-                    ++shown;
-                }
-                if (shown == 5000) ImGui::Text("(truncated at 5000 — narrow your filter)");
+
+        // One UScriptStruct row: expandable TreeNode (fields via ui_handle_struct)
+        // + a drag source publishing it as a UObject. `display` = compact leaf name,
+        // `full_narrow` = full path for the drag tooltip.
+        auto render_struct_row = [&](sdk::UObject* obj, const std::string& display, const std::string& full_narrow) {
+            ImGui::PushID(obj);
+            const bool node_open = ImGui::TreeNode((void*)obj, "%s", display.c_str());
+            if (ImGui::BeginDragDropSource()) {
+                // UScriptStruct is a UObject, publish as UObject so generic Object drop
+                // targets accept it. Struct-drop targets can sniff is_a(UScriptStruct).
+                ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                ImGui::Text("UScriptStruct: %s", full_narrow.c_str());
+                ImGui::EndDragDropSource();
+            }
+            if (node_open) {
+                try { ui_handle_struct(nullptr, (sdk::UStruct*)obj); }
+                catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display struct>"); }
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        };
+
+        // Single FUObjectArray pass collecting every UScriptStruct with its package
+        // path + leaf, so the By-Package tree and Flat list share one walk. Capped to
+        // keep the per-frame scan bounded.
+        struct SSItem { sdk::UObject* obj; std::string full_narrow; std::string leaf; std::string pkg; };
+        std::vector<SSItem> items;
+        bool truncated = false;
+        if (script_struct_class == nullptr) {
+            ImGui::Text("UScriptStruct::static_class() returned null");
+        } else {
+            auto arr = sdk::FUObjectArray::get();
+            const auto count = arr ? arr->get_object_count() : 0;
+            for (int32_t i = 0; i < count; ++i) {
+                if (items.size() >= 5000) { truncated = true; break; }
+                auto item = arr->get_object(i);
+                if (item == nullptr || item->get_object() == nullptr) continue;
+                auto obj = (sdk::UObject*)item->get_object();
+                auto cls = obj->get_class();
+                if (cls == nullptr || !cls->is_a(script_struct_class)) continue;
+                std::wstring full;
+                try { full = obj->get_full_name(); } catch (...) { continue; }
+                if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                const auto narrow = utility::narrow(full);
+                // Drop the leading "ScriptStruct " class token, then split path into
+                // package (before first '.') and leaf (after last '.').
+                const auto sp = narrow.find(' ');
+                const auto path = (sp != std::string::npos) ? narrow.substr(sp + 1) : narrow;
+                const auto last_dot = path.find_last_of('.');
+                const auto leaf = (last_dot != std::string::npos) ? path.substr(last_dot + 1) : path;
+                const auto pkg_dot = path.find('.');
+                const auto pkg = (pkg_dot != std::string::npos) ? path.substr(0, pkg_dot) : path;
+                items.push_back({obj, narrow, leaf, pkg});
             }
         }
-        ImGui::EndChild();
+
+        ImGui::TextDisabled("%zu UScriptStructs%s", items.size(),
+            truncated ? " (capped at 5000 — narrow filter)" : "");
+
+        if (ImGui::BeginTabBar("ScriptStructSubTabs")) {
+            // By Package is the default view (matches the Classes tab).
+            if (ImGui::BeginTabItem("By Package")) {
+                if (ImGui::BeginChild("ss_tree", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                    drag_scroll_current_window();
+                    // Nest by package path segments ("/Script/Engine" -> Script > Engine),
+                    // same shape as the Classes "By Package" tree. Node IDs come from the
+                    // PushID stack so identical segment names under different parents
+                    // never collide.
+                    struct Node {
+                        std::map<std::string, Node> children;
+                        std::vector<const SSItem*> leaves;
+                        int count = 0;
+                    };
+                    Node root;
+                    for (const auto& it : items) {
+                        Node* cur = &root;
+                        ++cur->count;
+                        size_t start = 0;
+                        while (start < it.pkg.size()) {
+                            if (it.pkg[start] == '/') { ++start; continue; }
+                            const auto end = it.pkg.find('/', start);
+                            const auto seg = it.pkg.substr(start, (end == std::string::npos ? it.pkg.size() : end) - start);
+                            cur = &cur->children[seg];
+                            ++cur->count;
+                            if (end == std::string::npos) break;
+                            start = end + 1;
+                        }
+                        cur->leaves.push_back(&it);
+                    }
+                    auto draw_node = [&](auto&& self, Node& n) -> void {
+                        for (auto& [seg, child] : n.children) {
+                            ImGui::PushID(seg.c_str());
+                            const auto hdr = seg + "  (" + std::to_string(child.count) + ")";
+                            if (ImGui::TreeNode(hdr.c_str())) {
+                                self(self, child);
+                                ImGui::TreePop();
+                            }
+                            ImGui::PopID();
+                        }
+                        for (const auto* it : n.leaves) {
+                            render_struct_row(it->obj, it->leaf, it->full_narrow);
+                        }
+                    };
+                    if (root.count == 0) {
+                        ImGui::TextDisabled(has_filter ? "no matches for filter" : "no UScriptStructs found");
+                    } else {
+                        draw_node(draw_node, root);
+                    }
+                }
+                ImGui::EndChild();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Flat")) {
+                if (ImGui::BeginChild("ss_flat", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                    drag_scroll_current_window();
+                    for (const auto& it : items) {
+                        render_struct_row(it.obj, it.leaf, it.full_narrow);
+                    }
+                }
+                ImGui::EndChild();
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
         ImGui::EndTabItem();
     }
 
