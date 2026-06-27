@@ -2354,6 +2354,42 @@ bool is_window_focused(sol::object flags_obj)
     return ImGui::IsWindowFocused(flags);
 }
 
+// Name of the top-level (root) ImGui window currently under the cursor, or nil if none.
+// Lets a Lua script decide for itself what to treat as "the canvas" vs a real tool window.
+std::optional<std::string> get_hovered_window_name()
+{
+    auto* ctx = ImGui::GetCurrentContext();
+    if (ctx == nullptr || ctx->HoveredWindow == nullptr) {
+        return std::nullopt;
+    }
+    ImGuiWindow* root = ctx->HoveredWindow->RootWindow ? ctx->HoveredWindow->RootWindow : ctx->HoveredWindow;
+    if (root->Name == nullptr) {
+        return std::nullopt;
+    }
+    return std::string{root->Name};
+}
+
+// True when the cursor is over a visible ImGui window, EXCLUDING the main UEVR canvas:
+// the main menu window ("UEVR [tag+...] [D3Dxx]") and the legacy fullscreen "Canvas" host.
+// Use this to tell whether the pointer is over script/overlay UI vs the bare game viewport
+// (IsWindowHovered(AnyWindow) can't, because the canvas host would always match).
+bool is_cursor_over_ui_window()
+{
+    auto* ctx = ImGui::GetCurrentContext();
+    if (ctx == nullptr || ctx->HoveredWindow == nullptr) {
+        return false;
+    }
+    ImGuiWindow* root = ctx->HoveredWindow->RootWindow ? ctx->HoveredWindow->RootWindow : ctx->HoveredWindow;
+    const char* name = root->Name;
+    if (name == nullptr) {
+        return false;
+    }
+    if (std::strncmp(name, "UEVR [", 6) == 0 || std::strcmp(name, "Canvas") == 0) {
+        return false;
+    }
+    return true;
+}
+
 bool is_item_toggled_selection()
 {
     return ImGui::IsItemToggledSelection();
@@ -3187,6 +3223,7 @@ void bindings::open_imgui(sol::state_view &lua)
     imgui["get_foreground_draw_list"] = api::imgui::get_foreground_draw_list;
     imgui["get_frame_height"] = api::imgui::get_frame_height;
     imgui["get_hovered_id"] = api::imgui::get_hovered_id;
+    imgui["get_hovered_window_name"] = api::imgui::get_hovered_window_name;
     imgui["get_id"] = api::imgui::get_id;
     imgui["get_id_from_pos"] = api::imgui::get_id_from_pos;
     imgui["get_item_id"] = api::imgui::get_item_id;
@@ -3206,6 +3243,7 @@ void bindings::open_imgui(sol::state_view &lua)
     imgui["is_any_item_active"] = api::imgui::is_any_item_active;
     imgui["is_any_item_focused"] = api::imgui::is_any_item_focused;
     imgui["is_any_item_hovered"] = api::imgui::is_any_item_hovered;
+    imgui["is_cursor_over_ui_window"] = api::imgui::is_cursor_over_ui_window;
     imgui["is_window_hovered"] = api::imgui::is_window_hovered;
     imgui["is_window_focused"] = api::imgui::is_window_focused;
     imgui["is_item_active"] = api::imgui::is_item_active;
