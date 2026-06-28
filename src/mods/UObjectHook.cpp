@@ -5354,12 +5354,24 @@ void UObjectHook::pump_class_sort_task() {
 }
 
 namespace {
-// ---- SDK JSON dump engine -------------------------------------------------
-// Self-contained reflection -> JSON (no external json lib). Feeds the Class
-// Browser "Export -> JSON" button. Emits per-property name/type/offset + raw
+// ---- SDK reflection dump engine -------------------------------------------
+// Self-contained reflection -> JSON or Lua (no external libs). Feeds the Class
+// Browser "Export" buttons. Emits per-property name/type/offset + raw
 // PropertyFlags (hex) and decoded flag names, and per-function FunctionFlags
-// (hex + names) with the param list.
-std::string sdk_json_escape(const std::string& s) {
+// (hex + names) with the param list. Output auto-splits into one file per
+// package so individual files stay small.
+enum class DumpFmt { Json, Lua };
+
+const char* sdk_ext(DumpFmt fmt) { return fmt == DumpFmt::Lua ? "lua" : "json"; }
+const char* sdk_arr_open(DumpFmt fmt) { return fmt == DumpFmt::Lua ? "{" : "["; }
+const char* sdk_arr_close(DumpFmt fmt) { return fmt == DumpFmt::Lua ? "}" : "]"; }
+
+// "key": (JSON) or key= (Lua). Every key we emit is a safe Lua bareword identifier.
+std::string sdk_key(DumpFmt fmt, const char* k) {
+    return fmt == DumpFmt::Lua ? (std::string(k) + "=") : ("\"" + std::string(k) + "\":");
+}
+
+std::string sdk_escape(DumpFmt fmt, const std::string& s) {
     std::string out;
     out.reserve(s.size() + 8);
     for (char c : s) {
@@ -5372,7 +5384,9 @@ std::string sdk_json_escape(const std::string& s) {
         default:
             if (static_cast<unsigned char>(c) < 0x20) {
                 char buf[8];
-                std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                // JSON uses \uXXXX; Lua has no such escape, so use its decimal \ddd form.
+                std::snprintf(buf, sizeof(buf), fmt == DumpFmt::Lua ? "\\%u" : "\\u%04x",
+                    static_cast<unsigned>(static_cast<unsigned char>(c)));
                 out += buf;
             } else {
                 out += c;
@@ -5382,13 +5396,13 @@ std::string sdk_json_escape(const std::string& s) {
     return out;
 }
 
-std::string sdk_json_str_array(const std::vector<std::string>& v) {
-    std::string out = "[";
+std::string sdk_str_array(DumpFmt fmt, const std::vector<std::string>& v) {
+    std::string out = sdk_arr_open(fmt);
     for (size_t i = 0; i < v.size(); ++i) {
         if (i) out += ",";
-        out += "\"" + sdk_json_escape(v[i]) + "\"";
+        out += "\"" + sdk_escape(fmt, v[i]) + "\"";
     }
-    out += "]";
+    out += sdk_arr_close(fmt);
     return out;
 }
 
@@ -5440,7 +5454,7 @@ std::vector<std::string> sdk_decode_function_flags(sdk::UFunction* fn) {
     return n;
 }
 
-std::string sdk_dump_property_json(sdk::FProperty* prop) {
+std::string sdk_dump_property(DumpFmt fmt, sdk::FProperty* prop) {
     std::string name = "?", type = "?";
     try { name = utility::narrow(prop->get_field_name().to_string()); } catch (...) {}
     try { type = utility::narrow(prop->get_class()->get_name().to_string()); } catch (...) {}
@@ -5449,14 +5463,16 @@ std::string sdk_dump_property_json(sdk::FProperty* prop) {
     try { offset = prop->get_offset(); } catch (...) {}
     char fbuf[24];
     std::snprintf(fbuf, sizeof(fbuf), "0x%llx", static_cast<unsigned long long>(flags));
-    return std::string("{\"name\":\"") + sdk_json_escape(name) + "\",\"type\":\"" + sdk_json_escape(type) +
-        "\",\"offset\":" + std::to_string(offset) + ",\"flags\":\"" + fbuf +
-        "\",\"flag_names\":" + sdk_json_str_array(sdk_decode_property_flags(flags)) + "}";
+    return "{" + sdk_key(fmt, "name") + "\"" + sdk_escape(fmt, name) + "\"," +
+        sdk_key(fmt, "type") + "\"" + sdk_escape(fmt, type) + "\"," +
+        sdk_key(fmt, "offset") + std::to_string(offset) + "," +
+        sdk_key(fmt, "flags") + "\"" + fbuf + "\"," +
+        sdk_key(fmt, "flag_names") + sdk_str_array(fmt, sdk_decode_property_flags(flags)) + "}";
 }
 
 // Dump a UStruct (UClass or UScriptStruct). include_inherited walks the super
 // chain for properties/functions; false = declared members only.
-std::string sdk_dump_ustruct_json(sdk::UStruct* strukt, bool include_inherited) {
+std::string sdk_dump_ustruct(DumpFmt fmt, sdk::UStruct* strukt, bool include_inherited) {
     static const auto ufunction_t = sdk::UFunction::static_class();
     std::string name, full, super;
     try { name = utility::narrow(strukt->get_fname().to_string()); } catch (...) {}
@@ -5465,19 +5481,22 @@ std::string sdk_dump_ustruct_json(sdk::UStruct* strukt, bool include_inherited) 
         try { super = utility::narrow(s->get_fname().to_string()); } catch (...) {}
     }
 
-    std::string out = "{\"name\":\"" + sdk_json_escape(name) + "\",\"full_name\":\"" + sdk_json_escape(full) +
-        "\",\"super\":\"" + sdk_json_escape(super) + "\",\"properties_size\":" +
-        std::to_string(static_cast<int>(strukt->get_properties_size())) + ",\"properties\":[";
+    std::string out = "{" + sdk_key(fmt, "name") + "\"" + sdk_escape(fmt, name) + "\"," +
+        sdk_key(fmt, "full_name") + "\"" + sdk_escape(fmt, full) + "\"," +
+        sdk_key(fmt, "super") + "\"" + sdk_escape(fmt, super) + "\"," +
+        sdk_key(fmt, "properties_size") + std::to_string(static_cast<int>(strukt->get_properties_size())) + "," +
+        sdk_key(fmt, "properties") + sdk_arr_open(fmt);
 
     bool first = true;
     for (auto super_s = strukt; super_s != nullptr; super_s = super_s->get_super_struct()) {
         for (auto f = super_s->get_child_properties(); f != nullptr; f = f->get_next()) {
             if (!first) out += ","; first = false;
-            out += sdk_dump_property_json(reinterpret_cast<sdk::FProperty*>(f));
+            out += sdk_dump_property(fmt, reinterpret_cast<sdk::FProperty*>(f));
         }
         if (!include_inherited) break;
     }
-    out += "],\"functions\":[";
+    out += sdk_arr_close(fmt);
+    out += "," + sdk_key(fmt, "functions") + sdk_arr_open(fmt);
 
     first = true;
     for (auto super_s = strukt; super_s != nullptr; super_s = super_s->get_super_struct()) {
@@ -5491,57 +5510,88 @@ std::string sdk_dump_ustruct_json(sdk::UStruct* strukt, bool include_inherited) 
             char fbuf[16];
             std::snprintf(fbuf, sizeof(fbuf), "0x%x", fflags);
             if (!first) out += ","; first = false;
-            out += "{\"name\":\"" + sdk_json_escape(fn_name) + "\",\"flags\":\"" + fbuf +
-                   "\",\"flag_names\":" + sdk_json_str_array(sdk_decode_function_flags(fn)) + ",\"params\":[";
+            out += "{" + sdk_key(fmt, "name") + "\"" + sdk_escape(fmt, fn_name) + "\"," +
+                   sdk_key(fmt, "flags") + "\"" + fbuf + "\"," +
+                   sdk_key(fmt, "flag_names") + sdk_str_array(fmt, sdk_decode_function_flags(fn)) + "," +
+                   sdk_key(fmt, "params") + sdk_arr_open(fmt);
             bool pfirst = true;
             for (auto p = fn->get_child_properties(); p != nullptr; p = p->get_next()) {
                 if (!pfirst) out += ","; pfirst = false;
-                out += sdk_dump_property_json(reinterpret_cast<sdk::FProperty*>(p));
+                out += sdk_dump_property(fmt, reinterpret_cast<sdk::FProperty*>(p));
             }
-            out += "]}";
+            out += sdk_arr_close(fmt);
+            out += "}";
         }
         if (!include_inherited) break;
     }
-    out += "]}";
+    out += sdk_arr_close(fmt);
+    out += "}";
     return out;
 }
 
-std::string sdk_dump_uenum_json(sdk::UEnum* uenum) {
+std::string sdk_dump_uenum(DumpFmt fmt, sdk::UEnum* uenum) {
     std::string name, full;
     try { name = utility::narrow(uenum->get_fname().to_string()); } catch (...) {}
     try { full = utility::narrow(uenum->get_full_name()); } catch (...) {}
-    std::string out = "{\"name\":\"" + sdk_json_escape(name) + "\",\"full_name\":\"" + sdk_json_escape(full) +
-        "\",\"kind\":\"enum\",\"values\":[";
+    std::string out = "{" + sdk_key(fmt, "name") + "\"" + sdk_escape(fmt, name) + "\"," +
+        sdk_key(fmt, "full_name") + "\"" + sdk_escape(fmt, full) + "\"," +
+        sdk_key(fmt, "kind") + "\"enum\"," + sdk_key(fmt, "values") + sdk_arr_open(fmt);
     try {
         auto names = uenum->get_names();
         for (size_t i = 0; i < names.size(); ++i) {
             if (i) out += ",";
-            out += "{\"name\":\"" + sdk_json_escape(names[i].first) + "\",\"value\":" +
-                   std::to_string(names[i].second) + "}";
+            out += "{" + sdk_key(fmt, "name") + "\"" + sdk_escape(fmt, names[i].first) + "\"," +
+                   sdk_key(fmt, "value") + std::to_string(names[i].second) + "}";
         }
     } catch (...) {}
-    out += "]}";
+    out += sdk_arr_close(fmt);
+    out += "}";
     return out;
 }
 
-// Join already-dumped JSON object strings into a {"<key>":[...]} document and
-// write it to <profile>/sdk_dump/<filename>, logging the count + path.
-void sdk_write_dump(const char* filename, const char* key, const std::vector<std::string>& parts) {
-    std::string doc = std::string("{\"") + key + "\":[";
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i) doc += ",";
-        doc += parts[i];
+// Package id for grouping, from a full name like "Class /Script/Engine.Actor" -> "Script.Engine".
+// Sanitised so it's a safe filename.
+std::string sdk_package_of(const std::string& full_name) {
+    const auto sp = full_name.find(' ');
+    const auto path = (sp != std::string::npos) ? full_name.substr(sp + 1) : full_name;
+    const auto dot = path.find('.');
+    const std::string pkg = (dot != std::string::npos) ? path.substr(0, dot) : path;
+    std::string out;
+    for (char c : pkg) {
+        if (c == '/') { if (!out.empty()) out += '.'; }
+        else if (c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|') out += '_';
+        else out += c;
     }
-    doc += "]}";
+    return out.empty() ? "Misc" : out;
+}
+
+// Auto-split writer: one file per package at <profile>/sdk_dump/<kind>/<Package>.<ext>, so no
+// single file gets huge. Lua files are a `return { ... }` table; JSON files are {"<kind>":[ ... ]}.
+void sdk_write_split(DumpFmt fmt, const char* kind, const std::map<std::string, std::vector<std::string>>& by_package) {
     try {
-        const auto dir = Framework::get_persistent_dir() / "sdk_dump";
-        std::filesystem::create_directories(dir);
-        const auto path = dir / filename;
-        std::ofstream f{path, std::ios::binary | std::ios::trunc};
-        f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
-        spdlog::info("[UObjectHook] Exported {} {} -> {}", parts.size(), key, path.string());
+        const auto root = Framework::get_persistent_dir() / "sdk_dump" / kind;
+        std::filesystem::create_directories(root);
+        size_t files = 0, items = 0;
+        for (const auto& [pkg, parts] : by_package) {
+            std::string body = sdk_arr_open(fmt);
+            for (size_t i = 0; i < parts.size(); ++i) {
+                if (i) body += ",";
+                body += parts[i];
+            }
+            body += sdk_arr_close(fmt);
+            const std::string doc = (fmt == DumpFmt::Lua)
+                ? ("return " + body + "\n")
+                : (std::string("{") + sdk_key(DumpFmt::Json, kind) + body + "}");
+            const auto path = root / (pkg + "." + sdk_ext(fmt));
+            std::ofstream f{path, std::ios::binary | std::ios::trunc};
+            f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
+            ++files;
+            items += parts.size();
+        }
+        spdlog::info("[UObjectHook] Exported {} {} across {} package file(s) ({}) -> {}",
+            items, kind, files, sdk_ext(fmt), root.string());
     } catch (const std::exception& e) {
-        spdlog::error("[UObjectHook] SDK JSON export ({}) failed: {}", key, e.what());
+        spdlog::error("[UObjectHook] SDK dump ({}) failed: {}", kind, e.what());
     }
 }
 } // namespace
@@ -5589,12 +5639,18 @@ void UObjectHook::draw_class_browser_window() {
     const auto wfilter = utility::widen(m_class_browser_filter);
     const bool has_filter = !wfilter.empty();
 
-    // Specific-or-batch JSON dump: exports every class currently matching the
-    // filter (filter to one name for a single class) from the already-validated
-    // m_sorted_classes, so there's no FUObjectArray re-classification. Each class
-    // carries its declared properties (name/type/offset + PropertyFlags hex+names)
-    // and functions (FunctionFlags hex+names + params).
-    if (ImGui::SmallButton("Export -> JSON")) {
+    // Export format, shared by all three tab export buttons.
+    static int s_dump_fmt_idx = 0; // 0 = JSON, 1 = Lua
+    ImGui::SetNextItemWidth(90.0f);
+    ImGui::Combo("dump format", &s_dump_fmt_idx, "JSON\0Lua\0");
+    const DumpFmt dump_fmt = s_dump_fmt_idx == 1 ? DumpFmt::Lua : DumpFmt::Json;
+
+    // Specific-or-batch dump: exports every class currently matching the filter (filter to one
+    // name for a single class) from the already-validated m_sorted_classes, so there's no
+    // FUObjectArray re-classification. Auto-split into one file per package to keep files small.
+    // Each class carries declared properties (name/type/offset + PropertyFlags) and functions
+    // (FunctionFlags + params).
+    if (ImGui::SmallButton("Export classes")) {
         std::vector<sdk::UClass*> to_dump;
         {
             std::shared_lock _{m_mutex};
@@ -5609,17 +5665,19 @@ void UObjectHook::draw_class_browser_window() {
                 to_dump.push_back(uclass);
             }
         }
-        std::vector<std::string> parts;
-        parts.reserve(to_dump.size());
+        std::map<std::string, std::vector<std::string>> by_package;
         for (auto* uclass : to_dump) {
-            try { parts.push_back(sdk_dump_ustruct_json(reinterpret_cast<sdk::UStruct*>(uclass), false)); }
+            std::string full;
+            try { full = utility::narrow(uclass->get_full_name()); } catch (...) {}
+            const auto pkg = sdk_package_of(full);
+            try { by_package[pkg].push_back(sdk_dump_ustruct(dump_fmt, reinterpret_cast<sdk::UStruct*>(uclass), false)); }
             catch (...) {}
         }
-        sdk_write_dump("sdk_dump_classes.json", "classes", parts);
+        sdk_write_split(dump_fmt, "classes", by_package);
     }
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Dump the filtered class list (properties+offset+flags,\n"
-                          "functions+flags+params) to\n<profile>/sdk_dump/sdk_dump_classes.json");
+        ImGui::SetTooltip("Dump the filtered class list (properties+offset+flags, functions+flags+params),\n"
+                          "one file per package, to <profile>/sdk_dump/classes/<Package>.%s", sdk_ext(dump_fmt));
     }
 
     if (!ImGui::BeginTabBar("ClassBrowserTabs")) {
@@ -5830,14 +5888,14 @@ void UObjectHook::draw_class_browser_window() {
         ImGui::TextDisabled("%zu UScriptStructs%s", items.size(),
             truncated ? " (capped at 5000 — narrow filter)" : "");
         ImGui::SameLine();
-        if (ImGui::SmallButton("Export -> JSON##ss")) {
-            std::vector<std::string> parts;
-            parts.reserve(items.size());
+        if (ImGui::SmallButton("Export structs##ss")) {
+            std::map<std::string, std::vector<std::string>> by_package;
             for (const auto& it : items) {
-                try { parts.push_back(sdk_dump_ustruct_json(reinterpret_cast<sdk::UStruct*>(it.obj), false)); }
+                const auto pkg = sdk_package_of(it.full_narrow);
+                try { by_package[pkg].push_back(sdk_dump_ustruct(dump_fmt, reinterpret_cast<sdk::UStruct*>(it.obj), false)); }
                 catch (...) {}
             }
-            sdk_write_dump("sdk_dump_scriptstructs.json", "scriptstructs", parts);
+            sdk_write_split(dump_fmt, "scriptstructs", by_package);
         }
 
         if (ImGui::BeginTabBar("ScriptStructSubTabs")) {
@@ -5913,8 +5971,8 @@ void UObjectHook::draw_class_browser_window() {
         static const auto enum_class = sdk::find_uobject<sdk::UClass>(L"Class /Script/CoreUObject.Enum");
         ImGui::TextDisabled("walks FUObjectArray looking for UEnum instances");
         ImGui::SameLine();
-        if (enum_class != nullptr && ImGui::SmallButton("Export -> JSON##enums")) {
-            std::vector<std::string> parts;
+        if (enum_class != nullptr && ImGui::SmallButton("Export enums##enums")) {
+            std::map<std::string, std::vector<std::string>> by_package;
             auto arr = sdk::FUObjectArray::get();
             const auto count = arr ? arr->get_object_count() : 0;
             for (int32_t i = 0; i < count; ++i) {
@@ -5923,14 +5981,13 @@ void UObjectHook::draw_class_browser_window() {
                 auto obj = (sdk::UObject*)item->get_object();
                 auto cls = obj->get_class();
                 if (cls == nullptr || !cls->is_a(enum_class)) continue;
-                if (has_filter) {
-                    std::wstring full;
-                    try { full = obj->get_full_name(); } catch (...) { continue; }
-                    if (full.find(wfilter) == std::wstring::npos) continue;
-                }
-                try { parts.push_back(sdk_dump_uenum_json((sdk::UEnum*)obj)); } catch (...) {}
+                std::wstring full;
+                try { full = obj->get_full_name(); } catch (...) { continue; }
+                if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+                const auto pkg = sdk_package_of(utility::narrow(full));
+                try { by_package[pkg].push_back(sdk_dump_uenum(dump_fmt, (sdk::UEnum*)obj)); } catch (...) {}
             }
-            sdk_write_dump("sdk_dump_enums.json", "enums", parts);
+            sdk_write_split(dump_fmt, "enums", by_package);
         }
         if (ImGui::BeginChild("enum_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
             drag_scroll_current_window();
