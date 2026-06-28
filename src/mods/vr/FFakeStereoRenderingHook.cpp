@@ -17481,11 +17481,13 @@ bool VRRenderTargetManager_Base::allocate_render_target_texture(uintptr_t return
             this->is_using_texture_desc = true;
             this->is_version_greq_5_1 = true;
 
-            if (is_ue57_dx11_backend()) {
-                SPDLOG_WARN_ONCE("Skipping UE 5.7 D3D11 BufferedRT texture-create replay hook; using the engine allocation path");
-                this->set_up_texture_hook = true;
-                return false;
-            }
+            // NOTE: this used to bail for is_ue57_dx11_backend() (skipping the texture-create hook
+            // install entirely) which left VRRenderTargetManager_Base::render_target null forever on
+            // UE5.7 D3D11 -> D3D11Component::setup() "Failed to get back buffer" loop -> black screen
+            // (Sprawl Zero). We now fall through into the emulation loop and install the SAME proven
+            // capture mechanism D3D12 uses: the post-hook (which captures the scene RT via
+            // texture_hook_ref, set from the allocate_render_target_texture out-param above). The
+            // unsafe pre-hook replay that the skip was protecting against stays DX12-only (see below).
         }
 
         // Present in a specific game or game(s), somewhere around 4.8-4.12 (?)
@@ -17606,12 +17608,17 @@ bool VRRenderTargetManager_Base::allocate_render_target_texture(uintptr_t return
                         const auto fn = utility::calculate_absolute(ip + 1);
                         SPDLOG_INFO("Analyzing call at {:x} to {:x}", ip, fn);
 
-                        if (is_ue57_dx11_backend() && this->is_version_greq_5_1 &&
-                            is_probable_ue57_dx11_texture_desc_prepare_function(fn))
+                        // UE5.7: install the proven desc-prepare/wrapper/finalize capture hooks for BOTH
+                        // D3D12 and D3D11. D3D12 anchors on the first analyzed call; D3D11 additionally
+                        // confirms this call IS the texture-desc prepare helper before anchoring (the
+                        // merge's old D3D11 path only *skipped* this helper and never installed any hook,
+                        // leaving render_target null -> Sprawl Zero black). The post-hook below (scene-RT
+                        // capture) is installed for both backends; the pre-hook (DX12-only UI-duplication
+                        // replay) stays gated to is_dx12() to avoid the unsafe replay the skip guarded against.
+                        if (is_ue_5_7_or_newer() &&
+                            (g_framework->is_dx12() ||
+                             (g_framework->is_dx11() && this->is_version_greq_5_1 && is_probable_ue57_dx11_texture_desc_prepare_function(fn))))
                         {
-                            SPDLOG_INFO("Skipping UE 5.7 D3D11 texture-desc prepare helper at {:x}; continuing to the real texture-create wrapper", fn);
-                            next_call_is_not_the_right_one = true;
-                        } else if (g_framework->is_dx12() && is_ue_5_7_or_newer()) {
                             const auto next_calls = find_next_direct_calls((uintptr_t)ip + decoded->Length, 0x80, 2);
 
                             if (next_calls.size() >= 2) {
@@ -17650,20 +17657,27 @@ bool VRRenderTargetManager_Base::allocate_render_target_texture(uintptr_t return
                                     this->texture_hook = std::move(texture_hook_result.value());
                                 }
 
-                                auto pre_texture_hook_result = safetyhook::MidHook::create((void*)wrapper_call_ip, +[](safetyhook::Context& ctx) -> void {
-                                    VRRenderTargetManager::pre_texture_hook_callback(ctx, false);
-                                });
+                                // Pre-hook = UE5.7 DX12-only UI-texture duplication replay (pre_texture_hook_callback's
+                                // 5.7 body is hard-gated is_dx12()). It is NOT needed for scene-RT capture (the
+                                // post-hook above already captures render_target) and is exactly the unsafe replay
+                                // the merge's D3D11 skip was guarding against -- so only install it on D3D12. On D3D11
+                                // the dedicated-UI handling falls back to the existing Slate/fallback paths.
+                                if (g_framework->is_dx12()) {
+                                    auto pre_texture_hook_result = safetyhook::MidHook::create((void*)wrapper_call_ip, +[](safetyhook::Context& ctx) -> void {
+                                        VRRenderTargetManager::pre_texture_hook_callback(ctx, false);
+                                    });
 
-                                if (!pre_texture_hook_result.has_value()) {
-                                    const auto e = pre_texture_hook_result.error();
+                                    if (!pre_texture_hook_result.has_value()) {
+                                        const auto e = pre_texture_hook_result.error();
 
-                                    if (e.type == safetyhook::MidHook::Error::BAD_ALLOCATION) {
-                                        SPDLOG_ERROR("Failed to create UE 5.7 pre texture hook: BAD_ALLOCATION: {}", (uint8_t)e.allocator_error);
+                                        if (e.type == safetyhook::MidHook::Error::BAD_ALLOCATION) {
+                                            SPDLOG_ERROR("Failed to create UE 5.7 pre texture hook: BAD_ALLOCATION: {}", (uint8_t)e.allocator_error);
+                                        } else {
+                                            SPDLOG_ERROR("Failed to create UE 5.7 pre texture hook: BAD_INLINE_HOOK: {}", (uint8_t)e.inline_hook_error.type);
+                                        }
                                     } else {
-                                        SPDLOG_ERROR("Failed to create UE 5.7 pre texture hook: BAD_INLINE_HOOK: {}", (uint8_t)e.inline_hook_error.type);
+                                        this->pre_texture_hook = std::move(pre_texture_hook_result.value());
                                     }
-                                } else {
-                                    this->pre_texture_hook = std::move(pre_texture_hook_result.value());
                                 }
 
                                 this->is_pre_texture_call_e8 = true;
