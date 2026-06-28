@@ -763,8 +763,11 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
         backbuffer = real_backbuffer;
     }
 
-    if (is_deadzone_rogue_current_game() && backbuffer == nullptr && real_backbuffer != nullptr) {
-        SPDLOG_WARNING_EVERY_N_SEC(2, "[Deadzone][D3D12] UE render target unavailable on frame; using real swapchain backbuffer fallback");
+    // Real-backbuffer bootstrap (per-frame): mirror the setup-time fallback so a frame whose UE RT
+    // is momentarily null draws the game flat instead of black. everspace2 excluded (own handling).
+    if (backbuffer == nullptr && real_backbuffer != nullptr &&
+        !vr->is_extreme_compatibility_mode_enabled() && !is_everspace2_current_game()) {
+        SPDLOG_WARNING_EVERY_N_SEC(2, "[VR][D3D12] UE render target unavailable on frame; using real swapchain backbuffer fallback");
         backbuffer = real_backbuffer;
     }
 
@@ -2647,13 +2650,18 @@ bool D3D12Component::setup() {
         backbuffer = real_backbuffer;
     }
 
-    const bool deadzone_real_backbuffer_bootstrap =
-        is_deadzone_rogue_current_game() &&
+    // Real-backbuffer bootstrap: when the engine's render target isn't available during setup on
+    // the non-extreme path, draw from the real swapchain backbuffer so the game shows up (flat)
+    // instead of a black screen. Proper stereo resumes once the UE RT is captured. Excludes
+    // everspace2, which has its own setup-failure-frame handling.
+    const bool real_backbuffer_bootstrap =
         backbuffer == nullptr &&
-        real_backbuffer != nullptr;
+        real_backbuffer != nullptr &&
+        !vr->is_extreme_compatibility_mode_enabled() &&
+        !is_everspace2_current_game();
 
-    if (deadzone_real_backbuffer_bootstrap) {
-        SPDLOG_WARNING_EVERY_N_SEC(2, "[Deadzone][D3D12] UE render target unavailable during setup; using real swapchain backbuffer bootstrap");
+    if (real_backbuffer_bootstrap) {
+        SPDLOG_WARNING_EVERY_N_SEC(2, "[VR][D3D12] UE render target unavailable during setup; bootstrapping from the real swapchain backbuffer (flat fallback)");
         backbuffer = real_backbuffer;
     }
 
@@ -2676,7 +2684,7 @@ bool D3D12Component::setup() {
     backbuffer_desc.Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
     backbuffer_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    if (!vr->is_extreme_compatibility_mode_enabled() && !deadzone_real_backbuffer_bootstrap) {
+    if (!vr->is_extreme_compatibility_mode_enabled() && !real_backbuffer_bootstrap) {
         backbuffer_desc.Width /= 2; // The texture we get from UE is both eyes combined. we will copy the regions later.
     }
 
