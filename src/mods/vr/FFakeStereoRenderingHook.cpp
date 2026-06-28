@@ -11228,6 +11228,23 @@ void FFakeStereoRenderingHook::post_init_properties(uintptr_t localplayer) {
         return;
     }
 
+    // UE5.7+: fail closed on the legacy native-stereo LocalPlayer bootstrap. The resolver matches the
+    // PostInitProperties slot against UObject's vtable, but manually re-invoking that slot on the
+    // LocalPlayer override here makes every instruction access-violate (the resolved slot is not a
+    // clean call on this build). The VEH below then "recovers" by skip-stepping past each faulting
+    // instruction one at a time, walking the entire wrong function until the render thread's command
+    // state is corrupted -- producing the c0000005 storm + D3D12 unhook/rehook loop + freeze/crash
+    // observed when switching ValorMortis (UE5.7 D3D12) to Native Stereo. The merged UE5.7 VR renderer
+    // sets up both eyes through the D3D12 path and does not need this second-view re-init, so skip it
+    // (same fail-closed pattern as the Deadzone/Avowed/Everwind guards). Working UE5.7 extreme-compat
+    // games (e.g. Sprawl Zero) never reach this call, so they are unaffected.
+    if (is_ue_5_7_or_newer()) {
+        SPDLOG_WARN_ONCE("[UE5.7][PostInitProperties] Skipping legacy LocalPlayer bootstrap (unsafe on UE5.7; the UE5.7 renderer handles both eyes)");
+        g_hook->m_sceneview_data.known_scene_states.clear();
+        g_hook->m_fixed_localplayer_view_count = true;
+        return;
+    }
+
     std::optional<uint32_t> idx{};
     const auto engine = sdk::UEngine::get_lvalue();
 
