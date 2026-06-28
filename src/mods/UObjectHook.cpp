@@ -6504,6 +6504,8 @@ void UObjectHook::draw_gizmo_options() {
     m_keybind_gizmo_rotate->draw("Rotate hotkey");
     m_keybind_gizmo_scale->draw("Scale hotkey");
     m_keybind_gizmo_combined->draw("Combined hotkey");
+
+    ImGui::SeparatorText("Appearance");
     ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
@@ -6512,6 +6514,8 @@ void UObjectHook::draw_gizmo_options() {
     if (m_gizmo_show_all_modes) {
         ImGui::SliderFloat("All-modes spacing", &m_gizmo_all_modes_offset, 32.0f, 160.0f, "%.0f px");
     }
+
+    ImGui::SeparatorText("Selection / picking");
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
     // One-shot picker: arm with the button, click a world object, it auto-disarms (no toggle-off
     // dance). "keep picking" keeps it armed for picking several in a row. Esc also cancels.
