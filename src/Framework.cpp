@@ -1581,9 +1581,12 @@ void Framework::reload_config() try {
     spdlog::error("Failed to reload config: {}", e.what());
 }
 
-// lazy. always show cursor gating on_frame overlays is dumb now that overlays work okay in vr
 bool Framework::is_drawing_anything() const {
-    return true/*m_draw_ui || FrameworkConfig::get()->is_always_show_cursor()*/;
+    // Gates the VR framework overlay quad (OverlayComponent OpenXR generate_framework_ui_quad,
+    // OpenVR should_show_overlay). This was hardcoded to `true`, which meant the overlay could
+    // NEVER be hidden in VR -- disabling the UI did nothing (the quad kept drawing). Restore the
+    // real condition so closing the UI (and not force-showing the cursor) hides the overlay.
+    return m_draw_ui || FrameworkConfig::get()->is_always_show_cursor();
 }
 
 void Framework::set_draw_ui(bool state, bool should_save) {
