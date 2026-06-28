@@ -5807,10 +5807,109 @@ void UObjectHook::draw_class_browser_window() {
             ImGui::EndChild();
         };
 
+        // Inheritance (super -> sub) tree -- "organize by class". Built from get_super_struct over
+        // the known class set; roots are classes whose super isn't in the list. Click a node's label
+        // to inspect it (the arrow / double-click expands); leaf classes reuse the shared class row.
+        // When filtering, a node shows if it or any descendant matches.
+        auto render_class_hierarchy = [&]() {
+            if (ImGui::BeginChild("class_hier", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+                drag_scroll_current_window();
+                std::shared_lock _{m_mutex};
+
+                std::unordered_set<sdk::UClass*> known;
+                for (auto* c : m_sorted_classes) {
+                    if (c != nullptr) known.insert(c);
+                }
+                std::unordered_map<sdk::UClass*, std::vector<sdk::UClass*>> children;
+                std::vector<sdk::UClass*> roots;
+                for (auto* c : m_sorted_classes) {
+                    if (c == nullptr) continue;
+                    sdk::UClass* super = nullptr;
+                    try { super = (sdk::UClass*)c->get_super_struct(); } catch (...) {}
+                    if (super != nullptr && super != c && known.count(super) != 0) {
+                        children[super].push_back(c);
+                    } else {
+                        roots.push_back(c);
+                    }
+                }
+
+                auto name_of = [&](sdk::UClass* c) -> std::string {
+                    try { return utility::narrow(c->get_fname().to_string()); } catch (...) { return "?"; }
+                };
+                auto full_of = [&](sdk::UClass* c) -> std::wstring {
+                    auto it = m_meta_objects.find(c);
+                    return (it != m_meta_objects.end() && it->second != nullptr) ? it->second->full_name : std::wstring{};
+                };
+                const auto by_name = [&](sdk::UClass* a, sdk::UClass* b) { return name_of(a) < name_of(b); };
+                std::sort(roots.begin(), roots.end(), by_name);
+                for (auto& [parent, kids] : children) {
+                    std::sort(kids.begin(), kids.end(), by_name);
+                }
+
+                std::unordered_map<sdk::UClass*, bool> vis_cache;
+                auto visible = [&](auto&& self, sdk::UClass* c) -> bool {
+                    if (!has_filter) return true;
+                    if (auto f = vis_cache.find(c); f != vis_cache.end()) return f->second;
+                    bool v = full_of(c).find(wfilter) != std::wstring::npos;
+                    if (!v) {
+                        if (auto ch = children.find(c); ch != children.end()) {
+                            for (auto* k : ch->second) { if (self(self, k)) { v = true; break; } }
+                        }
+                    }
+                    vis_cache[c] = v;
+                    return v;
+                };
+
+                auto draw = [&](auto&& self, sdk::UClass* c) -> void {
+                    if (!visible(visible, c)) return;
+                    auto ch = children.find(c);
+                    const bool has_kids = ch != children.end() && !ch->second.empty();
+                    if (!has_kids) {
+                        render_class_row(c, full_of(c), name_of(c));
+                        return;
+                    }
+                    ImGui::PushID(c);
+                    const auto hdr = name_of(c) + "  (" + std::to_string(ch->second.size()) + ")";
+                    const bool open = ImGui::TreeNodeEx(hdr.c_str(),
+                        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick);
+                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+                        if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), c)
+                                == m_open_class_inspectors.end()) {
+                            m_open_class_inspectors.push_back(c);
+                        }
+                    }
+                    if (ImGui::BeginDragDropSource()) {
+                        auto uc = c;
+                        ImGui::SetDragDropPayload("UEVR_UClass", &uc, sizeof(uc));
+                        ImGui::Text("UClass: %s", utility::narrow(full_of(c)).c_str());
+                        ImGui::EndDragDropSource();
+                    }
+                    if (open) {
+                        for (auto* k : ch->second) { self(self, k); }
+                        ImGui::TreePop();
+                    }
+                    ImGui::PopID();
+                };
+
+                if (roots.empty()) {
+                    ImGui::TextDisabled(m_sorted_classes.empty()
+                        ? "class list not yet populated — sort task may still be running..."
+                        : "no matches for filter");
+                } else {
+                    for (auto* r : roots) { draw(draw, r); }
+                }
+            }
+            ImGui::EndChild();
+        };
+
         if (ImGui::BeginTabBar("ClassesSubTabs")) {
             // By Package is the default (first) view per feedback.
             if (ImGui::BeginTabItem("By Package")) {
                 render_class_tree();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("By Class")) {
+                render_class_hierarchy();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Native (/Script/...)")) {
