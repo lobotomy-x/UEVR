@@ -4965,12 +4965,14 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             (g_framework->is_dx12() ? "D3D12" : "D3D11") + "]").c_str());
 
         m_desktop_fix->draw("Desktop Spectator View");
+        ImGui::SameLine();
+        m_2d_screen_mode->draw("2D Screen Mode");
 
         if (m_desktop_fix->value()) {
+            // Fixed width so the combo doesn't stretch full-panel and push its label off-screen.
+            ImGui::SetNextItemWidth(200.0f);
             m_desktop_mirror_mode->draw("Desktop Spectator View Mode");
         }
-
-        m_2d_screen_mode->draw("2D Screen Mode");
 
         ImGui::TextWrapped("Render Resolution (per-eye): %d x %d", get_runtime()->get_width(), get_runtime()->get_height());
         ImGui::TextWrapped("Total Render Resolution: %d x %d", get_runtime()->get_width() * 2, get_runtime()->get_height());
@@ -5382,26 +5384,11 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         if (ImGui::TreeNode("Compatibility Options")) {
             m_compatibility_ahud->draw("AHUD UI Compatibility");
             m_compatibility_skip_uobjectarray_init->draw("Skip UObjectArray Init");
-            m_compatibility_skip_pip->draw("Skip PostInitProperties");
-            m_compatibility_direct_aim->draw("Direct Aim Fallback");
-            m_compatibility_controller_camera_guard->draw("Controller-Camera Conflict Guard");
-            m_compatibility_head_turn_camera_stabilizer->draw("Head-Turn Camera Stabilizer");
-            m_compatibility_ui_layer_pose_telemetry->draw("UI Layer Pose Telemetry");
-            m_compatibility_ui_layer_pose_stabilizer->draw("UI Layer Pose Stabilizer");
-            if (m_compatibility_ui_layer_pose_stabilizer->value()) {
-                ImGui::TextWrapped("OpenXR UE5.7+: latches game UI layer pose to the same frame basis used for scene submit.");
-            }
-            m_compatibility_daysgone_bend_ui_placement_fix->draw("Days Gone Bend UI Placement Fix");
-            if (m_compatibility_daysgone_bend_ui_placement_fix->value()) {
-                ImGui::TextWrapped("Days Gone only: keeps Bend's in-scene 3D menu path and applies controlled BP_Menu3D/BendWidgetMain placement overrides. Tuning controls are shown below.");
-                if (m_fake_stereo_hook != nullptr) {
-                    m_fake_stereo_hook->draw_daysgone_bend_ui_controls();
-                }
-            }
-            m_compatibility_daysgone_gbuffer_safe_mode->draw("Days Gone GBuffer Safe Mode");
-            if (m_compatibility_daysgone_gbuffer_safe_mode->value()) {
-                ImGui::TextWrapped("Days Gone DX11 only: applies r.GBuffer=0 to avoid Bend deferred/GBuffer black road/terrain patches. It is opt-in and restored when disabled.");
-            }
+            // Removed from the UI (user: "useless options") -- the joeyhodge per-game compatibility
+            // toggles: Skip PostInitProperties, Direct Aim Fallback, Controller-Camera Conflict Guard,
+            // Head-Turn Camera Stabilizer, UI Layer Pose Telemetry/Stabilizer, Days Gone Bend UI
+            // Placement Fix, Days Gone GBuffer Safe Mode. Their members/accessors are retained and stay
+            // at their default (off), so dependent code paths are unchanged -- only the UI clutter is gone.
             m_sceneview_compatibility_mode->draw("SceneView Compatibility Mode");
             m_extreme_compat_mode->draw("Extreme Compatibility Mode");
 
