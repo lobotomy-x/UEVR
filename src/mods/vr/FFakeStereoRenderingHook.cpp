@@ -8533,8 +8533,9 @@ void FFakeStereoRenderingHook::pre_render_viewfamily_renderthread(ISceneViewExte
                     // so all of this might seem really overkill but
                     // it's a good way to detect whether we have an FMemStack at the top of the command list
                     // which we need to skip on UE5.5+
-                    if (utility::get_module_within(*(void**)l->root).value_or(nullptr) == nullptr || 
-                        IsBadReadPtr(*(void**)l->root, sizeof(void*)) || 
+                    if (IsBadReadPtr(l->root, sizeof(void*)) ||
+                        utility::get_module_within(*(void**)l->root).value_or(nullptr) == nullptr ||
+                        IsBadReadPtr(*(void**)l->root, sizeof(void*)) ||
                         utility::get_module_within(**(void***)l->root).value_or(nullptr) == nullptr ||
                         (!IsBadReadPtr(new_root->next, sizeof(void*)) && (utility::get_module_within(*(void**)new_root->next).value_or(nullptr) == nullptr || utility::get_module_within(**(void***)new_root->next).value_or(nullptr) == nullptr))
                     )
@@ -8544,7 +8545,15 @@ void FFakeStereoRenderingHook::pre_render_viewfamily_renderthread(ISceneViewExte
                             // Start at 0x10 because that's usually where the pointers in FMemStack end.
                             for (size_t i = 0x10; i < 0x50; i += sizeof(void*)) try {
                                 const auto cur_l = (sdk::FRHICommandListBase*)((uintptr_t)command_list + i);
-                                if (utility::get_module_within(*(void**)cur_l->root).value_or(nullptr) != nullptr) {
+                                // cur_l->root at a bruteforced offset is frequently garbage (e.g. an
+                                // FMemStack sentinel like 0xffffffffffffffff). Dereferencing it raised an
+                                // access violation that catch(...) does NOT catch under /EHsc, so it
+                                // escaped to the XRSystem null-deref handler and crashed -- but only on
+                                // the non-extreme-compat path, where this slate-thread probe runs.
+                                // Validate the pointer before dereferencing it.
+                                void* const cur_root = cur_l->root;
+                                if (cur_root != nullptr && !IsBadReadPtr(cur_root, sizeof(void*)) &&
+                                    utility::get_module_within(*(void**)cur_root).value_or(nullptr) != nullptr) {
                                     actual_offset = i;
                                     l = cur_l;
                                     SPDLOG_INFO("Found UE5.5+ command list at offset 0x{:x}", i);
@@ -9152,6 +9161,18 @@ bool FFakeStereoRenderingHook::setup_view_extensions() try {
                 SPDLOG_ERROR(
                     "[DaysGone] Null scene-render-target output-ref pattern at {:x} did not match expected FSceneRenderTargets load",
                     exception_address);
+            }
+
+            // The XRSystem/HMDDevice null-deref this handler patches is always in the game module
+            // (the engine loads the XRSystem from [GEngine + off]). A fault inside our OWN module is
+            // never that pattern -- it's a real UEVR bug -- and we must never analyze or NOP-patch our
+            // own code. Let such faults propagate untouched.
+            if (exception_module != utility::get_executable()) {
+                SPDLOG_ERROR(
+                    "Null dereference at {:x} is not in the game module (module={}); not an XRSystem deref, leaving it alone",
+                    exception_address,
+                    exception_module == nullptr ? "unknown" : utility::get_module_path(exception_module).value_or("unknown"));
+                return EXCEPTION_CONTINUE_SEARCH;
             }
 
             ignored_addresses.insert(exception_address);
