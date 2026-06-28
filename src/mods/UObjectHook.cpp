@@ -4378,7 +4378,7 @@ void UObjectHook::handle_click_select() {
 
     // Gather ALL candidates inside the pick cone (front-most first), optionally class-filtered, so the
     // user can scroll/swipe to cycle through overlapping objects instead of always getting the nearest.
-    struct Cand { float t; sdk::USceneComponent* comp; std::string name; };
+    struct Cand { float t; sdk::USceneComponent* comp; glm::vec3 world; std::string name; };
     std::vector<Cand> cands;
     {
         std::shared_lock _{m_mutex};
@@ -4405,7 +4405,7 @@ void UObjectHook::handle_click_select() {
                 for (auto& ch : fl) ch = (char)std::tolower((unsigned char)ch);
                 if (fl.find(class_filter) == std::string::npos) continue;
             }
-            cands.push_back({t, comp, std::move(fn)});
+            cands.push_back({t, comp, p, std::move(fn)});
         }
     }
     std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.t < b.t; });
@@ -4427,6 +4427,35 @@ void UObjectHook::handle_click_select() {
     if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1); // wheel up = nearer/previous
     m_pick_cycle = ((m_pick_cycle % n) + n) % n; // wrap
     draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
+
+    // World-space reticle on the focused cycle candidate (green, distinct from the amber selection
+    // box) so it's obvious WHICH overlapping object you're about to pick as you scroll through them.
+    // Drawn while actively scanning/cycling; disappears when the picker disarms.
+    if (m_highlight_selection && m_pick_cycle >= 0 && m_pick_cycle < (int)cands.size()) {
+        glm::vec2 sp{0.0f, 0.0f};
+        if (ugs->world_to_screen(pc, cands[m_pick_cycle].world, &sp)) {
+            ImVec2 c{sp.x, sp.y};
+            if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
+                c = vr->get_overlay_component().transform_world_aligned_to_overlay(c);
+            }
+            const auto* vp0 = ImGui::GetMainViewport();
+            if (c.x >= vp0->Pos.x && c.x <= vp0->Pos.x + vp0->Size.x &&
+                c.y >= vp0->Pos.y && c.y <= vp0->Pos.y + vp0->Size.y) {
+                auto* dl = ImGui::GetForegroundDrawList();
+                const ImU32 hl = IM_COL32(120, 255, 120, 245); // candidate green (matches the active list row)
+                const float r = 16.0f, b = 7.0f;
+                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r + b, c.y - r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r, c.y - r + b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r - b, c.y - r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r, c.y - r + b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r + b, c.y + r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r, c.y + r - b}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r - b, c.y + r}, hl, 2.0f);
+                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r, c.y + r - b}, hl, 2.0f);
+                dl->AddCircleFilled(c, 2.5f, hl);
+            }
+        }
+    }
 
     if (!clicked) {
         return; // overlay + scroll only; the click below commits the selection
