@@ -7485,7 +7485,22 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
         }
     }
 
-    ImGui::Text("%s", utility::narrow(object->get_full_name()).data());
+    // Prominent identity header (class + leaf name, coloured) with the full path dimmed below,
+    // so stacked / nested inspected objects are easy to tell apart in the layout.
+    {
+        std::string full, header;
+        try { full = utility::narrow(object->get_full_name()); } catch (...) {}
+        try {
+            header = utility::narrow(uclass->get_fname().to_string()) + "  " +
+                     utility::narrow(object->get_fname().to_string());
+        } catch (...) { header = full; }
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.55f, 0.85f, 1.0f, 1.0f});
+        ImGui::SeparatorText(header.c_str());
+        ImGui::PopStyleColor();
+        if (!full.empty()) {
+            ImGui::TextDisabled("%s", full.c_str());
+        }
+    }
 
     if (ImGui::TreeNode("Outer")) {
         auto outer_scope = m_path.enter("Outer");
