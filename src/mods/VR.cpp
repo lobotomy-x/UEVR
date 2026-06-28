@@ -5384,11 +5384,13 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         if (ImGui::TreeNode("Compatibility Options")) {
             m_compatibility_ahud->draw("AHUD UI Compatibility");
             m_compatibility_skip_uobjectarray_init->draw("Skip UObjectArray Init");
-            // Removed from the UI (user: "useless options") -- the joeyhodge per-game compatibility
-            // toggles: Skip PostInitProperties, Direct Aim Fallback, Controller-Camera Conflict Guard,
-            // Head-Turn Camera Stabilizer, UI Layer Pose Telemetry/Stabilizer, Days Gone Bend UI
-            // Placement Fix, Days Gone GBuffer Safe Mode. Their members/accessors are retained and stay
-            // at their default (off), so dependent code paths are unchanged -- only the UI clutter is gone.
+            // Skip PostInitProperties restored at user request -- it gates the native-stereo
+            // LocalPlayer bootstrap and is genuinely useful. The rest of the joeyhodge per-game
+            // compatibility toggles stay removed from the UI (Direct Aim Fallback, Controller-Camera
+            // Conflict Guard, Head-Turn Camera Stabilizer, UI Layer Pose Telemetry/Stabilizer, Days
+            // Gone Bend UI Placement Fix, Days Gone GBuffer Safe Mode); their members/accessors are
+            // retained at their default (off), so dependent code paths are unchanged.
+            m_compatibility_skip_pip->draw("Skip PostInitProperties");
             m_sceneview_compatibility_mode->draw("SceneView Compatibility Mode");
             m_extreme_compat_mode->draw("Extreme Compatibility Mode");
 
