@@ -7298,6 +7298,26 @@ struct SceneViewExtensionAnalyzer {
             return;
         }
 
+        // UE5.7+ changed FRHICommandBase: the root is frequently no longer a vtable-based object at
+        // offset 0 (lambda commands carry a function pointer + Next pointer instead). Overwriting
+        // offset 0 there corrupts the command linked-list, and the RDG-execute later writes into our
+        // hooked_command_fn thunk -> EXCEPTION_ACCESS_VIOLATION on the render thread (the
+        // non-extreme-compat crash on Sprawl Zero, UE5.7 D3D11). Only install the vtable hook when
+        // offset 0 actually looks like a vtable: a readable pointer into a loaded module whose first
+        // entry is itself a code pointer in a module. Otherwise fall back to enqueuing poses directly
+        // (no command mutation), which is the same safe path used when the command has no vtable.
+        const auto existing_vtable = *(void***)last_command;
+        const bool looks_like_vtable =
+            existing_vtable != nullptr &&
+            !IsBadReadPtr(existing_vtable, sizeof(void*)) &&
+            utility::get_module_within((uintptr_t)existing_vtable).value_or(nullptr) != nullptr &&
+            utility::get_module_within((uintptr_t)existing_vtable[0]).value_or(nullptr) != nullptr;
+        if (!looks_like_vtable) {
+            SPDLOG_INFO_ONCE("FRHICommandBase root is not vtable-based (UE5.7+ lambda command?); enqueueing poses without hooking the command");
+            runtime->enqueue_render_poses(frame_count);
+            return;
+        }
+
         original_vtables[last_command] = *(void***)last_command;
         *(void***)last_command = (void**)new_vtable.data();
     }
@@ -9168,10 +9188,15 @@ bool FFakeStereoRenderingHook::setup_view_extensions() try {
             // never that pattern -- it's a real UEVR bug -- and we must never analyze or NOP-patch our
             // own code. Let such faults propagate untouched.
             if (exception_module != utility::get_executable()) {
-                SPDLOG_ERROR(
-                    "Null dereference at {:x} is not in the game module (module={}); not an XRSystem deref, leaving it alone",
-                    exception_address,
-                    exception_module == nullptr ? "unknown" : utility::get_module_path(exception_module).value_or("unknown"));
+                // Remember it so the early-out at the top of this handler skips it next time -- these
+                // can recur every frame (e.g. an SDK reflection deref driven by a Lua script, or a
+                // read during instruction emulation), so we must not re-analyze or log them per-frame.
+                if (ignored_addresses.insert(exception_address).second) {
+                    SPDLOG_ERROR(
+                        "Null dereference at {:x} is not in the game module (module={}); not an XRSystem deref, leaving it alone",
+                        exception_address,
+                        exception_module == nullptr ? "unknown" : utility::get_module_path(exception_module).value_or("unknown"));
+                }
                 return EXCEPTION_CONTINUE_SEARCH;
             }
 
