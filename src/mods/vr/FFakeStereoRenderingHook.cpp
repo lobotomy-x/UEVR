@@ -16140,6 +16140,61 @@ void VRRenderTargetManager_Base::texture_hook_callback(safetyhook::Context& ctx,
         SPDLOG_INFO(" last texture index: {}", rtm->last_texture_index);
     }
 
+    // UE5.7 D3D11: at our finalize-post hook position the AllocateRenderTargetTexture out-param
+    // (texture_hook_ref) and RAX are not yet populated -- the D3D11 RHI writes the targetable
+    // texture through a different ref than the DX12 path does, so the normal capture above yields
+    // null (Sprawl Zero: "Texture is null... RAX is bad"). Probe the live argument/return registers
+    // for the freshly-created texture: either a FTexture2DRHIRef* (ref->texture) or a FRHITexture2D*
+    // directly. Every candidate is vtable-validated by the helpers below, so a wrong register is
+    // rejected (logged) rather than dereferenced unsafely.
+    if (texture == nullptr && is_ue_5_7_or_newer() && g_framework->is_dx11() && ctx.rbp != 0) {
+        // The AllocateRenderTargetTexture out-param (texture_hook_ref) is a dangling stack pointer on
+        // D3D11 and the registers are clobbered by the finalize call -- verified live: both go invalid
+        // before setup() reads render_target (the recovered RAX object recycles to a junk vtable, the
+        // out-param ref unmaps), so the VerifiedFTexture2D guard nulls render_target -> black.
+        // Disassembly of this build's allocate path shows finalize writes the fresh BufferedRT /
+        // BufferedSRV refs to stack locals in the *current* frame:
+        //     lea rdx,[rbp-0x40] ; lea r8,[rbp+0x50] ; call finalize ; <-- post-hook here
+        // At this hook rbp is still that frame, so the refs are live and ->texture is the persistent
+        // heap RHI texture. Scan a small window around the verified offsets for robustness across
+        // builds; recover_texture_from_ref vtable-validates each slot, so a non-texture slot is
+        // rejected rather than dereferenced unsafely.
+        // A real FRHITexture's vtable is dense with code pointers; recover_texture_from_ref's
+        // is_valid_texture_candidate only checks the vtable POINTER is in a module, which also passes
+        // on unrelated objects parked on the stack (verified live: a slot at [rbp-0x30] held such an
+        // object -- StereoStuff then walked its vtable for GetNativeResource, hit a bad function
+        // pointer at index 2, and crashed). Require the first few vtable slots to be code pointers in a
+        // module so the scan skips those and lands on the genuine BufferedRT/BufferedSRV ref.
+        auto vtable_looks_like_rhi_texture = [](FRHITexture2D* t) -> bool {
+            void* vt = nullptr;
+            try { vt = *(void**)t; } catch (...) { return false; }
+            if (vt == nullptr || IsBadReadPtr(vt, sizeof(void*) * 6)) return false;
+            for (int i = 0; i < 6; ++i) {
+                void* fn = ((void**)vt)[i];
+                if (fn == nullptr || IsBadReadPtr(fn, 1) || !utility::get_module_within(fn).has_value()) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        for (int off = -0x68; off <= 0x88; off += (int)sizeof(void*)) {
+            auto* t = recover_texture_from_ref(ctx.rbp + (intptr_t)off, "rbp-stack");
+            if (t == nullptr || !vtable_looks_like_rhi_texture(t)) {
+                continue;
+            }
+
+            texture = t;
+            texture_source = "rbp-stack";
+            SPDLOG_INFO_EVERY_N_SEC(2, "[UE5.7][D3D11] Recovered scene render target from stack [rbp{:+#x}]: {:x}", off, (uintptr_t)texture);
+            break;
+        }
+
+        if (texture == nullptr) {
+            SPDLOG_INFO_EVERY_N_SEC(2, "[UE5.7][D3D11] Could not recover scene RT from stack frame (rbp={:x})", ctx.rbp);
+        }
+    }
+
     if (texture != nullptr) {
         rtm->render_target = texture;
     }
