@@ -7441,6 +7441,39 @@ void UObjectHook::ui_standard_object_context_menu(sdk::UObjectBase* object) {
             sc(hex);
         }
 
+        // Recenter to camera: only meaningful for scene components (needs set_world_location).
+        // Mirrors the "Selected" panel button -- deproject the screen centre to a camera ray on the
+        // game thread and place the object at ray_origin + forward * m_recenter_distance. object is a
+        // UObjectBase*, so cast to UObject* for is_a and USceneComponent* for the move (same pattern
+        // as the m_camera_attach path).
+        if (this->exists(object) && ((sdk::UObject*)object)->is_a(sdk::USceneComponent::static_class())) {
+            if (ImGui::Button("Recenter to camera")) {
+                auto* comp = (sdk::USceneComponent*)object;
+                const auto* vp = ImGui::GetMainViewport();
+                const glm::vec2 screen_center{vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f};
+                const float dist = m_recenter_distance;
+                GameThreadWorker::get().enqueue([this, comp, screen_center, dist]() {
+                    if (!this->exists(comp)) return;
+                    try {
+                        auto engine = sdk::UGameEngine::get();
+                        auto world = engine != nullptr ? engine->get_world() : nullptr;
+                        if (world == nullptr) return;
+                        auto ugs = sdk::UGameplayStatics::get();
+                        if (ugs == nullptr) return;
+                        auto pc = ugs->get_player_controller(world, 0);
+                        if (pc == nullptr) return;
+                        glm::vec3 ray_origin{0.0f, 0.0f, 0.0f};
+                        glm::vec3 ray_dir{0.0f, 0.0f, 0.0f};
+                        if (!ugs->screen_to_world(pc, screen_center, &ray_origin, &ray_dir)) return;
+                        const float len = glm::length(ray_dir);
+                        if (len < 1e-6f) return;
+                        ray_dir /= len;
+                        comp->set_world_location(ray_origin + ray_dir * dist, false, false);
+                    } catch (...) {}
+                });
+            }
+        }
+
         ImGui::EndPopup();
     }
 }

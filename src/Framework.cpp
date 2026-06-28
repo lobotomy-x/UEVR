@@ -764,8 +764,13 @@ void Framework::run_imgui_frame(bool from_present) {
     if (m_draw_ui) {
         ImGuiContext& g = *ImGui::GetCurrentContext();
         ImGuiIO& io = g.IO;
-        const bool vr = VR::get()->is_hmd_active();
-        const ImGuiMouseButton kBtn = vr ? ImGuiMouseButton_Left : ImGuiMouseButton_Middle;
+        // MIDDLE mouse only. It is unbound by imgui (no drag-drop / context menu / window-move), so it
+        // can never fight window-move. Crucially this means in VR the drag-scroll is NOT on the
+        // controller trigger (= left mouse) anymore -- the trigger used to both arm this scroll AND be
+        // what imgui starts a window-move with, so a trigger-drag moved the whole window instead of
+        // scrolling. VR content scroll is the right thumbstick -> io.MouseWheel (OverlayComponent), and
+        // this handler simply stays inert in VR (no middle button). Flat keeps middle-drag pan.
+        const ImGuiMouseButton kBtn = ImGuiMouseButton_Middle;
 
         static ImGuiWindow* s_drag_scroll_win = nullptr;
         if (s_drag_scroll_win != nullptr) {
@@ -782,12 +787,7 @@ void Framework::run_imgui_frame(bool from_present) {
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
             }
         } else if (ImGui::IsMouseClicked(kBtn) && g.HoveredWindow != nullptr && g.MovingWindow == nullptr &&
-                   (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f) &&
-                   // middle button can start anywhere (it does nothing else); VR-left must avoid item
-                   // drags AND yield to the gizmo axis-drag / picker, which share the left button and
-                   // hit-test the background draw list (so they never set HoveredId/ActiveId).
-                   (!vr || (g.HoveredId == 0 && g.ActiveId == 0 &&
-                            !(UObjectHook::get() != nullptr && UObjectHook::get()->is_gizmo_or_picker_busy())))) {
+                   (g.HoveredWindow->ScrollMax.y > 0.0f || g.HoveredWindow->ScrollMax.x > 0.0f)) {
             s_drag_scroll_win = g.HoveredWindow;
         }
     }
