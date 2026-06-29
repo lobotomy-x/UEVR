@@ -30,10 +30,19 @@ takes a 440k-line drop. The diff is three stacked layers:
     - `c2da031` is_drawing_anything() restore (overlay can hide again)
     - `470c372` OpenXR framework UI curvature (cylinder layer)
     - `8dae30a` 3 review-found correctness fixes
-  These ~7 commits are a coherent, ~700-line, reviewable PR. **Verify each still applies on a clean
-  joeyhodge base** (some may need the joeyhodge UE5.7 capture scaffolding that's already upstream
-  there). Cherry-pick onto a fresh branch off `joeyuevr/ue57performance` — DO NOT push without the
-  user (irreversible/outward-facing).
+  These ~7 commits are a coherent, ~700-line, reviewable PR. They all DIRECTLY modify joeyhodge's
+  UE5.7 code (e.g. `b727eff` removes a joeyhodge early-return; `9a34192`/`642ffbb` extend joeyhodge's
+  D3D11 capture), so they apply on top of the joeyhodge base by construction. Validated by inspection
+  (all touch only render files; none reference the Lua/UI ecosystem). Recommended local prep (user
+  runs the push):
+  ```
+  git fetch joeyuevr
+  git checkout -b ue57-render-fixes joeyuevr/ue57performance
+  git cherry-pick b11b4f9 b727eff 9a34192 642ffbb c2da031 470c372 8dae30a
+  # resolve any conflicts (c2da031 is_drawing_anything + 642ffbb RT format may touch praydog-era
+  # lines that differ on joeyhodge's base), build, then open the PR to joeyuevr manually.
+  ```
+  DO NOT push or open the PR autonomously (irreversible/outward-facing).
 
 - **B. The lobotomy-x ecosystem (Lua, UI, UObjectHook, mcp) → standalone fork RELEASE, not upstream.**
   Too divergent and opinionated to upstream. Ship it as the lobotomy-x fork's own tagged release
@@ -53,9 +62,10 @@ See `.remember/remember.md` for full root-cause notes.
 
 ## Cleanup TODO (autonomous-safe, in progress)
 - [x] Reverted temporary diagnostics (curv-diag, d3d12-rt-diag) — tree clean at 8dae30a.
-- [ ] Lua API_Main.lua:207 `GetInputMouseDelta` nil error spams every tick (floods logs; bad for a
-      release). Fix or guard the call.
-- [ ] Audit session-touched files for leftover debug logging / dead code.
+- [~] Lua API_Main.lua:207 `GetInputMouseDelta` nil spam is a RUNTIME script (not in the repo — only
+      docs reference API_Main). It's a deployed luavrlib script in %APPDATA%\UnrealVRMod\...\scripts;
+      fix belongs to the luavrlib source/deploy, not this repo. Out of scope for the render PR.
+- [ ] Audit session-touched render files for leftover debug logging / dead code.
 - [ ] Confirm build is warnings-clean (RelWithDebInfo).
 
 ## Do NOT do autonomously
