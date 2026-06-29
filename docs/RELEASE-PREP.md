@@ -65,8 +65,12 @@ See `.remember/remember.md` for full root-cause notes.
 - [~] Lua API_Main.lua:207 `GetInputMouseDelta` nil spam is a RUNTIME script (not in the repo — only
       docs reference API_Main). It's a deployed luavrlib script in %APPDATA%\UnrealVRMod\...\scripts;
       fix belongs to the luavrlib source/deploy, not this repo. Out of scope for the render PR.
-- [ ] Audit session-touched render files for leftover debug logging / dead code.
-- [ ] Confirm build is warnings-clean (RelWithDebInfo).
+- [x] Audited session-touched render files — clean, no leftover [*-diag]/TEMPORARY/debug prints
+      (only upstream imgui comments + legitimate UI snprintf).
+- [x] Drafted the render PR body -> docs/PR-ue57-render-fixes.md (paste after cherry-pick).
+- [ ] Confirm build is warnings-clean (RelWithDebInfo) before release — needs a full rebuild.
+- [ ] (Optional, needs user) dry-run the cherry-pick onto joeyuevr/ue57performance to surface
+      conflicts before the real PR — not done autonomously (risk of a messy git state while away).
 
 ## Do NOT do autonomously
 Pushing, opening PRs, force-pushing, tagging releases, `git gc` (a backup tag exists per memory) —
