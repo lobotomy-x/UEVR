@@ -1101,7 +1101,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     // radius is the non-negative radius of the cylinder. Values of zero or floating point positive infinity are treated as an infinite cylinder.
     // centralAngle is the angle of the visible section of the cylinder, based at 0 radians, in the range of [0, 2π). It grows symmetrically around the 0 radian angle.
     // aspectRatio is the ratio of the visible cylinder section width / height. The height of the cylinder is given by: (cylinder radius × cylinder angle) / aspectRatio.
-    layer.centralAngle = glm::max<float>(1.0f, glm::radians(m_parent->m_slate_cylinder_angle->value()));
+    layer.centralAngle = glm::max<float>(glm::radians(1.0f), glm::radians(m_parent->m_slate_cylinder_angle->value()));
     layer.aspectRatio = (meters_w / meters_h);
     layer.radius = (meters_h / layer.centralAngle) * layer.aspectRatio;
 
@@ -1393,7 +1393,10 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
 // Dispatcher: pick the curved cylinder layer when the framework curvature slider is non-zero and the
 // runtime supports cylinder layers; otherwise the flat quad. Mirrors generate_slate_layer.
 std::optional<std::reference_wrapper<XrCompositionLayerBaseHeader>> OverlayComponent::OpenXR::generate_framework_ui_layer() {
-    if (m_parent->m_framework_curvature->value() > 0.0f && VR::get()->get_runtime()->is_cylinder_layer_allowed()) {
+    // Only curve the actual framework menu (is_drawing_ui). When the UI is closed but always-show-cursor
+    // keeps the cursor slate up, keep it flat -- matching the OpenVR path (SetOverlayCurvature uses
+    // is_drawing_ui() ? curvature : 0).
+    if (g_framework->is_drawing_ui() && m_parent->m_framework_curvature->value() > 0.0f && VR::get()->get_runtime()->is_cylinder_layer_allowed()) {
         if (auto result = generate_framework_ui_cylinder(); result.has_value()) {
             return *(XrCompositionLayerBaseHeader*)&result.value().get();
         }

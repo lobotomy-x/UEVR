@@ -16165,6 +16165,12 @@ void VRRenderTargetManager_Base::texture_hook_callback(safetyhook::Context& ctx,
         // object -- StereoStuff then walked its vtable for GetNativeResource, hit a bad function
         // pointer at index 2, and crashed). Require the first few vtable slots to be code pointers in a
         // module so the scan skips those and lands on the genuine BufferedRT/BufferedSRV ref.
+        // Snapshot the global FRHITexture2D vtable: recover_texture_from_ref -> is_valid_texture_candidate
+        // calls FRHITexture2D::set_vtable() for ANY module-resident candidate, even decoys the stricter
+        // 6-slot check below rejects. If the scan ends up matching nothing, restore the prior vtable so a
+        // rejected decoy can't leave the global pointing at a bogus value for downstream get_vtable() users.
+        void* const prev_rhi_vtable = FRHITexture2D::get_vtable();
+
         auto vtable_looks_like_rhi_texture = [](FRHITexture2D* t) -> bool {
             void* vt = nullptr;
             try { vt = *(void**)t; } catch (...) { return false; }
