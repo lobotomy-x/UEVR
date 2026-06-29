@@ -46,7 +46,8 @@ takes a 440k-line drop. The diff is three stacked layers:
 
 - **B. The lobotomy-x ecosystem (Lua, UI, UObjectHook, mcp) → standalone fork RELEASE, not upstream.**
   Too divergent and opinionated to upstream. Ship it as the lobotomy-x fork's own tagged release
-  with a CHANGELOG, not a praydog PR.
+  with a CHANGELOG, not a praydog PR. Feature overview drafted in **docs/FORK-FEATURES.md** (use as
+  a release-notes / README starting point).
 
 - **C. Truly base-level fixes → small targeted praydog PRs** only if any exist that are independent
   of both the joeyhodge merge and the Lua ecosystem. (Audit pending — likely very few.)
