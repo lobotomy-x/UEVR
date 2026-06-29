@@ -195,13 +195,16 @@ private:
             const UILayerPoseBasis* pose_basis = nullptr
         );
         std::optional<std::reference_wrapper<XrCompositionLayerQuad>> generate_framework_ui_quad();
-        
+        std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> generate_framework_ui_cylinder();
+        std::optional<std::reference_wrapper<XrCompositionLayerBaseHeader>> generate_framework_ui_layer();
+
     private:
         XrCompositionLayerQuad m_slate_layer{};
         XrCompositionLayerQuad m_slate_layer_right{};
         XrCompositionLayerCylinderKHR m_slate_layer_cylinder{};
         XrCompositionLayerCylinderKHR m_slate_layer_cylinder_right{};
         XrCompositionLayerQuad m_framework_ui_layer{};
+        XrCompositionLayerCylinderKHR m_framework_ui_layer_cylinder{};
         OverlayComponent* m_parent{ nullptr };
         
         friend class OverlayComponent;

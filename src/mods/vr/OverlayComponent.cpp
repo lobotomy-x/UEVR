@@ -1272,4 +1272,139 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 
     return layer;
 }
+
+// Curved (cylinder) variant of the framework UI overlay -- the OpenXR equivalent of the OpenVR
+// SetOverlayCurvature path (which only works on the OpenVR runtime). Mirrors generate_framework_ui_quad
+// for placement, then wraps the panel onto a cylinder section whose arc is driven by the framework
+// curvature slider. The flat pointer-intersection is run at the panel's front face so the controller
+// pointer keeps working on the curved surface (good-enough flat approximation, like the slate path).
+std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComponent::OpenXR::generate_framework_ui_cylinder() {
+    if (!g_framework->is_drawing_anything()) {
+        m_parent->m_framework_intersect_state.intersecting = false;
+        return std::nullopt;
+    }
+
+    auto& vr = VR::get();
+
+    auto& layer = this->m_framework_ui_layer_cylinder;
+
+    layer.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
+    const auto& ui_swapchain = vr->m_openxr->swapchains[(uint32_t)runtimes::OpenXR::SwapchainIndex::FRAMEWORK_UI];
+    layer.subImage.swapchain = ui_swapchain.handle;
+    layer.subImage.imageRect.offset.x = 0;
+    layer.subImage.imageRect.offset.y = 0;
+    layer.subImage.imageRect.extent.width = ui_swapchain.width;
+    layer.subImage.imageRect.extent.height = ui_swapchain.height;
+    layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    layer.eyeVisibility = XrEyeVisibility::XR_EYE_VISIBILITY_BOTH;
+
+    auto glm_matrix = glm::identity<glm::mat4>();
+
+    if (vr->m_overlay_component.m_framework_ui_follows_view->value()) {
+        layer.space = vr->m_openxr->view_space;
+    } else {
+        auto rotation_offset = glm::inverse(vr->get_rotation_offset());
+
+        if (!g_framework->is_drawing_ui() && vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()) {
+            const auto pre_flat_rotation = vr->get_pre_flattened_rotation();
+            const auto pre_flat_pitch = utility::math::pitch_only(pre_flat_rotation);
+            rotation_offset = glm::normalize(glm::inverse(pre_flat_pitch * vr->get_rotation_offset()));
+        }
+
+        glm_matrix = Matrix4x4f{rotation_offset};
+        glm_matrix[3] += vr->get_standing_origin();
+        layer.space = vr->m_openxr->stage_space;
+    }
+
+    const auto size_meters = g_framework->is_drawing_ui() ? m_parent->m_framework_size->value() : m_parent->m_slate_size->value();
+    const float scale_factor = g_framework->is_drawing_ui() ? ((float)ui_swapchain.width / 1920.0f) : 1.0f;
+    const float adjusted_size_meters = size_meters * scale_factor;
+
+    const auto meters_w = (float)ui_swapchain.width / (float)ui_swapchain.height * adjusted_size_meters;
+    const auto meters_h = adjusted_size_meters;
+
+    // Map the framework curvature slider (0..1) to a visible cylinder arc. A value of 0 is handled by
+    // the dispatcher (it picks the flat quad); here a positive curvature -> central angle up to ~180deg.
+    const float curvature = glm::clamp(m_parent->m_framework_curvature->value(), 0.0f, 1.0f);
+    layer.centralAngle = glm::max<float>(glm::radians(1.0f), curvature * glm::pi<float>());
+    layer.aspectRatio = (meters_w / meters_h);
+    layer.radius = (meters_h / layer.centralAngle) * layer.aspectRatio;
+
+    const float distance = g_framework->is_drawing_ui() ? m_parent->m_framework_distance->value() : (m_parent->m_slate_distance->value() - 0.01f);
+
+    // Position the panel's FRONT face exactly where the flat quad would sit, and run the controller-ray
+    // intersection against that flat plane before bending the layer back into a cylinder.
+    glm_matrix[3] -= glm_matrix[2] * distance;
+    if (!g_framework->is_drawing_ui()) {
+        glm_matrix[3] += m_parent->m_slate_x_offset->value() * glm_matrix[0];
+        glm_matrix[3] += m_parent->m_slate_y_offset->value() * glm_matrix[1];
+    }
+    glm_matrix[3].w = 1.0f;
+
+    if (vr->is_using_controllers()) {
+        const auto controller_index = !vr->m_swap_controllers->value() ? vr->get_right_controller_index() : vr->get_left_controller_index();
+        const auto controller_rot = glm::quat{vr->get_rotation(controller_index, false)};
+        const auto controller_pos = glm::vec3{vr->get_position(controller_index, false)};
+
+        const auto start = controller_pos;
+        const auto fwd = (controller_rot * glm::vec3{0.0f, 0.0f, -1.0f});
+        const auto plane_pos = glm::vec3{glm_matrix[3]};
+
+        float intersection_distance = 0.0f;
+        if (glm::intersectRayPlane<glm::vec3>(start, fwd, plane_pos, glm::normalize(glm::vec3{glm_matrix[2]}), intersection_distance)) {
+            const auto intersection_point = start + (fwd * intersection_distance);
+            const auto local_point = glm::inverse(glm_matrix) * glm::vec4{intersection_point, 1.0f};
+
+            const auto w_half = meters_w / 2.0f;
+            const auto h_half = meters_h / 2.0f;
+
+            if (local_point.x >= -w_half && local_point.x <= w_half && local_point.y >= -h_half && local_point.y <= h_half) {
+                const auto x = (local_point.x + w_half) / meters_w;
+                const auto y = (meters_h - (local_point.y + h_half)) / meters_h;
+
+                m_parent->m_framework_intersect_state.quad_intersection_point = {x, y};
+                m_parent->m_framework_intersect_state.intersecting = true;
+
+                if (auto it = vr->m_openxr->swapchains.find((uint32_t)runtimes::OpenXR::SwapchainIndex::FRAMEWORK_UI); it != vr->m_openxr->swapchains.end()) {
+                    const auto client_x = (int32_t)((float)it->second.width * x);
+                    const auto client_y = (int32_t)((float)it->second.height * y);
+
+                    m_parent->m_framework_intersect_state.swapchain_intersection_point = {client_x, client_y};
+                }
+            } else {
+                m_parent->m_framework_intersect_state.intersecting = false;
+            }
+        }
+    } else {
+        m_parent->m_framework_intersect_state.intersecting = false;
+    }
+
+    // The cylinder origin sits one radius BEHIND the front face along the panel normal, so the visible
+    // arc curves toward the viewer with its centre at the same place the flat quad's centre was.
+    glm_matrix[3] += glm_matrix[2] * layer.radius;
+    glm_matrix[3].w = 1.0f;
+
+    layer.pose.orientation = runtimes::OpenXR::to_openxr(glm::quat_cast(glm_matrix));
+    layer.pose.position = runtimes::OpenXR::to_openxr(glm_matrix[3]);
+
+    return layer;
+}
+
+// Dispatcher: pick the curved cylinder layer when the framework curvature slider is non-zero and the
+// runtime supports cylinder layers; otherwise the flat quad. Mirrors generate_slate_layer.
+std::optional<std::reference_wrapper<XrCompositionLayerBaseHeader>> OverlayComponent::OpenXR::generate_framework_ui_layer() {
+    if (m_parent->m_framework_curvature->value() > 0.0f && VR::get()->get_runtime()->is_cylinder_layer_allowed()) {
+        if (auto result = generate_framework_ui_cylinder(); result.has_value()) {
+            return *(XrCompositionLayerBaseHeader*)&result.value().get();
+        }
+
+        return std::nullopt;
+    }
+
+    if (auto result = generate_framework_ui_quad(); result.has_value()) {
+        return *(XrCompositionLayerBaseHeader*)&result.value().get();
+    }
+
+    return std::nullopt;
+}
 }

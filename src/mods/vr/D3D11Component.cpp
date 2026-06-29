@@ -1024,10 +1024,10 @@ vr::EVRCompositorError D3D11Component::on_frame(VR* vr) {
             }
 
             if (m_openxr.ever_acquired((uint32_t)runtimes::OpenXR::SwapchainIndex::FRAMEWORK_UI)) {
-                const auto framework_quad = openxr_overlay.generate_framework_ui_quad();
+                const auto framework_layer = openxr_overlay.generate_framework_ui_layer();
 
-                if (framework_quad) {
-                    quad_layers.push_back((XrCompositionLayerBaseHeader*)&framework_quad->get());
+                if (framework_layer) {
+                    quad_layers.push_back((XrCompositionLayerBaseHeader*)&framework_layer->get());
                 }
             }
             
