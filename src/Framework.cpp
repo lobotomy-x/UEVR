@@ -2547,7 +2547,13 @@ bool Framework::init_d3d11() {
     {
         // Create our blank render target.
         auto d3d11_rt_desc = backbuffer_desc;
-        d3d11_rt_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // For VR
+        // Must share a format family with the OpenXR FRAMEWORK_UI swapchain (B8G8R8A8_UNORM_SRGB,
+        // created in D3D11Component::OpenXR::create_swapchains). get_rendertarget_d3d11() (this RT) is
+        // CopyResource'd straight into that swapchain, and D3D11 CopyResource silently no-ops across
+        // format families -- with R8G8B8A8 here the copy wrote nothing, so the framework UI quad sampled
+        // a black swapchain => imgui "not rendering in headset" on D3D11. The D3D12 framework RT already
+        // uses B8G8R8A8 (which is why imgui shows in VR on D3D12); match it here.
+        d3d11_rt_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // For VR (must match the BGRA swapchain family)
 
         if (FAILED(device->CreateTexture2D(&d3d11_rt_desc, nullptr, &m_d3d11.blank_rt))) {
             spdlog::error("[D3D11] Failed to create render target texture!");
