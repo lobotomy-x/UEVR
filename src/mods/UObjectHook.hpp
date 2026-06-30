@@ -6,6 +6,7 @@
 #include <memory>
 #include <deque>
 #include <future>
+#include <atomic>
 
 #include <nlohmann/json.hpp>
 
@@ -233,6 +234,12 @@ private:
         Rotator<float>* view_rotation, const float world_to_meters, Vector3f* view_location, bool is_double
     );
 
+    // Spawn a temporary CameraActor parented to `target` and make the player view through it
+    // (SetViewTargetWithBlend), so a selected object can be inspected from a free vantage. Reversible
+    // via restore_view_camera() (returns the view to the pawn + destroys the camera). Game-thread.
+    void spawn_view_camera(sdk::USceneComponent* target);
+    void restore_view_camera();
+
     void ui_standard_object_context_menu(sdk::UObjectBase* object);
     void ui_handle_object(sdk::UObject* object);
     void ui_handle_properties(void* object, sdk::UStruct* definition);
@@ -344,7 +351,13 @@ private:
 
     std::unordered_map<sdk::USceneComponent*, std::shared_ptr<MotionControllerState>> m_motion_controller_attached_components{};
     std::unordered_set<sdk::USceneComponent*> m_gizmo_components{};
+    // Attached component currently being dragged by the flat screen-space gizmo. The stereo path reads
+    // this to skip its motion-controller follow (which would otherwise clobber the gizmo write every
+    // frame) and re-seed its attach offset from the gizmo-updated transform instead. Written on the draw
+    // thread, read on the stereo thread.
+    std::atomic<sdk::USceneComponent*> m_flat_gizmo_drag_comp{nullptr};
     float m_gizmo_axis_len{50.0f}; // world units (UE cm) for the translate gizmo axes
+    float m_gizmo_ring_radius{40.0f}; // rotate-mode ring radius (UE cm), decoupled from the axis length so big translate arrows don't balloon the rotate rings (better centering, esp. in VR)
     float m_gizmo_thickness{4.0f}; // gizmo line thickness (px), applies to all modes
     int m_gizmo_mode{0};           // 0 = translate, 1 = rotate, 2 = scale
     bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
@@ -355,8 +368,6 @@ private:
     bool m_gizmo_or_picker_busy{false};      // gizmo grabbed/hot or picker armed this frame (read by the global drag-scroll to yield in VR)
     bool m_has_gizmos{false};                // any gizmo target is shown this frame (drives wants_vr_pointer() so the VR pointer stays live over empty space)
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
-    bool m_gizmo_show_all_modes{false}; // D2: also draw the two inactive gizmo modes as non-interactive reference glyphs, offset in screen space
-    float m_gizmo_all_modes_offset{64.0f}; // screen-px spacing between the offset reference glyphs (D2)
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     float m_inspector_item_width{320.0f}; // UObjectHook property-editor max width (px); <=0 = unlimited. Keeps inherited-object rows in a readable column on a wide window.
     bool m_click_select_single{false};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating
@@ -388,6 +399,11 @@ private:
         sdk::UObject* object{nullptr};
         glm::vec3 offset{};
     } m_camera_attach{};
+
+    // Temporary spawned CameraActor used by the "View from spawned camera" action (game-thread owned).
+    // Non-null => a view camera is active; the context menu shows "Restore view" instead. Cleared on
+    // restore or when the actor is destroyed (object-destructor hook).
+    sdk::AActor* m_view_camera_actor{nullptr};
 
     auto get_spawned_spheres() const {
         std::shared_lock _{m_mutex};

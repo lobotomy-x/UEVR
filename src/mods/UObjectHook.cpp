@@ -2512,9 +2512,9 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<int>("UObjectHook_GizmoMode")) m_gizmo_mode = *v;
         if (auto v = cfg.get<float>("UObjectHook_GizmoThickness")) m_gizmo_thickness = *v;
         if (auto v = cfg.get<float>("UObjectHook_GizmoAxisLen")) m_gizmo_axis_len = *v;
+        if (auto v = cfg.get<float>("UObjectHook_GizmoRingRadius")) m_gizmo_ring_radius = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
-        if (auto v = cfg.get<bool>("UObjectHook_GizmoShowAllModes")) m_gizmo_show_all_modes = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
         if (auto v = cfg.get<bool>("UObjectHook_ShowTexturePreviews")) m_show_texture_previews = *v;
     }
@@ -2536,9 +2536,9 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<int>("UObjectHook_GizmoMode", m_gizmo_mode);
     cfg.set<float>("UObjectHook_GizmoThickness", m_gizmo_thickness);
     cfg.set<float>("UObjectHook_GizmoAxisLen", m_gizmo_axis_len);
+    cfg.set<float>("UObjectHook_GizmoRingRadius", m_gizmo_ring_radius);
     cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
     cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
-    cfg.set<bool>("UObjectHook_GizmoShowAllModes", m_gizmo_show_all_modes);
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
     cfg.set<bool>("UObjectHook_ShowTexturePreviews", m_show_texture_previews);
 }
@@ -2954,6 +2954,19 @@ void UObjectHook::tick_attachments(Rotator<float>* view_rotation, const float wo
         const auto adjusted_euler = glm::degrees(utility::math::euler_angles_from_steamvr(adjusted_rotation));
         const auto adjusted_location = hand_position + (quat_converter * (adjusted_rotation * state.location_offset));
 
+        // Flat-gizmo routing: while this attached component is being dragged by the screen-space gizmo,
+        // let the gizmo own the world transform — skip the follow + the non-permanent reset below that
+        // would clobber it, and continuously re-seed the attach offset from the gizmo-updated transform
+        // (the exact capture math the controller-adjust path uses, see the state.adjusting branch) so the
+        // follow holds the new pose once the drag ends.
+        if (comp == m_flat_gizmo_drag_comp.load()) {
+            std::unique_lock _{m_mutex};
+            const auto mqi = glm::inverse(orig_rotation_quat);
+            state.rotation_offset = mqi * hand_rotation;
+            state.location_offset = mqi * utility::math::ue4_to_glm(hand_position - orig_position);
+            continue;
+        }
+
         if (state.adjusting) {
             // Create a temporary actor that visualizes how we're adjusting the component
             if (state.adjustment_visualizer == nullptr) {
@@ -3353,6 +3366,111 @@ void UObjectHook::save_camera_state(const std::vector<std::string>& path) {
     } catch (...) {
         SPDLOG_ERROR("[UObjectHook] Failed to save camera state");
     }
+}
+
+// Layout-matched param block for APlayerController::SetViewTargetWithBlend(AActor* NewViewTarget,
+// float BlendTime, EViewTargetBlendFunction BlendFunc, float BlendExp, bool bLockOutgoing). Called via
+// reflection (no C++ binding). Zero-init then set NewViewTarget + BlendTime.
+namespace {
+struct SetViewTargetWithBlendParams {
+    sdk::AActor* NewViewTarget{nullptr};
+    float BlendTime{0.0f};
+    uint8_t BlendFunc{0};        // VTBlend_Linear
+    uint8_t _pad0[3]{};
+    float BlendExp{0.0f};
+    bool bLockOutgoing{false};
+    uint8_t _pad1[3]{};
+};
+}
+
+// Spawn a CameraActor parented to `target`, point it at the object, and make the local player view
+// through it. All engine work is deferred to the game thread; everything is guarded so a missing class
+// / world / PC just no-ops. Tears down any previous view camera first so this never leaks/stacks.
+void UObjectHook::spawn_view_camera(sdk::USceneComponent* target) {
+    const glm::vec3 cam_loc = m_last_camera_location;
+    GameThreadWorker::get().enqueue([this, target, cam_loc]() {
+        if (!this->exists(target)) return;
+        try {
+            auto engine = sdk::UGameEngine::get();
+            auto world = engine != nullptr ? engine->get_world() : nullptr;
+            if (world == nullptr) return;
+            auto ugs = sdk::UGameplayStatics::get();
+            if (ugs == nullptr) return;
+            auto pc = ugs->get_player_controller(world, 0);
+            if (pc == nullptr) return;
+
+            // Remove any existing view camera before spawning a new one.
+            if (m_view_camera_actor != nullptr && this->exists(m_view_camera_actor)) {
+                try { m_view_camera_actor->destroy_actor(); } catch (...) {}
+            }
+            m_view_camera_actor = nullptr;
+
+            auto cam_cls = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.CameraActor");
+            if (cam_cls == nullptr) return;
+
+            const glm::vec3 tgt = target->get_world_location();
+            // Spawn at the player's current eye position (so the initial framing matches what they see),
+            // or a sane behind/above offset if we don't have a camera location yet.
+            glm::vec3 spawn_pos = cam_loc;
+            if (glm::length(spawn_pos - tgt) < 1.0f) {
+                spawn_pos = tgt + glm::vec3{-250.0f, 0.0f, 100.0f};
+            }
+            auto cam = ugs->spawn_actor(world, cam_cls, spawn_pos);
+            if (cam == nullptr) return;
+
+            // Look from spawn_pos toward the target. UE FRotator is {Pitch (about Y), Yaw (about Z), Roll}.
+            const glm::vec3 dir = tgt - spawn_pos;
+            const float horiz = glm::length(glm::vec2{dir.x, dir.y});
+            const float yaw   = glm::degrees(std::atan2(dir.y, dir.x));
+            const float pitch = glm::degrees(std::atan2(dir.z, horiz));
+            try { cam->set_actor_rotation(glm::vec3{pitch, yaw, 0.0f}, true); } catch (...) {}
+
+            // Parent the camera to the target so it follows the object (keeps the world pose we just set).
+            if (auto root = cam->get_root_component(); root != nullptr) {
+                try { root->attach_to(target, L"None", 0, false); } catch (...) {}
+            }
+
+            // Make the local player view through the spawned camera.
+            if (auto fn = pc->get_class()->find_function(L"SetViewTargetWithBlend"); fn != nullptr) {
+                SetViewTargetWithBlendParams params{};
+                params.NewViewTarget = cam;
+                params.BlendTime = 0.3f;
+                pc->process_event(fn, &params);
+            }
+
+            m_view_camera_actor = cam;
+            SPDLOG_INFO("[UObjectHook] Spawned view camera {:x} on target {:x}", (uintptr_t)cam, (uintptr_t)target);
+        } catch (...) {
+            SPDLOG_ERROR("[UObjectHook] spawn_view_camera failed");
+        }
+    });
+}
+
+// Return the player's view to its pawn and destroy the temporary view camera. Game thread; safe to call
+// even if no camera is active (clears state + best-effort restores the pawn view).
+void UObjectHook::restore_view_camera() {
+    GameThreadWorker::get().enqueue([this]() {
+        try {
+            auto engine = sdk::UGameEngine::get();
+            auto world = engine != nullptr ? engine->get_world() : nullptr;
+            auto ugs = sdk::UGameplayStatics::get();
+            auto pc = (world != nullptr && ugs != nullptr) ? ugs->get_player_controller(world, 0) : nullptr;
+            if (pc != nullptr) {
+                if (auto fn = pc->get_class()->find_function(L"SetViewTargetWithBlend"); fn != nullptr) {
+                    SetViewTargetWithBlendParams params{};
+                    params.NewViewTarget = (sdk::AActor*)pc->get_acknowledged_pawn();
+                    params.BlendTime = 0.3f;
+                    pc->process_event(fn, &params);
+                }
+            }
+            if (m_view_camera_actor != nullptr && this->exists(m_view_camera_actor)) {
+                try { m_view_camera_actor->destroy_actor(); } catch (...) {}
+            }
+            m_view_camera_actor = nullptr;
+        } catch (...) {
+            SPDLOG_ERROR("[UObjectHook] restore_view_camera failed");
+        }
+    });
 }
 
 std::optional<UObjectHook::StatePath> UObjectHook::deserialize_path(const nlohmann::json& data) {
@@ -4740,12 +4858,17 @@ void UObjectHook::draw_component_gizmos() {
             }
         }
         if (m_gizmo_mode == 1 || m_gizmo_mode == 3) { // rotate rings: pure-rotate mode AND combined
+            // Pure-rotate mode uses its own ring radius (decoupled from the translate axis length) so
+            // cranking the gizmo scale for big arrows doesn't balloon the rings and wreck centering —
+            // worst in VR. Combined mode keeps the axis-length base (its radial layout pushes the rings
+            // outside the arrows via kRingScaleCombined).
+            const float ring_radius = (m_gizmo_mode == 1) ? m_gizmo_ring_radius : kAxisLen;
             for (int i = 0; i < 3; ++i) {
                 const glm::vec3& u = axes[(i + 1) % 3].dir;
                 const glm::vec3& v = axes[(i + 2) % 3].dir;
                 for (int s = 0; s < kRingSeg; ++s) {
                     const float t = ((float)s / (float)kRingSeg) * 6.28318530718f;
-                    sc.ring_ok[i][s] = project(sc.origin + kAxisLen * (ImCos(t) * u + ImSin(t) * v), sc.ring[i][s]);
+                    sc.ring_ok[i][s] = project(sc.origin + ring_radius * (ImCos(t) * u + ImSin(t) * v), sc.ring[i][s]);
                 }
             }
         }
@@ -4984,6 +5107,24 @@ void UObjectHook::draw_component_gizmos() {
         }
     }
 
+    // VR attach routing: if the actively-dragged gizmo target is attached to a motion controller, the
+    // per-frame attach-follow (update_motion_controller_components) would otherwise clobber the gizmo's
+    // world write every frame. Publish the dragged comp so the stereo path skips its follow and re-seeds
+    // its location/rotation offset from the gizmo-updated transform instead. Also force it permanent so
+    // the change actually persists (non-permanent attachments reset to origin each frame).
+    {
+        sdk::USceneComponent* routed = nullptr;
+        if (s_drag_comp != nullptr) {
+            std::shared_lock _{m_mutex};
+            if (auto it = m_motion_controller_attached_components.find(s_drag_comp);
+                it != m_motion_controller_attached_components.end() && it->second != nullptr) {
+                routed = s_drag_comp;
+                it->second->permanent = true;
+            }
+        }
+        m_flat_gizmo_drag_comp.store(routed);
+    }
+
     for (const auto& sc : screens) {
         // Selection highlight: a world->screen reticle (corner brackets + center dot) at the object's
         // projected origin so it's obvious what's selected. On-screen only; the edge arrow below
@@ -5148,58 +5289,7 @@ void UObjectHook::draw_component_gizmos() {
         const bool center_hot = (m_gizmo_mode == 2 || m_gizmo_mode == 3) &&
             ((s_drag_comp == sc.comp && s_drag_axis == 6) || (hover_comp == sc.comp && hover_axis == 6));
         dl->AddCircleFilled(sc.s_origin, center_hot ? 8.0f : 4.0f, IM_COL32(255, 255, 255, 255));
-
-        // D2: also show the two inactive gizmo modes as compact, non-interactive reference
-        // glyphs offset to the side, so all three types (move arrows / rotate rings / scale
-        // boxes) are visible at once without overlapping the live gizmo. Purely additive draw
-        // built from the already-projected axis tips (a screen-space copy), so it can never
-        // affect hit-testing or dragging.
-        if (m_gizmo_show_all_modes && m_gizmo_mode != 3) { // combined mode already shows all 3 — skip the offset reference glyphs
-            auto draw_mode_glyph = [&](const ImVec2& center, int mode) {
-                ImVec2 sv[3];
-                float maxlen = 1.0f;
-                for (int i = 0; i < 3; ++i) {
-                    sv[i] = ImVec2{sc.tip[i].x - sc.s_origin.x, sc.tip[i].y - sc.s_origin.y};
-                    const float l = ImSqrt(sv[i].x * sv[i].x + sv[i].y * sv[i].y);
-                    if (l > maxlen) maxlen = l;
-                }
-                const float k = 24.0f / maxlen; // scale the projected gizmo down to a compact glyph
-                for (int i = 0; i < 3; ++i) { sv[i].x *= k; sv[i].y *= k; }
-                const float th = 2.0f;
-                if (mode == 1) {
-                    constexpr int seg = 16;
-                    for (int i = 0; i < 3; ++i) {
-                        const ImVec2 u = sv[(i + 1) % 3], v = sv[(i + 2) % 3];
-                        ImVec2 prev{}; bool have_prev = false;
-                        for (int s = 0; s <= seg; ++s) {
-                            const float t = ((float)s / (float)seg) * 6.28318530718f;
-                            const ImVec2 pt{center.x + ImCos(t) * u.x + ImSin(t) * v.x,
-                                            center.y + ImCos(t) * u.y + ImSin(t) * v.y};
-                            if (have_prev) dl->AddLine(prev, pt, axes[i].col, th);
-                            prev = pt; have_prev = true;
-                        }
-                    }
-                } else {
-                    for (int i = 0; i < 3; ++i) {
-                        const ImVec2 tip{center.x + sv[i].x, center.y + sv[i].y};
-                        dl->AddLine(center, tip, axes[i].col, th);
-                        if (mode == 2) dl->AddRectFilled(ImVec2{tip.x - 3.0f, tip.y - 3.0f}, ImVec2{tip.x + 3.0f, tip.y + 3.0f}, axes[i].col);
-                        else           dl->AddCircleFilled(tip, 3.0f, axes[i].col);
-                    }
-                }
-                dl->AddCircleFilled(center, 2.5f, IM_COL32(255, 255, 255, 255));
-            };
-            const float off = m_gizmo_all_modes_offset;
-            int slot = 0;
-            for (int mode = 0; mode < 3; ++mode) {
-                if (mode == m_gizmo_mode) continue; // active mode already drawn live above
-                const ImVec2 c{sc.s_origin.x + off, sc.s_origin.y - off + (float)slot * off};
-                draw_mode_glyph(c, mode);
-                const char* nm = (mode == 0) ? "move" : (mode == 1) ? "rotate" : "scale";
-                dl->AddText(ImVec2{c.x + 28.0f, c.y - 6.0f}, IM_COL32(210, 210, 210, 210), nm);
-                ++slot;
-            }
-        }
+        // (All three handle types at once are available via the Combined gizmo mode — m_gizmo_mode == 3.)
     }
 
     // Right-click a selected object (near its w2s reticle) -> a context menu at the cursor. Right
@@ -5282,6 +5372,42 @@ void UObjectHook::draw_component_gizmos() {
                         } catch (...) {}
                     });
                 }
+                ImGui::Separator();
+                // Summon to camera: place the object on the camera ray through the screen centre, a fixed
+                // distance out (same logic as the panel's "Recenter to camera"). Deferred to the game thread.
+                if (ImGui::MenuItem("Summon to camera")) {
+                    const auto* vp = ImGui::GetMainViewport();
+                    const glm::vec2 screen_center{vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f};
+                    const float dist = m_recenter_distance;
+                    GameThreadWorker::get().enqueue([this, c, screen_center, dist]() {
+                        if (!this->exists(c)) return;
+                        try {
+                            auto engine = sdk::UGameEngine::get();
+                            auto world = engine != nullptr ? engine->get_world() : nullptr;
+                            if (world == nullptr) return;
+                            auto ugs = sdk::UGameplayStatics::get();
+                            if (ugs == nullptr) return;
+                            auto pc = ugs->get_player_controller(world, 0);
+                            if (pc == nullptr) return;
+                            glm::vec3 ray_origin{}, ray_dir{};
+                            if (!ugs->screen_to_world(pc, screen_center, &ray_origin, &ray_dir)) return;
+                            const float len = glm::length(ray_dir);
+                            if (len < 1e-6f) return;
+                            ray_dir /= len;
+                            c->set_world_location(ray_origin + ray_dir * dist, false, false);
+                        } catch (...) {}
+                    });
+                }
+                // Spawn a temporary camera parented to the object and view through it, so it can be
+                // inspected from a free vantage. Toggles to "Restore view" while one is active.
+                if (m_view_camera_actor == nullptr) {
+                    if (ImGui::MenuItem("View from spawned camera")) {
+                        spawn_view_camera(c);
+                    }
+                } else if (ImGui::MenuItem("Restore view (remove spawned camera)")) {
+                    restore_view_camera();
+                }
+                ImGui::Separator();
                 if (ImGui::MenuItem("Remove from selection")) {
                     std::unique_lock _{m_mutex};
                     m_gizmo_components.erase(c);
@@ -6537,12 +6663,13 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SeparatorText("Appearance");
     ImGui::SliderFloat("Gizmo thickness", &m_gizmo_thickness, 1.0f, 12.0f, "%.1f px");
     ImGui::SliderFloat("Gizmo axis length", &m_gizmo_axis_len, 5.0f, 1000.0f, "%.0f cm");
+    ImGui::SliderFloat("Rotate ring radius", &m_gizmo_ring_radius, 5.0f, 300.0f, "%.0f cm");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Rotate-mode ring size, independent of the axis length above.\nSmaller = tighter rings / better centering (especially in VR).");
+    }
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
-    ImGui::Checkbox("Show separate Move/Rotate/Scale gizmos (offset)", &m_gizmo_show_all_modes);
-    if (m_gizmo_show_all_modes) {
-        ImGui::SliderFloat("All-modes spacing", &m_gizmo_all_modes_offset, 32.0f, 160.0f, "%.0f px");
-    }
+    ImGui::TextDisabled("Tip: pick the Combined gizmo mode above to see move + rotate + scale handles at once.");
 
     ImGui::SeparatorText("Selection / picking");
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
@@ -10520,6 +10647,14 @@ void* UObjectHook::destructor(sdk::UObjectBase* object, void* rdx, void* r8, voi
 
             if (object == hook->m_camera_attach.object) {
                 hook->m_camera_attach.object = nullptr;
+            }
+
+            if (object == (sdk::UObjectBase*)hook->m_view_camera_actor) {
+                hook->m_view_camera_actor = nullptr;
+            }
+
+            if ((sdk::USceneComponent*)object == hook->m_flat_gizmo_drag_comp.load()) {
+                hook->m_flat_gizmo_drag_comp.store(nullptr);
             }
 
             for (auto super : it->second->super_classes) {
