@@ -396,11 +396,29 @@ uevr::API::UObject* find_class(const std::wstring& input) {
         return it->second;
     }
 
+    const bool is_bare_short_name = input.rfind(L"Class", 0) != 0 && input.rfind(L"ScriptStruct", 0) != 0;
+
+    // Miss on a bare short name: the one-shot short-name table (built lazily
+    // on first use, see g_short_names_built) can be built before this class's
+    // module/plugin has finished loading — common for gameplay classes like
+    // CameraComponent when find_fast() is called on an early frame. Rebuild
+    // once and retry the table lookup before falling through to the fuzzy
+    // path-guessing below; this is the difference between resolving the real
+    // class vs. never finding it again for the rest of the session (nothing
+    // else invalidates this table besides an explicit refresh_class_cache()).
+    if (is_bare_short_name) {
+        build_short_name_classes();
+        if (auto it = g_short_name_classes.find(input); it != g_short_name_classes.end()) {
+            g_find_cache[input] = it->second;
+            return it->second;
+        }
+    }
+
     uevr::API::UObject* result = nullptr;
 
     // 3. If it isn't already a fully-qualified path, try the common Engine path
     //    ("PlayerController" -> "Class /Script/Engine.PlayerController").
-    if (input.rfind(L"Class", 0) != 0 && input.rfind(L"ScriptStruct", 0) != 0) {
+    if (is_bare_short_name) {
         const std::wstring engine_input = L"Class /Script/Engine." + input;
         result = uevr::API::get()->find_uobject<uevr::API::UObject>(engine_input.c_str());
     }
@@ -408,6 +426,21 @@ uevr::API::UObject* find_class(const std::wstring& input) {
     // 4. Otherwise treat the input as a literal object path.
     if (result == nullptr) {
         result = uevr::API::get()->find_uobject<uevr::API::UObject>(input.c_str());
+    }
+
+    // Contract: find_class always resolves to a UClass (it's a class finder,
+    // not a general object finder) — every caller either reinterpret_cast's
+    // the result straight to UClass* (see add_component/spawn_object/get_cdo
+    // below) or, from Lua, calls UClass-only methods like get_objects_matching
+    // on it. Step 4's literal-path fallback can, for a bare short name with no
+    // "Class "/"ScriptStruct " prefix, land on some other reflected object
+    // that merely shares the short name — e.g. many Pawn/Character classes
+    // expose their camera through a UObjectProperty literally named
+    // "CameraComponent". Returning that silently breaks every caller
+    // downstream instead of failing loudly at the source, so refuse to cache
+    // or return anything that doesn't actually dcast to UClass.
+    if (result != nullptr && result->dcast<uevr::API::UClass>() == nullptr) {
+        result = nullptr;
     }
 
     g_find_cache[input] = result;
