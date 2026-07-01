@@ -1,19 +1,10 @@
-// cimgui_native_plugin: proves the on_imgui_frame + cimgui-redirect path
-// end-to-end with no Lua bridge.
+// cimgui_native_plugin: demo plugin that draws a native ImGui window inside
+// UEVR's overlay. Originally used cimgui via GetProcAddress, but the export
+// surface had gaps (ImDrawList_AddCircle/AddLine missing) and the resolved
+// surface was easy to mis-call. Switched to static-imgui linkage using
+// UEVR's exact source tree + imconfig (same pattern as lua_script_editor).
 //
-// How it works:
-//   * UEVR hooks LoadLibraryExW so any plugin asking for "cimgui.dll" gets
-//     back UEVRBackend.dll's HMODULE (PluginLoader.cpp::cimgui::setup_hook).
-//   * UEVRBackend.dll exports the full cimgui C ABI (see
-//     dependencies/submodules/cimgui/cimgui_exports.def).
-//   * So we LoadLibrary("cimgui.dll"), GetProcAddress every symbol we want,
-//     and call them inside our on_imgui_frame callback. UEVR's ImGuiContext
-//     is already current at that point, so we draw directly into the host
-//     overlay without linking any imgui.cpp into our DLL.
-//
-// Output: a native ImGui window titled "cimgui_native_plugin" with a tab bar
-// containing four panels: status, frame stats, dynamic widgets, and a draw-
-// list demo. Press F9 to toggle visibility.
+// F9 toggles the window.
 
 #include <Windows.h>
 #include <cmath>
@@ -21,102 +12,27 @@
 #include <cstdio>
 #include <cstring>
 
+#include "imgui.h"
+
 #include "uevr/Plugin.hpp"
 
 using namespace uevr;
 
 namespace {
 
-// ----- Minimal cimgui ABI surface ----------------------------------------
-struct ImVec2 { float x, y; };
-struct ImVec4 { float x, y, z, w; };
-using ImGuiID = unsigned int;
-using ImGuiWindowFlags = int;
-using ImGuiCol = int;
-
-struct CImgui {
-    bool resolved = false;
-
-    bool   (*Begin)(const char*, bool*, ImGuiWindowFlags) = nullptr;
-    void   (*End)() = nullptr;
-    bool   (*BeginTabBar)(const char*, int) = nullptr;
-    void   (*EndTabBar)() = nullptr;
-    bool   (*BeginTabItem)(const char*, bool*, int) = nullptr;
-    void   (*EndTabItem)() = nullptr;
-    void   (*Text)(const char*, ...) = nullptr;
-    void   (*TextColored)(ImVec4, const char*, ...) = nullptr;
-    void   (*TextWrapped)(const char*, ...) = nullptr;
-    void   (*Separator)() = nullptr;
-    void   (*SameLine)(float, float) = nullptr;
-    void   (*Spacing)() = nullptr;
-    bool   (*Button)(const char*, ImVec2) = nullptr;
-    bool   (*Checkbox)(const char*, bool*) = nullptr;
-    bool   (*SliderFloat)(const char*, float*, float, float, const char*, int) = nullptr;
-    bool   (*ColorEdit3)(const char*, float[3], int) = nullptr;
-    bool   (*InputText)(const char*, char*, size_t, int, void*, void*) = nullptr;
-    void   (*ProgressBar)(float, ImVec2, const char*) = nullptr;
-    void   (*SetNextWindowSize)(ImVec2, int) = nullptr;
-    void   (*PushID_Int)(int) = nullptr;
-    void   (*PopID)() = nullptr;
-    void   (*GetCursorScreenPos)(ImVec2*) = nullptr;
-    void*  (*GetWindowDrawList)() = nullptr;
-    void   (*ImDrawList_AddCircle)(void*, ImVec2, float, unsigned, int, float) = nullptr;
-    void   (*ImDrawList_AddLine)(void*, ImVec2, ImVec2, unsigned, float) = nullptr;
-
-    bool load() {
-        if (resolved) return true;
-        HMODULE h = ::LoadLibraryExW(L"cimgui.dll", nullptr, 0);
-        if (h == nullptr) return false;
-
-        #define G(field, sym) field = (decltype(field))::GetProcAddress(h, sym)
-        G(Begin,            "igBegin");
-        G(End,              "igEnd");
-        G(BeginTabBar,      "igBeginTabBar");
-        G(EndTabBar,        "igEndTabBar");
-        G(BeginTabItem,     "igBeginTabItem");
-        G(EndTabItem,       "igEndTabItem");
-        G(Text,             "igText");
-        G(TextColored,      "igTextColored");
-        G(TextWrapped,      "igTextWrapped");
-        G(Separator,        "igSeparator");
-        G(SameLine,         "igSameLine");
-        G(Spacing,          "igSpacing");
-        G(Button,           "igButton");
-        G(Checkbox,         "igCheckbox");
-        G(SliderFloat,      "igSliderFloat");
-        G(ColorEdit3,       "igColorEdit3");
-        G(InputText,        "igInputText");
-        G(ProgressBar,      "igProgressBar");
-        G(SetNextWindowSize,"igSetNextWindowSize");
-        G(PushID_Int,       "igPushID_Int");
-        G(PopID,            "igPopID");
-        G(GetCursorScreenPos,"igGetCursorScreenPos");
-        G(GetWindowDrawList,"igGetWindowDrawList");
-        G(ImDrawList_AddCircle, "ImDrawList_AddCircle");
-        G(ImDrawList_AddLine,   "ImDrawList_AddLine");
-        #undef G
-
-        resolved = Begin && End && Text && Button;
-        return resolved;
-    }
-};
-
 constexpr const char* TAG = "[cimgui_native]";
 constexpr WPARAM TOGGLE_KEY = VK_F9;
 
-CImgui g_ig;
-bool g_window_open = true;
+bool   g_window_open = true;
 uint64_t g_frame = 0;
 uint64_t g_button_clicks = 0;
 uint64_t g_tick = 0;
 
-// Widget state owned by C++
 bool  g_checkbox = false;
 float g_slider = 0.5f;
 float g_color[3] = { 0.3f, 0.7f, 1.0f };
 char  g_text_buf[256] = "type something";
 
-// FPS ring buffer
 constexpr int FPS_SAMPLES = 60;
 float g_fps_hist[FPS_SAMPLES] = {};
 int   g_fps_idx = 0;
@@ -137,14 +53,16 @@ float current_fps() {
 }
 
 void draw_status_tab() {
-    g_ig.Text("UEVR cimgui-redirect native plugin");
-    g_ig.Separator();
-    g_ig.Text("Window frames    : %llu", (unsigned long long)g_frame);
-    g_ig.Text("Engine ticks     : %llu", (unsigned long long)g_tick);
-    g_ig.Text("Button clicks    : %llu", (unsigned long long)g_button_clicks);
-    g_ig.Spacing();
-    g_ig.TextColored(ImVec4{0.4f, 1.0f, 0.4f, 1.0f},
-        "ImGui context owned by UEVR. Drawn from a separate DLL.");
+    ImGui::Text("UEVR static-imgui native plugin");
+    ImGui::Separator();
+    ImGui::Text("Window frames    : %llu", (unsigned long long)g_frame);
+    ImGui::Text("Engine ticks     : %llu", (unsigned long long)g_tick);
+    ImGui::Text("Button clicks    : %llu", (unsigned long long)g_button_clicks);
+    ImGui::Spacing();
+    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+        "ImGui context owned by UEVR. Drawn from a separate DLL with its");
+    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f),
+        "own static imgui linkage rebound to host ctx + allocators.");
 }
 
 void draw_frame_tab() {
@@ -159,83 +77,88 @@ void draw_frame_tab() {
     }
     const float avg = sum / float(FPS_SAMPLES);
 
-    g_ig.Text("Instant : %6.1f fps", fps);
-    g_ig.Text("Average : %6.1f fps  (last %d samples)", avg, FPS_SAMPLES);
-    g_ig.Text("Peak    : %6.1f fps", mx);
-    g_ig.Separator();
+    ImGui::Text("Instant : %6.1f fps", fps);
+    ImGui::Text("Average : %6.1f fps  (last %d samples)", avg, FPS_SAMPLES);
+    ImGui::Text("Peak    : %6.1f fps", mx);
+    ImGui::Separator();
+    ImGui::PlotLines("##fps", g_fps_hist, FPS_SAMPLES, g_fps_idx, nullptr,
+        0.0f, mx > 0.0f ? mx : 1.0f, ImVec2(-1.0f, 60.0f));
     const float frac = mx > 0.0f ? (avg / mx) : 0.0f;
-    g_ig.ProgressBar(frac, ImVec2{ -1.0f, 0.0f }, nullptr);
+    ImGui::ProgressBar(frac, ImVec2(-1.0f, 0.0f), nullptr);
 }
 
 void draw_widgets_tab() {
-    if (g_ig.Button("ping", ImVec2{0, 0})) {
+    if (ImGui::Button("ping")) {
         ++g_button_clicks;
         API::get()->log_info("%s ping -> %llu", TAG,
             (unsigned long long)g_button_clicks);
     }
-    g_ig.SameLine(0.0f, -1.0f);
-    g_ig.Checkbox("checkbox", &g_checkbox);
-    g_ig.SliderFloat("slider", &g_slider, 0.0f, 1.0f, "%.3f", 0);
-    g_ig.ColorEdit3("color", g_color, 0);
-    if (g_ig.InputText)
-        g_ig.InputText("text", g_text_buf, sizeof(g_text_buf), 0, nullptr, nullptr);
-    g_ig.Spacing();
-    g_ig.TextWrapped("All state lives in this plugin DLL. Pushes into the host's ImGui via UEVR's exported cimgui ABI.");
+    ImGui::SameLine();
+    ImGui::Checkbox("checkbox", &g_checkbox);
+    ImGui::SliderFloat("slider", &g_slider, 0.0f, 1.0f);
+    ImGui::ColorEdit3("color", g_color);
+    ImGui::InputText("text", g_text_buf, sizeof(g_text_buf));
+    ImGui::Spacing();
+    ImGui::TextWrapped("All widget state lives in this plugin DLL.");
 }
 
-void draw_drawlist_tab() {
-    if (!g_ig.GetWindowDrawList || !g_ig.GetCursorScreenPos) {
-        g_ig.Text("ImDrawList helpers unavailable");
-        return;
-    }
+void draw_draw_tab() {
+    // Native ImDrawList works because we linked imgui statically — no
+    // cimgui export gap. The list belongs to the current window so drawing
+    // is clipped to it.
+    auto* dl = ImGui::GetWindowDrawList();
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    const ImVec2 center(origin.x + 150.0f, origin.y + 100.0f);
 
-    ImVec2 origin{};
-    g_ig.GetCursorScreenPos(&origin);
-    void* dl = g_ig.GetWindowDrawList();
-    const ImVec2 center{ origin.x + 150.0f, origin.y + 100.0f };
+    dl->AddCircle(center, 60.0f, 0xFFFFFFFF, 32, 1.5f);
+    const float theta = float(g_frame) * 0.05f;
+    const ImVec2 tip(center.x + 50.0f * std::cos(theta),
+                     center.y + 50.0f * std::sin(theta));
+    const unsigned col = (unsigned(g_color[0] * 255) <<  0)
+                       | (unsigned(g_color[1] * 255) <<  8)
+                       | (unsigned(g_color[2] * 255) << 16)
+                       | 0xFF000000u;
+    dl->AddLine(center, tip, col, 2.0f);
 
-    if (g_ig.ImDrawList_AddCircle && dl) {
-        const unsigned col = 0xFFFFFFFF;
-        g_ig.ImDrawList_AddCircle(dl, center, 60.0f, col, 32, 1.5f);
-        const float theta = float(g_frame) * 0.05f;
-        const ImVec2 tip{
-            center.x + 50.0f * cosf(theta),
-            center.y + 50.0f * sinf(theta)
-        };
-        const unsigned col_line =
-              (unsigned(g_color[0] * 255) <<  0)
-            | (unsigned(g_color[1] * 255) <<  8)
-            | (unsigned(g_color[2] * 255) << 16)
-            |  0xFF000000u;
-        g_ig.ImDrawList_AddLine(dl, center, tip, col_line, 2.0f);
-    }
-    // Reserve some vertical space so subsequent items don't overlap.
-    g_ig.Text("\n\n\n\n\n\n\n\n\n  drawing into UEVR's overlay via raw cimgui");
+    ImGui::Dummy(ImVec2(0, 220.0f));
+    ImGui::TextDisabled("native ImDrawList drawn straight into host overlay");
 }
 
-void render() {
-    if (!g_ig.load()) return;
+void render(UEVR_ImGuiFrameCbData* data) {
     if (!g_window_open) return;
+    if (data == nullptr) return;
+
+    ImGui::SetCurrentContext((ImGuiContext*)data->context);
+    ImGui::SetAllocatorFunctions(
+        (ImGuiMemAllocFunc)data->malloc_fn,
+        (ImGuiMemFreeFunc)data->free_fn,
+        data->user_data);
+
+    static bool s_logged = false;
+    if (!s_logged) {
+        s_logged = true;
+        IMGUI_CHECKVERSION();
+        API::get()->log_info("%s ImGui ABI ok: %s",
+            TAG, ImGui::GetVersion());
+    }
 
     ++g_frame;
-    g_ig.SetNextWindowSize(ImVec2{ 420.0f, 360.0f }, 1 /* ImGuiCond_FirstUseEver */);
 
-    if (!g_ig.Begin("cimgui_native_plugin", &g_window_open, 0)) {
-        g_ig.End();
+    ImGui::SetNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin("cimgui_native_plugin", &g_window_open, 0)) {
+        ImGui::End();
         return;
     }
 
-    if (g_ig.BeginTabBar && g_ig.BeginTabBar("##tabs", 0)) {
-        if (g_ig.BeginTabItem("status", nullptr, 0)) { draw_status_tab();   g_ig.EndTabItem(); }
-        if (g_ig.BeginTabItem("frame",  nullptr, 0)) { draw_frame_tab();    g_ig.EndTabItem(); }
-        if (g_ig.BeginTabItem("widgets",nullptr, 0)) { draw_widgets_tab();  g_ig.EndTabItem(); }
-        if (g_ig.BeginTabItem("draw",   nullptr, 0)) { draw_drawlist_tab(); g_ig.EndTabItem(); }
-        g_ig.EndTabBar();
-    } else {
-        draw_status_tab();
+    if (ImGui::BeginTabBar("##tabs")) {
+        if (ImGui::BeginTabItem("status"))  { draw_status_tab(); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("frame"))   { draw_frame_tab();  ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("widgets")) { draw_widgets_tab();ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem("draw"))    { draw_draw_tab();   ImGui::EndTabItem(); }
+        ImGui::EndTabBar();
     }
 
-    g_ig.End();
+    ImGui::End();
 }
 
 } // namespace
@@ -254,8 +177,13 @@ public:
             return;
         }
 
-        fns->on_imgui_frame([](UEVR_ImGuiFrameCbData*) { render(); });
-        api.log_info("%s ready (F9 to toggle window)", TAG);
+        fns->on_imgui_frame([](UEVR_ImGuiFrameCbData* d) {
+            try { render(d); } catch (...) {
+                static bool once = false;
+                if (!once) { once = true; API::get()->log_error("%s render exception", TAG); }
+            }
+        });
+        api.log_info("%s ready (F9 to toggle)", TAG);
     }
 
     bool on_message(HWND, UINT msg, WPARAM wparam, LPARAM) override {
