@@ -87,34 +87,76 @@ void PluginLoader::free_sol_state_view(void* state_view) {
     delete reinterpret_cast<sol::state_view*>(state_view);
 }
 
+// Helper: copy a std::string into a caller-supplied buffer, NUL-terminated.
+static void plugin_loader_write_out(char* out, unsigned int out_size, std::string_view s) {
+    if (out == nullptr || out_size == 0) return;
+    const auto n = std::min<size_t>(s.size(), out_size - 1);
+    if (n > 0) memcpy(out, s.data(), n);
+    out[n] = '\0';
+}
+
+// Convert any sol::object to a printable string via the running lua's
+// tostring(). Falls back gracefully if tostring is missing.
+static std::string plugin_loader_to_string(sol::state_view lua, sol::object o) {
+    if (!o.valid()) return "nil";
+    if (o.get_type() == sol::type::string) return o.as<std::string>();
+    auto tostring = lua["tostring"];
+    if (tostring.get_type() != sol::type::function) return "";
+    try {
+        sol::protected_function pf = tostring;
+        sol::protected_function_result r = pf(o);
+        if (!r.valid()) return "";
+        sol::object so = r;
+        if (so.get_type() == sol::type::string) return so.as<std::string>();
+    } catch (...) {}
+    return "";
+}
+
 bool PluginLoader::exec_lua_chunk(const char* chunk, const char* label, char* out_result, unsigned int out_size) {
     if (chunk == nullptr) return false;
 
     auto ll = LuaLoader::get();
     if (!ll) return false;
-
     auto state = ll->get_state();
     if (!state) return false;
 
-    auto& lua = state->context()->lua();
+    // Engine tick and other internal lua callers may hold this mutex; we
+    // block until they release rather than re-entering lua_State.
+    auto& ctx = *state->context();
+    std::scoped_lock _{ctx.get_mutex()};
+    auto& lua = ctx.lua();
+
     try {
-        auto res = lua.load(chunk, label, sol::load_mode::any)();
-        if (!res.valid()) {
+        sol::load_result loaded = lua.load(chunk, label ? label : "exec_lua_chunk",
+            sol::load_mode::any);
+        if (!loaded.valid()) {
+            sol::error err = loaded;
+            plugin_loader_write_out(out_result, out_size,
+                std::string("load error: ") + err.what());
             return false;
         }
-
-        if (out_result && out_size > 0) {
-            std::string s = "";
-            if (res.get_type() == sol::type::string) {
-                s = res.get<std::string>();
-            }
-            const auto n = std::min<size_t>(s.size(), out_size - 1);
-            memcpy(out_result, s.c_str(), n);
-            out_result[n] = '\0';
+        sol::protected_function pf = loaded;
+        sol::protected_function_result pres = pf();
+        if (!pres.valid()) {
+            sol::error err = pres;
+            plugin_loader_write_out(out_result, out_size,
+                std::string("runtime error: ") + err.what());
+            return false;
         }
-
+        if (pres.return_count() > 0) {
+            sol::object r = pres;
+            plugin_loader_write_out(out_result, out_size,
+                plugin_loader_to_string(lua, r));
+        } else {
+            plugin_loader_write_out(out_result, out_size, "");
+        }
         return true;
-    } catch(...) {
+    } catch (const std::exception& e) {
+        plugin_loader_write_out(out_result, out_size,
+            std::string("C++ exception: ") + e.what());
+        return false;
+    } catch (...) {
+        plugin_loader_write_out(out_result, out_size, "C++ exception: (unknown)");
         return false;
     }
 }
@@ -124,19 +166,25 @@ bool PluginLoader::get_global_string(const char* name, char* out, unsigned int o
 
     auto ll = LuaLoader::get();
     if (!ll) return false;
-
     auto state = ll->get_state();
     if (!state) return false;
 
-    auto& lua = state->context()->lua();
-    sol::object obj = lua.globals()[name];
-    if (!obj.valid() || !obj.is<const char*>()) return false;
+    auto& ctx = *state->context();
+    std::scoped_lock _{ctx.get_mutex()};
+    auto& lua = ctx.lua();
 
-    auto s = std::string(obj.as<const char*>());
-    const auto n = std::min<size_t>(s.size(), out_size - 1);
-    memcpy(out, s.c_str(), n);
-    out[n] = '\0';
-    return true;
+    try {
+        sol::object obj = lua.globals()[name];
+        if (!obj.valid() || obj.get_type() == sol::type::nil) {
+            plugin_loader_write_out(out, out_size, "");
+            return false;
+        }
+        plugin_loader_write_out(out, out_size, plugin_loader_to_string(lua, obj));
+        return true;
+    } catch (...) {
+        plugin_loader_write_out(out, out_size, "");
+        return false;
+    }
 }
 void PluginLoader::do_lua_string(const char* lua_chunk, const char* chunk_name) {
     auto ll = LuaLoader::get();
@@ -157,13 +205,16 @@ void PluginLoader::set_global_string(const char* name, const char* value) {
 
     auto ll = LuaLoader::get();
     if (!ll) return;
-
     auto state = ll->get_state();
     if (!state) return;
 
-    auto& lua = state->context()->lua();
-    if (value == nullptr) lua[name] = sol::nil;
-    else lua[name] = std::string(value);
+    auto& ctx = *state->context();
+    std::scoped_lock _{ctx.get_mutex()};
+    auto& lua = ctx.lua();
+    try {
+        if (value == nullptr) lua[name] = sol::nil;
+        else lua[name] = std::string(value);
+    } catch (...) {}
 }
 
 namespace uevr {
