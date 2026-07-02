@@ -57,8 +57,10 @@ end-to-end on Sprawl Zero (UE5.7 D3D11): stereo renders and the overlay shows in
   recovers nothing and falls back, never crashes).
 
 ## Known limitations / not in this PR
-- UE5.7 **D3D12** still has a title-specific capture gap (e.g. ValorMortis: render_target null every
-  frame -> black). Same class as #2/#3 but on the D3D12 path; needs its own live investigation.
+- UE5.7 **D3D12** has a title-specific **OpenXR** gap (e.g. ValorMortis: black under OpenXR but
+  renders fine under OpenVR, so the scene-RT capture itself works). Suspect is the OpenXR
+  projection-layer submit path / a session conflict with the game's own OpenXR plugin; needs its own
+  investigation. Users can run affected titles under OpenVR meanwhile.
 - The game's own slate UI is skipped on UE5.7 (FViewportInfo RT-provider probe disabled for
   stability) — separate issue.
 - #6 curvature unverified in-headset (see caveat).

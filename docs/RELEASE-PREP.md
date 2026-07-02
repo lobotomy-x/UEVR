@@ -54,8 +54,10 @@ takes a 440k-line drop. The diff is three stacked layers:
 
 ## Open render bugs (NOT release-blockers, document as known issues)
 
-- ValorMortis (UE5.7 D3D12): scene render_target never captured (acquire_scene_target_resource null
-  every frame -> bootstrap) -> black. D3D12 analog of the D3D11 capture bug; needs live disasm.
+- ValorMortis (UE5.7 D3D12): black under **OpenXR only** — WORKS under OpenVR (user-confirmed
+  2026-07-02). So the scene-RT capture is fine (runtime-agnostic); the suspect is the OpenXR
+  projection-layer submit gate (log showed `submitted=false has_game_tex=true` on the AFR path) or an
+  OpenXR session conflict with the game's own OpenXR plugin. Workaround: run the title under OpenVR.
 - Game's own slate UI missing on UE5.7 (FViewportInfo RT-provider probe deliberately skipped for
   stability, FFakeStereoRenderingHook.cpp:14694).
 - Framework curvature reported flat by user despite cylinder extension enabled — under diagnosis.
