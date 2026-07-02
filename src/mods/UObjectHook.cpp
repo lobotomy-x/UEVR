@@ -7927,6 +7927,13 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.55f, 0.85f, 1.0f, 1.0f});
         ImGui::SeparatorText(header.c_str());
         ImGui::PopStyleColor();
+        // Main-tree drag support (roadmap): the identity header of ANY inspected
+        // object is a drag source, so objects reached through paths with no row
+        // handle (Common Objects -> PlayerController/Pawn/World, Outer chains,
+        // camera-attach node) can still be dragged onto caller slots / drop
+        // targets. SeparatorText is an ID-0 item; the helper passes
+        // SourceAllowNullID so attaching to it is legal.
+        make_drag_source_for_object(object, header.c_str());
         if (!full.empty()) {
             ImGui::TextDisabled("%s", full.c_str());
         }
@@ -8874,6 +8881,9 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
             }
             const auto narrow = utility::narrow(comp_name);
             const bool made = ImGui::TreeNode(narrow.data());
+            // Main-tree drag support (roadmap): every component row is a drag
+            // source, open or closed, same as the Attached/Overlapped lists.
+            make_drag_source_for_object(comp_obj, narrow.c_str());
             utility::ScopeGuard tree_guard{[made]() { if (made) ImGui::TreePop(); }};
 
             if (made) {
