@@ -68,6 +68,12 @@ public:
     // Identity when the UI is closed. See the .cpp for the math. (Restored after the UE5.7 merge.)
     ImVec2 transform_world_aligned_to_overlay(const ImVec2& slate_px) const;
 
+    // The framework UI plane distance actually used this frame: the slider value, unless gizmo
+    // auto-depth is enabled AND a gizmo target exists — then the plane is pulled in to sit between the
+    // player camera and the nearest gizmo object (clamped). Every consumer of the framework distance
+    // (quad/cylinder poses AND the gizmo remap above) MUST use this so they stay in agreement.
+    float get_effective_framework_distance() const;
+
 private:
     // Cached data for imgui VR overlay so we know when we need to update it
     // instead of doing it constantly every frame
@@ -144,6 +150,9 @@ private:
     //   _Scale      raw uniform multiplier about screen-centre (catch-all fudge).
     const ModSlider::Ptr m_framework_gizmo_correction{ ModSlider::create("UI_Framework_Gizmo_Correction", 0.0f, 2.0f, 1.0f) };
     const ModSlider::Ptr m_framework_gizmo_scale{ ModSlider::create("UI_Framework_Gizmo_Scale", 0.25f, 4.0f, 1.0f) };
+    // Auto-depth: when a gizmo target exists, pull the framework UI plane in between the player camera
+    // and the nearest gizmo object so the flat gizmo sits close to the thing being manipulated.
+    const ModToggle::Ptr m_framework_auto_depth{ ModToggle::create("UI_Framework_AutoDepth", true) };
 
 public:
     OverlayComponent()
@@ -163,6 +172,7 @@ public:
             *m_framework_curvature,
             *m_framework_gizmo_correction,
             *m_framework_gizmo_scale,
+            *m_framework_auto_depth,
             *m_framework_ui_follows_view,
             *m_framework_wrist_ui,
             *m_framework_mouse_emulation

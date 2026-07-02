@@ -8,11 +8,34 @@
 
 #include "Framework.hpp"
 #include "../VR.hpp"
+#include "../UObjectHook.hpp"
 #include "../utility/ImGui.hpp"
 
 #include "OverlayComponent.hpp"
 
 namespace vrmod {
+float OverlayComponent::get_effective_framework_distance() const {
+    const float configured = m_framework_distance->value();
+
+    if (!m_framework_auto_depth->value()) {
+        return configured;
+    }
+
+    const auto& uobjecthook = UObjectHook::get();
+    if (uobjecthook == nullptr) {
+        return configured;
+    }
+
+    const float obj_m = uobjecthook->get_nearest_gizmo_distance_meters();
+    if (obj_m <= 0.0f) {
+        return configured; // no gizmo target this frame
+    }
+
+    // Sit the plane between the camera and the object: 75% of the way out, never closer than 0.35m
+    // (comfort) and never further than the configured distance (auto-depth only pulls IN).
+    return std::clamp(obj_m * 0.75f, 0.35f, configured);
+}
+
 void OverlayComponent::on_reset() {
     m_overlay_data = {};
 }
@@ -231,10 +254,14 @@ void OverlayComponent::on_draw_ui() {
         m_ui_invert_alpha->draw("UI Invert Alpha");
 
         m_framework_distance->draw("Framework Distance");
-        m_framework_size->draw("Framework Size");
-        if (VR::get()->get_runtime()->is_openvr()) {
-            m_framework_curvature->draw("Framework Curvature");
+        m_framework_auto_depth->draw("Framework Auto Depth (gizmo)");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("When a gizmo target is selected, pull the framework UI plane in so it sits\nbetween your head and the object (75%% of the way out, min 0.35m).\nOnly ever pulls IN from the configured Framework Distance.");
         }
+        m_framework_size->draw("Framework Size");
+        // Curvature applies to BOTH runtimes now: OpenVR via SetOverlayCurvature, OpenXR via the
+        // cylinder composition layer (generate_framework_ui_cylinder). Previously OpenVR-gated.
+        m_framework_curvature->draw("Framework Curvature");
         m_framework_gizmo_correction->draw("Gizmo Overlay Correction");
         m_framework_gizmo_scale->draw("Gizmo Overlay Scale");
         m_framework_ui_follows_view->draw("Framework Follows View");
@@ -647,7 +674,7 @@ ImVec2 OverlayComponent::transform_world_aligned_to_overlay(const ImVec2& slate_
     const float scale_factor = size.x / 1920.0f; // mirrors update_overlay_openvr framework path
 
     const float slate_dist = m_slate_distance->value() - 0.01f; // matches slate placement
-    const float fw_dist    = m_framework_distance->value();
+    const float fw_dist    = get_effective_framework_distance(); // MUST match the quad/cylinder pose
     const float slate_sz   = m_slate_size->value();
     const float fw_sz      = m_framework_size->value() * scale_factor;
     if (slate_dist <= 0.0f || fw_dist <= 0.0f || fw_sz <= 0.0f) {
@@ -773,7 +800,7 @@ void OverlayComponent::update_overlay_openvr() {
         glm_matrix[3] += vr->get_standing_origin();
 
         if (g_framework->is_drawing_ui()) {
-            glm_matrix[3] -= glm_matrix[2] * m_framework_distance->value();
+            glm_matrix[3] -= glm_matrix[2] * get_effective_framework_distance();
         } else {
             glm_matrix[3] -= glm_matrix[2] * (m_slate_distance->value() - 0.01f);
 
@@ -1214,7 +1241,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
     layer.size = {meters_w, meters_h};
 
     if (g_framework->is_drawing_ui()) {
-        glm_matrix[3] -= glm_matrix[2] * m_parent->m_framework_distance->value();
+        glm_matrix[3] -= glm_matrix[2] * m_parent->get_effective_framework_distance();
     } else {
         glm_matrix[3] -= glm_matrix[2] * (m_parent->m_slate_distance->value() - 0.01f);
 
@@ -1330,7 +1357,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     layer.aspectRatio = (meters_w / meters_h);
     layer.radius = (meters_h / layer.centralAngle) * layer.aspectRatio;
 
-    const float distance = g_framework->is_drawing_ui() ? m_parent->m_framework_distance->value() : (m_parent->m_slate_distance->value() - 0.01f);
+    const float distance = g_framework->is_drawing_ui() ? m_parent->get_effective_framework_distance() : (m_parent->m_slate_distance->value() - 0.01f);
 
     // Position the panel's FRONT face exactly where the flat quad would sit, and run the controller-ray
     // intersection against that flat plane before bending the layer back into a cylinder.

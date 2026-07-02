@@ -106,8 +106,9 @@ protected:
     // Click-to-select: when m_click_select_mode is on, a left click in the world (overlay up,
     // not over a widget) deprojects the cursor to a ray and adds the front-most scene component
     // near that ray to m_gizmo_components. Candidates come from the tracked object set; their
-    // world position is read cheaply from the reflected RelativeLocation field (no per-candidate
-    // ProcessEvent), which equals world location for unattached root components (the usual target).
+    // world position is composed from the reflected RelativeLocation/Rotation/Scale3D by walking
+    // the AttachParent chain (plain memory reads, no per-candidate ProcessEvent), so attached
+    // components with large relative offsets are ranked at their true screen position too.
     void handle_click_select();
 
     // Dockable pop-out windows (rendered from on_frame). Toggle via
@@ -239,6 +240,19 @@ private:
     // via restore_view_camera() (returns the view to the pawn + destroys the camera). Game-thread.
     void spawn_view_camera(sdk::USceneComponent* target);
     void restore_view_camera();
+
+public:
+    // Distance (meters, tracking-space scale) from the game camera to the NEAREST gizmo-target
+    // component this frame, or -1 when no gizmo target is shown. OverlayComponent reads this to
+    // auto-place the framework UI plane between the player camera and the object being manipulated.
+    float get_nearest_gizmo_distance_meters() const;
+
+private:
+    // Overlay-material highlight (UE5.1+ UMeshComponent::SetOverlayMaterial): apply m_highlight_material
+    // as the overlay material of newly gizmo-selected mesh comps, restore the original on deselect.
+    // Both enqueue to the game thread internally and are duplicate-safe.
+    void apply_overlay_highlight(sdk::USceneComponent* comp, sdk::UObject* material);
+    void restore_overlay_highlight(sdk::USceneComponent* comp);
 
     void ui_standard_object_context_menu(sdk::UObjectBase* object);
     void ui_handle_object(sdk::UObject* object);
@@ -373,6 +387,17 @@ private:
     bool m_click_select_single{false};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating
     bool m_gizmo_set_movable{true};       // on click-select, set the component's Mobility to Movable(2) so StaticMeshComponents can actually be moved by the gizmo
     bool m_highlight_selection{true};     // draw a world->screen outline over each gizmo-selected object
+    bool m_highlight_overlay_material{false}; // also highlight selected mesh comps via SetOverlayMaterial (UE5.1+; no-op on older engines)
+    bool m_highlight_material_search_attempted{false}; // auto-find of a default highlight material was tried this session
+    sdk::UObject* m_highlight_material{nullptr}; // the UMaterialInterface used as the overlay highlight (auto-found engine material or user-picked)
+    // comp -> original overlay material (possibly null) captured before the highlight was applied, so
+    // deselect can restore it. Mutated on the game thread under the unique lock; snapshotted by the
+    // draw thread under the shared lock.
+    std::unordered_map<sdk::USceneComponent*, sdk::UObject*> m_overlay_mat_originals{};
+    // Nearest gizmo-target distance in WORLD units this frame (-1 = none), published by
+    // draw_component_gizmos (draw thread), consumed by get_nearest_gizmo_distance_meters.
+    std::atomic<float> m_nearest_gizmo_dist_ue{-1.0f};
+    float m_last_world_to_meters{100.0f}; // last world_to_meters from the stereo callback (benign cross-thread read)
     float m_snap_translate{10.0f};        // Ctrl-snap step for translate (world units)
     float m_snap_rotate{15.0f};           // Ctrl-snap step for rotate (degrees)
     float m_snap_scale{0.1f};             // Ctrl-snap step for scale

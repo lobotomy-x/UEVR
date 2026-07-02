@@ -1,5 +1,6 @@
 #include <fstream>
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <cmath>
 #include <utility/Logging.hpp>
@@ -2516,6 +2517,7 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_HighlightOverlayMaterial")) m_highlight_overlay_material = *v;
         if (auto v = cfg.get<bool>("UObjectHook_ShowTexturePreviews")) m_show_texture_previews = *v;
     }
 
@@ -2540,6 +2542,7 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
     cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
+    cfg.set<bool>("UObjectHook_HighlightOverlayMaterial", m_highlight_overlay_material);
     cfg.set<bool>("UObjectHook_ShowTexturePreviews", m_show_texture_previews);
 }
 
@@ -2599,6 +2602,8 @@ void UObjectHook::on_pre_calculate_stereo_view_offset(void* stereo_device, const
     } else {
         m_last_camera_location = *view_location;
     }
+
+    m_last_world_to_meters = world_to_meters; // for get_nearest_gizmo_distance_meters (benign race)
 
     if (m_camera_attach.object != nullptr) {
         if (m_camera_attach.object->is_a(sdk::AActor::static_class())) {
@@ -3425,9 +3430,11 @@ void UObjectHook::spawn_view_camera(sdk::USceneComponent* target) {
             const float pitch = glm::degrees(std::atan2(dir.z, horiz));
             try { cam->set_actor_rotation(glm::vec3{pitch, yaw, 0.0f}, true); } catch (...) {}
 
-            // Parent the camera to the target so it follows the object (keeps the world pose we just set).
+            // Parent the camera to the target so it follows the object. AttachType MUST be
+            // 1 = EAttachLocation::KeepWorldPosition — 0 (KeepRelativeOffset) reinterprets the world
+            // pose we just set as parent-relative and teleports the camera to the wrong spot.
             if (auto root = cam->get_root_component(); root != nullptr) {
-                try { root->attach_to(target, L"None", 0, false); } catch (...) {}
+                try { root->attach_to(target, L"None", 1, false); } catch (...) {}
             }
 
             // Make the local player view through the spawned camera.
@@ -3470,6 +3477,83 @@ void UObjectHook::restore_view_camera() {
         } catch (...) {
             SPDLOG_ERROR("[UObjectHook] restore_view_camera failed");
         }
+    });
+}
+
+float UObjectHook::get_nearest_gizmo_distance_meters() const {
+    const float d = m_nearest_gizmo_dist_ue.load();
+    if (d <= 0.0f) {
+        return -1.0f;
+    }
+
+    auto& vr = VR::get();
+    const float wtm = m_last_world_to_meters * (vr != nullptr ? vr->get_world_scale() : 1.0f);
+    if (wtm <= 0.0001f) {
+        return -1.0f;
+    }
+
+    return d / wtm;
+}
+
+// Overlay-material highlight: set `material` as the component's overlay material (UE5.1+
+// UMeshComponent::SetOverlayMaterial), remembering the original so restore_overlay_highlight can put it
+// back. Missing SetOverlayMaterial (UE4 / non-mesh comps) is a silent no-op. Duplicate-safe: the map
+// check makes repeated enqueues for the same comp idempotent (jobs run sequentially on the game thread).
+void UObjectHook::apply_overlay_highlight(sdk::USceneComponent* comp, sdk::UObject* material) {
+    GameThreadWorker::get().enqueue([this, comp, material]() {
+        if (!this->exists(comp) || material == nullptr || !this->exists(material)) {
+            return;
+        }
+        {
+            std::shared_lock _{m_mutex};
+            if (m_overlay_mat_originals.contains(comp)) {
+                return; // already applied
+            }
+        }
+        try {
+            auto klass = comp->get_class();
+            if (klass == nullptr) return;
+            auto set_fn = klass->find_function(L"SetOverlayMaterial");
+            if (set_fn == nullptr) return; // engine/component doesn't support overlay materials
+            sdk::UObject* orig = nullptr;
+            if (auto get_fn = klass->find_function(L"GetOverlayMaterial"); get_fn != nullptr) {
+                struct { sdk::UObject* ret{nullptr}; } gp{};
+                comp->process_event(get_fn, &gp);
+                orig = gp.ret;
+            }
+            struct { sdk::UObject* mat{nullptr}; } sp{};
+            sp.mat = material;
+            comp->process_event(set_fn, &sp);
+            {
+                std::unique_lock _{m_mutex};
+                m_overlay_mat_originals[comp] = orig;
+            }
+        } catch (...) {}
+    });
+}
+
+void UObjectHook::restore_overlay_highlight(sdk::USceneComponent* comp) {
+    GameThreadWorker::get().enqueue([this, comp]() {
+        sdk::UObject* orig = nullptr;
+        {
+            std::unique_lock _{m_mutex};
+            auto it = m_overlay_mat_originals.find(comp);
+            if (it == m_overlay_mat_originals.end()) {
+                return; // nothing applied (or another queued restore already handled it)
+            }
+            orig = it->second;
+            m_overlay_mat_originals.erase(it);
+        }
+        if (!this->exists(comp)) {
+            return;
+        }
+        try {
+            auto set_fn = comp->get_class()->find_function(L"SetOverlayMaterial");
+            if (set_fn == nullptr) return;
+            struct { sdk::UObject* mat{nullptr}; } sp{};
+            sp.mat = (orig != nullptr && this->exists(orig)) ? orig : nullptr;
+            comp->process_event(set_fn, &sp);
+        } catch (...) {}
     });
 }
 
@@ -4456,10 +4540,24 @@ void UObjectHook::handle_click_select() {
         return;
     }
 
-    // RelativeLocation offset (cached). Equals world location for unattached root components.
+    // Reflected transform properties (cached). World position is composed by walking the
+    // AttachParent chain below — plain memory reads, no ProcessEvent — so attached components
+    // with big relative offsets (e.g. mesh comps parented deep in an actor) rank correctly too.
     static const sdk::FProperty* s_rel_loc_prop = []() -> sdk::FProperty* {
         auto* cls = sdk::USceneComponent::static_class();
         return cls != nullptr ? cls->find_property(L"RelativeLocation") : nullptr;
+    }();
+    static const sdk::FProperty* s_rel_rot_prop = []() -> sdk::FProperty* {
+        auto* cls = sdk::USceneComponent::static_class();
+        return cls != nullptr ? cls->find_property(L"RelativeRotation") : nullptr;
+    }();
+    static const sdk::FProperty* s_rel_scale_prop = []() -> sdk::FProperty* {
+        auto* cls = sdk::USceneComponent::static_class();
+        return cls != nullptr ? cls->find_property(L"RelativeScale3D") : nullptr;
+    }();
+    static const sdk::FProperty* s_attach_parent_prop = []() -> sdk::FProperty* {
+        auto* cls = sdk::USceneComponent::static_class();
+        return cls != nullptr ? cls->find_property(L"AttachParent") : nullptr;
     }();
     if (s_rel_loc_prop == nullptr) {
         static bool s_warned = false;
@@ -4483,13 +4581,66 @@ void UObjectHook::handle_click_select() {
     ray_dir /= dir_len;
 
     // Single pass under the shared lock: filter to scene components (via the cached super-class
-    // list — no virtual calls, no ProcessEvent), read each candidate's RelativeLocation straight
-    // from memory, and keep the front-most one inside an angular cone of the click ray. Doing the
+    // list — no virtual calls, no ProcessEvent), compose each candidate's WORLD location from its
+    // reflected RelativeLocation/Rotation/Scale3D by walking the AttachParent chain (still plain
+    // memory reads), and keep the front-most one inside an angular cone of the click ray. Doing the
     // reads under the lock blocks the add/destructor hooks for the (brief) scan so we never read a
-    // component that is being freed on the game thread. RelativeLocation == world location for an
-    // unattached root component (the usual gizmo target); attached children are approximate.
+    // component that is being freed on the game thread. Approximations: socket offsets and the
+    // bAbsolute* overrides are ignored (rare; the cone radius usually still catches those).
     constexpr float kConeTan = 0.06f;  // ~3.4 deg half-angle of the pick cone
     constexpr float kMinPerp = 40.0f;  // world units: always allow at least this radius up close
+
+    // Read a reflected FVector/FRotator (double on UE5, float on UE4) as glm::vec3.
+    auto read_vec3_prop = [is_ue5_vec](const sdk::FProperty* prop, sdk::USceneComponent* c) -> glm::vec3 {
+        if (is_ue5_vec) {
+            const auto* d = prop->get_data<glm::vec<3, double>>(c);
+            return glm::vec3{(float)d->x, (float)d->y, (float)d->z};
+        }
+        return *prop->get_data<glm::vec3>(c);
+    };
+
+    // UE FRotationMatrix rows for an FRotator {x=Pitch, y=Yaw, z=Roll} (degrees). Row-vector
+    // convention: world_v = v.x*M[0] + v.y*M[1] + v.z*M[2] — matches UE's TransformVector exactly,
+    // so the chain composition reproduces the engine's own parent-relative placement.
+    auto ue_rot_rows = [](const glm::vec3& rot) -> std::array<glm::vec3, 3> {
+        const float P = glm::radians(rot.x), Y = glm::radians(rot.y), R = glm::radians(rot.z);
+        const float SP = std::sin(P), CP = std::cos(P);
+        const float SY = std::sin(Y), CY = std::cos(Y);
+        const float SR = std::sin(R), CR = std::cos(R);
+        return {
+            glm::vec3{CP * CY, CP * SY, SP},
+            glm::vec3{SR * SP * CY - CR * SY, SR * SP * SY + CR * CY, -SR * CP},
+            glm::vec3{-(CR * SP * CY + SR * SY), CY * SR - CR * SP * SY, CR * CP},
+        };
+    };
+
+    // World location of a component: its RelativeLocation pushed up through each ancestor's
+    // relative transform (scale -> rotate -> translate per level). Caller holds the shared lock, so
+    // exists_unsafe() vets every AttachParent pointer before it's dereferenced. Depth-capped
+    // against pathological/cyclic chains.
+    auto compose_world_location = [&](sdk::USceneComponent* comp) -> glm::vec3 {
+        glm::vec3 p = read_vec3_prop(s_rel_loc_prop, comp);
+        if (s_attach_parent_prop == nullptr) {
+            return p;
+        }
+        auto* parent = *s_attach_parent_prop->get_data<sdk::USceneComponent*>(comp);
+        for (int depth = 0; parent != nullptr && depth < 12; ++depth) {
+            if (!exists_unsafe((sdk::UObjectBase*)parent)) {
+                break; // freed / untracked pointer — stop with the partial composition
+            }
+            const glm::vec3 pl = read_vec3_prop(s_rel_loc_prop, parent);
+            if (s_rel_scale_prop != nullptr) {
+                p *= read_vec3_prop(s_rel_scale_prop, parent);
+            }
+            if (s_rel_rot_prop != nullptr) {
+                const auto M = ue_rot_rows(read_vec3_prop(s_rel_rot_prop, parent));
+                p = p.x * M[0] + p.y * M[1] + p.z * M[2];
+            }
+            p += pl;
+            parent = *s_attach_parent_prop->get_data<sdk::USceneComponent*>(parent);
+        }
+        return p;
+    };
 
     std::string class_filter = m_pick_class_filter;
     for (auto& ch : class_filter) ch = (char)std::tolower((unsigned char)ch);
@@ -4509,9 +4660,7 @@ void UObjectHook::handle_click_select() {
             if (!is_scene) for (auto* sc : meta->super_classes) { if (sc == scene_cls) { is_scene = true; break; } }
             if (!is_scene) continue;
             auto* comp = reinterpret_cast<sdk::USceneComponent*>(obj);
-            glm::vec3 p{0.0f, 0.0f, 0.0f};
-            if (is_ue5_vec) { const auto* d = s_rel_loc_prop->get_data<glm::vec<3, double>>(comp); p = glm::vec3{(float)d->x, (float)d->y, (float)d->z}; }
-            else            { p = *s_rel_loc_prop->get_data<glm::vec3>(comp); }
+            const glm::vec3 p = compose_world_location(comp);
             const glm::vec3 v = p - ray_origin;
             const float t = glm::dot(v, ray_dir);
             if (t <= 1.0f) continue; // behind / on top of the camera
@@ -4681,6 +4830,55 @@ void UObjectHook::draw_component_gizmos() {
     // gizmos float on the background draw-list — otherwise the pointer only updates over imgui
     // windows and VR users can't hover/grab gizmo handles in open space.
     m_has_gizmos = !draw_comps.empty();
+
+    // Cleared here (and re-published after projection below) so the overlay auto-depth falls back to
+    // the configured distance on any early-out this frame.
+    m_nearest_gizmo_dist_ue.store(-1.0f);
+
+    // Overlay-material highlight sync: apply to newly selected comps, restore deselected ones. Runs
+    // BEFORE the empty early-out so turning the feature off / clearing the selection still restores.
+    {
+        // Lazy auto-find of a default highlight material (config may enable the toggle before any
+        // material was ever picked). Engine-content materials that are essentially always loaded.
+        if (m_highlight_overlay_material && m_highlight_material == nullptr && !m_highlight_material_search_attempted) {
+            m_highlight_material_search_attempted = true;
+            GameThreadWorker::get().enqueue([this]() {
+                static const wchar_t* candidates[] = {
+                    L"Material /Engine/EngineDebugMaterials/DebugMeshMaterial.DebugMeshMaterial",
+                    L"Material /Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial",
+                    L"Material /Engine/EngineMaterials/WidgetMaterial.WidgetMaterial",
+                    L"Material /Engine/EngineMaterials/DefaultDeferredDecalMaterial.DefaultDeferredDecalMaterial",
+                };
+                for (auto path : candidates) {
+                    if (auto mat = sdk::find_uobject<sdk::UObject>(path); mat != nullptr) {
+                        m_highlight_material = mat;
+                        SPDLOG_INFO("[UObjectHook] Overlay-highlight material auto-selected: {}", utility::narrow(path));
+                        return;
+                    }
+                }
+                SPDLOG_WARN("[UObjectHook] No default overlay-highlight material found — pick one in the gizmo options");
+            });
+        }
+
+        const bool hl_active = m_highlight_overlay_material && m_highlight_material != nullptr;
+        std::unordered_map<sdk::USceneComponent*, sdk::UObject*> originals;
+        {
+            std::shared_lock _{m_mutex};
+            originals = m_overlay_mat_originals;
+        }
+        for (const auto& [comp, orig] : originals) {
+            if (!hl_active || !draw_comps.contains(comp)) {
+                restore_overlay_highlight(comp);
+            }
+        }
+        if (hl_active) {
+            for (auto* comp : draw_comps) {
+                if (!originals.contains(comp)) {
+                    apply_overlay_highlight(comp, m_highlight_material);
+                }
+            }
+        }
+    }
 
     if (draw_comps.empty()) {
         s_drag_comp = nullptr;
@@ -4873,6 +5071,20 @@ void UObjectHook::draw_component_gizmos() {
             }
         }
         screens.push_back(sc);
+    }
+
+    // Publish the nearest gizmo-target distance (world units) for the overlay auto-depth.
+    // m_last_camera_location comes from the stereo callback (same benign cross-thread read the
+    // camera-attach UI already does).
+    {
+        float best_d = -1.0f;
+        for (const auto& sc : screens) {
+            const float d = glm::length(sc.origin - m_last_camera_location);
+            if (best_d < 0.0f || d < best_d) {
+                best_d = d;
+            }
+        }
+        m_nearest_gizmo_dist_ue.store(best_d);
     }
 
     // Nearest axis to the cursor across all gizmos (for hover highlight + the
@@ -6708,6 +6920,35 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SameLine();
     ImGui::Checkbox("Highlight selection", &m_highlight_selection);
     ImGui::Checkbox("Set Movable on select (Mobility=2)", &m_gizmo_set_movable);
+    // Overlay-material highlight: SetOverlayMaterial on selected mesh comps (UE5.1+). The material is
+    // auto-found from engine content on first enable; any UMaterialInterface can be dropped/picked in.
+    ImGui::Checkbox("Overlay-material highlight (UE5.1+)", &m_highlight_overlay_material);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Renders the highlight material OVER each selected mesh component\n(UMeshComponent::SetOverlayMaterial — silently unavailable on UE4).\nOriginal overlay material is restored on deselect.");
+    }
+    if (m_highlight_overlay_material) {
+        ImGui::SameLine();
+        ImGui::TextDisabled(m_highlight_material != nullptr ? "(material ready)" : "(no material yet)");
+        static PickerState s_hl_mat_picker{};
+        static sdk::UClass* s_mat_iface_cls = nullptr;
+        if (s_mat_iface_cls == nullptr) {
+            s_mat_iface_cls = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.MaterialInterface");
+        }
+        sdk::UObject* slot = m_highlight_material;
+        if (render_universal_object_picker("hl_overlay_mat", slot, s_hl_mat_picker, s_mat_iface_cls, false, nullptr)) {
+            // Material changed: restore everything currently highlighted so the sync loop re-applies
+            // with the new material next frame.
+            std::unordered_map<sdk::USceneComponent*, sdk::UObject*> originals;
+            {
+                std::shared_lock _{m_mutex};
+                originals = m_overlay_mat_originals;
+            }
+            for (const auto& [comp, orig] : originals) {
+                restore_overlay_highlight(comp);
+            }
+            m_highlight_material = slot;
+        }
+    }
 
     ImGui::SeparatorText("Ctrl-snap steps (hold Ctrl while dragging the gizmo)");
     ImGui::SliderFloat("Move snap (cm)", &m_snap_translate, 0.0f, 100.0f, "%.1f");
@@ -10655,6 +10896,12 @@ void* UObjectHook::destructor(sdk::UObjectBase* object, void* rdx, void* r8, voi
 
             if ((sdk::USceneComponent*)object == hook->m_flat_gizmo_drag_comp.load()) {
                 hook->m_flat_gizmo_drag_comp.store(nullptr);
+            }
+
+            hook->m_overlay_mat_originals.erase((sdk::USceneComponent*)object);
+
+            if (object == (sdk::UObjectBase*)hook->m_highlight_material) {
+                hook->m_highlight_material = nullptr;
             }
 
             for (auto super : it->second->super_classes) {
