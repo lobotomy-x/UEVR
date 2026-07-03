@@ -530,10 +530,22 @@ void CommandContext::clear_rtv(d3d12::TextureContext& tex, const float* color, D
 
 void CommandContext::execute() {
     std::scoped_lock _{this->mtx};
-    
+
     if (this->has_commands) {
         if (FAILED(this->cmd_list->Close())) {
             spdlog::error("[VR] Failed to close command list. ({})", utility::narrow(this->internal_name));
+            // A failed Close leaves the list in an error state and nothing was submitted — without
+            // recovery, has_commands stays true, wait() never resets (waiting_for_fence is false),
+            // and every subsequent frame re-records onto the errored list and fails Close again
+            // (the "Failed to close command list" spam). Reset is the documented recovery; the
+            // allocator is safe to reset because the previous frame's work was fenced in wait().
+            if (FAILED(this->cmd_allocator->Reset())) {
+                spdlog::error("[VR] Failed to reset command allocator after failed close. ({})", utility::narrow(this->internal_name));
+            }
+            if (FAILED(this->cmd_list->Reset(this->cmd_allocator.Get(), nullptr))) {
+                spdlog::error("[VR] Failed to reset command list after failed close. ({})", utility::narrow(this->internal_name));
+            }
+            this->has_commands = false;
             return;
         }
         
