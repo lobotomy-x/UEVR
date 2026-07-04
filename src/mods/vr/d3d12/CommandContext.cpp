@@ -2,6 +2,8 @@
 #include <utility/String.hpp>
 #include <chrono>
 #include <string_view>
+#include <mutex>
+#include <unordered_set>
 
 #include "Framework.hpp"
 #include "render/D3D12Diagnostics.hpp"
@@ -11,6 +13,78 @@
 
 namespace {
 constexpr auto FENCE_PROFILER_LOG_INTERVAL = std::chrono::seconds(5);
+
+// D3D12 raw copies (CopyResource / CopyTextureRegion) require the source and destination to share the
+// same "format family" (their common typeless format), NOT merely the same byte size. R8G8B8A8 and
+// B8G8R8A8 are both 32bpp but are DIFFERENT families — copying between them is E_INVALIDARG, which puts
+// the command list into an error state so the following Close() fails (the "Failed to close command
+// list (OpenVR Right Eye)" storm seen when the real swapchain backbuffer, e.g. R10G10B10A2, is used as
+// the flat fallback while the eye textures are B8G8R8A8). Unknown formats map to themselves so only
+// identical formats are treated as compatible.
+DXGI_FORMAT dxgi_format_family(DXGI_FORMAT f) {
+    switch (f) {
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    case DXGI_FORMAT_R8G8B8A8_UINT:
+    case DXGI_FORMAT_R8G8B8A8_SNORM:
+    case DXGI_FORMAT_R8G8B8A8_SINT:
+        return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+    case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+    case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8X8_TYPELESS;
+    case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+    case DXGI_FORMAT_R10G10B10A2_UNORM:
+    case DXGI_FORMAT_R10G10B10A2_UINT:
+        return DXGI_FORMAT_R10G10B10A2_TYPELESS;
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+    case DXGI_FORMAT_R16G16B16A16_FLOAT:
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+    case DXGI_FORMAT_R16G16B16A16_UINT:
+    case DXGI_FORMAT_R16G16B16A16_SNORM:
+    case DXGI_FORMAT_R16G16B16A16_SINT:
+        return DXGI_FORMAT_R16G16B16A16_TYPELESS;
+    default:
+        return f;
+    }
+}
+
+bool dxgi_copy_compatible(DXGI_FORMAT a, DXGI_FORMAT b) {
+    return a == b || dxgi_format_family(a) == dxgi_format_family(b);
+}
+
+// True when src->dst is a legal raw copy. On a mismatch it logs once per (src,dst) format pair and
+// returns false so the caller skips recording the copy (leaving the destination unchanged) rather than
+// wedging the command list. src/dst must be non-null (callers guard that first).
+bool copy_formats_compatible(ID3D12Resource* src, ID3D12Resource* dst, std::wstring_view ctx_name) {
+    const auto sf = src->GetDesc().Format;
+    const auto df = dst->GetDesc().Format;
+    if (dxgi_copy_compatible(sf, df)) {
+        return true;
+    }
+
+    static std::mutex s_mtx;
+    static std::unordered_set<uint64_t> s_seen;
+    const uint64_t key = ((uint64_t)(uint32_t)sf << 32) | (uint32_t)df;
+    bool first = false;
+    {
+        std::scoped_lock _{s_mtx};
+        first = s_seen.insert(key).second;
+    }
+    if (first) {
+        spdlog::warn(
+            "[VR][D3D12] Skipping incompatible-format copy on '{}' (src fmt {} -> dst fmt {}); a raw copy across "
+            "format families is E_INVALIDARG and would wedge the command list. Destination keeps its previous "
+            "contents until a matching-format source is available.",
+            utility::narrow(std::wstring{ctx_name}), (uint32_t)sf, (uint32_t)df);
+    }
+    return false;
+}
 
 struct FenceTimingStats {
     uint64_t count{};
@@ -266,6 +340,10 @@ void CommandContext::copy(ID3D12Resource* src, ID3D12Resource* dst, D3D12_RESOUR
         return;
     }
 
+    if (!copy_formats_compatible(src, dst, this->internal_name)) {
+        return;
+    }
+
     // Switch src into copy source.
     D3D12_RESOURCE_BARRIER src_barrier{};
 
@@ -318,6 +396,10 @@ void CommandContext::copy_region_to_subresource(ID3D12Resource* src, ID3D12Resou
 
     if (src == nullptr || dst == nullptr) {
         spdlog::error("[VR] nullptr passed to copy_region_to_subresource");
+        return;
+    }
+
+    if (!copy_formats_compatible(src, dst, this->internal_name)) {
         return;
     }
 
@@ -379,6 +461,10 @@ void CommandContext::copy_region(ID3D12Resource* src, ID3D12Resource* dst, D3D12
 
     if (src == nullptr || dst == nullptr) {
         spdlog::error("[VR] nullptr passed to copy_region");
+        return;
+    }
+
+    if (!copy_formats_compatible(src, dst, this->internal_name)) {
         return;
     }
 
@@ -444,6 +530,11 @@ void CommandContext::copy_region_stereo(ID3D12Resource* srcleft, ID3D12Resource*
 {
     if (srcleft == nullptr || srcright == nullptr || dst == nullptr) {
         spdlog::error("[VR] nullptr passed to copy_region_stereo");
+        return;
+    }
+
+    if (!copy_formats_compatible(srcleft, dst, this->internal_name) ||
+        !copy_formats_compatible(srcright, dst, this->internal_name)) {
         return;
     }
 
