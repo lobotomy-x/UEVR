@@ -112,6 +112,86 @@ inline void drag_scroll_current_window() {
     }
 }
 
+// Put a string on the Win32 clipboard as CF_TEXT. Shared by the object-label copy actions.
+inline void copy_text_to_clipboard(const std::string& s) {
+    if (!OpenClipboard(nullptr)) {
+        return;
+    }
+    EmptyClipboard();
+    if (HGLOBAL h = GlobalAlloc(GMEM_DDESHARE, s.size() + 1); h != nullptr) {
+        if (char* d = (char*)GlobalLock(h); d != nullptr) {
+            std::memcpy(d, s.c_str(), s.size() + 1);
+            GlobalUnlock(h);
+            SetClipboardData(CF_TEXT, h);
+        }
+    }
+    CloseClipboard();
+}
+
+// Shorten a UObject full name to a compact, readable label by dropping the long package/outer path.
+// UE get_full_name() is "ClassName /Package/Path.Outer:Leaf"; this keeps "ClassName Leaf" (the leaf is
+// the text after the last '.', ':' or '/'), so common objects (World, PersistentLevel, PlayerController,
+// Pawn, ...) read cleanly instead of blowing out the layout. The FULL name is still what search matches
+// and what copy/tooltip use — this only affects the on-screen text. Falls back to the input when it has
+// no recognizable structure.
+inline std::string shorten_object_path(std::string_view full) {
+    if (full.empty()) {
+        return std::string{full};
+    }
+
+    const size_t sp = full.find(' '); // get_full_name() = "Class Path"
+    const std::string_view cls  = (sp == std::string_view::npos) ? std::string_view{} : full.substr(0, sp);
+    const std::string_view path = (sp == std::string_view::npos) ? full : full.substr(sp + 1);
+
+    const size_t cut = path.find_last_of(".:/");
+    std::string_view leaf = (cut == std::string_view::npos) ? path : path.substr(cut + 1);
+    if (leaf.empty()) {
+        leaf = path;
+    }
+
+    if (cls.empty()) {
+        return std::string{leaf};
+    }
+    // Already compact (no path, e.g. "Class Default__Class") -> keep as-is if the leaf equals the path.
+    std::string out;
+    out.reserve(cls.size() + 1 + leaf.size());
+    out.append(cls);
+    out.push_back(' ');
+    out.append(leaf);
+    return out;
+}
+
+// Render a compact object label as wrapped text: shows the shortened form, hovering shows the FULL name
+// as a tooltip, right-click copies the FULL name. `full` is the untruncated get_full_name() result
+// (optionally with a leading "[0xADDR] " which is preserved on the short form). Display-only.
+inline void ui_object_label_compact(const std::string& full,
+                                    const ImVec4& color = ImVec4{0.7f, 0.7f, 0.7f, 1.0f}) {
+    if (full.empty()) {
+        return;
+    }
+
+    // Preserve a leading "[0x...] " address prefix (some call sites prepend one) and shorten the rest.
+    std::string prefix;
+    std::string_view body{full};
+    if (!body.empty() && body.front() == '[') {
+        if (const size_t rb = body.find("] "); rb != std::string_view::npos) {
+            prefix = std::string{body.substr(0, rb + 2)};
+            body = body.substr(rb + 2);
+        }
+    }
+    const std::string shortl = prefix + shorten_object_path(body);
+
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    ImGui::TextWrapped("%s", shortl.c_str());
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s\n\n(right-click to copy full name)", full.c_str());
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            copy_text_to_clipboard(full);
+        }
+    }
+}
+
 // Right-click Copy/Paste for a vector/quat widget. Call immediately AFTER the
 // DragFloatN so the context menu binds to it. Copy writes "x, y, z[, w]" to the
 // clipboard; Paste parses that many floats back (tolerant of commas / () / []).
@@ -640,11 +720,15 @@ sdk::UObject* render_object_picker_popup(const char* popup_id,
             }
             std::wstring full;
             try { full = obj->get_full_name(); } catch (...) { continue; }
-            if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
+            if (has_filter && full.find(wfilter) == std::wstring::npos) continue; // search matches the FULL name
             const auto narrow = utility::narrow(full);
+            const auto shortl = shorten_object_path(narrow);
             ImGui::PushID((void*)obj);
-            if (ImGui::Selectable(narrow.c_str())) {
+            if (ImGui::Selectable(shortl.c_str())) {
                 picked = obj;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%s", narrow.c_str());
             }
             ImGui::PopID();
             ++shown;
@@ -936,11 +1020,9 @@ bool render_universal_object_picker(const char* id_prefix, sdk::UObject*& slot,
         }
     }
 
-    // Wrapped full name of the current value.
+    // Compact name of the current value (hover for the full path, right-click to copy it).
     if (slot != nullptr && !full_label.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.7f, 0.7f, 0.7f, 1.0f});
-        ImGui::TextWrapped("%s", full_label.c_str());
-        ImGui::PopStyleColor();
+        ui_object_label_compact(full_label);
     }
 
     return changed;
@@ -6068,6 +6150,9 @@ void UObjectHook::draw_class_browser_window() {
                     m_open_class_inspectors.push_back(uclass);
                 }
             }
+            if (ImGui::IsItemHovered() && !full.empty()) {
+                ImGui::SetTooltip("%s", utility::narrow(full).c_str()); // full path on hover; row shows the short form
+            }
             if (ImGui::BeginDragDropSource()) {
                 ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
                 ImGui::Text("UClass: %s", utility::narrow(full).c_str());
@@ -6090,7 +6175,7 @@ void UObjectHook::draw_class_browser_window() {
                     const bool is_native = full.find(L"/Script/") != std::wstring::npos;
                     if (is_native != want_native) continue;
                     if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
-                    render_class_row(uclass, full, utility::narrow(full));
+                    render_class_row(uclass, full, shorten_object_path(utility::narrow(full)));
                     ++shown;
                 }
                 if (shown == 0) {
@@ -9112,11 +9197,12 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     // Name filter — function lists are often huge; let the user narrow them
     // (case-insensitive substring) to find the function they want to call/hook.
     static char s_func_filter[64] = "";
+    ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##func_filter", "filter functions by name...", s_func_filter, sizeof(s_func_filter));
-    ImGui::SameLine();
     // Group by class: one TreeNode per declaring class along the super chain
     // (e.g. Actor -> K2_GetActorRotation, FPSPlayer -> CustomGameFunction)
-    // instead of one flat alphabetical list of the whole inheritance.
+    // instead of one flat alphabetical list of the whole inheritance. On its own row so it doesn't
+    // share the line with the (now full-width) filter box.
     static bool s_group_by_class = false;
     ImGui::Checkbox("Group by class", &s_group_by_class);
 
@@ -9414,28 +9500,32 @@ const auto check_flags = [](uint64_t flags){
     if (s_prop_type_idx >= (int)type_list.size()) s_prop_type_idx = 0;
     if (s_prop_base_idx >= (int)base_list.size()) s_prop_base_idx = 0;
 
-    // Controls: name search (text) + property-type dropdown + base-class dropdown + group + tex stub.
-    ImGui::SetNextItemWidth(150.0f);
+    // Controls laid out on TWO rows so they don't crowd each other or overflow a narrow window:
+    //   Row 1: property-name search (fills the row).
+    //   Row 2: type filter + base-class filter + group mode + the texture-preview stub.
+    ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##propnamefilter", "search properties...", s_prop_name_filter, sizeof(s_prop_name_filter));
-    ImGui::SameLine();
     {
         std::vector<const char*> items; items.reserve(type_list.size());
         for (const auto& s : type_list) items.push_back(s.c_str());
-        ImGui::SetNextItemWidth(140.0f);
+        ImGui::SetNextItemWidth(130.0f);
         ImGui::Combo("type##proptype", &s_prop_type_idx, items.data(), (int)items.size());
     }
     ImGui::SameLine();
     {
         std::vector<const char*> items; items.reserve(base_list.size());
         for (const auto& s : base_list) items.push_back(s.c_str());
-        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SetNextItemWidth(140.0f);
         ImGui::Combo("base##propbase", &s_prop_base_idx, items.data(), (int)items.size());
     }
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(110.0f);
     ImGui::Combo("group##propgroup", &s_prop_group_mode, "Flat\0By base class\0By type\0");
     ImGui::SameLine();
-    ImGui::Checkbox("tex preview##stub", &m_show_texture_previews); // STUB, default off (crash-prone)
+    ImGui::Checkbox("tex##stub", &m_show_texture_previews); // STUB, default off (crash-prone)
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Texture previews (D3D11, experimental — crash-prone; default off)");
+    }
     if (m_show_texture_previews && object != nullptr && uclass != nullptr) {
         std::string tex_cn;
         try { tex_cn = utility::narrow(uclass->get_fname().to_string()); } catch (...) {}
