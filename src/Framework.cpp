@@ -1982,14 +1982,18 @@ void Framework::draw_ui() {
     // viewport on the next frame.
     auto& cf = ImGui::GetIO().ConfigFlags;
     cf = IMGUICONFIGFLAGS | ImGuiConfigFlags_NoMouseCursorChange; // causes bugs with the cursor
-    // Multiviewport (popping panels out to real OS windows) is enabled for NON-VR (flat D3D11/D3D12)
-    // when the user turns on the FrameworkConfig toggle. It stays OFF entirely while the HMD is active
-    // (per-viewport submit AVs inside the VR compositor frame). Historically this was force-disabled on
-    // both flat renderers after pop-out crashes ("renders nowhere" on D3D11, secondary-viewport
-    // device-hang on D3D12); the mitigations since then (unpinned main viewport, stale-ini sanitizer,
-    // win32 main-viewport platform-data force-create, present-thread UpdatePlatformWindows) re-open it
-    // for opt-in testing. NEEDS TESTING — if pop-out still crashes, gate a renderer back out here.
+    // Multiviewport (popping panels out to real OS windows) stays force-disabled on BOTH flat
+    // renderers and in VR. It was briefly re-enabled for flat non-VR (2026-07-05) to retest, and the
+    // historical crash reproduced immediately — a flat-D3D12 title hard-crashed/device-hung on pop-out
+    // (secondary-swapchain teardown), matching the "renders nowhere" (D3D11) / secondary-viewport
+    // device-hang (D3D12) reports. The current mitigations (unpinned main viewport, stale-ini
+    // sanitizer, win32 main-viewport platform-data force-create, present-thread UpdatePlatformWindows)
+    // are NOT enough. Re-enabling needs a real fix to the secondary-viewport swapchain lifecycle, which
+    // needs live debugging — do NOT drop these renderer guards again without it. VR stays off too
+    // (per-viewport submit AVs inside the VR compositor frame).
     if (FrameworkConfig::get()->is_use_multiviewport()
+        && get_renderer_type() != RendererType::D3D11
+        && get_renderer_type() != RendererType::D3D12
         && !VR::get()->is_hmd_active()) {
         cf |= ImGuiConfigFlags_ViewportsEnable;
     }
