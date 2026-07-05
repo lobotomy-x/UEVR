@@ -3500,7 +3500,7 @@ void UObjectHook::spawn_view_camera(sdk::USceneComponent* target) {
             // or a sane behind/above offset if we don't have a camera location yet.
             glm::vec3 spawn_pos = cam_loc;
             if (glm::length(spawn_pos - tgt) < 1.0f) {
-                spawn_pos = tgt + glm::vec3{-250.0f, 0.0f, 100.0f};
+                spawn_pos = tgt;
             }
             auto cam = ugs->spawn_actor(world, cam_cls, spawn_pos);
             if (cam == nullptr) return;
@@ -5919,9 +5919,170 @@ std::string sdk_dump_property(DumpFmt fmt, sdk::FProperty* prop) {
         sdk_key(fmt, "flag_names") + sdk_str_array(fmt, sdk_decode_property_flags(flags)) + "}";
 }
 
+// ---- EmmyLua (LuaLS) SDK emitter ------------------------------------------
+// The Lua export is a UE4SS-style TYPE-ANNOTATION sdk for a Lua language server
+// (sumneko/lua-language-server): one ---@class per UClass/UScriptStruct with a
+// ---@field per property (types resolved to the concrete class/struct/array/map/
+// enum), plus function stubs with ---@param/---@return. It is NOT executable Lua
+// data — point your LSP at the sdk_dump/classes folder for autocomplete on UEVR
+// API objects. (The JSON export remains the machine-readable reflection dump.)
+
+bool sdk_lua_is_keyword(const std::string& s) {
+    static const std::unordered_set<std::string> kw{
+        "and","break","do","else","elseif","end","false","for","function","goto",
+        "if","in","local","nil","not","or","repeat","return","then","true","until","while"};
+    return kw.count(s) != 0;
+}
+
+// UE name -> a valid Lua identifier for an @field / @param / enum key.
+std::string sdk_lua_ident(const std::string& in) {
+    std::string out;
+    out.reserve(in.size());
+    for (char c : in) {
+        out += (std::isalnum((unsigned char)c) || c == '_') ? c : '_';
+    }
+    if (out.empty()) out = "_";
+    if (std::isdigit((unsigned char)out[0])) out.insert(out.begin(), '_');
+    if (sdk_lua_is_keyword(out)) out += "_";
+    return out;
+}
+
+std::string sdk_obj_name_or(sdk::UObject* o, const char* fb) {
+    if (o == nullptr) return fb;
+    try { return utility::narrow(o->get_fname().to_string()); } catch (...) { return fb; }
+}
+
+// Resolve an FProperty to its LuaLS type string (recurses through array/set/map/inner).
+std::string sdk_lua_type(sdk::FProperty* prop) {
+    if (prop == nullptr) return "any";
+    std::string kind;
+    try { kind = utility::narrow(prop->get_class()->get_name().to_string()); } catch (...) { return "any"; }
+
+    if (kind == "BoolProperty") return "boolean";
+    if (kind == "FloatProperty" || kind == "DoubleProperty") return "number";
+    if (kind == "IntProperty" || kind == "Int8Property" || kind == "Int16Property" || kind == "Int64Property" ||
+        kind == "UInt16Property" || kind == "UInt32Property" || kind == "UInt64Property" || kind == "ByteProperty")
+        return "integer";
+    if (kind == "StrProperty" || kind == "NameProperty" || kind == "TextProperty") return "string";
+    if (kind == "EnumProperty") {
+        sdk::UEnum* en = nullptr;
+        try { en = reinterpret_cast<sdk::FEnumProperty*>(prop)->get_enum(); } catch (...) {}
+        return sdk_obj_name_or((sdk::UObject*)en, "integer");
+    }
+    if (kind == "StructProperty") {
+        sdk::UScriptStruct* ss = nullptr;
+        try { ss = reinterpret_cast<sdk::FStructProperty*>(prop)->get_struct(); } catch (...) {}
+        return sdk_obj_name_or((sdk::UObject*)ss, "table");
+    }
+    if (kind == "ArrayProperty") {
+        sdk::FProperty* inner = nullptr;
+        try { inner = reinterpret_cast<sdk::FArrayProperty*>(prop)->get_inner(); } catch (...) {}
+        return sdk_lua_type(inner) + "[]";
+    }
+    if (kind == "SetProperty") {
+        sdk::FProperty* e = nullptr;
+        try { e = reinterpret_cast<sdk::FSetProperty*>(prop)->get_element_prop(); } catch (...) {}
+        return sdk_lua_type(e) + "[]";
+    }
+    if (kind == "MapProperty") {
+        sdk::FProperty* k = nullptr; sdk::FProperty* v = nullptr;
+        try { k = reinterpret_cast<sdk::FMapProperty*>(prop)->get_key_prop(); } catch (...) {}
+        try { v = reinterpret_cast<sdk::FMapProperty*>(prop)->get_value_prop(); } catch (...) {}
+        return "table<" + sdk_lua_type(k) + ", " + sdk_lua_type(v) + ">";
+    }
+    if (kind == "ObjectProperty" || kind == "ClassProperty" || kind == "WeakObjectProperty" ||
+        kind == "LazyObjectProperty" || kind == "SoftObjectProperty" || kind == "SoftClassProperty" ||
+        kind == "InterfaceProperty" || kind == "ObjectPtrProperty") {
+        sdk::UClass* pc = nullptr;
+        try { pc = reinterpret_cast<sdk::FObjectProperty*>(prop)->get_property_class(); } catch (...) {}
+        return sdk_obj_name_or((sdk::UObject*)pc, "UObject");
+    }
+    if (kind == "DelegateProperty" || kind == "MulticastInlineDelegateProperty" ||
+        kind == "MulticastSparseDelegateProperty") {
+        return "function";
+    }
+    return "any";
+}
+
+// EmmyLua ---@class block for a UClass/UScriptStruct: declared @fields + function stubs. Inherited
+// members are provided by the `: Super` chain, so only declared members are emitted per class.
+std::string sdk_emmylua_ustruct(sdk::UStruct* strukt) {
+    static const auto ufunction_t = sdk::UFunction::static_class();
+    const std::string name = sdk_obj_name_or((sdk::UObject*)strukt, "Unknown");
+    std::string super;
+    if (auto s = strukt->get_super_struct(); s != nullptr) {
+        super = sdk_obj_name_or((sdk::UObject*)s, "");
+    }
+
+    std::string out = "---@class " + name;
+    if (!super.empty()) out += " : " + super;
+    out += "\n";
+
+    for (auto f = strukt->get_child_properties(); f != nullptr; f = f->get_next()) {
+        auto* p = reinterpret_cast<sdk::FProperty*>(f);
+        std::string pn;
+        try { pn = utility::narrow(p->get_field_name().to_string()); } catch (...) { continue; }
+        out += "---@field " + sdk_lua_ident(pn) + " " + sdk_lua_type(p) + "\n";
+    }
+    out += name + " = {}\n\n";
+
+    for (auto child = strukt->get_children(); child != nullptr; child = child->get_next()) {
+        if (child->get_class() == nullptr || !child->get_class()->is_a(ufunction_t)) continue;
+        auto* fn = reinterpret_cast<sdk::UFunction*>(child);
+        std::string fn_name;
+        try { fn_name = utility::narrow(fn->get_fname().to_string()); } catch (...) { continue; }
+
+        std::string anno;
+        std::vector<std::string> in_names;
+        std::vector<std::string> ret_types;
+        for (auto p = fn->get_child_properties(); p != nullptr; p = p->get_next()) {
+            auto* fp = reinterpret_cast<sdk::FProperty*>(p);
+            uint64_t fl = 0; try { fl = fp->get_property_flags(); } catch (...) {}
+            if ((fl & 0x80) == 0) continue; // not a Parm (skip locals)
+            std::string pn; try { pn = utility::narrow(fp->get_field_name().to_string()); } catch (...) { pn = "arg"; }
+            const std::string ty = sdk_lua_type(fp);
+            const bool is_return = (fl & 0x400) != 0; // ReturnParm
+            const bool is_out    = (fl & 0x100) != 0; // OutParm (comes back via ProcessEvent)
+            if (is_return || is_out) {
+                ret_types.push_back(ty);
+            }
+            if (!is_return) { // ReturnParm is output-only; everything else is also an input
+                const std::string id = sdk_lua_ident(pn);
+                anno += "---@param " + id + " " + ty + "\n";
+                in_names.push_back(id);
+            }
+        }
+        for (const auto& rt : ret_types) anno += "---@return " + rt + "\n";
+
+        out += anno;
+        out += "function " + name + ":" + sdk_lua_ident(fn_name) + "(";
+        for (size_t i = 0; i < in_names.size(); ++i) { if (i) out += ", "; out += in_names[i]; }
+        out += ") end\n\n";
+    }
+    return out;
+}
+
+// EmmyLua ---@enum block: named integer values (leaf of any "EType::Value" key).
+std::string sdk_emmylua_uenum(sdk::UEnum* uenum) {
+    const std::string name = sdk_obj_name_or((sdk::UObject*)uenum, "UnknownEnum");
+    std::string out = "---@enum " + name + "\n" + name + " = {\n";
+    try {
+        for (auto& [k, v] : uenum->get_names()) {
+            std::string key = k;
+            if (const auto cc = key.rfind("::"); cc != std::string::npos) key = key.substr(cc + 2);
+            out += "    " + sdk_lua_ident(key) + " = " + std::to_string(v) + ",\n";
+        }
+    } catch (...) {}
+    out += "}\n\n";
+    return out;
+}
+
 // Dump a UStruct (UClass or UScriptStruct). include_inherited walks the super
 // chain for properties/functions; false = declared members only.
 std::string sdk_dump_ustruct(DumpFmt fmt, sdk::UStruct* strukt, bool include_inherited) {
+    if (fmt == DumpFmt::Lua) {
+        return sdk_emmylua_ustruct(strukt); // UE4SS-style annotations, not JSON-as-Lua
+    }
     static const auto ufunction_t = sdk::UFunction::static_class();
     std::string name, full, super;
     try { name = utility::narrow(strukt->get_fname().to_string()); } catch (...) {}
@@ -5979,6 +6140,9 @@ std::string sdk_dump_ustruct(DumpFmt fmt, sdk::UStruct* strukt, bool include_inh
 }
 
 std::string sdk_dump_uenum(DumpFmt fmt, sdk::UEnum* uenum) {
+    if (fmt == DumpFmt::Lua) {
+        return sdk_emmylua_uenum(uenum); // UE4SS-style ---@enum, not JSON-as-Lua
+    }
     std::string name, full;
     try { name = utility::narrow(uenum->get_fname().to_string()); } catch (...) {}
     try { full = utility::narrow(uenum->get_full_name()); } catch (...) {}
@@ -6022,15 +6186,26 @@ void sdk_write_split(DumpFmt fmt, const char* kind, const std::map<std::string, 
         std::filesystem::create_directories(root);
         size_t files = 0, items = 0;
         for (const auto& [pkg, parts] : by_package) {
-            std::string body = sdk_arr_open(fmt);
-            for (size_t i = 0; i < parts.size(); ++i) {
-                if (i) body += ",";
-                body += parts[i];
+            std::string doc;
+            if (fmt == DumpFmt::Lua) {
+                // UE4SS-style annotation file: standalone ---@class/@enum blocks, no data wrapper.
+                // ---@meta makes the LSP treat these as ambient definitions (available without require).
+                doc = "---@meta\n"
+                      "-- UEVR SDK type annotations for '" + pkg + "' (UE4SS-style, for Lua LSP autocomplete).\n"
+                      "-- Auto-generated by the UEVR Class Browser; NOT executable. Point sumneko/\n"
+                      "-- lua-language-server (e.g. .luarc.json workspace.library) at this sdk_dump folder.\n\n";
+                for (const auto& part : parts) doc += part; // each block already ends with a blank line
+            } else {
+                std::string body = sdk_arr_open(fmt);
+                for (size_t i = 0; i < parts.size(); ++i) {
+                    if (i) body += ",";
+                    body += parts[i];
+                }
+                body += sdk_arr_close(fmt);
+                doc = std::string("{") + sdk_key(DumpFmt::Json, kind) + body + "}";
+                // Pretty-print so the JSON export isn't a single dense line.
+                try { doc = nlohmann::json::parse(doc).dump(2); } catch (...) {}
             }
-            body += sdk_arr_close(fmt);
-            const std::string doc = (fmt == DumpFmt::Lua)
-                ? ("return " + body + "\n")
-                : (std::string("{") + sdk_key(DumpFmt::Json, kind) + body + "}");
             const auto path = root / (pkg + "." + sdk_ext(fmt));
             std::ofstream f{path, std::ios::binary | std::ios::trunc};
             f.write(doc.data(), static_cast<std::streamsize>(doc.size()));
@@ -6091,7 +6266,13 @@ void UObjectHook::draw_class_browser_window() {
     // Export format, shared by all three tab export buttons.
     static int s_dump_fmt_idx = 0; // 0 = JSON, 1 = Lua
     ImGui::SetNextItemWidth(90.0f);
-    ImGui::Combo("dump format", &s_dump_fmt_idx, "JSON\0Lua\0");
+    ImGui::Combo("dump format", &s_dump_fmt_idx, "JSON\0Lua (LSP defs)\0");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("JSON: machine-readable reflection dump (pretty-printed).\n"
+                          "Lua (LSP defs): UE4SS-style ---@class / ---@field / ---@enum type\n"
+                          "annotations for Lua-language-server autocomplete. Point your\n"
+                          ".luarc.json workspace.library at <profile>/sdk_dump/. Not executable.");
+    }
     const DumpFmt dump_fmt = s_dump_fmt_idx == 1 ? DumpFmt::Lua : DumpFmt::Json;
 
     // Specific-or-batch dump: exports every class currently matching the filter (filter to one
