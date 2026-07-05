@@ -16708,7 +16708,41 @@ bool VRRenderTargetManager_Base::create_dedicated_ui_texture() {
                         }
 
                         sdk::FRenderTarget::update_offsets(frt);
-                        auto** frt_texture = frt->get_render_target_texture();
+
+                        // GetRenderTargetTexture is a virtual. While the RHI render resource is still
+                        // constructing, its vtable slot is the base pure-virtual (_purecall) — calling it
+                        // then aborts the process ("pure virtual function called", crashed Delta/D3D11 at
+                        // create_dedicated_ui_texture). Resolve the concrete getter on THIS object each
+                        // attempt: the override is a trivial `lea rax,[rcx+disp]; ret` accessor (the same
+                        // shape the SDK's index discovery matches), whereas a _purecall slot is a jmp/thunk
+                        // that fails this check. If it isn't installed yet, retry rather than call into it.
+                        auto slot_is_rt_getter = [](const uint8_t* p) -> bool {
+                            if (p == nullptr || IsBadReadPtr((void*)p, 3)) return false;
+                            if (p[0] != 0x48 || p[1] != 0x8D) return false; // REX.W + LEA
+                            const uint8_t modrm = p[2];
+                            const uint8_t mod = (modrm >> 6) & 3, reg = (modrm >> 3) & 7, rm = modrm & 7;
+                            return reg == 0 /*RAX*/ && rm == 1 /*RCX*/ && (mod == 1 || mod == 2); // [rcx+disp8/32]
+                        };
+
+                        FRHITexture2D** frt_texture = nullptr;
+                        {
+                            auto* const vtable = *(uintptr_t**)frt;
+                            bool getter_ready = false;
+                            if (vtable != nullptr && !IsBadReadPtr(vtable, sizeof(void*))) {
+                                for (uint32_t i = 1; i <= 6; ++i) {
+                                    const auto slot = vtable[i];
+                                    if (slot == 0 || IsBadReadPtr((void*)slot, sizeof(void*))) break;
+                                    if (!slot_is_rt_getter((const uint8_t*)slot)) continue;
+                                    using GetRTTexFn = FRHITexture2D** (*)(const sdk::FRenderTarget*);
+                                    frt_texture = ((GetRTTexFn)slot)(frt);
+                                    getter_ready = true;
+                                    break;
+                                }
+                            }
+                            if (!getter_ready) {
+                                return false; // concrete getter not installed yet — retry next frame
+                            }
+                        }
 
                         if (frt_texture == nullptr || *frt_texture == nullptr || IsBadReadPtr(*frt_texture, sizeof(void*))) {
                             return false;
