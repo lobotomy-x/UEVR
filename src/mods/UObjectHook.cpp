@@ -2463,6 +2463,9 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
                         arr.count = 0;
                     }
                 }
+                    break; // MUST break — without it ArrayProperty fell through into StrProperty and
+                           // reinterpreted the array's data as an FString, realloc'ing a non-FMalloc /
+                           // already-moved block (FMallocBinned2 "unrecognized block" heap-corruption crash).
                 case L"StrProperty"_fnv:
                 {
                     using FString = sdk::TArray<wchar_t>;
