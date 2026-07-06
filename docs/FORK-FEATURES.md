@@ -13,11 +13,55 @@ users of the fork. Not exhaustive — the major capability areas only._
 - OpenXR framework UI curvature (cylinder layer) to match the OpenVR curved panel.
 
 ## Lua scripting ecosystem (luavrlib)
-- Expanded Lua API + libraries; demo scripts (freecam, devtools, workers, etc.).
-- `lua_imgui` plugin (REPL, object inspector, VR, console, bridge tabs).
-- `cimgui_native` plugin + a Lua script editor plugin; PluginLoader wiring.
+
+_Months of pre-existing work on this fork's Lua/imgui stack — the largest single divergence from
+upstream. Cheat sheet: docs/lua-api-cheatsheet.md (mirrored live in-game by the CheatSheet panel)._
+
+**imgui, modernized + Lua API roughly doubled**
+- dear imgui advanced ~5 years past upstream UEVR's vintage (now 1.92.x: docking, dynamic fonts,
+  multi-select, modern tables) with the ABI/threading fallout of that jump ironed out.
+- The Lua `imgui` binding grew to near-parity with the C++ API: full tables, tab bars, drag & drop,
+  popups/modals, tree nodes, color pickers, fonts (load/push/size), style push/pop, clip rects,
+  low-level draw lists + path API, item/id state, viewport sidebars, platform windows, the UEVR host
+  dockspace id, and a `draw` overlay table. Optional-argument handling fixed across the board
+  (omitted args no longer throw through sol2).
+
+**`uevr.api_fast` (SDKFast) — native fast paths**
+- Direct native bindings for the hot transform paths on Actors/SceneComponents
+  (get/set actor & world location/rotation, offsets, sockets, root/components lookup, batch actor
+  locations, cached `find_class`) that skip `process_event` reflection dispatch — a massive speedup
+  for scripts touching many transforms per frame.
+
+**Multistate / threading**
+- Multiple isolated Lua states + worker-thread execution support (ScriptState), with demo scripts
+  (`workers_demo` and friends) showcasing heavy per-frame workloads moved off the game thread.
+
+**Math & struct usertypes**
+- Full usertype set with metamethods and utility methods: Vector2/3/4 (float + double), Quaternion,
+  Matrix4x4, Transform — arithmetic operators, `dot/cross/normalize/length`, `inverse/transpose`,
+  `transform_vector`/`transform_vector4[w]`, plus `Vector3:world_to_screen()` / `world_to_ndc()`
+  projection helpers.
+- Automatic UStruct bindings expanded well past upstream's FVector/FRotator→vec3: FQuat→Quaternion,
+  FTransform→Transform, FMatrix→Matrix, FLinearColor→vec4 all convert transparently at the
+  property/param boundary (StructObject).
+- **TArray support** for reading/writing array properties and function results from Lua.
+- **UEnum support** (enum lookup and named values).
+
+**Reflection power tools**
+- UE4SS-style **property/function flag editing** — e.g. flip EditConst/BlueprintReadOnly off a
+  property or make a function callable, from Lua and the UI.
+- Blueprint/function-library access via CDOs; `:call`, `:get_property`/`:set_property` on any object.
+
+**Embedding / tooling**
+- **C++ → inline Lua**: plugins and native code can execute Lua chunks in the live state
+  (thread-safe `exec_lua` through the PluginLoader C API) — the bridge the plugins below build on.
+- `lua_imgui` plugin (REPL, object inspector, VR, console, bridge tabs), `cimgui_native` plugin,
+  and a full in-overlay **Lua script editor** IDE (syntax highlighting, global/autorun scripts,
+  Globals/Modules state-inspector tabs); PluginLoader wiring for all of it.
 - **uevr-mcp**: an MCP server exposing the live game to tooling (object inspection, memory reads,
   render diagnostics, Lua exec, hooks) over HTTP/named-pipe — used heavily for live debugging.
+- Demo/library scripts: freecam, devtools sidebar, workers, camera manager, crosshair, debug draw,
+  common-objects helpers, and more.
 
 ## UObjectHook enhancements
 - Visual transform **gizmos** (translate/rotate/scale, world/local, multi-axis, multi-select,
@@ -26,8 +70,9 @@ users of the fork. Not exhaustive — the major capability areas only._
   view, result display (arrays/enums/TMap/TSet/delegates).
 - **Property editor**: type filter, group-by-class/type, math-struct (Transform/Vector) compact
   display, inherited-object column sizing.
-- **Class browser**: class hierarchy + ScriptStruct/Enum browsing; **SDK dumpers** to JSON and Lua
-  (per-package autosplit, decoded PropertyFlags/FunctionFlags), exposed in-UI and via a Lua script.
+- **Class browser**: class hierarchy + ScriptStruct/Enum browsing; **SDK dumpers** — pretty-printed
+  JSON reflection dumps and UE4SS-style Lua LSP definitions (`---@class`/`---@field`/`---@enum` for
+  editor autocompletion), per-package autosplit, decoded PropertyFlags/FunctionFlags.
 
 ## UI / overlay
 - Drag-to-scroll decoupled from window-move (VR thumbstick / flat middle-mouse).
