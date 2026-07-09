@@ -38,6 +38,7 @@
 #include "uobjecthook/SDKDumper.hpp"
 #include "VR.hpp"
 #include "PluginLoader.hpp"
+#include "LuaLoader.hpp"
 #include <d3d11.h>
 
 #include "UObjectHook.hpp"
@@ -2297,7 +2298,11 @@ void UObjectHook::hook_process_event() {
     }
 }
 
-namespace { bool is_func_monitored(sdk::UFunction* fn); }
+namespace {
+    bool is_func_monitored(sdk::UFunction* fn);
+    bool is_func_blocked(sdk::UFunction* fn);
+    uint64_t func_call_count(sdk::UFunction* fn);
+}
 
 void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, void* params, void* r9) {
     auto& hook = UObjectHook::get();
@@ -4501,6 +4506,10 @@ void UObjectHook::on_frame() {
         set_disabled(!is_disabled());
     }
 
+    try { sync_hooked_functions_to_lua(); }
+    catch (const std::exception& e) { spdlog::error("[UObjectHook] sync_hooked_functions_to_lua threw: {}", e.what()); }
+    catch (...)                     { spdlog::error("[UObjectHook] sync_hooked_functions_to_lua threw (unknown)"); }
+
     // Rebindable gizmo transform-mode keys. is_key_down_once() returns false while unbound, so these
     // are no-ops until the user assigns them in the gizmo options — no default key collisions.
     if (m_keybind_gizmo_move->is_key_down_once())     { m_gizmo_mode = 0; }
@@ -5045,7 +5054,10 @@ void UObjectHook::dispatch_picker_selection_event() {
             {"targets", targets}
         };
         const auto data = payload.dump();
-        PluginLoader::get()->dispatch_custom_event("uobjecthook_picker_selection", data.c_str());
+        // dispatch_lua_event (NOT dispatch_custom_event — that's the native-plugin-to-plugin bus and
+        // never reaches Lua on its own) is LuaLoader::dispatch_event, the direct bridge to Lua's
+        // uevr.sdk.callbacks.on_lua_event(name, data).
+        LuaLoader::get()->dispatch_event("uobjecthook_picker_selection", data);
     } catch (const std::exception& e) {
         spdlog::error("[UObjectHook] dispatch_picker_selection_event failed: {}", e.what());
     } catch (...) {
@@ -5079,7 +5091,7 @@ void UObjectHook::dispatch_gizmo_target_event(sdk::USceneComponent* comp, bool a
             {"added", added}
         };
         const auto data = payload.dump();
-        PluginLoader::get()->dispatch_custom_event("uobjecthook_gizmo_target", data.c_str());
+        LuaLoader::get()->dispatch_event("uobjecthook_gizmo_target", data); // see note in dispatch_picker_selection_event
     } catch (const std::exception& e) {
         spdlog::error("[UObjectHook] dispatch_gizmo_target_event failed: {}", e.what());
     } catch (...) {
@@ -7150,8 +7162,18 @@ void UObjectHook::draw_class_browser_window() {
                 try { full = obj->get_full_name(); } catch (...) { continue; }
                 if (has_filter && full.find(wfilter) == std::wstring::npos) continue;
                 const auto narrow = utility::narrow(full);
+                auto* as_func = (sdk::UFunction*)obj;
                 ImGui::PushID(obj);
                 ImGui::Selectable(narrow.c_str());
+                ui_function_context_menu(as_func, nullptr, false); // Block/Monitor/flags — no target object here
+                if (is_func_blocked(as_func)) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "[Blocked]");
+                }
+                if (is_func_monitored(as_func)) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "[Mon %llu]", (unsigned long long)func_call_count(as_func));
+                }
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
                     ImGui::Text("UFunction: %s", narrow.c_str());
@@ -7694,6 +7716,7 @@ void UObjectHook::draw_process_event_monitor() {
                     ImGui::SameLine();
 
                     ImGui::Text("%s", utility::narrow(ufunc->get_full_name()).c_str());
+                    ui_function_context_menu(ufunc, nullptr, false);
                 }
 
                 ImGui::TreePop();
@@ -7752,8 +7775,17 @@ void UObjectHook::draw_process_event_monitor() {
                     }
                     ImGui::SameLine();
                     const auto made = ImGui::TreeNode(utility::narrow(ufunc->get_full_name()).c_str());
+                    ui_function_context_menu(ufunc, nullptr, false);
                     ImGui::SameLine();
                     ImGui::Text(" (%llu)", (unsigned long long)display_count);
+                    if (is_func_blocked(ufunc)) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.0f, 1.0f}, "[Blocked]");
+                    }
+                    if (is_func_monitored(ufunc)) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4{0.4f, 0.8f, 1.0f, 1.0f}, "[Mon]");
+                    }
 
                     if (made) {
                         auto& data = m_called_functions[ufunc];
@@ -9643,6 +9675,10 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
 }
 
 namespace {
+// Forward declaration: defined below (after is_func_blocked/is_func_monitored, which it calls) —
+// set_func_blocked/set_func_monitored need to call it at their point of state change.
+void dispatch_function_monitor_event(sdk::UFunction* fn, bool added, const char* source);
+
 // User-blocked UFunctions. The pre-hook below returns false for any function in
 // this set, which makes PluginLoader::ufunction_hook_intermediary skip the
 // original call (the function becomes a no-op). The hook stays installed when a
@@ -9671,6 +9707,7 @@ void set_func_blocked(sdk::UFunction* fn, bool blocked) {
         std::scoped_lock _{g_blocked_funcs_mtx};
         g_blocked_funcs.erase(fn);
     }
+    dispatch_function_monitor_event(fn, blocked, "block");
 }
 
 // Per-function call monitor: a post-hook counts invocations for any monitored
@@ -9710,8 +9747,111 @@ void set_func_monitored(sdk::UFunction* fn, bool on) {
         std::scoped_lock _{g_monitor_mtx};
         g_monitored_funcs.erase(fn);
     }
+    dispatch_function_monitor_event(fn, on, "monitor");
+}
+
+// Fires "uobjecthook_function_monitor" to Lua whenever a function's hooked/monitored/blocked state
+// changes — from the UI (Block/Monitor toggle in ui_function_context_menu, via set_func_blocked/
+// set_func_monitored above) OR from ANY external hook_ptr usage (a Lua script's fn:hook_ptr(...), or a
+// native plugin) via the per-frame sync in UObjectHook::sync_hooked_functions_to_lua(). `source`
+// documents which path triggered this ("block", "monitor", or "external_hook") so a script can tell
+// UI-driven monitoring apart from its own hook. Caller info (top_classes/top_callers) comes from
+// m_called_functions' per-receiver tallies — process_event_hook populates these for EVERY function it
+// records regardless of how that function came to be hooked, as long as the global ProcessEvent
+// listener is on.
+// JSON payload: {"address":hex,"full_name","added":bool,"blocked":bool,"monitored":bool,
+//   "call_count":N,"source","top_classes":[{"name","count"}],"top_callers":[{"address","full_name","count"}]}
+void dispatch_function_monitor_event(sdk::UFunction* fn, bool added, const char* source) {
+    if (fn == nullptr) {
+        return;
+    }
+    try {
+        char addr_buf[24];
+        std::snprintf(addr_buf, sizeof(addr_buf), "%llx", (unsigned long long)(uintptr_t)fn);
+        std::string full_name;
+        try { full_name = utility::narrow(fn->get_full_name()); } catch (...) {}
+
+        uint64_t call_count = 0;
+        nlohmann::json top_classes = nlohmann::json::array();
+        nlohmann::json top_callers = nlohmann::json::array();
+        {
+            auto hook = UObjectHook::get();
+            std::scoped_lock _{hook->m_function_mutex};
+            if (auto it = hook->m_called_functions.find(fn); it != hook->m_called_functions.end()) {
+                call_count = it->second.call_count;
+
+                std::vector<std::pair<sdk::UClass*, size_t>> classes(
+                    it->second.caller_class_counts.begin(), it->second.caller_class_counts.end());
+                std::sort(classes.begin(), classes.end(), [](auto& a, auto& b) { return a.second > b.second; });
+                for (size_t i = 0; i < classes.size() && i < 5; ++i) {
+                    std::string cname;
+                    try { cname = utility::narrow(classes[i].first->get_fname().to_string()); } catch (...) { continue; }
+                    top_classes.push_back({{"name", cname}, {"count", classes[i].second}});
+                }
+
+                std::vector<std::pair<sdk::UObject*, size_t>> callers(
+                    it->second.caller_instance_counts.begin(), it->second.caller_instance_counts.end());
+                std::sort(callers.begin(), callers.end(), [](auto& a, auto& b) { return a.second > b.second; });
+                for (size_t i = 0; i < callers.size() && i < 5; ++i) {
+                    auto* obj = callers[i].first;
+                    if (!hook->exists((sdk::UObjectBase*)obj)) continue;
+                    char caddr[24];
+                    std::snprintf(caddr, sizeof(caddr), "%llx", (unsigned long long)(uintptr_t)obj);
+                    std::string oname;
+                    try { oname = utility::narrow(obj->get_full_name()); } catch (...) {}
+                    top_callers.push_back({{"address", caddr}, {"full_name", oname}, {"count", callers[i].second}});
+                }
+            }
+        }
+
+        const nlohmann::json payload{
+            {"address", addr_buf},
+            {"full_name", full_name},
+            {"added", added},
+            {"blocked", is_func_blocked(fn)},
+            {"monitored", is_func_monitored(fn)},
+            {"call_count", call_count},
+            {"source", source},
+            {"top_classes", top_classes},
+            {"top_callers", top_callers}
+        };
+        const auto data = payload.dump();
+        LuaLoader::get()->dispatch_event("uobjecthook_function_monitor", data);
+    } catch (const std::exception& e) {
+        spdlog::error("[UObjectHook] dispatch_function_monitor_event failed: {}", e.what());
+    } catch (...) {
+        spdlog::error("[UObjectHook] dispatch_function_monitor_event failed");
+    }
 }
 } // namespace
+
+// Called once per frame from on_frame(). Diffs PluginLoader::get_hooked_functions() (the single choke
+// point ANY hook_ptr call goes through — Lua's fn:hook_ptr(...), a native plugin, or UObjectHook's own
+// Block/Monitor) against what's already been announced, and dispatches "uobjecthook_function_monitor"
+// for anything new (source = "monitor"/"block" if the UI put it there, else "external_hook") or
+// removed. This is what makes the Lua-visible pool bidirectional: a script's own fn:hook_ptr() call is
+// picked up here exactly the same way a UI Block/Monitor toggle is (that path ALSO dispatches
+// immediately from set_func_blocked/set_func_monitored — this loop is a safety net that additionally
+// covers hooks the UI never touched).
+void UObjectHook::sync_hooked_functions_to_lua() {
+    auto current_vec = PluginLoader::get()->get_hooked_functions();
+    std::unordered_set<sdk::UFunction*> current{current_vec.begin(), current_vec.end()};
+
+    for (auto* fn : current) {
+        if (fn == nullptr || m_known_hooked_funcs.contains(fn)) {
+            continue;
+        }
+        const char* source = is_func_blocked(fn) ? "block" : (is_func_monitored(fn) ? "monitor" : "external_hook");
+        dispatch_function_monitor_event(fn, true, source);
+    }
+    for (auto* fn : m_known_hooked_funcs) {
+        if (fn != nullptr && !current.contains(fn)) {
+            dispatch_function_monitor_event(fn, false, "unhooked");
+        }
+    }
+
+    m_known_hooked_funcs = std::move(current);
+}
 
 void UObjectHook::draw_active_function_hooks() {
     // Snapshot under the locks, then render (don't hold a lock across ImGui).

@@ -727,8 +727,6 @@ public:
     void draw_process_event_monitor();
 
 private:
-    std::recursive_mutex m_function_mutex{};
-
     struct CalledFunctionInfo {
         size_t call_count{0};
 
@@ -748,9 +746,23 @@ private:
     };
 
 public:
+    // Public (not private) so free functions in UObjectHook.cpp's anonymous namespace — e.g.
+    // dispatch_function_monitor_event, which needs to read m_called_functions but isn't a member —
+    // can lock it directly, matching m_called_functions itself already being public.
+    std::recursive_mutex m_function_mutex{};
     std::unordered_map<sdk::UFunction*, CalledFunctionInfo> m_called_functions{};
     std::deque<sdk::UFunction*> m_most_recent_functions{};
     std::unordered_set<sdk::UFunction*> m_ignored_recent_functions{};
+
+private:
+    // Per-frame diff against PluginLoader::get_hooked_functions() so a function hooked via a Lua
+    // script's fn:hook_ptr(...) (or a native plugin) — NOT through UObjectHook's own Block/Monitor
+    // toggle — still fires "uobjecthook_function_monitor" to Lua the moment it's noticed. Tracks what
+    // has already been announced so add/remove is only dispatched on actual change.
+    void sync_hooked_functions_to_lua();
+    std::unordered_set<sdk::UFunction*> m_known_hooked_funcs{};
+
+public:
 
     struct {
         int32_t max_calls{0};

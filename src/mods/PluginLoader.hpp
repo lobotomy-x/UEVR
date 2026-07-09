@@ -174,6 +174,21 @@ public:
 
     bool hook_ufunction_ptr(UEVR_UFunctionHandle func, UEVR_UFunction_NativePreFn pre, UEVR_UFunction_NativePostFn post);
 
+    // Snapshot of every UFunction currently hook_ptr'd, regardless of who called hook_ufunction_ptr —
+    // a native plugin, a Lua script's fn:hook_ptr(...) (which routes through the exact same
+    // UEVR_UFunctionFunctions::hook_ptr -> hook_ufunction_ptr choke point), or UObjectHook's own
+    // Block/Monitor toggle. UObjectHook polls this once per frame to notice externally-added hooks
+    // and mirror them into its Lua-visible monitored-functions pool.
+    std::vector<sdk::UFunction*> get_hooked_functions() {
+        std::shared_lock _{m_ufunction_hooks_mtx};
+        std::vector<sdk::UFunction*> out;
+        out.reserve(m_ufunction_hooks.size());
+        for (auto& [fn, state] : m_ufunction_hooks) {
+            out.push_back(fn);
+        }
+        return out;
+    }
+
 private:
     std::vector<UEVR_LuaStateCreatedCb> m_on_lua_state_created_cbs {};
     std::vector<UEVR_LuaStateDestroyedCb> m_on_lua_state_destroyed_cbs {};
