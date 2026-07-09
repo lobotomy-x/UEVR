@@ -4053,6 +4053,17 @@ void UObjectHook::update_persistent_states() {
                         value = prop_state->data.u16;
                     }
                     break;
+                case "NameProperty"_fnv:
+                    {
+                        // sdk::FName is exactly two int32 pool indices (8 bytes) — the same raw bytes
+                        // the generic property editor's display_context already memcpy'd into data.u64
+                        // when "Save Property" was hit, so just reinterpret them back. Only valid within
+                        // the SAME process run the save happened in (the pool indices are process-
+                        // instance-relative), same caveat every other reapplied scalar here already has.
+                        auto& value = *(sdk::FName*)(obj.as<uintptr_t>() + ((sdk::FProperty*)prop_desc)->get_offset());
+                        value = *(sdk::FName*)&prop_state->data;
+                    }
+                    break;
                 case "StructProperty"_fnv:
                     {
                         // Restore the raw struct bytes (Vector/Rotator/Transform/etc.). Clamp the
@@ -10397,13 +10408,17 @@ const auto check_flags = [](uint64_t flags){
         }
 
         // Group header: emit a collapsing header whenever the group key changes; skip the
-        // group's properties while it is collapsed.
+        // group's properties while it is collapsed. Default OPEN — a by-class/by-type group is
+        // just the object's OWN fields bucketed for readability, not a pointer to another object,
+        // so it counts as "sensibly grouped data" and should read uncollapsed. Any individual field
+        // that IS an object reference still gets its own separately-gated (collapsed) TreeNode
+        // further down regardless of this group's state.
         if (s_prop_group_mode != 0) {
             const std::wstring key = (s_prop_group_mode == 1) ? decl->get_fname().to_string() : propc_type;
             if (!any_group_started || key != cur_group_key) {
                 cur_group_key = key;
                 any_group_started = true;
-                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str());
+                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str(), ImGuiTreeNodeFlags_DefaultOpen);
             }
             if (!cur_group_open) {
                 continue;
@@ -10928,7 +10943,11 @@ const auto check_flags = [](uint64_t flags){
                     ImGui::EndPopup();
                 }
 
-                const bool open = ImGui::TreeNode(prop_name.data());
+                // A StructProperty is inline data, never itself a pointer to another object — default
+                // its field list open ("sensibly grouped data"). Any member that IS an object
+                // reference still renders its own separately-gated (collapsed) TreeNode via the
+                // recursive ui_handle_struct call below.
+                const bool open = ImGui::TreeNodeEx(prop_name.data(), ImGuiTreeNodeFlags_DefaultOpen);
                 utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
                 if (open) {
                     auto scope2 = m_path.enter(utility::narrow(prop->get_field_name().to_string()));
@@ -10940,7 +10959,32 @@ const auto check_flags = [](uint64_t flags){
             break;
         case L"ArrayProperty"_fnv:
             {
-                const bool open = ImGui::TreeNode(prop_name.data());
+                // Same "uncollapsed unless it points to an object" rule as the struct case above:
+                // arrays of plain data (numbers/structs/strings) default open; arrays of object
+                // references default collapsed, since expanding one walks a whole nested object
+                // per entry (same reasoning as the Object/WeakObject/SoftObject property cases).
+                bool is_object_array = false;
+                try {
+                    if (auto inner = ((sdk::FArrayProperty*)prop)->get_inner(); inner != nullptr) {
+                        if (auto inner_c = inner->get_class(); inner_c != nullptr) {
+                            switch (utility::hash(inner_c->get_name().to_string())) {
+                            case L"InterfaceProperty"_fnv:
+                            case L"ObjectProperty"_fnv:
+                            case L"WeakObjectProperty"_fnv:
+                            case L"LazyObjectProperty"_fnv:
+                            case L"SoftObjectProperty"_fnv:
+                            case L"ClassProperty"_fnv:
+                            case L"SoftClassProperty"_fnv:
+                                is_object_array = true;
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+                    }
+                } catch (...) {}
+
+                const bool open = ImGui::TreeNodeEx(prop_name.data(), is_object_array ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen);
                 utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
                 if (open) {
                     auto scope2 = m_path.enter(prop_name);
@@ -10956,13 +11000,37 @@ const auto check_flags = [](uint64_t flags){
             break;
         case L"NameProperty"_fnv:
             {
-                const auto& value = *(sdk::FName*)((uintptr_t)object + fprop->get_offset());
-                const auto wstr = value.to_string();
-                const auto str = utility::narrow(wstr);
+                auto& value = *(sdk::FName*)((uintptr_t)object + fprop->get_offset());
 
-                ImGui::Text("%s: ", prop_name.data());
-                ImGui::SameLine(0.0f, 0.0f);
-                ImGui::TextColored(ImVec4{3.0f / 255.0f, 232.0f / 255.0f, 252.0f / 255.0f, 1.0f}, "%s", str.data());
+                // Editable — per-property scratch text buffer keyed by the field's own live
+                // address (unique per instance+property), resynced from the live FName every
+                // frame. Commits ONLY on deactivate-after-edit (blur/Enter), NOT per keystroke:
+                // EFindName::Add permanently interns whatever we construct into the target
+                // process's global FName pool, so committing on every character would intern
+                // every in-progress partial string typed. Matches encode_param's one-shot commit
+                // for the identical FName{wstring_view, EFindName::Add} construction (line ~1380).
+                static std::unordered_map<void*, std::string> s_name_edit_bufs;
+                // Evict once the map gets large so a long session's churn of spawned/destroyed
+                // objects (each a distinct field address) doesn't leak forever — mirrors the
+                // erase-on-cleanup precedent this file already uses for s_scale_last_dist.
+                if (s_name_edit_bufs.size() > 512) {
+                    s_name_edit_bufs.clear();
+                }
+                auto& buf = s_name_edit_bufs[(void*)&value];
+                buf = utility::narrow(value.to_string());
+                // +1 for the null terminator regardless of current content length — ImGui::InputText
+                // requires buf_size > strlen(content) or there's no room to type further (and an
+                // assert-enabled build trips its own "properly zero-terminated?" assert).
+                buf.resize(std::max<size_t>(buf.size() + 1, 256));
+
+                ImGui::InputText(prop_name.data(), buf.data(), buf.size());
+                if (ImGui::IsItemDeactivatedAfterEdit()) {
+                    buf.resize(std::strlen(buf.c_str()));
+                    const std::wstring wide = utility::widen(buf);
+                    value = sdk::FName{std::wstring_view{wide}, sdk::EFindName::Add};
+                    buf.resize(std::max<size_t>(buf.size() + 1, 256));
+                }
+                display_context(value);
             }
             break;
         case L"StrProperty"_fnv:
