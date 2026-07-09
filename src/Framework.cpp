@@ -1432,14 +1432,19 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         //                   NOT use WantCaptureKeyboard — that is true whenever any
         //                   UEVR window merely has focus, which would swallow WASD.
         const auto& io = ImGui::GetIO();
+        // m_force_input_capture is orthogonal to m_draw_ui (see set_force_input_capture) — a
+        // subsystem like UObjectHook can need the same blocking/cursor behavior as the main overlay
+        // while that overlay's own "UEVR [...]" panel is closed (e.g. its standalone window is open,
+        // or a picker mode is armed).
+        const bool ui_active_for_input = m_draw_ui || m_force_input_capture.load();
         // Smart: a left-click in the viewport (outside any UI window) hands mouse
         // control to the game so the camera/mouse-look works; a click on a UI window
         // takes control back. draw_ui() drops/re-applies the SetCursorPos pin + cursor
         // to match m_smart_game_mouse.
-        if (m_draw_ui && m_input_mode == 2 && message == WM_LBUTTONDOWN) {
+        if (ui_active_for_input && m_input_mode == 2 && message == WM_LBUTTONDOWN) {
             m_smart_game_mouse = !io.WantCaptureMouse;
         }
-        if (m_draw_ui && m_input_mode != 1) {
+        if (ui_active_for_input && m_input_mode != 1) {
             const bool is_keyboard = (message >= WM_KEYFIRST && message <= WM_KEYLAST);
             const bool is_mouse = (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST) || message == WM_INPUT;
 
@@ -1975,7 +1980,7 @@ void Framework::draw_ui() {
         m_current_theme = get_imgui_theme_value();
     }
 
-    ImGui::GetIO().MouseDrawCursor = m_draw_ui || FrameworkConfig::get()->is_always_show_cursor();
+    ImGui::GetIO().MouseDrawCursor = m_draw_ui || FrameworkConfig::get()->is_always_show_cursor() || m_force_input_capture.load();
     // Base flag set; we then OR in ViewportsEnable if the user has the
     // FrameworkConfig toggle on. Toggling at runtime is safe — clearing the
     // flag makes ImGui re-absorb any popped-out windows back into the main

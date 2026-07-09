@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <unordered_set>
 #include <memory>
 #include <filesystem>
@@ -198,6 +199,17 @@ public:
 
     void set_draw_ui(bool state, bool should_save = true);
 
+    // Orthogonal to m_draw_ui / is_drawing_ui(): forces mouse/keyboard-to-game blocking (same
+    // Capture/Smart logic as when the main overlay is open) AND the always-visible soft cursor, even
+    // while the main "UEVR [...]" panel is closed. Deliberately does NOT touch is_drawing_ui() or
+    // is_drawing_anything() (those also drive the VR framework-UI slate/quad swap — a different,
+    // regression-prone concern). Any subsystem that needs exclusive input while the main panel might
+    // be closed (e.g. UObjectHook's standalone window / picker modes) sets this every frame it's
+    // active; it's a plain "still wanted?" level, not a ref-count, so the caller must clear it once
+    // it stops needing it (which happens naturally: it's recomputed and re-pushed every frame).
+    void set_force_input_capture(bool active) { m_force_input_capture = active; }
+    bool is_force_input_capture() const { return m_force_input_capture; }
+
     // Ported from joeyhodge ue57performance — his UE5.7 VR rework calls these for the hook watchdog
     // (notify_render_activity) and to detect a stalled game thread (get_last_framework_on_frame_time).
     void notify_render_activity();
@@ -350,6 +362,10 @@ private:
     // hand mouse control to the game (camera/mouse-look) — drops the SetCursorPos
     // pin + hides the cursor while keeping the overlay. Menu key frees it again.
     bool m_smart_game_mouse{true};
+    // See set_force_input_capture(). Atomic: written from UObjectHook::on_frame() (engine-frame
+    // thread), read from the WM message hook (can run on the game's window-message thread) and from
+    // draw_ui() (cursor visibility).
+    std::atomic<bool> m_force_input_capture{false};
 
     ImVec2 m_last_window_pos{};
     ImVec2 m_last_window_size{};

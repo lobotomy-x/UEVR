@@ -4497,12 +4497,26 @@ void UObjectHook::on_frame() {
     if (m_keybind_gizmo_combined->is_key_down_once()) { m_gizmo_mode = 3; }
     if (m_keybind_pick->is_key_down_once())           { m_click_select_mode = !m_click_select_mode; }
 
-    // Quick-access keybind: F2 toggles the Class Browser window whenever the
-    // overlay is open (and not typing into a field), so it is reachable without
-    // navigating to the UObjectHook sidebar page.
-    if (g_framework->is_drawing_ui() && !ImGui::GetIO().WantTextInput &&
-        ImGui::IsKeyPressed(ImGuiKey_F2, false)) {
+    // Push "does UObjectHook itself need exclusive input right now" into Framework every frame —
+    // this is what lets mouse/keyboard-to-game blocking and the always-visible cursor follow the
+    // picker/gizmo/standalone-window state independent of whether the main "UEVR [...]" panel happens
+    // to be open (see Framework::set_force_input_capture). Recomputed and re-pushed every frame, so it
+    // naturally clears itself once nothing here is active anymore.
+    g_framework->set_force_input_capture(wants_active_ui());
+
+    // Quick-access keybind: F2 toggles the Class Browser window whenever UObjectHook is already
+    // active (and not typing into a field) — reachable without navigating to the UObjectHook sidebar
+    // page.
+    if (wants_active_ui() && !ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F2, false)) {
         m_show_class_browser = !m_show_class_browser;
+    }
+    // F3 toggles the standalone Main window and is intentionally NOT gated on wants_active_ui() —
+    // unlike F2, it needs to work as the BOOTSTRAP that summons UObjectHook with the main "UEVR [...]"
+    // panel fully closed and nothing else active yet (the whole point of task #7). Fixed-key
+    // collision risk with a game's own F3 binding is an accepted, deliberate tradeoff here (same
+    // category of tradeoff F2 already makes, just without the is_drawing_ui() precondition).
+    if (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F3, false)) {
+        m_show_main_window = !m_show_main_window;
     }
 
     // Dockable pop-out windows live OUTSIDE the sidebar tree (which only
@@ -4529,6 +4543,11 @@ void UObjectHook::on_frame() {
         try { draw_options_window(); }
         catch (const std::exception& e) { spdlog::error("[UObjectHook] options window threw: {}", e.what()); }
         catch (...)                     { spdlog::error("[UObjectHook] options window threw (unknown)"); }
+    }
+    if (m_show_main_window) {
+        try { draw_main_window(); }
+        catch (const std::exception& e) { spdlog::error("[UObjectHook] main window threw: {}", e.what()); }
+        catch (...)                     { spdlog::error("[UObjectHook] main window threw (unknown)"); }
     }
     // Class Inspector windows: one per entry in m_open_class_inspectors.
     // Iterate by index because the inspector's X-close path removes from the
@@ -7640,6 +7659,19 @@ void UObjectHook::draw_process_event_monitor() {
     }
 }
 
+// Standalone pop-out of draw_main() — same dockable-window pattern as the Class Browser / Function
+// Hooks windows, reachable via its own checkbox/hotkey (F3) so the "Main" page content (selected-
+// object inspector, attached components, spawn actor, ...) doesn't require navigating the sidebar.
+void UObjectHook::draw_main_window() {
+    uobjecthook_dock_into_host_once();
+    if (!ImGui::Begin("UEVR Object Hook", &m_show_main_window)) {
+        ImGui::End();
+        return;
+    }
+    utility::ScopeGuard end_guard{[]() { ImGui::End(); }};
+    draw_main();
+}
+
 void UObjectHook::draw_main() {
     // Live Function Caller — pinned workbench-style widget that sits ABOVE the
     // deep object tree so the user does not have to drill through
@@ -7661,6 +7693,10 @@ void UObjectHook::draw_main() {
     ImGui::Checkbox("Function Hooks window", &m_show_function_caller);
     ImGui::SameLine();
     ImGui::Checkbox("Options window", &m_show_options_window);
+    ImGui::Checkbox("Standalone Main window (F3)", &m_show_main_window);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Pop this page (selected-object inspector, attached components, spawn actor, ...)\nout into its own dockable window, summonable without opening the main UEVR overlay.");
+    }
     // Labelled section header so the user-curated objects below (selected pick, MC-attached
     // components, attached camera, overlapped) are visually distinct from the "Browse all
     // objects" trees further down.
