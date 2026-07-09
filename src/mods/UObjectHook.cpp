@@ -4511,11 +4511,10 @@ void UObjectHook::on_frame() {
     // Both windows auto-attach to Framework's main dockspace via
     // SetNextWindowDockID(FirstUseEver) just like Lua imgui.begin_window.
     //
-    // Gate on is_drawing_ui() so these windows share the overlay's lifecycle:
-    // closing the UEVR UI closes the Class Browser / Function Caller / Options /
-    // Class Inspector windows too (toggle bools are preserved, so reopening the
-    // overlay restores whatever was open). World-space gizmos below stay live.
-    if (g_framework->is_drawing_ui()) {
+    // Gate on wants_active_ui() (main overlay OR any of UObjectHook's own windows/picker) rather than
+    // is_drawing_ui() directly, so these pop-outs keep working with the main "UEVR [...]" panel closed
+    // — e.g. the standalone Main window (m_show_main_window) needs to render independent of it.
+    if (wants_active_ui()) {
     if (m_show_class_browser) {
         try { draw_class_browser_window(); }
         catch (const std::exception& e) { spdlog::error("[UObjectHook] class browser threw: {}", e.what()); }
@@ -4553,9 +4552,11 @@ void UObjectHook::on_frame() {
 }
 
 void UObjectHook::handle_click_select() {
-    // Modal picker: only while the overlay is up and the cursor isn't over an imgui widget,
-    // and only on the frame the left button goes down (one selection per click).
-    if (!g_framework->is_drawing_ui()) {
+    // Modal picker: only while UObjectHook itself is active (main overlay open, standalone window
+    // shown, or the picker is armed) and the cursor isn't over an imgui widget, one selection per
+    // click. wants_active_ui() (not g_framework->is_drawing_ui() directly) lets the armed picker keep
+    // working even with the main "UEVR [...]" panel closed.
+    if (!wants_active_ui()) {
         return;
     }
     // Esc cancels the armed pick (the natural "never mind" out).
@@ -4572,9 +4573,38 @@ void UObjectHook::handle_click_select() {
     const bool clicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
     const auto& io = ImGui::GetIO();
 
-    // Candidate overlay (header + capped scrollable list, active row highlighted). Shared by the
-    // cached-redraw path and the fresh-scan path.
-    auto draw_pick_overlay = [](const ImVec2& mouse, const std::vector<std::pair<sdk::USceneComponent*, std::string>>& list, int active) {
+    // Remap a screen point through the VR overlay transform (identity flat/UI-closed), so the marker
+    // and candidate list stay visually aligned with the gizmo/reticle drawing convention used
+    // elsewhere in this file.
+    auto remap = [](ImVec2 p) -> ImVec2 {
+        if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
+            return vr->get_overlay_component().transform_world_aligned_to_overlay(p);
+        }
+        return p;
+    };
+
+    // Persistent crosshair at the CURRENT mouse/controller-ray screen position — distinct from the
+    // green reticle on the focused candidate (which can sit off-axis once you scroll to an overlapping
+    // object). This one marks where the pick ray itself is aimed, so cycling through candidates never
+    // loses track of the original screen-space click point. Cyan, small, always drawn while armed.
+    auto draw_click_marker = [&](const ImVec2& mouse) {
+        auto* dl = ImGui::GetForegroundDrawList();
+        const ImVec2 c = remap(mouse);
+        const ImU32 col = IM_COL32(80, 220, 255, 235);
+        const float r = 6.0f;
+        dl->AddLine(ImVec2{c.x - r, c.y}, ImVec2{c.x + r, c.y}, col, 1.5f);
+        dl->AddLine(ImVec2{c.x, c.y - r}, ImVec2{c.x, c.y + r}, col, 1.5f);
+        dl->AddCircle(c, r * 0.55f, col, 12, 1.5f);
+    };
+
+    // Candidate overlay (header + capped scrollable list, active row highlighted). Shows the SHORT
+    // label for every row; once the active row hasn't changed for kIdleSec, its full path replaces
+    // the short label as a looping horizontal marquee (there's no per-row imgui hover here — this is
+    // raw foreground-draw-list text following the cursor — so "idled on" means "still the active
+    // scroll-cycle target after a beat", not a traditional mouse-hover).
+    static sdk::USceneComponent* s_idle_target = nullptr;
+    static double s_idle_since = 0.0;
+    auto draw_pick_overlay = [](const ImVec2& mouse, const std::vector<PickCandidate>& list, int active) {
         if (list.empty()) return;
         auto* dl = ImGui::GetForegroundDrawList();
         const ImVec2 b{mouse.x + 16.0f, mouse.y - 6.0f};
@@ -4582,6 +4612,12 @@ void UObjectHook::handle_click_select() {
         char hdr[96];
         snprintf(hdr, sizeof(hdr), "pick %d/%d  (scroll to cycle, click to select)", active + 1, n);
         dl->AddText(ImVec2{b.x, b.y - 16.0f}, IM_COL32(255, 220, 90, 235), hdr);
+
+        constexpr double kIdleSec = 0.6;   // how long the active row must be unchanged before it marquees
+        constexpr float kMarqueePxPerSec = 45.0f;
+        constexpr float kMarqueeGapPx = 40.0f;
+        constexpr float kMarqueeWidth = 340.0f;
+
         const int kShow = 8;
         int start = active - kShow / 2;
         if (start < 0) start = 0;
@@ -4589,9 +4625,31 @@ void UObjectHook::handle_click_select() {
         for (int k = start; k < n && k < start + kShow; ++k) {
             const bool act = (k == active);
             const float y = b.y + (k - start) * 16.0f;
-            const std::string row = (act ? "> " : "  ") + list[k].second;
+            const ImU32 col = act ? IM_COL32(120, 255, 120, 255) : IM_COL32(210, 210, 210, 220);
+
+            const bool marquee = act && list[k].comp == s_idle_target &&
+                (ImGui::GetTime() - s_idle_since) > kIdleSec && !list[k].full_path.empty();
+            if (marquee) {
+                // Clip to a fixed-width box and slide the full path leftward, wrapping with a gap so it
+                // loops seamlessly. Two copies drawn side by side; only the visible slice matters.
+                const std::string text = "> " + list[k].full_path + std::string((size_t)(kMarqueeGapPx / 6.0f), ' ');
+                const float text_w = ImGui::CalcTextSize(text.c_str()).x;
+                const float period = text_w > 0.0f ? text_w : 1.0f;
+                const float elapsed = (float)(ImGui::GetTime() - s_idle_since - kIdleSec);
+                const float scroll = std::fmod(elapsed * kMarqueePxPerSec, period);
+                dl->PushClipRect(ImVec2{b.x, y}, ImVec2{b.x + kMarqueeWidth, y + 14.0f}, true);
+                for (int rep = 0; rep < 2; ++rep) {
+                    const float x = b.x - scroll + rep * period;
+                    dl->AddText(ImVec2{x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), text.c_str());
+                    dl->AddText(ImVec2{x, y}, col, text.c_str());
+                }
+                dl->PopClipRect();
+                continue;
+            }
+
+            const std::string row = (act ? "> " : "  ") + list[k].short_label;
             dl->AddText(ImVec2{b.x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), row.c_str());
-            dl->AddText(ImVec2{b.x, y}, act ? IM_COL32(120, 255, 120, 255) : IM_COL32(210, 210, 210, 220), row.c_str());
+            dl->AddText(ImVec2{b.x, y}, col, row.c_str());
         }
     };
 
@@ -4605,8 +4663,13 @@ void UObjectHook::handle_click_select() {
         if (!m_pick_cache.empty()) {
             const int n = (int)m_pick_cache.size();
             m_pick_cycle = ((m_pick_cycle % n) + n) % n;
+            if (s_idle_target != m_pick_cache[m_pick_cycle].comp) {
+                s_idle_target = m_pick_cache[m_pick_cycle].comp;
+                s_idle_since = ImGui::GetTime();
+            }
             draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
         }
+        draw_click_marker(io.MousePos);
         return;
     }
     s_last_pick_mouse = io.MousePos;
@@ -4732,6 +4795,7 @@ void UObjectHook::handle_click_select() {
 
     // Gather ALL candidates inside the pick cone (front-most first), optionally class-filtered, so the
     // user can scroll/swipe to cycle through overlapping objects instead of always getting the nearest.
+    // Root components only (see the AttachParent check below for why/how).
     struct Cand { float t; sdk::USceneComponent* comp; glm::vec3 world; std::string name; };
     std::vector<Cand> cands;
     {
@@ -4745,6 +4809,16 @@ void UObjectHook::handle_click_select() {
             if (!is_scene) for (auto* sc : meta->super_classes) { if (sc == scene_cls) { is_scene = true; break; } }
             if (!is_scene) continue;
             auto* comp = reinterpret_cast<sdk::USceneComponent*>(obj);
+            // Root components only: an actor's RootComponent always sits at the top of ITS OWN
+            // attach chain (AttachParent == nullptr), so this is a cheap proxy for "is root" without
+            // calling AActor::get_root_component() (a ProcessEvent call — too costly/unsafe to run
+            // per-candidate in this per-frame scan). Approximation: an actor attached to ANOTHER actor
+            // has a non-null AttachParent on its own root too, so that case is missed (false negative,
+            // never a false positive — a true non-root child is never mistaken for a root).
+            if (s_attach_parent_prop != nullptr) {
+                auto* parent0 = *s_attach_parent_prop->get_data<sdk::USceneComponent*>(comp);
+                if (parent0 != nullptr) continue;
+            }
             const glm::vec3 p = compose_world_location(comp);
             const glm::vec3 v = p - ray_origin;
             const float t = glm::dot(v, ray_dir);
@@ -4763,22 +4837,58 @@ void UObjectHook::handle_click_select() {
     std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.t < b.t; });
 
     // Commit to the frame-persistent cache so an armed-but-idle picker can redraw without re-scanning.
+    // short_label is name-first (via the shared shorten_object_path helper); full_path backs the
+    // hover/idle marquee, the Lua selection event, and Copy actions. Screen position is projected once
+    // here and reused by both the marquee width math and the Lua event payload.
     m_pick_cache.clear();
     m_pick_cache.reserve(cands.size());
-    for (auto& c : cands) m_pick_cache.push_back({c.comp, std::move(c.name)});
+    for (auto& c : cands) {
+        PickCandidate entry{};
+        entry.comp = c.comp;
+        entry.full_path = c.name;
+        entry.short_label = shorten_object_path(c.name);
+        entry.world = c.world;
+        glm::vec2 sp{0.0f, 0.0f};
+        if (ugs->world_to_screen(pc, c.world, &sp)) {
+            entry.screen = sp;
+        }
+        m_pick_cache.push_back(std::move(entry));
+    }
+
+    draw_click_marker(io.MousePos);
+
+    // Dispatch the Lua selection-state event whenever the active candidate or the candidate SET
+    // changes (not on every pixel of mouse movement that leaves both unchanged).
+    static sdk::USceneComponent* s_last_dispatched_active = nullptr;
+    static size_t s_last_dispatched_count = SIZE_MAX;
 
     if (m_pick_cache.empty()) {
         m_pick_cycle = 0;
         auto* dl = ImGui::GetForegroundDrawList();
         dl->AddText(ImVec2{io.MousePos.x + 16.0f, io.MousePos.y + 2.0f}, IM_COL32(255, 180, 60, 230),
                     class_filter.empty() ? "(no object under cursor)" : "(no match for filter)");
+        if (s_last_dispatched_active != nullptr || s_last_dispatched_count != 0) {
+            s_last_dispatched_active = nullptr;
+            s_last_dispatched_count = 0;
+            dispatch_picker_selection_event();
+        }
         return;
     }
 
     const int n = (int)m_pick_cache.size();
     if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1); // wheel up = nearer/previous
     m_pick_cycle = ((m_pick_cycle % n) + n) % n; // wrap
+    if (s_idle_target != m_pick_cache[m_pick_cycle].comp) {
+        s_idle_target = m_pick_cache[m_pick_cycle].comp;
+        s_idle_since = ImGui::GetTime();
+    }
     draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
+
+    if (s_last_dispatched_active != m_pick_cache[m_pick_cycle].comp || s_last_dispatched_count != m_pick_cache.size()) {
+        s_last_dispatched_active = m_pick_cache[m_pick_cycle].comp;
+        s_last_dispatched_count = m_pick_cache.size();
+        dispatch_picker_selection_event();
+    }
 
     // World-space reticle on the focused cycle candidate (green, distinct from the amber selection
     // box) so it's obvious WHICH overlapping object you're about to pick as you scroll through them.
@@ -4812,7 +4922,7 @@ void UObjectHook::handle_click_select() {
     if (!clicked) {
         return; // overlay + scroll only; the click below commits the selection
     }
-    sdk::USceneComponent* best = m_pick_cache[m_pick_cycle].first;
+    sdk::USceneComponent* best = m_pick_cache[m_pick_cycle].comp;
     const float best_t = cands[m_pick_cycle].t;
 
     if (best != nullptr) {
@@ -4838,6 +4948,7 @@ void UObjectHook::handle_click_select() {
         }
         if (inserted) {
             spdlog::info("[UObjectHook] click-select added gizmo target: {} (dist {:.0f})", name, best_t);
+            dispatch_gizmo_target_event(best, true);
             // Make the component movable so the gizmo can actually translate it — StaticMeshComponents
             // default to Static mobility and won't move otherwise. Writes the reflected Mobility enum
             // byte = EComponentMobility::Movable(2). (handle_click_select runs on the game thread.)
@@ -4861,6 +4972,87 @@ void UObjectHook::handle_click_select() {
                 m_click_select_mode = false;
             }
         }
+    }
+}
+
+bool UObjectHook::wants_active_ui() const {
+    return g_framework->is_drawing_ui() || m_show_main_window || m_click_select_mode ||
+           m_show_class_browser || m_show_function_caller || m_show_options_window || m_has_gizmos;
+}
+
+// JSON payload: {"active_index":0,"count":N,"targets":[{"address":hex,"full_name","short_name",
+// "screen":{"x","y"},"world":{"x","y","z"}}, ...]}. The active (scroll-focused) candidate is always
+// moved to index 0; the rest keep their existing nearest-first order. `address` is plain hex (no "0x"
+// prefix — matches object_from_path_or_address's own reader) so Lua can round-trip it through
+// uevr.api:to_uobject(tonumber(addr, 16)).
+void UObjectHook::dispatch_picker_selection_event() {
+    try {
+        auto push_target = [](nlohmann::json& arr, const PickCandidate& c) {
+            char addr_buf[24];
+            std::snprintf(addr_buf, sizeof(addr_buf), "%llx", (unsigned long long)(uintptr_t)c.comp);
+            arr.push_back({
+                {"address", addr_buf},
+                {"full_name", c.full_path},
+                {"short_name", c.short_label},
+                {"screen", {{"x", c.screen.x}, {"y", c.screen.y}}},
+                {"world", {{"x", c.world.x}, {"y", c.world.y}, {"z", c.world.z}}}
+            });
+        };
+
+        nlohmann::json targets = nlohmann::json::array();
+        if (m_pick_cycle >= 0 && m_pick_cycle < (int)m_pick_cache.size()) {
+            push_target(targets, m_pick_cache[m_pick_cycle]);
+        }
+        for (size_t i = 0; i < m_pick_cache.size(); ++i) {
+            if ((int)i == m_pick_cycle) continue;
+            push_target(targets, m_pick_cache[i]);
+        }
+
+        const nlohmann::json payload{
+            {"active_index", 0},
+            {"count", targets.size()},
+            {"targets", targets}
+        };
+        const auto data = payload.dump();
+        PluginLoader::get()->dispatch_custom_event("uobjecthook_picker_selection", data.c_str());
+    } catch (const std::exception& e) {
+        spdlog::error("[UObjectHook] dispatch_picker_selection_event failed: {}", e.what());
+    } catch (...) {
+        spdlog::error("[UObjectHook] dispatch_picker_selection_event failed");
+    }
+}
+
+// JSON payload: {"address":hex,"full_name","added":bool}. Fired whenever a component enters/leaves
+// m_gizmo_components (click-select commit, the "Show gizmo" checkbox, "Remove from selection") so a
+// Lua script can apply/clear its own overlay-material or debug visualization in step with the
+// built-in gizmo highlight. Callers MUST NOT hold m_mutex when calling this — dispatch_custom_event
+// fans out to native-plugin callbacks that may re-enter UObjectHook.
+void UObjectHook::dispatch_gizmo_target_event(sdk::USceneComponent* comp, bool added) {
+    if (comp == nullptr) {
+        return;
+    }
+    try {
+        char addr_buf[24];
+        std::snprintf(addr_buf, sizeof(addr_buf), "%llx", (unsigned long long)(uintptr_t)comp);
+        std::string full_name;
+        {
+            std::shared_lock _{m_mutex};
+            if (auto it = m_meta_objects.find(reinterpret_cast<sdk::UObjectBase*>(comp));
+                it != m_meta_objects.end() && it->second != nullptr) {
+                full_name = utility::narrow(it->second->full_name);
+            }
+        }
+        const nlohmann::json payload{
+            {"address", addr_buf},
+            {"full_name", full_name},
+            {"added", added}
+        };
+        const auto data = payload.dump();
+        PluginLoader::get()->dispatch_custom_event("uobjecthook_gizmo_target", data.c_str());
+    } catch (const std::exception& e) {
+        spdlog::error("[UObjectHook] dispatch_gizmo_target_event failed: {}", e.what());
+    } catch (...) {
+        spdlog::error("[UObjectHook] dispatch_gizmo_target_event failed");
     }
 }
 
@@ -5083,7 +5275,7 @@ void UObjectHook::draw_component_gizmos() {
     // the gizmo is visible — gating on it made the gizmo undraggable. Gating on
     // hovered/active item instead lets axis clicks land in open space while still
     // yielding to buttons/sliders. An in-flight drag keeps going regardless.
-    const bool can_start = g_framework->is_drawing_ui() && !m_click_select_mode && !m_click_select_picked_frame &&
+    const bool can_start = wants_active_ui() && !m_click_select_mode && !m_click_select_picked_frame &&
         !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive();
 
     // Release / invalidate an in-flight drag.
@@ -5594,7 +5786,7 @@ void UObjectHook::draw_component_gizmos() {
     // (visibility / position / spawn call process_event) are deferred to the game thread.
     {
         static sdk::USceneComponent* s_ctx_comp = nullptr;
-        if (g_framework->is_drawing_ui() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive() &&
+        if (wants_active_ui() && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive() &&
             ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
             float best = 34.0f * 34.0f; // ~34px pick radius
             sdk::USceneComponent* hit = nullptr;
@@ -5706,8 +5898,14 @@ void UObjectHook::draw_component_gizmos() {
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Remove from selection")) {
-                    std::unique_lock _{m_mutex};
-                    m_gizmo_components.erase(c);
+                    bool changed = false;
+                    {
+                        std::unique_lock _{m_mutex};
+                        changed = m_gizmo_components.erase(c) > 0;
+                    }
+                    if (changed) {
+                        dispatch_gizmo_target_event(c, false); // outside the lock — dispatch can re-enter
+                    }
                 }
             }
             ImGui::EndPopup();
@@ -7044,7 +7242,7 @@ void UObjectHook::draw_function_caller_window() {
 
     // Collapsing regions instead of tabs so the caller and the hooks/events
     // monitor can be seen at once.
-    if (ImGui::CollapsingHeader("Function Caller", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Function Caller")) {
         ImGui::TextDisabled("Drop/type a target + pick a function. Shared with the per-object callers.");
         ImGui::Separator();
         render_live_caller_slots();
@@ -7053,7 +7251,7 @@ void UObjectHook::draw_function_caller_window() {
     // Active hooks (the flagged set: Block/Monitor) and the ProcessEvent monitor
     // are merged — flagged functions are the same set the PE "Flagged only" mode
     // records, so they belong together.
-    if (ImGui::CollapsingHeader("Hooks & Events", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Hooks & Events")) {
         ImGui::SeparatorText("Flagged functions (right-click a function -> Block / Monitor)");
         draw_active_function_hooks();
         ImGui::Dummy(ImVec2(0.0f, 6.0f));
@@ -7475,7 +7673,7 @@ void UObjectHook::draw_main() {
         std::string sel_name;
         try { sel_name = utility::narrow(sel->get_class()->get_fname().to_string() + L" " + sel->get_fname().to_string()); }
         catch (...) { sel_name = "<selected>"; }
-        if (ImGui::CollapsingHeader((std::string("Selected: ") + sel_name + "###lastsel").c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader((std::string("Selected: ") + sel_name + "###lastsel").c_str())) {
             ImGui::PushID("lastsel");
 
             // Save / restore world position. The actual get/set_world_location call into the engine
@@ -8238,9 +8436,16 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
 
     if (uclass->is_a(sdk::UActorComponent::static_class())) {
         if (ImGui::Button("Destroy Component")) {
+            // destroy_component() -> AActor::destroy_component() -> ProcessEvent(K2_DestroyComponent),
+            // same class of engine-touching call as every other mutating button here (Show/Hide,
+            // Attach, Save Position, ...) — those are ALL deferred to the game thread; this one wasn't,
+            // which is why it silently did nothing / was unsafe: ProcessEvent from the draw/UI thread
+            // races the game thread instead of running on it.
             auto comp = (sdk::UActorComponent*)object;
-
-            comp->destroy_component();
+            GameThreadWorker::get().enqueue([this, comp]() {
+                if (!this->exists(comp)) return;
+                try { comp->destroy_component(); } catch (...) {}
+            });
         }
     }
 
@@ -8296,13 +8501,20 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             // still lives via m_objects under the same lock (can't call exists() — that re-locks).
             const bool add = gizmo;
             GameThreadWorker::get().enqueue([this, comp, add]() {
-                std::unique_lock _{m_mutex};
-                if (add) {
-                    if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
-                        m_gizmo_components.insert(comp);
+                bool changed = false;
+                {
+                    std::unique_lock _{m_mutex};
+                    if (add) {
+                        if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
+                            m_gizmo_components.insert(comp);
+                            changed = true;
+                        }
+                    } else {
+                        changed = m_gizmo_components.erase(comp) > 0;
                     }
-                } else {
-                    m_gizmo_components.erase(comp);
+                }
+                if (changed) {
+                    dispatch_gizmo_target_event(comp, add); // outside the lock — dispatch can re-enter
                 }
             });
         }
@@ -8409,39 +8621,6 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
             //        }
             //
             //}
-
-            // Per-component lua console.
-            // The previous implementation had four serious bugs stacked on top of each other:
-            //   - `static std::string_view text = std::string + std::string` left a string_view
-            //     pointing at the temporary's destroyed buffer.
-            //   - `char* input{}` was an uninitialized null pointer.
-            //   - `strcpy_s(input, sizeof(text.data()), text.data())` copied into nullptr with a
-            //     size of sizeof(const char*) = 8.
-            //   - `ImGui::InputTextMultiline(..., input, sizeof(input), ...)` passed buf=nullptr
-            //     and size=8 to imgui.
-            // Replaced with a per-component buffer indexed by component address.
-            const auto hex = (std::stringstream{} << std::hex << (uintptr_t)comp).str();
-            if (ImGui::TreeNode("Lua")) {
-                constexpr size_t kBufSize = 4096;
-                static std::unordered_map<uintptr_t, std::array<char, kBufSize>> s_buffers;
-                auto [it, inserted] = s_buffers.try_emplace((uintptr_t)comp);
-                if (inserted) {
-                    const auto initial = std::string{"local comp = uevr.api:to_uobject(0x"} + hex + ")\n";
-                    const auto n = std::min(initial.size(), kBufSize - 1);
-                    std::memcpy(it->second.data(), initial.data(), n);
-                    it->second[n] = '\0';
-                }
-                auto& buf = it->second;
-
-                const auto size = ImGui::GetContentRegionAvail();
-                ImGui::InputTextMultiline("##luainput", buf.data(), buf.size(),
-                    ImVec2(size.x, std::max(120.0f, size.y * 0.5f)),
-                    ImGuiInputTextFlags_AllowTabInput);
-                if (ImGui::Button("Execute")) {
-                    PluginLoader::get()->do_lua_string(buf.data(), utility::narrow(comp->get_full_name()).data());
-                }
-                ImGui::TreePop();
-            }
 
             auto save_state_logic = [&](const std::vector<std::string>& path) {
                 auto json = serialize_mc_state(path, state);
@@ -9005,13 +9184,20 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
             // under a shared_lock, so push the insert/erase to the game thread where no lock is held.
             const bool add = gizmo;
             GameThreadWorker::get().enqueue([this, comp, add]() {
-                std::unique_lock _{m_mutex};
-                if (add) {
-                    if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
-                        m_gizmo_components.insert(comp);
+                bool changed = false;
+                {
+                    std::unique_lock _{m_mutex};
+                    if (add) {
+                        if (m_objects.contains(reinterpret_cast<sdk::UObjectBase*>(comp))) {
+                            m_gizmo_components.insert(comp);
+                            changed = true;
+                        }
+                    } else {
+                        changed = m_gizmo_components.erase(comp) > 0;
                     }
-                } else {
-                    m_gizmo_components.erase(comp);
+                }
+                if (changed) {
+                    dispatch_gizmo_target_event(comp, add); // outside the lock — dispatch can re-enter
                 }
             });
         }
@@ -9387,7 +9573,7 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     // (e.g. Actor -> K2_GetActorRotation, FPSPlayer -> CustomGameFunction)
     // instead of one flat alphabetical list of the whole inheritance. On its own row so it doesn't
     // share the line with the (now full-width) filter box.
-    static bool s_group_by_class = false;
+    static bool s_group_by_class = true; // default on: functions grouped by declaring class
     ImGui::Checkbox("Group by class", &s_group_by_class);
 
     std::string filter_lc = s_func_filter;
@@ -9492,9 +9678,10 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
             utility::ScopeGuard pop_guard{[]() { ImGui::PopID(); }};
 
             const auto cls_name = utility::narrow(super->get_fname().to_string());
-            const bool is_leaf = super == (sdk::UStruct*)uclass;
-            const auto flags = is_leaf ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
-            if (ImGui::TreeNodeEx((void*)super, flags, "%s (%zu)", cls_name.c_str(), funcs.size())) {
+            // Folded by default (even the leaf/declaring class) so a long inheritance chain doesn't
+            // dump every function open at once — matches the folded-by-default convention across
+            // every UObjectHook menu/tree.
+            if (ImGui::TreeNodeEx((void*)super, ImGuiTreeNodeFlags_None, "%s (%zu)", cls_name.c_str(), funcs.size())) {
                 for (auto func : funcs) {
                     render_one_function(func);
                 }
@@ -9643,7 +9830,7 @@ const auto check_flags = [](uint64_t flags){
     static char s_prop_name_filter[64]{};   // search properties by NAME (substring)
     static int s_prop_type_idx = 0;          // 0 = All, else index into type_list
     static int s_prop_base_idx = 0;          // 0 = All, else index into base_list
-    static int s_prop_group_mode = 0;        // 0 = flat, 1 = by base class, 2 = by type
+    static int s_prop_group_mode = 1;        // 0 = flat, 1 = by base class (default on), 2 = by type
 
     // Reset the type/base dropdown selections when switching to a different object — the saved
     // index would otherwise point at a different type/class in the new object's lists.
@@ -9786,7 +9973,7 @@ const auto check_flags = [](uint64_t flags){
             if (!any_group_started || key != cur_group_key) {
                 cur_group_key = key;
                 any_group_started = true;
-                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str());
             }
             if (!cur_group_open) {
                 continue;
@@ -11007,7 +11194,7 @@ void UObjectHook::draw_texture_preview(sdk::UObject* texture) {
 }
 
 #pragma endregion
-// === STUB (VR — needs a headset to verify; empty so the build stays green) ================
+// === STUB (VR — needs a headset to verify; empty so the build stays green) NO IT DOESNT make it support flatscreen first you dolt ================
 // E1+E2: while a component is being adjusted in VR (motion-controller attach in adjust mode,
 // or just selected for the gizmo), let the LEFT/RIGHT thumbstick drive the gizmo's active axis
 // (X/Y on one stick, Z on the other) and draw the gizmo as if the matching axis HANDLE were

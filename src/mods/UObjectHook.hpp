@@ -116,6 +116,10 @@ protected:
     // main dockspace host on first show.
     void draw_class_browser_window();
     void draw_function_caller_window();
+    // Standalone pop-out of draw_main() — the sidebar "Main" page content (selected-object inspector,
+    // attached components, spawn actor, ...) in its own dockable window, reachable via checkbox/hotkey
+    // independent of which sidebar tab is selected. Same lifecycle/pattern as the two windows above.
+    void draw_main_window();
     // Refresh m_sorted_classes by relaunching the async sort if needed and
     // harvesting any completed task. Called by both the Objects-by-Class
     // view and the Class Browser so the Class Browser populates on its
@@ -132,6 +136,7 @@ protected:
     bool m_show_class_browser{false};
     bool m_show_function_caller{false};
     bool m_show_options_window{false}; // dockable pop-out of the gizmo/selection options
+    bool m_show_main_window{false};    // dockable pop-out of draw_main() (the sidebar "Main" page)
     // Filter buffer for the class browser (shared across tabs)
     std::string m_class_browser_filter{};
 
@@ -408,10 +413,44 @@ private:
     sdk::USceneComponent* m_last_selected{nullptr}; // most recently click-selected component (main-page display + context-menu target)
     char m_pick_class_filter[128]{}; // picker: restrict candidates to those whose full name contains this (case-insensitive)
     int  m_pick_cycle{0};            // picker: which of the overlapping candidates under the cursor is the active one (scroll to cycle)
+
+    // One picker candidate: the component, a short display label, its full path (shown on
+    // hover/idle), and the screen/world points it was found at this scan (reused for the marker draw
+    // and the Lua selection-state event without re-projecting).
+    struct PickCandidate {
+        sdk::USceneComponent* comp{nullptr};
+        std::string short_label{};
+        std::string full_path{};
+        glm::vec2 screen{0.0f, 0.0f};
+        glm::vec3 world{0.0f, 0.0f, 0.0f};
+    };
     // Cached candidate list so the per-frame overlay doesn't re-scan m_objects (+ screen_to_world
     // ProcessEvent) every frame while the picker is armed — rebuilt only when the cursor moves / the
     // wheel turns / a click happens. Touched only on the draw thread in handle_click_select.
-    std::vector<std::pair<sdk::USceneComponent*, std::string>> m_pick_cache{};
+    std::vector<PickCandidate> m_pick_cache{};
+
+    // Fire a Lua custom event ("uobjecthook_picker_selection") with the current picker candidate list
+    // — the active (scroll-focused) one moved to index 0 — plus each candidate's screen/world point.
+    // Called from handle_click_select whenever the active candidate or the candidate set changes, so
+    // Lua-side overlay-material / debug-visualization scripts can follow the picker live.
+    void dispatch_picker_selection_event();
+    // Fire a Lua custom event ("uobjecthook_gizmo_target") when a component is added to / removed
+    // from the gizmo-target set (click-select commit, "Show gizmo" checkbox, "Remove from
+    // selection"), so Lua can apply/clear its own overlay-material or debug visualization in step
+    // with the built-in gizmo highlight.
+    void dispatch_gizmo_target_event(sdk::USceneComponent* comp, bool added);
+
+    // True whenever UObjectHook itself needs exclusive input/cursor even if the main UEVR overlay
+    // ("UEVR [...]" window) is closed: its own standalone window is open, a picker mode is armed, any
+    // of its pop-out windows are shown, or a gizmo is currently on screen. Used (a) in place of
+    // g_framework->is_drawing_ui() for UObjectHook's OWN interactive gates (gizmo drag-start,
+    // click-select, the w2s context menu, the pop-out-window list) so those features work
+    // independent of the main overlay, and (b) pushed into Framework's input-capture override each
+    // frame (see on_frame()) so mouse/keyboard blocking + the always-visible cursor follow suit.
+    // Deliberately does NOT touch g_framework->is_drawing_ui() itself — that also drives the VR
+    // framework-UI-quad slate/framework swap (OverlayComponent), which is a different concern with
+    // its own history of regressions; this stays additive/orthogonal to it.
+    bool wants_active_ui() const;
     // Saved world positions for the "Save/Restore position" buttons. Touched from game-thread tasks
     // (GameThreadWorker) for the actual get/set_world_location, and read from the draw thread for the
     // button-enable check, so guard it with its own mutex (independent of m_mutex).
@@ -699,6 +738,13 @@ private:
 
         std::unique_ptr<HeavyData> heavy_data{nullptr};
         bool wants_heavy_data{false};
+
+        // Per-receiver tallies for the ProcessEvent monitor's "By class" / "By caller" grouping —
+        // "class" = the receiver's UClass (calls aggregated across every instance of that class),
+        // "caller" = the specific receiver UObject instance. Populated in process_event_hook
+        // alongside call_count, so grouping needs no extra scan of call history.
+        std::unordered_map<sdk::UClass*, size_t> caller_class_counts{};
+        std::unordered_map<sdk::UObject*, size_t> caller_instance_counts{};
     };
 
 public:
