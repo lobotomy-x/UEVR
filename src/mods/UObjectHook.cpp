@@ -5826,6 +5826,127 @@ void UObjectHook::draw_component_gizmos() {
                 try { cn = utility::narrow(c->get_fname().to_string()); } catch (...) {}
                 ImGui::TextDisabled("%s", cn.c_str());
                 ImGui::Separator();
+
+                // Minimal read-only inspection view, right here in the context menu — no need to open
+                // the main page tree for a quick look. Properties grouped by declaring class (matches
+                // the main property editor's "Group by class" default); Components lists the owning
+                // actor's components (a MenuItem click sends it to "Inspect in main page").
+                if (ImGui::BeginMenu("Object")) {
+                    if (ImGui::BeginMenu("Properties")) {
+                        // Compact "name: value" — scalars only; anything else just shows its type so
+                        // the menu stays a quick glance, not a full editor (that's still the main page).
+                        auto compact_value = [](void* obj, sdk::FProperty* p) -> std::string {
+                            std::string cname;
+                            try { cname = utility::narrow(p->get_class()->get_name().to_string()); } catch (...) { return "?"; }
+                            try {
+                                if (cname == "BoolProperty") return ((sdk::FBoolProperty*)p)->get_value_from_object(obj) ? "true" : "false";
+                                if (cname == "FloatProperty") return std::format("{:.3f}", *p->get_data<float>(obj));
+                                if (cname == "DoubleProperty") return std::format("{:.3f}", *p->get_data<double>(obj));
+                                if (cname == "IntProperty") return std::to_string(*p->get_data<int32_t>(obj));
+                                if (cname == "Int64Property") return std::to_string(*p->get_data<int64_t>(obj));
+                                if (cname == "UInt32Property") return std::to_string(*p->get_data<uint32_t>(obj));
+                                if (cname == "ByteProperty") return std::to_string((int)*p->get_data<uint8_t>(obj));
+                                if (cname == "NameProperty") return utility::narrow(p->get_data<sdk::FName>(obj)->to_string());
+                                if (cname == "ObjectProperty") return *p->get_data<sdk::UObject*>(obj) != nullptr ? "<object>" : "null";
+                            } catch (...) {}
+                            return "(" + cname + ")";
+                        };
+                        for (auto super = (sdk::UStruct*)c->get_class(); super != nullptr; super = super->get_super_struct()) {
+                            std::string cls_name;
+                            try { cls_name = utility::narrow(super->get_fname().to_string()); } catch (...) { continue; }
+                            if (!ImGui::BeginMenu(cls_name.c_str())) continue;
+                            for (auto f = super->get_child_properties(); f != nullptr; f = f->get_next()) {
+                                auto* p = reinterpret_cast<sdk::FProperty*>(f);
+                                std::string pn;
+                                try { pn = utility::narrow(p->get_field_name().to_string()); } catch (...) { continue; }
+                                const auto row = pn + ": " + compact_value(c, p);
+                                ImGui::MenuItem(row.c_str(), nullptr, false, false); // display-only row
+                            }
+                            ImGui::EndMenu();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Components")) {
+                        // get_owner() is a ProcessEvent call, but this only runs once per menu OPEN
+                        // (not per-frame), unlike the picker's per-candidate scan — fine here.
+                        sdk::AActor* owner = nullptr;
+                        try { owner = c->get_owner(); } catch (...) {}
+                        if (owner == nullptr) {
+                            ImGui::TextDisabled("(no owner)");
+                        } else {
+                            try {
+                                auto comps = owner->get_all_components();
+                                std::sort(comps.begin(), comps.end(), [](sdk::UObject* a, sdk::UObject* b) {
+                                    std::wstring an, bn;
+                                    try { an = a->get_fname().to_string(); } catch (...) {}
+                                    try { bn = b->get_fname().to_string(); } catch (...) {}
+                                    return an < bn;
+                                });
+                                for (auto* comp_obj : comps) {
+                                    if (comp_obj == nullptr) continue;
+                                    std::string comp_name;
+                                    try { comp_name = utility::narrow(comp_obj->get_fname().to_string()); } catch (...) { continue; }
+                                    if (ImGui::MenuItem(comp_name.c_str()) && comp_obj->is_a(sdk::USceneComponent::static_class())) {
+                                        m_last_selected = (sdk::USceneComponent*)comp_obj;
+                                    }
+                                }
+                            } catch (...) {}
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
+
+                // Spawn a new component of a common type on this component's owner.
+                if (ImGui::BeginMenu("Add Component")) {
+                    static const char* kCommonComponentTypes[] = {
+                        "CapsuleComponent", "SphereComponent", "BoxComponent", "StaticMeshComponent",
+                        "SkeletalMeshComponent", "CameraComponent", "PointLightComponent",
+                        "SpotLightComponent", "AudioComponent", "SceneComponent",
+                        "TextRenderComponent", "ArrowComponent", "BillboardComponent"
+                    };
+                    for (const char* short_type : kCommonComponentTypes) {
+                        if (ImGui::MenuItem(short_type)) {
+                            const auto class_path = std::wstring{L"Class /Script/Engine."} + utility::widen(short_type);
+                            GameThreadWorker::get().enqueue([this, c, class_path]() {
+                                if (!this->exists(c)) return;
+                                try {
+                                    auto* owner = c->get_owner();
+                                    auto* comp_c = sdk::find_uobject<sdk::UClass>(class_path);
+                                    if (owner == nullptr || comp_c == nullptr) return;
+                                    auto* new_comp = owner->add_component_by_class(comp_c);
+                                    if (new_comp != nullptr) {
+                                        owner->finish_add_component(new_comp);
+                                    }
+                                } catch (...) {}
+                            });
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+
+                // Attach an EXISTING scene component (picked via the universal picker) as a child of c.
+                static std::string s_ctx_attach_filter{};
+                if (ImGui::MenuItem("Attach Component...")) {
+                    s_ctx_attach_filter.clear();
+                    ImGui::OpenPopup("##uobj_sel_ctx_attach_picker");
+                }
+                if (auto* picked = render_object_picker_popup("##uobj_sel_ctx_attach_picker", s_ctx_attach_filter,
+                                                               sdk::USceneComponent::static_class(), false);
+                    picked != nullptr) {
+                    auto* to_attach = (sdk::USceneComponent*)picked;
+                    GameThreadWorker::get().enqueue([this, c, to_attach]() {
+                        if (this->exists(c) && this->exists(to_attach)) try { to_attach->attach_to(c, L"None", 0, true); } catch (...) {}
+                    });
+                }
+
+                // Send this component to the Function Caller's target slot, for a quick function call
+                // without dragging it there manually.
+                if (ImGui::MenuItem("Select Target (Function Caller)")) {
+                    load_live_caller_target(c);
+                }
+
+                ImGui::Separator();
                 if (ImGui::MenuItem("Inspect in main page")) {
                     m_last_selected = c; // game thread; UI reads it benignly
                 }
