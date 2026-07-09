@@ -2317,6 +2317,18 @@ void* UObjectHook::process_event_hook(sdk::UObject* obj, sdk::UFunction* func, v
         auto& data = hook->m_called_functions[func];
         ++data.call_count;
 
+        // Per-receiver tallies for the ProcessEvent monitor's "By class"/"By caller" grouping.
+        // get_class() is a cheap fixed-offset read (unlike get_owner(), which is a ProcessEvent call
+        // and would be unsafe/wrong to call from inside this hook) — safe on every call.
+        if (obj != nullptr) {
+            try {
+                if (auto* obj_cls = obj->get_class(); obj_cls != nullptr) {
+                    ++data.caller_class_counts[obj_cls];
+                }
+            } catch (...) {}
+            ++data.caller_instance_counts[obj];
+        }
+
         hook->m_most_recent_functions.push_front(func);
 
         if (hook->m_most_recent_functions.size() > 200) {
@@ -7691,6 +7703,14 @@ void UObjectHook::draw_process_event_monitor() {
                 ImGui::SliderInt("Max Calls", &m_process_event_search.max_calls, 0, 10000);
                 ImGui::InputText("Search", m_process_event_search.buffer.data(), m_process_event_search.buffer.size());
 
+                // "By class" groups by the RECEIVER's class (calls aggregated across every instance of
+                // that class); "By caller" groups by the specific receiver INSTANCE. Both are populated
+                // in process_event_hook alongside call_count (caller_class_counts/caller_instance_counts),
+                // so grouping needs no extra scan of call history.
+                static int s_pe_group_mode = 0; // 0 = flat, 1 = by class, 2 = by caller
+                ImGui::SetNextItemWidth(160.0f);
+                ImGui::Combo("group##pe_group", &s_pe_group_mode, "Flat\0By class\0By caller\0");
+
                 std::string_view search{m_process_event_search.buffer.data()};
                 std::vector<sdk::UFunction*> functions_sorted_by_call_count{};
 
@@ -7720,43 +7740,93 @@ void UObjectHook::draw_process_event_monitor() {
                     return m_called_functions[a].call_count > m_called_functions[b].call_count;
                 });
 
-                for (auto& ufunc : functions_sorted_by_call_count) {
-                    if (m_ignored_recent_functions.contains(ufunc)) {
-                        continue;
-                    }
-
-                    if (!this->exists(ufunc)) {
-                        functions_to_cleanup.push_back(ufunc);
-                        continue;
-                    }
-
+                // Shared per-function row (Ignore button + expandable name + count + param inspector).
+                // `display_count` is the function's GLOBAL call_count in flat mode, or the group-specific
+                // tally (how many times THIS class/caller called it) when grouped.
+                auto render_function_row = [this](sdk::UFunction* ufunc, size_t display_count) {
                     ImGui::PushID(ufunc);
-
-                    utility::ScopeGuard ___{[]() {
-                        ImGui::PopID();
-                    }};
+                    utility::ScopeGuard ___{[]() { ImGui::PopID(); }};
 
                     if (ImGui::Button("Ignore")) {
                         m_ignored_recent_functions.insert(ufunc);
                     }
-
                     ImGui::SameLine();
-
                     const auto made = ImGui::TreeNode(utility::narrow(ufunc->get_full_name()).c_str());
-
                     ImGui::SameLine();
-                    ImGui::Text(" (%llu)", m_called_functions[ufunc].call_count);
+                    ImGui::Text(" (%llu)", (unsigned long long)display_count);
 
                     if (made) {
                         auto& data = m_called_functions[ufunc];
                         data.wants_heavy_data = true;
-
                         if (data.heavy_data != nullptr) {
-                            // Param inspector.
-                            ui_handle_struct(data.heavy_data->params.data(), ufunc);
+                            ui_handle_struct(data.heavy_data->params.data(), ufunc); // param inspector
                         }
-
                         ImGui::TreePop();
+                    }
+                };
+
+                if (s_pe_group_mode == 0) {
+                    for (auto& ufunc : functions_sorted_by_call_count) {
+                        if (m_ignored_recent_functions.contains(ufunc)) continue;
+                        if (!this->exists(ufunc)) { functions_to_cleanup.push_back(ufunc); continue; }
+                        render_function_row(ufunc, m_called_functions[ufunc].call_count);
+                    }
+                } else {
+                    // Build class/caller -> [(function, group-specific count)] from each function's own
+                    // tally map, then render one CollapsingHeader per group (busiest group first).
+                    struct GroupEntry { sdk::UFunction* func; size_t count; };
+                    struct Group { std::string label; void* key{nullptr}; std::vector<GroupEntry> entries; size_t total{0}; };
+                    std::unordered_map<void*, Group> groups;
+
+                    for (auto& ufunc : functions_sorted_by_call_count) {
+                        if (m_ignored_recent_functions.contains(ufunc)) continue;
+                        if (!this->exists(ufunc)) { functions_to_cleanup.push_back(ufunc); continue; }
+                        auto& data = m_called_functions[ufunc];
+
+                        if (s_pe_group_mode == 1) {
+                            for (auto& [cls, count] : data.caller_class_counts) {
+                                if (cls == nullptr || count == 0) continue;
+                                auto& g = groups[(void*)cls];
+                                if (g.entries.empty() && g.key == nullptr) {
+                                    g.key = (void*)cls;
+                                    try { g.label = utility::narrow(cls->get_fname().to_string()); } catch (...) { g.label = "<class>"; }
+                                }
+                                g.entries.push_back({ufunc, count});
+                                g.total += count;
+                            }
+                        } else { // by caller (instance)
+                            for (auto& [obj, count] : data.caller_instance_counts) {
+                                if (obj == nullptr || count == 0 || !this->exists(obj)) continue;
+                                auto& g = groups[(void*)obj];
+                                if (g.entries.empty() && g.key == nullptr) {
+                                    g.key = (void*)obj;
+                                    // Short label (shorten_object_path) — this list can get long with
+                                    // many instances; the full path is still one click away (TreeNode).
+                                    std::string full;
+                                    try { full = utility::narrow(obj->get_full_name()); } catch (...) { full = "<object>"; }
+                                    g.label = shorten_object_path(full);
+                                }
+                                g.entries.push_back({ufunc, count});
+                                g.total += count;
+                            }
+                        }
+                    }
+
+                    std::vector<Group*> sorted_groups;
+                    sorted_groups.reserve(groups.size());
+                    for (auto& [key, g] : groups) sorted_groups.push_back(&g);
+                    std::sort(sorted_groups.begin(), sorted_groups.end(), [](const Group* a, const Group* b) { return a->total > b->total; });
+
+                    for (auto* g : sorted_groups) {
+                        std::sort(g->entries.begin(), g->entries.end(), [](const GroupEntry& a, const GroupEntry& b) { return a.count > b.count; });
+                        ImGui::PushID(g->key);
+                        utility::ScopeGuard grp_guard{[]() { ImGui::PopID(); }};
+                        if (ImGui::TreeNode((g->label + std::format(" ({} calls, {} functions)", g->total, g->entries.size())).c_str())) {
+                            for (auto& e : g->entries) {
+                                render_function_row(e.func, e.count);
+                            }
+                            ImGui::TreePop();
+                        }
                     }
                 }
 
@@ -7818,6 +7888,69 @@ void UObjectHook::draw_main() {
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Pop this page (selected-object inspector, attached components, spawn actor, ...)\nout into its own dockable window, summonable without opening the main UEVR overlay.");
     }
+
+    // Basic spawn-actor: type a full class path (Class /Script/Engine.X) or use one of the common-type
+    // quick-spawn buttons. Both place the new actor along the camera's look-at ray, m_recenter_distance
+    // out — same placement math as the w2s context menu's "Summon to camera" / "Recenter to camera".
+    ImGui::SeparatorText("Spawn Actor");
+    {
+        // Compute the screen-center ray HERE (draw thread — ImGui state isn't safe to touch from a
+        // GameThreadWorker lambda) and defer the actual UGameplayStatics::SpawnActor + screen_to_world
+        // ProcessEvent calls to the game thread, same split every other engine-touching action here uses.
+        auto spawn_at_look_at = [this](const std::wstring& class_path) {
+            const auto* vp = ImGui::GetMainViewport();
+            const glm::vec2 screen_center{vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f};
+            const float dist = m_recenter_distance;
+            GameThreadWorker::get().enqueue([this, class_path, screen_center, dist]() {
+                try {
+                    auto* cls = sdk::find_uobject<sdk::UClass>(class_path);
+                    auto* engine = sdk::UGameEngine::get();
+                    auto* world = engine != nullptr ? engine->get_world() : nullptr;
+                    auto* ugs = sdk::UGameplayStatics::get();
+                    if (cls == nullptr || world == nullptr || ugs == nullptr) return;
+                    glm::vec3 spawn_pos{0.0f, 0.0f, 0.0f};
+                    if (auto* pc = ugs->get_player_controller(world, 0); pc != nullptr) {
+                        glm::vec3 ray_origin{}, ray_dir{};
+                        if (ugs->screen_to_world(pc, screen_center, &ray_origin, &ray_dir)) {
+                            const float len = glm::length(ray_dir);
+                            if (len > 1e-6f) {
+                                spawn_pos = ray_origin + (ray_dir / len) * dist;
+                            }
+                        }
+                    }
+                    auto* spawned = ugs->spawn_actor(world, cls, spawn_pos);
+                    if (spawned == nullptr) {
+                        SPDLOG_WARN("[UObjectHook] Spawn Actor failed for {}", utility::narrow(class_path));
+                    }
+                } catch (...) {}
+            });
+        };
+
+        static char s_spawn_actor_class[256]{};
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputTextWithHint("##spawn_actor_class",
+                "Class /Script/Engine.StaticMeshActor  (Enter to spawn at the camera's look-at point)",
+                s_spawn_actor_class, sizeof(s_spawn_actor_class), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            if (sdk::find_uobject<sdk::UClass>(utility::widen(s_spawn_actor_class)) == nullptr) {
+                strcpy_s(s_spawn_actor_class, "(class not found)");
+            } else {
+                spawn_at_look_at(utility::widen(s_spawn_actor_class));
+            }
+        }
+
+        // Quick-spawn: common actor types, same look-at placement, no path-typing required.
+        static const char* kCommonActorTypes[] = {
+            "StaticMeshActor", "PointLight", "SpotLight", "DirectionalLight", "CameraActor",
+            "TriggerBox", "TriggerSphere", "TargetPoint", "AudioVolume"
+        };
+        for (size_t i = 0; i < IM_ARRAYSIZE(kCommonActorTypes); ++i) {
+            if (i > 0) ImGui::SameLine();
+            if (ImGui::SmallButton(kCommonActorTypes[i])) {
+                spawn_at_look_at(std::wstring{L"Class /Script/Engine."} + utility::widen(kCommonActorTypes[i]));
+            }
+        }
+    }
+
     // Labelled section header so the user-curated objects below (selected pick, MC-attached
     // components, attached camera, overlapped) are visually distinct from the "Browse all
     // objects" trees further down.
@@ -11351,30 +11484,92 @@ void UObjectHook::draw_texture_preview(sdk::UObject* texture) {
 }
 
 #pragma endregion
-// === STUB (VR — needs a headset to verify; empty so the build stays green) NO IT DOESNT make it support flatscreen first you dolt ================
-// E1+E2: while a component is being adjusted in VR (motion-controller attach in adjust mode,
-// or just selected for the gizmo), let the LEFT/RIGHT thumbstick drive the gizmo's active axis
-// (X/Y on one stick, Z on the other) and draw the gizmo as if the matching axis HANDLE were
-// being mouse-clicked (highlight it hot).
-//
-// TASK / CONTEXT for the implementer (Gemini / user / future me):
-//   Input: read thumbstick axes from VR::get() controller state (see how OverlayComponent /
-//     the VR input path reads controller axes). Map left-stick X/Y -> gizmo X/Y, right-stick
-//     Y -> gizmo Z. Respect m_gizmo_mode (0 translate / 1 rotate / 2 scale).
-//   Apply: reuse the SAME edits the mouse-drag path uses in draw_component_gizmos —
-//     set_world_location / add_world_rotation / set_relative_scale. Scale the stick delta by
-//     frame delta-time * a sensitivity constant so it's framerate-independent.
-//   Display (E2): set the gizmo hot/hover state for the stick-driven axis so the handle looks
-//     "clicked" (extend draw_component_gizmos' hot-state to accept a VR-driven axis index).
-//   E3: if `comp` is MC-attached in adjust mode (m_auto_gizmo_on_adjust already draws its
-//     gizmo), feed these edits into the MotionControllerState location_offset/rotation_offset
-//     (see draw_component_gizmos ~2879) and surface the metrics (ties into the D3 label).
-//   Call site: a guarded no-op call is already wired in draw_component_gizmos (VR-active path).
-// =========================================================================================
+// VR thumbstick gizmo control (needs a headset to verify feel/sensitivity, but the logic below is
+// exercised the same way every frame a gizmo is shown in VR — it just no-ops at zero stick input).
+// Left stick X/Y drives world X/Y; right stick Y drives world Z — same channel mapping regardless of
+// m_gizmo_mode, only the OPERATION differs (translate / rotate about that axis / scale that axis).
+// Reuses the exact edit calls the mouse-drag path uses (set_world_location / add_world_rotation /
+// set_relative_scale) and the exact FRotator-component-per-world-axis mapping the mouse path derived
+// (ax 0/X->Roll, 1/Y->Pitch, 2/Z->Yaw) so stick-driven and mouse-driven rotation agree. Also drives
+// m_driven_comp/m_driven_axis/m_driven_frame — the SAME "hot axis" mechanism the property-inspector
+// slider drag already uses (see driven_hot() in draw_component_gizmos) — so the matching gizmo handle
+// highlights while a stick is deflected, no separate VR-specific hot-state needed.
 void UObjectHook::vr_gizmo_stick_adjust(sdk::USceneComponent* comp) {
-    // INTENTIONALLY EMPTY — see the context block above. No-op keeps the build green and the
-    // feature discoverable; fill in per the steps (needs a headset to verify).
-    (void)comp;
+    if (comp == nullptr) {
+        return;
+    }
+    auto vr = VR::get();
+    if (vr == nullptr || !vr->is_using_controllers()) {
+        return;
+    }
+
+    constexpr float kDeadzone = 0.15f;
+    constexpr float kTranslatePerSec = 80.0f;   // world cm/sec at full deflection
+    constexpr float kRotatePerSec = 90.0f;      // degrees/sec at full deflection
+    constexpr float kScalePerSec = 0.5f;        // relative-scale units/sec at full deflection
+
+    auto deadzoned = [](float v) -> float {
+        if (std::fabs(v) < kDeadzone) return 0.0f;
+        // Rescale so output still reaches +/-1 at full deflection instead of jumping at the
+        // deadzone edge.
+        const float sign = v < 0.0f ? -1.0f : 1.0f;
+        return sign * (std::fabs(v) - kDeadzone) / (1.0f - kDeadzone);
+    };
+
+    const auto left = vr->get_left_stick_axis();
+    const auto right = vr->get_right_stick_axis();
+    // channel[0]=world X (left stick X), channel[1]=world Y (left stick Y), channel[2]=world Z
+    // (right stick Y) — matches the task spec's "left-stick X/Y -> gizmo X/Y, right-stick Y -> gizmo Z".
+    const float channel[3] = { deadzoned(left.x), deadzoned(left.y), deadzoned(right.y) };
+    if (channel[0] == 0.0f && channel[1] == 0.0f && channel[2] == 0.0f) {
+        return; // sticks centered — nothing to drive, nothing to highlight
+    }
+
+    const float dt = m_last_delta_time;
+    int hot_axis = -1;
+    float hot_mag = 0.0f;
+
+    try {
+        if (m_gizmo_mode == 1) { // Rotate: each channel spins about its matching world axis.
+            glm::vec3 euler{0.0f, 0.0f, 0.0f};
+            for (int ax = 0; ax < 3; ++ax) {
+                if (channel[ax] == 0.0f) continue;
+                const float delta = channel[ax] * kRotatePerSec * dt;
+                if (ax == 0)      euler.z += delta; // world X -> Roll
+                else if (ax == 1) euler.x += delta; // world Y -> Pitch
+                else              euler.y += delta; // world Z -> Yaw
+                if (std::fabs(channel[ax]) > hot_mag) { hot_mag = std::fabs(channel[ax]); hot_axis = ax; }
+            }
+            comp->add_world_rotation(euler, false, false);
+        } else if (m_gizmo_mode == 2) { // Scale: each channel grows/shrinks its matching axis.
+            auto scale = comp->get_relative_scale();
+            for (int ax = 0; ax < 3; ++ax) {
+                if (channel[ax] == 0.0f) continue;
+                scale[ax] += channel[ax] * kScalePerSec * dt;
+                if (std::fabs(channel[ax]) > hot_mag) { hot_mag = std::fabs(channel[ax]); hot_axis = ax; }
+            }
+            comp->set_relative_scale(scale);
+        } else { // Translate (0) and Combined (3) both move — Combined has no single "active" mode.
+            const glm::vec3 world_axes[3] = {
+                glm::vec3{1.0f, 0.0f, 0.0f}, glm::vec3{0.0f, 1.0f, 0.0f}, glm::vec3{0.0f, 0.0f, 1.0f}
+            };
+            glm::vec3 offset{0.0f, 0.0f, 0.0f};
+            for (int ax = 0; ax < 3; ++ax) {
+                if (channel[ax] == 0.0f) continue;
+                offset += world_axes[ax] * (channel[ax] * kTranslatePerSec * dt);
+                if (std::fabs(channel[ax]) > hot_mag) { hot_mag = std::fabs(channel[ax]); hot_axis = ax; }
+            }
+            comp->set_world_location(comp->get_world_location() + offset, false, false);
+        }
+    } catch (...) {
+        return;
+    }
+
+    if (hot_axis >= 0) {
+        m_driven_comp = comp;
+        m_driven_axis = hot_axis;
+        m_driven_frame = (uint32_t)ImGui::GetFrameCount();
+    }
 }
 
 void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {
