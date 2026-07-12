@@ -10289,6 +10289,17 @@ const auto check_flags = [](uint64_t flags){
     struct FieldEntry { sdk::FField* prop; sdk::UStruct* decl; };
     std::vector<FieldEntry> sorted_fields{};
 
+    // Depth of each declaring class in the inheritance chain, 0 = uclass itself (most derived),
+    // increasing toward the root (UObject). Lets "By base class" grouping sort base-to-derived
+    // instead of alphabetically, matching the actual hierarchy instead of coincidental name order.
+    std::unordered_map<sdk::UStruct*, int> class_depth{};
+    {
+        int depth = 0;
+        for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
+            class_depth[super] = depth++;
+        }
+    }
+
     for (auto super = (sdk::UStruct*)uclass; super != nullptr; super = super->get_super_struct()) {
         auto props = super->get_child_properties();
 
@@ -10355,9 +10366,18 @@ const auto check_flags = [](uint64_t flags){
         return std::wstring{};
     };
 
-    // Sort by group key first (when grouping), then by field name.
+    // Sort by group key first (when grouping), then by field name. "By base class" groups sort by
+    // inheritance depth (root/base first, most-derived last) instead of alphabetically -- class_depth
+    // only covers uclass's own chain, so a group key with no depth entry (shouldn't happen since decl
+    // is always one of uclass's supers) falls back to alphabetical via the -1 default.
     std::sort(sorted_fields.begin(), sorted_fields.end(), [&](const FieldEntry& a, const FieldEntry& b) {
-        if (s_prop_group_mode != 0) {
+        if (s_prop_group_mode == 1) {
+            const auto it_a = class_depth.find(a.decl);
+            const auto it_b = class_depth.find(b.decl);
+            const int da = it_a != class_depth.end() ? it_a->second : -1;
+            const int db = it_b != class_depth.end() ? it_b->second : -1;
+            if (da != db) return da > db; // higher depth = more base = first
+        } else if (s_prop_group_mode != 0) {
             const auto ga = group_key_of(a), gb = group_key_of(b);
             if (ga != gb) return ga < gb;
         }
