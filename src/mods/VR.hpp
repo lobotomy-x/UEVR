@@ -476,8 +476,8 @@ public:
                (m_extreme_compat_mode->value() && m_rendering_method->value() == RenderingMethod::NATIVE_STEREO);
     }
 
-    bool should_ignore_native_stereo_fix_for_avowed_sync() const;
-    bool should_force_native_stereo_fix_same_pass() const;
+    bool should_ignore_native_stereo_fix_for_avowed_sync() const { return false; }
+    bool should_force_native_stereo_fix_same_pass() const { return false; }
 
     SynchronizeStage get_synchronize_stage() {
         return (SynchronizeStage) m_sync_mode->value();

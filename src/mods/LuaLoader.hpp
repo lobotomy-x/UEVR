@@ -28,14 +28,13 @@ public:
     std::vector<SidebarEntryInfo> get_sidebar_entries() override {
         if (m_script_panels.empty()) {
             return {
-                {"Main", true}, {"Script UI", true}, {"Editor", true}
+                {"Main", true}, {"Script UI", true}
             };
         }
 
         std::vector<SidebarEntryInfo> entries{
             {"Main", true},
-            {"Script UI", true},
-            {"Editor", true}
+            {"Script UI", true}
         };
 
         for (auto& entry : m_script_panels) {

@@ -655,12 +655,7 @@ private:
     bool attempt_runtime_inject_stereo();
     bool hook_ue418_oculus_pixel_density_sink();
     void post_init_properties(uintptr_t localplayer);
-    void try_adopt_scene_viewport_render_target(sdk::FViewport* viewport, const char* source);
-    void update_daysgone_ui_telemetry();
-    void log_daysgone_ui_telemetry_game_thread();
-    void update_daysgone_bend_ui_placement_fix();
-    void apply_daysgone_bend_ui_placement_fix_game_thread();
-    void restore_daysgone_bend_ui_placement_fix_game_thread();
+    void try_adopt_scene_viewport_render_target(sdk::FViewport* viewport, const char* source) {}
 
     // Hooks
     // UGameEngine

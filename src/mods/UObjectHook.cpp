@@ -2619,7 +2619,10 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
-        if (auto v = cfg.get<bool>("UObjectHook_HighlightOverlayMaterial")) m_highlight_overlay_material = *v;
+        // Overlay-material highlight menu was removed (unreliable — SetOverlayMaterial silently
+        // no-ops on UE4 and the "restore on deselect" bookkeeping never fully worked). Deliberately
+        // NOT loading a saved true value here so it can't come back enabled from an old config; the
+        // uobjecthook_gizmo_target Lua event is the documented way to build an equivalent by hand now.
         if (auto v = cfg.get<bool>("UObjectHook_ShowTexturePreviews")) m_show_texture_previews = *v;
     }
 
@@ -7572,35 +7575,6 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SameLine();
     ImGui::Checkbox("Highlight selection", &m_highlight_selection);
     ImGui::Checkbox("Set Movable on select (Mobility=2)", &m_gizmo_set_movable);
-    // Overlay-material highlight: SetOverlayMaterial on selected mesh comps (UE5.1+). The material is
-    // auto-found from engine content on first enable; any UMaterialInterface can be dropped/picked in.
-    ImGui::Checkbox("Overlay-material highlight (UE5.1+)", &m_highlight_overlay_material);
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Renders the highlight material OVER each selected mesh component\n(UMeshComponent::SetOverlayMaterial — silently unavailable on UE4).\nOriginal overlay material is restored on deselect.");
-    }
-    if (m_highlight_overlay_material) {
-        ImGui::SameLine();
-        ImGui::TextDisabled(m_highlight_material != nullptr ? "(material ready)" : "(no material yet)");
-        static PickerState s_hl_mat_picker{};
-        static sdk::UClass* s_mat_iface_cls = nullptr;
-        if (s_mat_iface_cls == nullptr) {
-            s_mat_iface_cls = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.MaterialInterface");
-        }
-        sdk::UObject* slot = m_highlight_material;
-        if (render_universal_object_picker("hl_overlay_mat", slot, s_hl_mat_picker, s_mat_iface_cls, false, nullptr)) {
-            // Material changed: restore everything currently highlighted so the sync loop re-applies
-            // with the new material next frame.
-            std::unordered_map<sdk::USceneComponent*, sdk::UObject*> originals;
-            {
-                std::shared_lock _{m_mutex};
-                originals = m_overlay_mat_originals;
-            }
-            for (const auto& [comp, orig] : originals) {
-                restore_overlay_highlight(comp);
-            }
-            m_highlight_material = slot;
-        }
-    }
 
     ImGui::SeparatorText("Ctrl-snap steps (hold Ctrl while dragging the gizmo)");
     ImGui::SliderFloat("Move snap (cm)", &m_snap_translate, 0.0f, 100.0f, "%.1f");
@@ -7610,7 +7584,9 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::SeparatorText("Inspector");
     ImGui::SliderFloat("Property column width", &m_inspector_item_width, 0.0f, 900.0f,
                        m_inspector_item_width <= 0.0f ? "unlimited" : "%.0f px");
-    ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
+    if (g_framework->get_renderer_type() == Framework::RendererType::D3D11) {
+        ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
+    }
 }
 
 // Dockable pop-out of the options — drag its title bar onto the main UObjectHook window to dock it
@@ -10344,12 +10320,15 @@ const auto check_flags = [](uint64_t flags){
     ImGui::SameLine();
     ImGui::SetNextItemWidth(110.0f);
     ImGui::Combo("group##propgroup", &s_prop_group_mode, "Flat\0By base class\0By type\0");
-    ImGui::SameLine();
-    ImGui::Checkbox("tex##stub", &m_show_texture_previews); // STUB, default off (crash-prone)
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Texture previews (D3D11, experimental — crash-prone; default off)");
+    const bool is_d3d11 = g_framework->get_renderer_type() == Framework::RendererType::D3D11;
+    if (is_d3d11) {
+        ImGui::SameLine();
+        ImGui::Checkbox("tex##stub", &m_show_texture_previews); // STUB, default off (crash-prone)
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Texture previews (D3D11, experimental — crash-prone; default off)");
+        }
     }
-    if (m_show_texture_previews && object != nullptr && uclass != nullptr) {
+    if (is_d3d11 && m_show_texture_previews && object != nullptr && uclass != nullptr) {
         std::string tex_cn;
         try { tex_cn = utility::narrow(uclass->get_fname().to_string()); } catch (...) {}
         if (tex_cn.find("Texture") != std::string::npos) {
