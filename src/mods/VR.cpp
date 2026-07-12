@@ -45,11 +45,7 @@
 
 #include "VR.hpp"
 #include "UObjectHook.hpp"
-#include "GameSpecific.hpp"
 
-namespace {
-bool is_stalker2_executable_cached();
-}
 
 std::shared_ptr<VR>& VR::get() {
     //static std::shared_ptr<VR> instance = std::make_shared<VR>();
@@ -58,7 +54,6 @@ std::shared_ptr<VR>& VR::get() {
 
 VR::~VR() {
     stop_native_openxr_async_wait_worker();
-    stop_hitch_snapshot_writer();
 }
 
 bool VR::on_openxr_resolution_scale_changed(
@@ -118,14 +113,7 @@ bool VR::on_openxr_resolution_scale_changed(
     }();
 
     if (!ue57_invalidated && !legacy_live_policy.live_allowed) {
-        if (is_stalker2_executable_cached()) {
-            SPDLOG_WARN(
-                "[Stalker2][OpenXR] Live resolution-scale reconfigure is intentionally disabled for UE5.1/Stalker2; saved value will apply after reinject/restart [{}x{}]->[{}x{}]",
-                old_width,
-                old_height,
-                new_width,
-                new_height);
-        } else {
+
             SPDLOG_WARN(
                 "[OpenXR] Live resolution-scale reconfigure is disabled for this engine path; version={} reason={} saved value will apply after reinject/restart [{}x{}]->[{}x{}]",
                 legacy_live_policy.version,
@@ -134,7 +122,7 @@ bool VR::on_openxr_resolution_scale_changed(
                 old_height,
                 new_width,
                 new_height);
-        }
+
         return false;
     }
 
@@ -161,1249 +149,7 @@ bool VR::on_openxr_resolution_scale_changed(
     return true;
 }
 
-namespace {
 using json = nlohmann::json;
-
-constexpr bool STALKER2_TRANSITION_OPENXR_DEFERS_ENABLED = false;
-
-int64_t hitch_age_ms(std::chrono::steady_clock::time_point now, std::chrono::steady_clock::time_point then) {
-    if (then.time_since_epoch().count() == 0) {
-        return -1;
-    }
-
-    return std::chrono::duration_cast<std::chrono::milliseconds>(now - then).count();
-}
-
-int64_t steady_clock_ms(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-}
-
-std::string hitch_timestamp_suffix() {
-    const auto now = std::chrono::system_clock::now();
-    const auto time = std::chrono::system_clock::to_time_t(now);
-    std::tm tm{};
-    localtime_s(&tm, &time);
-
-    std::ostringstream out{};
-    out << std::put_time(&tm, "%Y%m%d_%H%M%S");
-    return out.str();
-}
-
-bool is_ue_5_7_or_newer_for_ui_layer_pose() {
-    static const auto result = []() {
-        const auto disk_version = sdk::get_file_version_info();
-        const auto str_version = utility::narrow(sdk::search_for_version(utility::get_executable()).value_or(L"0.00"));
-
-        if (str_version != "0.00") {
-            return str_version.starts_with("5.7") || str_version.starts_with("5.8") || str_version.starts_with("5.9");
-        }
-
-        return disk_version.dwFileVersionMS >= 0x50007;
-    }();
-
-    return result;
-}
-
-double quat_delta_degrees(const glm::quat& a, const glm::quat& b) {
-    const auto dot = std::clamp(std::abs(glm::dot(glm::normalize(a), glm::normalize(b))), 0.0f, 1.0f);
-    return (double)glm::degrees(2.0f * std::acos(dot));
-}
-
-bool is_stalker2_executable_cached() {
-    static const bool is_stalker2 = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_stalker2_executable_path(*exe_path);
-    }();
-
-    return is_stalker2;
-}
-
-bool is_everspace2_executable_cached() {
-    static const bool is_everspace2 = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_everspace2_executable_path(*exe_path);
-    }();
-
-    return is_everspace2;
-}
-
-
-bool should_defer_stalker2_very_late_openxr_wait(const VRRuntime* runtime, bool is_d3d12) {
-    if (runtime == nullptr || !is_d3d12 || !runtime->is_openxr() || !is_stalker2_executable_cached()) {
-        return false;
-    }
-
-    // Stalker2 can stall for seconds if a VERY_LATE xrWaitFrame is held across
-    // the UE5.1 gameplay-load/render handoff. After initial valid poses, let
-    // the D3D12 submit path own wait/begin/end so the frame loop stays local to
-    // the copy/submit that actually presents to the HMD.
-    return runtime->got_first_sync && runtime->got_first_valid_poses;
-}
-
-struct GameFovResolver {
-    int32_t read_camera_cache_offset{-1};
-    int32_t camera_cache_offset{-1};
-    int32_t last_frame_camera_cache_offset{-1};
-    int32_t camera_cache_private_offset{-1};
-    int32_t last_frame_camera_cache_private_offset{-1};
-    int32_t pov_offset{-1};
-    int32_t fov_offset{-1};
-    int32_t location_offset{-1};
-    int32_t rotation_offset{-1};
-    int32_t default_fov_offset{-1};
-    int32_t aspect_ratio_offset{-1};
-    int32_t overscan_resolution_fraction_offset{-1};
-    int32_t crop_fraction_offset{-1};
-    int32_t default_aspect_ratio_offset{-1};
-    sdk::FBoolProperty* constrain_aspect_ratio_property{nullptr};
-    sdk::FBoolProperty* default_constrain_aspect_ratio_property{nullptr};
-    bool attempted{false};
-    bool valid{false};
-};
-
-GameFovResolver g_game_fov_resolver{};
-
-bool is_ue418_executable() {
-    static const auto result = []() {
-        const auto version = sdk::search_for_version(utility::get_executable()).value_or(L"");
-        return version.starts_with(L"4.18");
-    }();
-
-    return result;
-}
-
-
-
-
-float normalize_angle_delta(float a, float b) {
-    auto delta = std::fmod(a - b, 360.0f);
-    if (delta > 180.0f) {
-        delta -= 360.0f;
-    } else if (delta < -180.0f) {
-        delta += 360.0f;
-    }
-
-    return std::abs(delta);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-bool resolve_game_fov_offsets() {
-    if (g_game_fov_resolver.attempted) {
-        return g_game_fov_resolver.valid;
-    }
-
-    g_game_fov_resolver.attempted = true;
-
-    auto pcm_class = sdk::APlayerCameraManager::static_class();
-    if (pcm_class == nullptr) {
-        return false;
-    }
-
-    auto find_cache_prop = [&](const wchar_t* name, int32_t& offset_out) -> sdk::FStructProperty* {
-        auto prop = (sdk::FStructProperty*)pcm_class->find_property(name);
-        if (prop != nullptr) {
-            offset_out = prop->get_offset();
-        }
-
-        return prop;
-    };
-
-    auto cache_private_prop = find_cache_prop(L"CameraCachePrivate", g_game_fov_resolver.camera_cache_private_offset);
-    auto cache_prop_public = find_cache_prop(L"CameraCache", g_game_fov_resolver.camera_cache_offset);
-    auto last_frame_cache_private_prop = find_cache_prop(L"LastFrameCameraCachePrivate", g_game_fov_resolver.last_frame_camera_cache_private_offset);
-    auto last_frame_cache_prop = find_cache_prop(L"LastFrameCameraCache", g_game_fov_resolver.last_frame_camera_cache_offset);
-
-    sdk::FStructProperty* cache_prop = cache_private_prop;
-    if (cache_prop == nullptr) {
-        cache_prop = cache_prop_public;
-    }
-
-    if (cache_prop == nullptr) {
-        cache_prop = last_frame_cache_private_prop;
-    }
-
-    if (cache_prop == nullptr) {
-        cache_prop = last_frame_cache_prop;
-    }
-
-    if (cache_prop == nullptr) {
-        return false;
-    }
-
-    g_game_fov_resolver.read_camera_cache_offset = cache_prop->get_offset();
-
-    auto cache_struct = cache_prop->get_struct();
-    if (cache_struct == nullptr) {
-        return false;
-    }
-
-    auto pov_prop = (sdk::FStructProperty*)cache_struct->find_property(L"POV");
-    if (pov_prop == nullptr) {
-        return false;
-    }
-
-    auto pov_struct = pov_prop->get_struct();
-    if (pov_struct == nullptr) {
-        return false;
-    }
-
-    auto fov_prop = pov_struct->find_property(L"FOV");
-    auto location_prop = pov_struct->find_property(L"Location");
-    auto rotation_prop = pov_struct->find_property(L"Rotation");
-    if (fov_prop == nullptr || location_prop == nullptr || rotation_prop == nullptr) {
-        return false;
-    }
-
-    g_game_fov_resolver.pov_offset = pov_prop->get_offset();
-    g_game_fov_resolver.fov_offset = fov_prop->get_offset();
-    g_game_fov_resolver.location_offset = location_prop->get_offset();
-    g_game_fov_resolver.rotation_offset = rotation_prop->get_offset();
-
-    if (auto aspect_prop = pov_struct->find_property(L"AspectRatio"); aspect_prop != nullptr && aspect_prop->get_class() != nullptr &&
-        aspect_prop->get_class()->get_name().to_string() == L"FloatProperty")
-    {
-        g_game_fov_resolver.aspect_ratio_offset = aspect_prop->get_offset();
-    }
-
-    if (auto overscan_fraction_prop = pov_struct->find_property(L"OverscanResolutionFraction"); overscan_fraction_prop != nullptr && overscan_fraction_prop->get_class() != nullptr &&
-        overscan_fraction_prop->get_class()->get_name().to_string() == L"FloatProperty")
-    {
-        g_game_fov_resolver.overscan_resolution_fraction_offset = overscan_fraction_prop->get_offset();
-    }
-
-    if (auto crop_fraction_prop = pov_struct->find_property(L"CropFraction"); crop_fraction_prop != nullptr && crop_fraction_prop->get_class() != nullptr &&
-        crop_fraction_prop->get_class()->get_name().to_string() == L"FloatProperty")
-    {
-        g_game_fov_resolver.crop_fraction_offset = crop_fraction_prop->get_offset();
-    }
-
-    if (auto constrain_prop = pov_struct->find_property(L"bConstrainAspectRatio"); constrain_prop != nullptr && constrain_prop->get_class() != nullptr &&
-        constrain_prop->get_class()->get_name().to_string() == L"BoolProperty")
-    {
-        g_game_fov_resolver.constrain_aspect_ratio_property = (sdk::FBoolProperty*)constrain_prop;
-    }
-
-    if (auto default_prop = pcm_class->find_property(L"DefaultFOV"); default_prop != nullptr) {
-        g_game_fov_resolver.default_fov_offset = default_prop->get_offset();
-    }
-
-    if (auto default_aspect_prop = pcm_class->find_property(L"DefaultAspectRatio"); default_aspect_prop != nullptr &&
-        default_aspect_prop->get_class() != nullptr && default_aspect_prop->get_class()->get_name().to_string() == L"FloatProperty")
-    {
-        g_game_fov_resolver.default_aspect_ratio_offset = default_aspect_prop->get_offset();
-    }
-
-    if (auto default_constrain_prop = pcm_class->find_property(L"bDefaultConstrainAspectRatio"); default_constrain_prop != nullptr &&
-        default_constrain_prop->get_class() != nullptr && default_constrain_prop->get_class()->get_name().to_string() == L"BoolProperty")
-    {
-        g_game_fov_resolver.default_constrain_aspect_ratio_property = (sdk::FBoolProperty*)default_constrain_prop;
-    }
-
-    g_game_fov_resolver.valid = true;
-    return true;
-}
-
-std::optional<float> read_game_fov(sdk::APlayerCameraManager* pcm) {
-    if (pcm == nullptr) {
-        return std::nullopt;
-    }
-
-    if (!resolve_game_fov_offsets()) {
-        return std::nullopt;
-    }
-
-    const auto base = (uint8_t*)pcm;
-    const auto fov_ptr = (float*)(base + g_game_fov_resolver.read_camera_cache_offset +
-                                  g_game_fov_resolver.pov_offset +
-                                  g_game_fov_resolver.fov_offset);
-    const auto fov = *fov_ptr;
-
-    if (!std::isfinite(fov)) {
-        return std::nullopt;
-    }
-
-    return fov;
-}
-
-std::optional<glm::vec3> read_game_camera_vector(sdk::APlayerCameraManager* pcm, int32_t field_offset) {
-    if (pcm == nullptr) {
-        return std::nullopt;
-    }
-
-    if (!resolve_game_fov_offsets() || field_offset < 0) {
-        return std::nullopt;
-    }
-
-    const auto base = (uint8_t*)pcm;
-    const auto vec_ptr = (float*)(base + g_game_fov_resolver.read_camera_cache_offset +
-                                  g_game_fov_resolver.pov_offset +
-                                  field_offset);
-
-    const glm::vec3 value{vec_ptr[0], vec_ptr[1], vec_ptr[2]};
-    if (!std::isfinite(value.x) || !std::isfinite(value.y) || !std::isfinite(value.z)) {
-        return std::nullopt;
-    }
-
-    return value;
-}
-
-std::optional<glm::vec3> read_game_camera_location(sdk::APlayerCameraManager* pcm) {
-    return read_game_camera_vector(pcm, g_game_fov_resolver.location_offset);
-}
-
-std::optional<glm::vec3> read_game_camera_rotation(sdk::APlayerCameraManager* pcm) {
-    return read_game_camera_vector(pcm, g_game_fov_resolver.rotation_offset);
-}
-
-bool write_game_fov(sdk::APlayerCameraManager* pcm, float fov) {
-    if (pcm == nullptr || !std::isfinite(fov)) {
-        return false;
-    }
-
-    if (!resolve_game_fov_offsets()) {
-        return false;
-    }
-
-    const auto base = (uint8_t*)pcm;
-    const auto write_cache_fov = [&](int32_t cache_offset) {
-        if (cache_offset < 0) {
-            return;
-        }
-
-        auto fov_ptr = (float*)(base + cache_offset +
-                                g_game_fov_resolver.pov_offset +
-                                g_game_fov_resolver.fov_offset);
-        *fov_ptr = fov;
-    };
-
-    write_cache_fov(g_game_fov_resolver.camera_cache_offset);
-    write_cache_fov(g_game_fov_resolver.last_frame_camera_cache_offset);
-    write_cache_fov(g_game_fov_resolver.camera_cache_private_offset);
-    write_cache_fov(g_game_fov_resolver.last_frame_camera_cache_private_offset);
-
-    return true;
-}
-
-bool write_game_camera_aspect_constraints(sdk::APlayerCameraManager* pcm, float aspect_ratio) {
-    if (pcm == nullptr || !std::isfinite(aspect_ratio) || aspect_ratio <= 0.1f) {
-        return false;
-    }
-
-    if (!resolve_game_fov_offsets()) {
-        return false;
-    }
-
-    bool wrote = false;
-    const auto base = (uint8_t*)pcm;
-
-    const auto write_cache_aspect = [&](int32_t cache_offset) {
-        if (cache_offset < 0) {
-            return;
-        }
-
-        const auto pov_base = base + cache_offset + g_game_fov_resolver.pov_offset;
-
-        if (g_game_fov_resolver.aspect_ratio_offset >= 0) {
-            *(float*)(pov_base + g_game_fov_resolver.aspect_ratio_offset) = aspect_ratio;
-            wrote = true;
-        }
-
-        if (g_game_fov_resolver.constrain_aspect_ratio_property != nullptr) {
-            const auto prop_base = pov_base + g_game_fov_resolver.constrain_aspect_ratio_property->get_offset();
-            g_game_fov_resolver.constrain_aspect_ratio_property->set_value_in_propbase(prop_base, false);
-            wrote = true;
-        }
-
-        if (g_game_fov_resolver.overscan_resolution_fraction_offset >= 0) {
-            *(float*)(pov_base + g_game_fov_resolver.overscan_resolution_fraction_offset) = 1.0f;
-            wrote = true;
-        }
-
-        if (g_game_fov_resolver.crop_fraction_offset >= 0) {
-            *(float*)(pov_base + g_game_fov_resolver.crop_fraction_offset) = 1.0f;
-            wrote = true;
-        }
-    };
-
-    write_cache_aspect(g_game_fov_resolver.camera_cache_offset);
-    write_cache_aspect(g_game_fov_resolver.last_frame_camera_cache_offset);
-    write_cache_aspect(g_game_fov_resolver.camera_cache_private_offset);
-    write_cache_aspect(g_game_fov_resolver.last_frame_camera_cache_private_offset);
-
-    if (g_game_fov_resolver.default_aspect_ratio_offset >= 0) {
-        *(float*)(base + g_game_fov_resolver.default_aspect_ratio_offset) = aspect_ratio;
-        wrote = true;
-    }
-
-    if (g_game_fov_resolver.default_constrain_aspect_ratio_property != nullptr) {
-        g_game_fov_resolver.default_constrain_aspect_ratio_property->set_value_in_object(pcm, false);
-        wrote = true;
-    }
-
-    return wrote;
-}
-
-
-std::optional<float> read_default_fov(sdk::APlayerCameraManager* pcm) {
-    if (pcm == nullptr) {
-        return std::nullopt;
-    }
-
-    if (!resolve_game_fov_offsets()) {
-        return std::nullopt;
-    }
-
-    if (g_game_fov_resolver.default_fov_offset < 0) {
-        return std::nullopt;
-    }
-
-    const auto base = (uint8_t*)pcm;
-    const auto fov_ptr = (float*)(base + g_game_fov_resolver.default_fov_offset);
-    const auto fov = *fov_ptr;
-
-    if (!std::isfinite(fov)) {
-        return std::nullopt;
-    }
-
-    return fov;
-}
-
-
-bool is_avowed_executable() {
-    static const bool is_avowed = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        return uevr::games::is_avowed_executable_path(*module_path);
-    }();
-
-    return is_avowed;
-}
-
-
-
-bool is_subnautica2_executable() {
-    static const bool is_subnautica2 = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        auto lowered = *module_path;
-        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t ch) {
-            return static_cast<wchar_t>(std::towlower(ch));
-        });
-
-        return lowered.find(L"subnautica2-win64-shipping") != std::wstring::npos ||
-               lowered.find(L"subnautica2-wingdk-shipping") != std::wstring::npos;
-    }();
-
-    return is_subnautica2;
-}
-
-
-bool is_daysgone_executable() {
-    static const bool is_daysgone = []() {
-        const auto module_path = utility::get_module_pathw(utility::get_executable());
-        if (!module_path.has_value()) {
-            return false;
-        }
-
-        return uevr::games::is_daysgone_executable_path(*module_path);
-    }();
-
-    return is_daysgone;
-}
-
-bool contains_case_insensitive(std::wstring_view value, std::wstring_view needle) {
-    auto value_lower = std::wstring{value};
-    auto needle_lower = std::wstring{needle};
-
-    std::transform(value_lower.begin(), value_lower.end(), value_lower.begin(), [](wchar_t ch) {
-        return static_cast<wchar_t>(std::towlower(ch));
-    });
-    std::transform(needle_lower.begin(), needle_lower.end(), needle_lower.begin(), [](wchar_t ch) {
-        return static_cast<wchar_t>(std::towlower(ch));
-    });
-
-    return value_lower.find(needle_lower) != std::wstring::npos;
-}
-
-std::optional<std::wstring> read_object_text_property(sdk::UObject* object, std::wstring_view name) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop = klass->find_property(name);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop_type = prop->get_class()->get_name().to_string();
-    const auto prop_addr = (uint8_t*)object + prop->get_offset();
-
-    if (prop_type == L"NameProperty") {
-        return ((sdk::FName*)prop_addr)->to_string();
-    }
-
-    if (prop_type == L"StrProperty") {
-        const auto str = (sdk::TArray<wchar_t>*)prop_addr;
-        if (str->data == nullptr || str->count <= 0 || str->count > 4096 || str->capacity < str->count) {
-            return std::wstring{};
-        }
-
-        if (IsBadReadPtr(str->data, (size_t)str->count * sizeof(wchar_t))) {
-            return std::nullopt;
-        }
-
-        auto count = (size_t)str->count;
-        while (count > 0 && str->data[count - 1] == L'\0') {
-            --count;
-        }
-
-        return std::wstring{str->data, count};
-    }
-
-    return std::nullopt;
-} catch (...) {
-    return std::nullopt;
-}
-
-std::optional<sdk::UObject*> read_object_property(sdk::UObject* object, std::wstring_view name) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop = klass->find_property(name);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop_type = prop->get_class()->get_name().to_string();
-    if (prop_type != L"ObjectProperty") {
-        return std::nullopt;
-    }
-
-    auto value = *(sdk::UObject**)((uint8_t*)object + prop->get_offset());
-    if (value == nullptr || IsBadReadPtr(value, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    return value;
-} catch (...) {
-    return std::nullopt;
-}
-
-bool is_live_uobject_identity(sdk::UObject* object, int32_t expected_index = -1, int32_t expected_serial = 0) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return false;
-    }
-
-    const auto objects = sdk::FUObjectArray::get();
-    if (objects == nullptr) {
-        return false;
-    }
-
-    const auto index = expected_index >= 0 ? expected_index : (int32_t)object->get_internal_index();
-    if (index < 0 || index >= objects->get_object_count()) {
-        return false;
-    }
-
-    const auto item = objects->get_object(index);
-    if (item == nullptr || item->get_object() != object) {
-        return false;
-    }
-
-    return expected_serial == 0 || item->get_serial_number() == expected_serial;
-} catch (...) {
-    return false;
-}
-
-bool is_everspace2_cinematic_bar(sdk::UObject* object, std::wstring_view expected_name) try {
-    if (!is_live_uobject_identity(object) || object->get_name_safe() != expected_name) {
-        return false;
-    }
-
-    const auto klass = object->get_class();
-    return klass != nullptr && klass->get_full_name() == L"Class /Script/UMG.Image";
-} catch (...) {
-    return false;
-}
-
-bool remove_everspace2_cinematic_bars(sdk::UObject* hud) try {
-    if (!is_live_uobject_identity(hud)) {
-        return false;
-    }
-
-    const auto top = read_object_property(hud, L"BarImageTop");
-    const auto bottom = read_object_property(hud, L"BarImageBottom");
-    if (!top.has_value() || !bottom.has_value() ||
-        !is_everspace2_cinematic_bar(*top, L"BarImageTop") ||
-        !is_everspace2_cinematic_bar(*bottom, L"BarImageBottom")) {
-        return false;
-    }
-
-    const auto top_function = (*top)->get_class()->find_function(L"RemoveFromParent");
-    const auto bottom_function = (*bottom)->get_class()->find_function(L"RemoveFromParent");
-    if (top_function == nullptr || bottom_function == nullptr ||
-        top_function->get_full_name() != L"Function /Script/UMG.Widget.RemoveFromParent" ||
-        bottom_function->get_full_name() != L"Function /Script/UMG.Widget.RemoveFromParent") {
-        return false;
-    }
-
-    (*top)->process_event(top_function, nullptr);
-    (*bottom)->process_event(bottom_function, nullptr);
-    return true;
-} catch (...) {
-    return false;
-}
-
-std::optional<sdk::UObject*> call_object_object_function(sdk::UObject* object, std::wstring_view function_name) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto fn = klass->find_function(function_name);
-    if (fn == nullptr) {
-        return std::nullopt;
-    }
-
-    struct ObjectReturnParams {
-        sdk::UObject* ret{nullptr};
-    } params{};
-
-    object->process_event(fn, &params);
-    if (params.ret == nullptr || IsBadReadPtr(params.ret, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    return params.ret;
-} catch (...) {
-    return std::nullopt;
-}
-
-bool write_object_bool_property(sdk::UObject* object, std::wstring_view name, bool value) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return false;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return false;
-    }
-
-    const auto prop = klass->find_property(name);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return false;
-    }
-
-    const auto prop_type = prop->get_class()->get_name().to_string();
-    if (prop_type != L"BoolProperty") {
-        return false;
-    }
-
-    ((sdk::FBoolProperty*)prop)->set_value_in_object(object, value);
-    return true;
-} catch (...) {
-    return false;
-}
-
-bool write_object_float_property(sdk::UObject* object, std::wstring_view name, float value) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*)) || !std::isfinite(value)) {
-        return false;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return false;
-    }
-
-    const auto prop = klass->find_property(name);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return false;
-    }
-
-    const auto prop_type = prop->get_class()->get_name().to_string();
-    if (prop_type != L"FloatProperty") {
-        return false;
-    }
-
-    *(float*)((uint8_t*)object + prop->get_offset()) = value;
-    return true;
-} catch (...) {
-    return false;
-}
-
-bool write_struct_float_property(sdk::UObject* object, std::wstring_view struct_property, std::wstring_view field_name, float value) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*)) || !std::isfinite(value)) {
-        return false;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return false;
-    }
-
-    const auto prop = (sdk::FStructProperty*)klass->find_property(struct_property);
-    if (prop == nullptr || prop->get_class() == nullptr || prop->get_class()->get_name().to_string() != L"StructProperty") {
-        return false;
-    }
-
-    const auto structure = prop->get_struct();
-    if (structure == nullptr) {
-        return false;
-    }
-
-    const auto field = structure->find_property(field_name);
-    if (field == nullptr || field->get_class() == nullptr || field->get_class()->get_name().to_string() != L"FloatProperty") {
-        return false;
-    }
-
-    *(float*)((uint8_t*)object + prop->get_offset() + field->get_offset()) = value;
-    return true;
-} catch (...) {
-    return false;
-}
-
-std::optional<sdk::UObject*> read_struct_object_field(sdk::UObject* object, std::wstring_view struct_property, size_t field_offset) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop = klass->find_property(struct_property);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto prop_type = prop->get_class()->get_name().to_string();
-    if (prop_type != L"StructProperty") {
-        return std::nullopt;
-    }
-
-    const auto value_addr = (uint8_t*)object + prop->get_offset() + field_offset;
-    if (IsBadReadPtr(value_addr, sizeof(sdk::UObject*))) {
-        return std::nullopt;
-    }
-
-    const auto value = *(sdk::UObject**)value_addr;
-    if (value == nullptr || IsBadReadPtr(value, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    return value;
-} catch (...) {
-    return std::nullopt;
-}
-
-std::optional<bool> call_object_bool_function(sdk::UObject* object, std::wstring_view function_name) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    const auto klass = object->get_class();
-    if (klass == nullptr) {
-        return std::nullopt;
-    }
-
-    const auto fn = klass->find_function(function_name);
-    if (fn == nullptr) {
-        return std::nullopt;
-    }
-
-    struct BoolReturnParams {
-        bool ret{false};
-    } params{};
-
-    object->process_event(fn, &params);
-    return params.ret;
-} catch (...) {
-    return std::nullopt;
-}
-
-std::string get_log_object_name(sdk::UObject* object) {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return "null";
-    }
-
-    try {
-        return utility::narrow(object->get_full_name());
-    } catch (...) {
-        return "unresolved";
-    }
-}
-
-bool has_property_named(sdk::UClass* klass, std::wstring_view name) try {
-    return klass != nullptr && klass->find_property(name) != nullptr;
-} catch (...) {
-    return false;
-}
-
-sdk::FBoolProperty* get_bool_property_descriptor(sdk::UClass* klass, std::wstring_view name) try {
-    if (klass == nullptr || IsBadReadPtr(klass, sizeof(void*))) {
-        return nullptr;
-    }
-
-    const auto prop = klass->find_property(name);
-    if (prop == nullptr || prop->get_class() == nullptr) {
-        return nullptr;
-    }
-
-    if (prop->get_class()->get_name().to_string() != L"BoolProperty") {
-        return nullptr;
-    }
-
-    return (sdk::FBoolProperty*)prop;
-} catch (...) {
-    return nullptr;
-}
-
-bool is_subnautica2_save_thumbnail_settings_class(sdk::UClass* klass) try {
-    const auto thumbnails_enabled = get_bool_property_descriptor(klass, L"ThumbnailsEnabled");
-    if (thumbnails_enabled == nullptr) {
-        return false;
-    }
-
-    // Keep the guard narrow to the UWE save-thumbnail settings shape instead
-    // of mutating any random class that happens to expose ThumbnailsEnabled.
-    return has_property_named(klass, L"ThumbnailWidth") ||
-           has_property_named(klass, L"ThumbnailHeight") ||
-           has_property_named(klass, L"ScreenShotTimeout") ||
-           has_property_named(klass, L"AutoSaveThumbnailFrequency");
-} catch (...) {
-    return false;
-}
-
-bool disable_subnautica2_save_thumbnails_on_object(sdk::UObject* object) try {
-    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
-        return false;
-    }
-
-    const auto klass = object->get_class();
-    if (!is_subnautica2_save_thumbnail_settings_class(klass)) {
-        return false;
-    }
-
-    const auto thumbnails_enabled = get_bool_property_descriptor(klass, L"ThumbnailsEnabled");
-    if (thumbnails_enabled == nullptr) {
-        return false;
-    }
-
-    if (thumbnails_enabled->get_value_from_object(object)) {
-        thumbnails_enabled->set_value_in_object(object, false);
-    }
-
-    SPDLOG_INFO(
-        "[Subnautica2][SaveThumbnailGuard] Disabled save thumbnails on {}",
-        get_log_object_name(object));
-    return true;
-} catch (...) {
-    return false;
-}
-
-std::vector<sdk::UObject*> get_live_objects_by_class_name(const std::wstring& class_name) {
-    std::vector<sdk::UObject*> result{};
-
-    const auto klass = sdk::find_uobject<sdk::UClass>(class_name);
-    if (klass == nullptr) {
-        return result;
-    }
-
-    auto& object_hook = UObjectHook::get();
-    object_hook->activate();
-
-    const auto cdo = klass->get_class_default_object();
-    for (auto object_base : object_hook->get_objects_by_class(klass)) {
-        if (object_base == nullptr || object_base == cdo) {
-            continue;
-        }
-
-        auto object = (sdk::UObject*)object_base;
-        if (object_hook->exists(object)) {
-            result.push_back(object);
-        }
-    }
-
-    return result;
-}
-
-bool write_camera_component_fullscreen_aspect(sdk::UObject* camera_component, float aspect_ratio) {
-    if (camera_component == nullptr || !std::isfinite(aspect_ratio) || aspect_ratio <= 0.1f) {
-        return false;
-    }
-
-    bool wrote = false;
-    wrote |= write_object_bool_property(camera_component, L"bConstrainAspectRatio", false);
-    wrote |= write_object_bool_property(camera_component, L"bOverrideAspectRatioAxisConstraint", false);
-    wrote |= write_object_bool_property(camera_component, L"bScaleResolutionWithOverscan", false);
-    wrote |= write_object_bool_property(camera_component, L"bCropOverscan", false);
-    wrote |= write_object_float_property(camera_component, L"AspectRatio", aspect_ratio);
-    wrote |= write_object_float_property(camera_component, L"Overscan", 0.0f);
-    wrote |= write_struct_float_property(camera_component, L"CropSettings", L"AspectRatio", aspect_ratio);
-    return wrote;
-}
-
-sdk::UObject* get_first_live_object_by_class_name(const std::wstring& class_name) {
-    const auto objects = get_live_objects_by_class_name(class_name);
-    return objects.empty() ? nullptr : objects.front();
-}
-
-std::optional<sdk::UObject*> read_pcm_view_target(sdk::APlayerCameraManager* pcm) try {
-    struct ViewTargetResolver {
-        bool attempted{false};
-        bool valid{false};
-        int32_t view_target_offset{-1};
-        int32_t target_offset{-1};
-    };
-
-    static ViewTargetResolver resolver{};
-
-    if (pcm == nullptr) {
-        return std::nullopt;
-    }
-
-    if (!resolver.attempted) {
-        resolver.attempted = true;
-
-        const auto pcm_class = sdk::APlayerCameraManager::static_class();
-        if (pcm_class != nullptr) {
-            if (const auto view_target_prop = (sdk::FStructProperty*)pcm_class->find_property(L"ViewTarget"); view_target_prop != nullptr) {
-                if (const auto view_target_struct = view_target_prop->get_struct(); view_target_struct != nullptr) {
-                    if (const auto target_prop = view_target_struct->find_property(L"Target"); target_prop != nullptr) {
-                        resolver.view_target_offset = view_target_prop->get_offset();
-                        resolver.target_offset = target_prop->get_offset();
-                        resolver.valid = true;
-                    }
-                }
-            }
-        }
-    }
-
-    if (!resolver.valid) {
-        return std::nullopt;
-    }
-
-    const auto target = *(sdk::UObject**)((uint8_t*)pcm + resolver.view_target_offset + resolver.target_offset);
-    if (target == nullptr || IsBadReadPtr(target, sizeof(void*))) {
-        return std::nullopt;
-    }
-
-    return target;
-} catch (...) {
-    return std::nullopt;
-}
-
-sdk::APlayerCameraManager* get_primary_player_camera_manager(sdk::UGameEngine* engine) {
-    auto world = engine != nullptr ? engine->get_world() : nullptr;
-    auto gameplay = sdk::UGameplayStatics::get();
-
-    if (world == nullptr || gameplay == nullptr) {
-        return nullptr;
-    }
-
-    auto pc = gameplay->get_player_controller(world, 0);
-    return pc != nullptr ? pc->get_player_camera_manager() : nullptr;
-}
-
-std::optional<std::wstring> find_shf_bink_url() {
-    static const std::wstring tool_class_name = L"BlueprintGeneratedClass /Game/Cinematic/Asset/BinkPlayer/CS_BinkPlayTool.CS_BinkPlayTool_C";
-    static const std::wstring player_class_name = L"Class /Script/BinkMediaPlayer.BinkMediaPlayer";
-
-    constexpr std::wstring_view target_movie = L"noce_prerender_sc0101_l1_bk";
-
-    for (auto* tool : get_live_objects_by_class_name(tool_class_name)) {
-        for (const auto property_name : {L"CurrentBinkLinkUrl", L"BinkLinkUrl"}) {
-            if (const auto url = read_object_text_property(tool, property_name); url.has_value() && contains_case_insensitive(*url, target_movie)) {
-                return url;
-            }
-        }
-
-        if (const auto player = read_object_property(tool, L"CurrentBinkPlayerSource"); player.has_value() && *player != nullptr) {
-            if (const auto url = read_object_text_property(*player, L"URL"); url.has_value() && contains_case_insensitive(*url, target_movie)) {
-                return url;
-            }
-        }
-    }
-
-    for (auto* player : get_live_objects_by_class_name(player_class_name)) {
-        if (const auto url = read_object_text_property(player, L"URL"); url.has_value() && contains_case_insensitive(*url, target_movie)) {
-            return url;
-        }
-    }
-
-    return std::nullopt;
-}
-
-struct ShfAuto2DDecision {
-    bool should_force{false};
-    std::wstring cutscene{};
-    std::wstring url{};
-    std::wstring target{};
-    std::optional<float> fov{};
-};
-
-ShfAuto2DDecision evaluate_shf_auto_2d(sdk::UGameEngine* engine) {
-    static const std::wstring widget_class_name = L"WidgetBlueprintGeneratedClass /Game/UI/Cutscene/WBP_Cutscene.WBP_Cutscene_C";
-
-    ShfAuto2DDecision decision{};
-
-    sdk::UObject* widget = nullptr;
-    for (auto* candidate : get_live_objects_by_class_name(widget_class_name)) {
-        const auto candidate_cutscene = read_object_text_property(candidate, L"CutsceneName");
-        if (candidate_cutscene.has_value() && *candidate_cutscene == L"LS_SC0101_L1_M") {
-            widget = candidate;
-            decision.cutscene = *candidate_cutscene;
-            break;
-        }
-    }
-
-    if (widget == nullptr) {
-        return decision;
-    }
-
-    const auto bink_url = find_shf_bink_url();
-    if (!bink_url.has_value()) {
-        return decision;
-    }
-
-    decision.url = *bink_url;
-
-    auto* pcm = get_primary_player_camera_manager(engine);
-    decision.fov = read_game_fov(pcm);
-    if (!decision.fov.has_value() || *decision.fov < 37.3f || *decision.fov > 37.7f) {
-        return decision;
-    }
-
-    if (const auto target = read_pcm_view_target(pcm); target.has_value() && *target != nullptr) {
-        decision.target = (*target)->get_full_name();
-        if (!contains_case_insensitive(decision.target, L"CineCameraActor")) {
-            return decision;
-        }
-    }
-
-    decision.should_force = true;
-    return decision;
-}
-
-struct DispatchAuto2DDecision {
-    bool should_force{false};
-    std::string reason{};
-    std::string subsystem{};
-    std::string source{};
-    std::string player{};
-    std::string texture{};
-    std::optional<bool> playing{};
-    std::optional<bool> preparing{};
-    std::optional<bool> buffering{};
-    std::optional<bool> ready{};
-};
-
-bool is_dispatch_media_player_active(sdk::UObject* player, DispatchAuto2DDecision& decision) {
-    decision.playing = call_object_bool_function(player, L"IsPlaying");
-    decision.preparing = call_object_bool_function(player, L"IsPreparing");
-    decision.buffering = call_object_bool_function(player, L"IsBuffering");
-    decision.ready = call_object_bool_function(player, L"IsReady");
-
-    if (decision.playing.value_or(false)) {
-        decision.reason = "media-player-playing";
-        return true;
-    }
-
-    if (decision.preparing.value_or(false) || decision.buffering.value_or(false)) {
-        decision.reason = "media-player-loading";
-        return true;
-    }
-
-    // If UE4 media functions cannot be resolved in this title, trust Dispatch's
-    // explicit ActiveMediaObjects struct instead of leaving movie scenes in HMD space.
-    if (!decision.playing.has_value() && !decision.preparing.has_value() && !decision.buffering.has_value() && !decision.ready.has_value()) {
-        decision.reason = "active-media-objects";
-        return true;
-    }
-
-    return false;
-}
-
-DispatchAuto2DDecision evaluate_dispatch_auto_2d(sdk::UGameEngine* engine) {
-    (void)engine;
-
-    static const std::wstring media_subsystem_class_name = L"Class /Script/AdHocMedia.AdHocMediaSubsystem";
-    static const std::wstring map_transition_widget_class_name =
-        L"WidgetBlueprintGeneratedClass /Game/Shared/Shifts/Gameplay/Widgets/HeroDatabase/SubWidgets/WBP_VideoPlayerMapTransition.WBP_VideoPlayerMapTransition_C";
-
-    DispatchAuto2DDecision decision{};
-
-    for (auto* subsystem : get_live_objects_by_class_name(media_subsystem_class_name)) {
-        const auto source = read_struct_object_field(subsystem, L"ActiveMediaObjects", 0x0);
-        const auto player = read_struct_object_field(subsystem, L"ActiveMediaObjects", 0x8);
-        const auto texture = read_struct_object_field(subsystem, L"ActiveMediaObjects", 0x10);
-
-        if (!source.has_value() && !player.has_value() && !texture.has_value()) {
-            continue;
-        }
-
-        decision.subsystem = get_log_object_name(subsystem);
-        decision.source = source.has_value() ? get_log_object_name(*source) : "null";
-        decision.player = player.has_value() ? get_log_object_name(*player) : "null";
-        decision.texture = texture.has_value() ? get_log_object_name(*texture) : "null";
-
-        if (player.has_value() && *player != nullptr && is_dispatch_media_player_active(*player, decision)) {
-            decision.should_force = true;
-            return decision;
-        }
-    }
-
-    for (auto* widget : get_live_objects_by_class_name(map_transition_widget_class_name)) {
-        const auto in_viewport = call_object_bool_function(widget, L"IsInViewport");
-        const auto visible = call_object_bool_function(widget, L"IsVisible");
-        if (in_viewport.value_or(false) || (!in_viewport.has_value() && visible.value_or(false))) {
-            decision.should_force = true;
-            decision.reason = "video-map-transition-widget";
-            decision.player = get_log_object_name(widget);
-            return decision;
-        }
-    }
-
-    return decision;
-}
-
-struct MixtapeAuto2DDecision {
-    bool should_force{false};
-    std::string reason{};
-    std::string player{};
-    std::string url{};
-    std::optional<bool> playing{};
-    std::optional<bool> preparing{};
-    std::optional<bool> buffering{};
-    std::optional<bool> ready{};
-};
-
-bool looks_like_mixtape_bink_url(std::wstring_view value) {
-    return contains_case_insensitive(value, L".bk2") ||
-           contains_case_insensitive(value, L".bik") ||
-           contains_case_insensitive(value, L"/movies/") ||
-           contains_case_insensitive(value, L"\\movies\\");
-}
-
-std::optional<std::wstring> read_mixtape_bink_url(sdk::UObject* player) {
-    for (const auto property_name : {L"URL", L"Url", L"MediaUrl", L"MediaURL"}) {
-        const auto url = read_object_text_property(player, property_name);
-        if (url.has_value() && !url->empty()) {
-            return url;
-        }
-    }
-
-    return std::nullopt;
-}
-
-bool is_mixtape_bink_media_player_active(sdk::UObject* player, MixtapeAuto2DDecision& decision) {
-    decision.playing = call_object_bool_function(player, L"IsPlaying");
-    decision.preparing = call_object_bool_function(player, L"IsPreparing");
-    decision.buffering = call_object_bool_function(player, L"IsBuffering");
-    decision.ready = call_object_bool_function(player, L"IsReady");
-
-    if (decision.playing.value_or(false)) {
-        decision.reason = "bink-playing";
-        return true;
-    }
-
-    if (decision.preparing.value_or(false) || decision.buffering.value_or(false)) {
-        decision.reason = "bink-loading";
-        return true;
-    }
-
-    return false;
-}
-
-MixtapeAuto2DDecision evaluate_mixtape_auto_2d(sdk::UGameEngine* engine) {
-    (void)engine;
-
-    static const std::wstring bink_player_class_name = L"Class /Script/BinkMediaPlayer.BinkMediaPlayer";
-
-    for (auto* player : get_live_objects_by_class_name(bink_player_class_name)) {
-        MixtapeAuto2DDecision decision{};
-        decision.player = get_log_object_name(player);
-
-        const auto url = read_mixtape_bink_url(player);
-        if (url.has_value()) {
-            decision.url = utility::narrow(*url);
-        }
-
-        if (!url.has_value() || !looks_like_mixtape_bink_url(*url)) {
-            continue;
-        }
-
-        if (is_mixtape_bink_media_player_active(player, decision)) {
-            decision.should_force = true;
-            return decision;
-        }
-    }
-
-    return {};
-}
-}
-
-bool VR::should_ignore_native_stereo_fix_for_avowed_sync() const {
-    if (!is_avowed_executable() || !m_native_stereo_fix->value()) {
-        return false;
-    }
-
-    if (m_rendering_method->value() != RenderingMethod::SYNCHRONIZED) {
-        return false;
-    }
-
-    SPDLOG_INFO_ONCE("[Avowed][NativeStereoFix] Ignoring Native Stereo Fix while Synced Sequential rendering is active");
-    return true;
-}
-
-bool VR::should_force_native_stereo_fix_same_pass() const {
-    if (!m_native_stereo_fix->value() || is_using_afr() || !is_stalker2_executable_cached()) {
-        return false;
-    }
-
-    // Stalker2's UE5.1 render-target handoff is only stable with the native
-    // stereo fix using the original same-pass path. Letting this flip live can
-    // invalidate active render state and crash during cutscene/gameplay RT work.
-    SPDLOG_INFO_ONCE("[Stalker2][NativeStereoFix] Forcing Same Stereo Pass while Native Stereo Fix is enabled");
-    return true;
-}
 
 bool VR::is_native_openxr_async_wait_active() const {
     return is_native_stereo_fix_async_openxr_wait_enabled() &&
@@ -1506,40 +252,6 @@ void VR::native_openxr_async_wait_worker_loop(std::stop_token stop_token) {
     }
 
     m_native_openxr_async_wait_inflight.store(false);
-}
-
-bool VR::is_controller_camera_conflict_guard_active() const {
-    if (!is_controller_camera_conflict_guard_enabled() || !is_hmd_active()) {
-        return false;
-    }
-
-    static const bool is_supported_title = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_controller_camera_guard_candidate_path(*exe_path);
-    }();
-
-    if (!is_supported_title || !is_xinput_gamepad_active_within(std::chrono::seconds(2))) {
-        return false;
-    }
-
-    // Keep the guard out of menus/loading screens. It is intended for gameplay
-    // controller/camera conflicts after a pawn is actually possessed.
-    try {
-        const auto engine = sdk::UGameEngine::get();
-        const auto world = engine != nullptr ? engine->get_world() : nullptr;
-        const auto player_controller = world != nullptr && sdk::UGameplayStatics::get() != nullptr
-            ? sdk::UGameplayStatics::get()->get_player_controller(world, 0)
-            : nullptr;
-
-        if (player_controller == nullptr || player_controller->get_acknowledged_pawn() == nullptr) {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
-
-    SPDLOG_INFO_ONCE("[ControllerCameraGuard] Active: preserving game camera/control rotation while gamepad is active");
-    return true;
 }
 
 // Called when the mod is initialized
@@ -1755,7 +467,7 @@ std::optional<std::string> VR::initialize_openvr() {
         m_openvr->error = *overlay_error;
         return Mod::on_initialize();
     }
-    
+
     m_openvr->loaded = true;
     m_openvr->error = std::nullopt;
     m_runtime = m_openvr;
@@ -1923,7 +635,7 @@ std::optional<std::string> VR::initialize_openxr() {
         strcpy(instance_create_info.applicationInfo.applicationName, application_name.c_str());
         instance_create_info.applicationInfo.applicationName[XR_MAX_APPLICATION_NAME_SIZE - 1] = '\0';
         instance_create_info.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
-        
+
         result = xrCreateInstance(&instance_create_info, &m_openxr->instance);
 
         // we can't convert the result to a string here
@@ -1941,7 +653,7 @@ std::optional<std::string> VR::initialize_openxr() {
     } else {
         spdlog::info("[VR] Found existing openxr instance");
     }
-    
+
     // Step 2: Create a system
     spdlog::info("[VR] Creating OpenXR system");
 
@@ -2083,7 +795,7 @@ std::optional<std::string> VR::initialize_openxr_input() {
 
         return std::nullopt;
     }
-    
+
     for (auto& it : m_action_handles) {
         auto openxr_action_name = m_openxr->translate_openvr_action_name(it.first);
 
@@ -2327,7 +1039,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
     if (!m_spoofed_gamepad_connection) {
         spdlog::info("[VR] Successfully spoofed gamepad connection @ {}", user_index);
     }
-    
+
     m_last_xinput_update = now;
     m_spoofed_gamepad_connection = true;
 
@@ -2481,8 +1193,8 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
     state->Gamepad.sThumbRY = (int16_t)std::clamp<float>(((float)state->Gamepad.sThumbRY + right_joystick_axis.y * 32767.0f), -32767.0f, 32767.0f);
 
     bool already_dpad_shifted{false};
-    bool true_left_joystick_as_dpad{false}; 
-    bool true_right_joystick_as_dpad{false}; 
+    bool true_left_joystick_as_dpad{false};
+    bool true_right_joystick_as_dpad{false};
 
     if (m_dpad_gesture_state.direction != DPadGestureState::Direction::NONE) {
         already_dpad_shifted = true;
@@ -2531,9 +1243,9 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
             button_touch_inactive = !is_action_active_any_joystick(m_action_a_button_touch_left) && !is_action_active_any_joystick(m_action_b_button_touch_left);
         }
 
-        // Toggling UEVR menu using L3 + R3 has higher priority 
-        const auto dpad_active = (is_right_joystick_click_down &&  (dpad_method == DPadMethod::RIGHT_JOYSTICK_CLICK) && (! is_left_joystick_click_down)) 
-        || (is_left_joystick_click_down &&  (dpad_method == DPadMethod::LEFT_JOYSTICK_CLICK) && (! is_right_joystick_click_down)) 
+        // Toggling UEVR menu using L3 + R3 has higher priority
+        const auto dpad_active = (is_right_joystick_click_down &&  (dpad_method == DPadMethod::RIGHT_JOYSTICK_CLICK) && (! is_left_joystick_click_down))
+        || (is_left_joystick_click_down &&  (dpad_method == DPadMethod::LEFT_JOYSTICK_CLICK) && (! is_right_joystick_click_down))
         || (button_touch_inactive && thumbrest_check) || dpad_method == DPadMethod::LEFT_JOYSTICK || dpad_method == DPadMethod::RIGHT_JOYSTICK;
 
         if (dpad_active) {
@@ -2556,7 +1268,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
                 tx = true_right_joystick_axis.x;
                 true_right_joystick_as_dpad = true;
             }
-            
+
             if (ty >= 0.5f) {
                 state->Gamepad.wButtons |= XINPUT_GAMEPAD_DPAD_UP;
             }
@@ -2577,7 +1289,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
             {
                 state->Gamepad.wButtons &= ~XINPUT_GAMEPAD_RIGHT_THUMB;
             }
-            else if(dpad_method == DPadMethod::LEFT_JOYSTICK_CLICK) 
+            else if(dpad_method == DPadMethod::LEFT_JOYSTICK_CLICK)
             {
                 state->Gamepad.wButtons &= ~XINPUT_GAMEPAD_LEFT_THUMB;
             }
@@ -2637,7 +1349,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
                     }
                     // Requiring the joystick returning to its natrual position at least once before another snapturn,
                     // even if no snapturn is actually run
-                    m_was_snapturn_run_on_input = true; 
+                    m_was_snapturn_run_on_input = true;
                 }
             }
         }
@@ -2660,7 +1372,7 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
             }
         }
     }
-    
+
     // Do it again after all the VR buttons have been spoofed
     update_imgui_state_from_xinput_state(*state, true);
 }
@@ -2889,7 +1601,7 @@ void VR::update_imgui_state_from_xinput_state(XINPUT_STATE& state, bool is_vr_co
                     save_camera(0);
                 }
                 break;
-            
+
             case 1:
                 if (gamepad.wButtons & XINPUT_GAMEPAD_B) {
                     load_camera(2);
@@ -2905,7 +1617,7 @@ void VR::update_imgui_state_from_xinput_state(XINPUT_STATE& state, bool is_vr_co
                     load_camera(0);
                 }
 
-                break; 
+                break;
             case 0:
             default:
                 if (gamepad.wButtons & XINPUT_GAMEPAD_B) {
@@ -2923,7 +1635,7 @@ void VR::update_imgui_state_from_xinput_state(XINPUT_STATE& state, bool is_vr_co
                 if (gamepad.wButtons & XINPUT_GAMEPAD_X) {
                     this->set_standing_origin(this->get_position(0));
                 }
-                
+
                 break;
             }
 
@@ -2999,653 +1711,17 @@ void VR::update_imgui_state_from_xinput_state(XINPUT_STATE& state, bool is_vr_co
     ZeroMemory(&state.Gamepad, sizeof(XINPUT_GAMEPAD));
 }
 
-vrmod::UILayerPoseBasis VR::build_ui_layer_pose_basis(uint32_t render_frame_count) {
-    vrmod::UILayerPoseBasis basis{};
-    basis.render_frame_count = render_frame_count;
-    basis.capture_time = std::chrono::steady_clock::now();
-    basis.rotation_offset = get_rotation_offset();
-    basis.pre_flattened_rotation = get_pre_flattened_rotation();
-    basis.standing_origin = get_standing_origin();
-
-    if (m_openxr == nullptr || get_runtime() == nullptr || !get_runtime()->is_openxr()) {
-        return basis;
-    }
-
-    {
-        std::scoped_lock lock{m_openxr->sync_assignment_mtx};
-        basis.openxr_internal_frame_count = m_openxr->internal_frame_count;
-        basis.openxr_internal_render_frame_count = m_openxr->internal_render_frame_count;
-
-        const auto& state = m_openxr->pipeline_states[render_frame_count % runtimes::OpenXR::QUEUE_SIZE];
-        basis.predicted_display_time = state.frame_state.predictedDisplayTime != 0
-            ? state.frame_state.predictedDisplayTime
-            : m_openxr->frame_state.predictedDisplayTime;
-    }
-
-    basis.pose_update_frame_count = m_openxr->last_pose_update_frame_count;
-    basis.pose_update_time = m_openxr->last_successful_pose_update;
-    basis.valid = m_openxr->got_first_poses && m_openxr->got_first_valid_poses;
-    basis.stabilizer_allowed =
-        basis.valid &&
-        is_ui_layer_pose_stabilizer_enabled() &&
-        is_ue_5_7_or_newer_for_ui_layer_pose() &&
-        m_openxr->stage_space != XR_NULL_HANDLE &&
-        m_openxr->view_space != XR_NULL_HANDLE;
-
-    return basis;
-}
-
-VR::UILayerPoseTelemetrySnapshot VR::get_ui_layer_pose_telemetry_snapshot() {
-    std::scoped_lock lock{m_ui_layer_pose_telemetry_mtx};
-    return m_ui_layer_pose_snapshot;
-}
-
-void VR::record_ui_layer_pose_sample(
-    const vrmod::UILayerPoseBasis* basis,
-    runtimes::OpenXR::SwapchainIndex swapchain,
-    XrEyeVisibility eye,
-    bool follow_view,
-    bool stabilizer_used,
-    const glm::quat& hmd_rotation,
-    const glm::quat& live_ui_rotation,
-    const glm::quat& applied_rotation,
-    const char* refusal_reason)
-{
-    if (!is_ui_layer_pose_telemetry_enabled() && !is_ui_layer_pose_stabilizer_enabled()) {
-        return;
-    }
-
-    const auto now = std::chrono::steady_clock::now();
-    const auto basis_valid = basis != nullptr && basis->valid;
-    const auto swapchain_index = (uint32_t)swapchain;
-    const auto last_ui_frame = m_is_d3d12 ? m_d3d12.openxr().get_last_acquired_frame(swapchain_index) : 0;
-    const auto ui_image_age_frames = last_ui_frame == 0 ? -1 : std::max<int>(0, m_frame_count - (int)last_ui_frame);
-    const auto pose_age_ms = basis != nullptr ? hitch_age_ms(now, basis->pose_update_time) : -1;
-    const auto orientation_delta_deg = quat_delta_degrees(live_ui_rotation, applied_rotation);
-    double hmd_angular_velocity_deg_s = 0.0;
-
-    std::scoped_lock lock{m_ui_layer_pose_telemetry_mtx};
-
-    if (m_ui_layer_pose_last_rotation_time.time_since_epoch().count() != 0) {
-        const auto elapsed = std::chrono::duration<double>{now - m_ui_layer_pose_last_rotation_time}.count();
-        if (elapsed > 0.0001) {
-            hmd_angular_velocity_deg_s = quat_delta_degrees(m_ui_layer_pose_last_live_rotation, hmd_rotation) / elapsed;
-        }
-    }
-
-    m_ui_layer_pose_last_live_rotation = hmd_rotation;
-    m_ui_layer_pose_last_rotation_time = now;
-
-    auto& sample = m_ui_layer_pose_samples[m_ui_layer_pose_cursor];
-    sample = {};
-    sample.timestamp = now;
-    sample.sequence = ++m_ui_layer_pose_sequence;
-    sample.render_frame_count = basis != nullptr ? basis->render_frame_count : (uint32_t)m_render_frame_count;
-    sample.openxr_internal_frame_count = basis != nullptr ? basis->openxr_internal_frame_count : 0;
-    sample.openxr_internal_render_frame_count = basis != nullptr ? basis->openxr_internal_render_frame_count : 0;
-    sample.pose_update_frame_count = basis != nullptr ? basis->pose_update_frame_count : 0;
-    sample.swapchain_index = swapchain_index;
-    sample.eye = (int)eye;
-    sample.basis_valid = basis_valid;
-    sample.stabilizer_allowed = basis != nullptr && basis->stabilizer_allowed;
-    sample.stabilizer_used = stabilizer_used;
-    sample.follow_view = follow_view;
-    sample.ui_image_age_frames = ui_image_age_frames;
-    sample.pose_age_ms = pose_age_ms;
-    sample.orientation_delta_deg = orientation_delta_deg;
-    sample.hmd_angular_velocity_deg_s = hmd_angular_velocity_deg_s;
-    sample.refusal_reason = refusal_reason != nullptr ? refusal_reason : "none";
-    m_ui_layer_pose_cursor = (m_ui_layer_pose_cursor + 1) % UI_LAYER_POSE_TELEMETRY_RING_SIZE;
-
-    auto& snapshot = m_ui_layer_pose_snapshot;
-    ++snapshot.sample_count;
-    if (stabilizer_used) {
-        ++snapshot.stabilizer_used_count;
-    }
-    if (!basis_valid) {
-        ++snapshot.invalid_basis_count;
-    }
-    if (follow_view) {
-        ++snapshot.follow_view_count;
-    }
-
-    snapshot.last_render_frame_count = sample.render_frame_count;
-    snapshot.last_openxr_internal_frame_count = sample.openxr_internal_frame_count;
-    snapshot.last_openxr_internal_render_frame_count = sample.openxr_internal_render_frame_count;
-    snapshot.last_pose_update_frame_count = sample.pose_update_frame_count;
-    snapshot.last_swapchain_index = sample.swapchain_index;
-    snapshot.last_eye = sample.eye;
-    snapshot.last_basis_valid = sample.basis_valid;
-    snapshot.last_stabilizer_used = sample.stabilizer_used;
-    snapshot.last_follow_view = sample.follow_view;
-    snapshot.last_ui_image_age_frames = sample.ui_image_age_frames;
-    snapshot.last_pose_age_ms = sample.pose_age_ms;
-    snapshot.last_orientation_delta_deg = sample.orientation_delta_deg;
-    snapshot.last_hmd_angular_velocity_deg_s = sample.hmd_angular_velocity_deg_s;
-    snapshot.max_orientation_delta_deg = std::max(snapshot.max_orientation_delta_deg, sample.orientation_delta_deg);
-    snapshot.max_hmd_angular_velocity_deg_s = std::max(snapshot.max_hmd_angular_velocity_deg_s, sample.hmd_angular_velocity_deg_s);
-
-    if (is_ui_layer_pose_telemetry_enabled() &&
-        (m_ui_layer_pose_last_log.time_since_epoch().count() == 0 || now - m_ui_layer_pose_last_log >= std::chrono::seconds(5)))
-    {
-        SPDLOG_INFO(
-            "[OpenXR][ui-layer-pose] samples={} stabilizer_used={} invalid_basis={} follow_view={} last_frame={} pose_age_ms={} ui_image_age_frames={} orient_delta_deg={:.2f} hmd_ang_vel_deg_s={:.2f} max_delta_deg={:.2f} max_hmd_ang_vel_deg_s={:.2f}",
-            snapshot.sample_count,
-            snapshot.stabilizer_used_count,
-            snapshot.invalid_basis_count,
-            snapshot.follow_view_count,
-            snapshot.last_render_frame_count,
-            snapshot.last_pose_age_ms,
-            snapshot.last_ui_image_age_frames,
-            snapshot.last_orientation_delta_deg,
-            snapshot.last_hmd_angular_velocity_deg_s,
-            snapshot.max_orientation_delta_deg,
-            snapshot.max_hmd_angular_velocity_deg_s);
-        m_ui_layer_pose_last_log = now;
-    }
-}
-
-void VR::record_hitch_snapshot_sample(std::chrono::steady_clock::time_point now) {
-    auto& sample = m_hitch_snapshot_samples[m_hitch_snapshot_cursor];
-    sample = {};
-    sample.timestamp = now;
-    sample.sequence = ++m_hitch_snapshot_sequence;
-    sample.frame_count = m_frame_count;
-    sample.render_frame_count = m_render_frame_count;
-    sample.rendering_method = m_rendering_method != nullptr ? m_rendering_method->value() : -1;
-    sample.hmd_active = is_hmd_active();
-    sample.runtime_loaded = get_runtime() != nullptr && get_runtime()->loaded;
-    sample.runtime_ready = get_runtime() != nullptr && get_runtime()->ready();
-    sample.using_controllers = is_using_controllers();
-    sample.using_afr = is_using_afr();
-    sample.native_stereo_fix = is_native_stereo_fix_enabled();
-    sample.submitted = m_submitted;
-    sample.framework_frame_age_ms = g_framework == nullptr ? -1 : hitch_age_ms(now, g_framework->get_last_framework_on_frame_time());
-    sample.mod_frame_age_ms = hitch_age_ms(now, m_last_mod_frame);
-    sample.d3d12_frame_age_ms = hitch_age_ms(now, m_d3d12.get_last_on_frame_time());
-    sample.cvar_change_counter = m_cvar_manager != nullptr ? m_cvar_manager->get_change_counter() : 0;
-    sample.d3d12 = m_is_d3d12 ? m_d3d12.get_hitch_frame_snapshot(this) : vrmod::D3D12Component::HitchFrameSnapshot{};
-    sample.ui_layer_pose = get_ui_layer_pose_telemetry_snapshot();
-
-    if (const auto runtime = get_runtime(); runtime != nullptr && runtime->is_openxr()) {
-        if (const auto openxr = get_openxr_runtime(); openxr != nullptr) {
-            sample.xr_wait_age_ms = hitch_age_ms(now, openxr->last_successful_wait_frame);
-            sample.xr_begin_age_ms = hitch_age_ms(now, openxr->last_successful_begin_frame);
-            sample.xr_end_age_ms = hitch_age_ms(now, openxr->last_successful_end_frame);
-            sample.pose_update_age_ms = hitch_age_ms(now, openxr->last_successful_pose_update);
-            sample.session_state = (int)openxr->session_state;
-            sample.session_ready = openxr->session_ready;
-            sample.frame_synced = openxr->frame_synced;
-            sample.frame_began = openxr->frame_began;
-            sample.got_first_poses = openxr->got_first_poses;
-            sample.got_first_valid_poses = openxr->got_first_valid_poses;
-            sample.accepted_relaxed_startup_poses = openxr->accepted_relaxed_startup_poses;
-        }
-    }
-
-    m_hitch_snapshot_cursor = (m_hitch_snapshot_cursor + 1) % HITCH_SNAPSHOT_RING_SIZE;
-    if (m_hitch_snapshot_cursor == 0) {
-        m_hitch_snapshot_wrapped = true;
-    }
-}
-
-void VR::enqueue_hitch_snapshot_dump(HitchSnapshotDumpRequest&& request) {
-    {
-        std::scoped_lock lock{m_hitch_snapshot_writer_mutex};
-
-        if (!m_hitch_snapshot_writer_thread.joinable()) {
-            m_hitch_snapshot_writer_thread = std::jthread([this](std::stop_token stop_token) {
-                hitch_snapshot_writer_loop(stop_token);
-            });
-        }
-
-        while (m_hitch_snapshot_dump_queue.size() >= HITCH_SNAPSHOT_MAX_PENDING_DUMPS) {
-            m_hitch_snapshot_dump_queue.pop_front();
-        }
-
-        m_hitch_snapshot_dump_queue.emplace_back(std::move(request));
-    }
-
-    m_hitch_snapshot_writer_cv.notify_one();
-}
-
-void VR::hitch_snapshot_writer_loop(std::stop_token stop_token) {
-    while (true) {
-        HitchSnapshotDumpRequest request{};
-
-        {
-            std::unique_lock lock{m_hitch_snapshot_writer_mutex};
-            m_hitch_snapshot_writer_cv.wait(lock, [this, &stop_token]() {
-                return stop_token.stop_requested() || !m_hitch_snapshot_dump_queue.empty();
-            });
-
-            if (stop_token.stop_requested()) {
-                m_hitch_snapshot_dump_queue.clear();
-                return;
-            }
-
-            request = std::move(m_hitch_snapshot_dump_queue.front());
-            m_hitch_snapshot_dump_queue.pop_front();
-        }
-
-        write_hitch_snapshot_request(std::move(request));
-    }
-}
-
-void VR::stop_hitch_snapshot_writer() {
-    if (!m_hitch_snapshot_writer_thread.joinable()) {
-        return;
-    }
-
-    m_hitch_snapshot_writer_thread.request_stop();
-    m_hitch_snapshot_writer_cv.notify_all();
-    m_hitch_snapshot_writer_thread.join();
-
-    std::scoped_lock lock{m_hitch_snapshot_writer_mutex};
-    m_hitch_snapshot_dump_queue.clear();
-}
-
-void VR::write_hitch_snapshot_request(HitchSnapshotDumpRequest&& request) try {
-    std::filesystem::create_directories(request.path.parent_path());
-
-    json samples = json::array();
-
-    for (const auto& sample : request.samples) {
-        if (sample.timestamp.time_since_epoch().count() == 0) {
-            continue;
-        }
-
-        const auto& d3d12 = sample.d3d12;
-        const auto& ui_layer_pose = sample.ui_layer_pose;
-        samples.push_back({
-            {"age_ms", hitch_age_ms(request.dump_time, sample.timestamp)},
-            {"sequence", sample.sequence},
-            {"frame_count", sample.frame_count},
-            {"render_frame_count", sample.render_frame_count},
-            {"rendering_method", sample.rendering_method},
-            {"hmd_active", sample.hmd_active},
-            {"runtime_loaded", sample.runtime_loaded},
-            {"runtime_ready", sample.runtime_ready},
-            {"using_controllers", sample.using_controllers},
-            {"using_afr", sample.using_afr},
-            {"native_stereo_fix", sample.native_stereo_fix},
-            {"submitted", sample.submitted},
-            {"framework_frame_age_ms", sample.framework_frame_age_ms},
-            {"mod_frame_age_ms", sample.mod_frame_age_ms},
-            {"d3d12_frame_age_ms", sample.d3d12_frame_age_ms},
-            {"xr_wait_age_ms", sample.xr_wait_age_ms},
-            {"xr_begin_age_ms", sample.xr_begin_age_ms},
-            {"xr_end_age_ms", sample.xr_end_age_ms},
-            {"pose_update_age_ms", sample.pose_update_age_ms},
-            {"session_state", sample.session_state},
-            {"session_ready", sample.session_ready},
-            {"frame_synced", sample.frame_synced},
-            {"frame_began", sample.frame_began},
-            {"got_first_poses", sample.got_first_poses},
-            {"got_first_valid_poses", sample.got_first_valid_poses},
-            {"accepted_relaxed_startup_poses", sample.accepted_relaxed_startup_poses},
-            {"cvar_change_counter", sample.cvar_change_counter},
-            {"d3d12", {
-                {"initialized", d3d12.initialized},
-                {"force_reset", d3d12.force_reset},
-                {"last_afr_state", d3d12.last_afr_state},
-                {"has_prev_backbuffer", d3d12.has_prev_backbuffer},
-                {"has_game_tex", d3d12.has_game_tex},
-                {"has_ui_tex", d3d12.has_ui_tex},
-                {"has_scene_capture_tex", d3d12.has_scene_capture_tex},
-                {"backbuffer_width", d3d12.backbuffer_width},
-                {"backbuffer_height", d3d12.backbuffer_height},
-                {"ui_extent_width", d3d12.ui_extent_width},
-                {"ui_extent_height", d3d12.ui_extent_height},
-                {"hmd_width", d3d12.hmd_width},
-                {"hmd_height", d3d12.hmd_height},
-                {"openxr_swapchain_count", d3d12.openxr_swapchain_count},
-                {"ui_swapchain_width", d3d12.ui_swapchain_width},
-                {"ui_swapchain_height", d3d12.ui_swapchain_height},
-                {"eye_swapchain_width", d3d12.eye_swapchain_width},
-                {"eye_swapchain_height", d3d12.eye_swapchain_height},
-                {"depth_swapchain_width", d3d12.depth_swapchain_width},
-                {"depth_swapchain_height", d3d12.depth_swapchain_height},
-                {"swapchain_recreate_count", d3d12.swapchain_recreate_count},
-                {"last_swapchain_recreate_reasons", d3d12.last_swapchain_recreate_reasons},
-                {"perf_on_frame_count", d3d12.perf_on_frame_count},
-                {"perf_on_frame_avg_ms", d3d12.perf_on_frame_avg_ms},
-                {"perf_on_frame_max_ms", d3d12.perf_on_frame_max_ms},
-                {"perf_ui_copy_count", d3d12.perf_ui_copy_count},
-                {"perf_ui_copy_avg_ms", d3d12.perf_ui_copy_avg_ms},
-                {"perf_ui_copy_max_ms", d3d12.perf_ui_copy_max_ms},
-                {"perf_swapchain_copy_count", d3d12.perf_swapchain_copy_count},
-                {"perf_swapchain_copy_avg_ms", d3d12.perf_swapchain_copy_avg_ms},
-                {"perf_swapchain_copy_max_ms", d3d12.perf_swapchain_copy_max_ms},
-                {"perf_openxr_submit_count", d3d12.perf_openxr_submit_count},
-                {"perf_openxr_submit_avg_ms", d3d12.perf_openxr_submit_avg_ms},
-                {"perf_openxr_submit_max_ms", d3d12.perf_openxr_submit_max_ms},
-            }},
-            {"ui_layer_pose", {
-                {"sample_count", ui_layer_pose.sample_count},
-                {"stabilizer_used_count", ui_layer_pose.stabilizer_used_count},
-                {"invalid_basis_count", ui_layer_pose.invalid_basis_count},
-                {"follow_view_count", ui_layer_pose.follow_view_count},
-                {"last_render_frame_count", ui_layer_pose.last_render_frame_count},
-                {"last_openxr_internal_frame_count", ui_layer_pose.last_openxr_internal_frame_count},
-                {"last_openxr_internal_render_frame_count", ui_layer_pose.last_openxr_internal_render_frame_count},
-                {"last_pose_update_frame_count", ui_layer_pose.last_pose_update_frame_count},
-                {"last_swapchain_index", ui_layer_pose.last_swapchain_index},
-                {"last_eye", ui_layer_pose.last_eye},
-                {"last_basis_valid", ui_layer_pose.last_basis_valid},
-                {"last_stabilizer_used", ui_layer_pose.last_stabilizer_used},
-                {"last_follow_view", ui_layer_pose.last_follow_view},
-                {"last_ui_image_age_frames", ui_layer_pose.last_ui_image_age_frames},
-                {"last_pose_age_ms", ui_layer_pose.last_pose_age_ms},
-                {"last_orientation_delta_deg", ui_layer_pose.last_orientation_delta_deg},
-                {"max_orientation_delta_deg", ui_layer_pose.max_orientation_delta_deg},
-                {"last_hmd_angular_velocity_deg_s", ui_layer_pose.last_hmd_angular_velocity_deg_s},
-                {"max_hmd_angular_velocity_deg_s", ui_layer_pose.max_hmd_angular_velocity_deg_s},
-            }},
-        });
-    }
-
-    const auto& latest_cvar_change = request.latest_cvar_change;
-    json root{
-        {"type", "uevr_hitch_snapshot"},
-        {"tick_gap_ms", request.tick_gap_ms},
-        {"suspected_stall", request.suspected_stall},
-        {"sample_count", samples.size()},
-        {"latest_cvar_change", {
-            {"counter", latest_cvar_change.counter},
-            {"name", latest_cvar_change.name},
-            {"value", latest_cvar_change.value},
-            {"source", latest_cvar_change.source},
-        }},
-        {"samples", std::move(samples)},
-    };
-
-    std::ofstream file{request.path};
-    file << root.dump(2);
-    SPDLOG_INFO("[VR][hitch-snapshot] Wrote {}", request.path.string());
-} catch (const std::exception& e) {
-    SPDLOG_WARN("[VR][hitch-snapshot] Failed to write snapshot: {}", e.what());
-} catch (...) {
-    SPDLOG_WARN("[VR][hitch-snapshot] Failed to write snapshot");
-}
-
-void VR::dump_hitch_snapshot(std::chrono::steady_clock::duration tick_gap, const char* suspected_stall) try {
-    if (!m_enable_hitch_diagnostics->value()) {
-        return;
-    }
-
-    const auto now = std::chrono::steady_clock::now();
-
-    if (m_last_hitch_snapshot_dump.time_since_epoch().count() != 0 && now - m_last_hitch_snapshot_dump < std::chrono::seconds(30)) {
-        return;
-    }
-
-    m_last_hitch_snapshot_dump = now;
-    const auto dir = Framework::get_persistent_dir("hitch_snapshots");
-    const auto path = dir / std::format(
-        "hitch_snapshot_{}_{}.json",
-        hitch_timestamp_suffix(),
-        ++m_hitch_snapshot_dump_count);
-
-    const auto count = m_hitch_snapshot_wrapped ? HITCH_SNAPSHOT_RING_SIZE : m_hitch_snapshot_cursor;
-    const auto start = m_hitch_snapshot_wrapped ? m_hitch_snapshot_cursor : 0;
-    HitchSnapshotDumpRequest request{};
-    request.path = path;
-    request.dump_time = now;
-    request.tick_gap_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tick_gap).count();
-    request.suspected_stall = suspected_stall != nullptr ? suspected_stall : "unknown";
-    request.latest_cvar_change = m_cvar_manager != nullptr ? m_cvar_manager->get_change_snapshot() : CVarManager::ChangeSnapshot{};
-    request.samples.reserve(count);
-
-    for (size_t i = 0; i < count; ++i) {
-        const auto& sample = m_hitch_snapshot_samples[(start + i) % HITCH_SNAPSHOT_RING_SIZE];
-
-        if (sample.timestamp.time_since_epoch().count() == 0) {
-            continue;
-        }
-
-        request.samples.push_back(sample);
-    }
-
-    enqueue_hitch_snapshot_dump(std::move(request));
-} catch (const std::exception& e) {
-    SPDLOG_WARN("[VR][hitch-snapshot] Failed to queue snapshot: {}", e.what());
-} catch (...) {
-    SPDLOG_WARN("[VR][hitch-snapshot] Failed to queue snapshot");
-}
-
-void VR::note_stalker2_transition_stress(const char* reason) {
-    if (!m_is_d3d12 || m_openxr == nullptr || get_runtime() == nullptr ||
-        !get_runtime()->is_openxr() || !is_stalker2_executable_cached() ||
-        !m_openxr->got_first_valid_poses)
-    {
-        return;
-    }
-
-    constexpr auto STRESS_HOLD = std::chrono::milliseconds{350};
-    constexpr auto NEW_BURST_GAP_MS = 1000LL;
-
-    const auto now = std::chrono::steady_clock::now();
-    const auto now_ms = steady_clock_ms(now);
-    const auto previous_stress_ms = m_stalker2_transition_last_stress_ms.exchange(now_ms);
-
-    if (previous_stress_ms == 0 || now_ms - previous_stress_ms > NEW_BURST_GAP_MS) {
-        m_stalker2_transition_first_stress_ms.store(now_ms);
-        m_stalker2_transition_last_defer_ms.store(0);
-        m_stalker2_transition_deferred_frames.store(0);
-    }
-
-    const auto until_ms = steady_clock_ms(now + STRESS_HOLD);
-    auto current_until_ms = m_stalker2_transition_stress_until_ms.load();
-
-    while (until_ms > current_until_ms &&
-        !m_stalker2_transition_stress_until_ms.compare_exchange_weak(current_until_ms, until_ms))
-    {
-    }
-
-    const auto events = m_stalker2_transition_stress_events.fetch_add(1) + 1;
-
-    SPDLOG_INFO_EVERY_N_SEC(
-        2,
-        "[Stalker2][OpenXR] Transition stress noted reason={} events={} hold_until_ms={}",
-        reason != nullptr ? reason : "unknown",
-        events,
-        m_stalker2_transition_stress_until_ms.load());
-}
-
-bool VR::should_defer_stalker2_openxr_frame_for_transition(const char* reason) {
-    if (!m_is_d3d12 || m_openxr == nullptr || get_runtime() == nullptr ||
-        !get_runtime()->is_openxr() || !is_stalker2_executable_cached() ||
-        !m_openxr->can_run_frame_loop() || !m_openxr->got_first_valid_poses)
-    {
-        return false;
-    }
-
-    if (!STALKER2_TRANSITION_OPENXR_DEFERS_ENABLED) {
-        SPDLOG_INFO_ONCE(
-            "[Stalker2][OpenXR] Transition defer guard disabled for A/B; leaving stable RT copy and stress diagnostics active");
-        return false;
-    }
-
-    // Never interfere with an already-open or already-waited frame. The guard is
-    // only for avoiding a new blocking xrWaitFrame while UE5.1 is in a known
-    // Stalker2 cutscene/gameplay render-target transition.
-    if (m_openxr->frame_began || m_openxr->frame_synced) {
-        return false;
-    }
-
-    constexpr auto MAX_BURST_DEFER_MS = 700LL;
-    constexpr auto MIN_DEFER_SPACING_MS = 16LL;
-    constexpr auto MAX_DEFERRED_FRAMES_PER_BURST = 1u;
-    constexpr auto MAX_LAST_END_AGE_MS = 250LL;
-
-    const auto now_ms = steady_clock_ms();
-    const auto until_ms = m_stalker2_transition_stress_until_ms.load();
-    const auto now = std::chrono::steady_clock::now();
-
-    if (until_ms == 0 || now_ms > until_ms) {
-        return false;
-    }
-
-    if (!m_openxr->ever_submitted ||
-        m_openxr->last_successful_end_frame.time_since_epoch().count() == 0 ||
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_openxr->last_successful_end_frame).count() > MAX_LAST_END_AGE_MS)
-    {
-        return false;
-    }
-
-    const auto first_stress_ms = m_stalker2_transition_first_stress_ms.load();
-
-    if (first_stress_ms == 0 || now_ms - first_stress_ms > MAX_BURST_DEFER_MS) {
-        return false;
-    }
-
-    if (m_stalker2_transition_deferred_frames.load() >= MAX_DEFERRED_FRAMES_PER_BURST) {
-        return false;
-    }
-
-    const auto previous_defer_ms = m_stalker2_transition_last_defer_ms.exchange(now_ms);
-
-    if (previous_defer_ms != 0 && now_ms - previous_defer_ms < MIN_DEFER_SPACING_MS) {
-        return false;
-    }
-
-    const auto deferred = m_stalker2_transition_deferred_frames.fetch_add(1) + 1;
-
-    SPDLOG_WARNING_EVERY_N_SEC(
-        1,
-        "[Stalker2][OpenXR] Deferring one D3D12 OpenXR submit during transition stress reason={} deferred={} until_ms={} first_stress_age_ms={}",
-        reason != nullptr ? reason : "unknown",
-        deferred,
-        until_ms,
-        now_ms - first_stress_ms);
-
-    return true;
-}
 
 void VR::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
     ZoneScopedN(__FUNCTION__);
 
     const auto now = std::chrono::steady_clock::now();
     const auto previous_engine_tick = m_last_engine_tick;
-    const bool hitch_diagnostics_enabled = m_enable_hitch_diagnostics->value();
-
     m_cvar_manager->on_pre_engine_tick(engine, delta);
-    if (!hitch_diagnostics_enabled) {
-        if (m_hitch_diagnostics_enabled_last_frame) {
-            stop_hitch_snapshot_writer();
-            m_hitch_snapshot_cursor = 0;
-            m_hitch_snapshot_wrapped = false;
-            m_last_hitch_snapshot_sample = {};
-        }
 
-        m_hitch_diagnostics_enabled_last_frame = false;
-    } else if (m_last_hitch_snapshot_sample.time_since_epoch().count() == 0 ||
-        now - m_last_hitch_snapshot_sample >= HITCH_SNAPSHOT_SAMPLE_INTERVAL)
-    {
-        m_hitch_diagnostics_enabled_last_frame = true;
-        record_hitch_snapshot_sample(now);
-        m_last_hitch_snapshot_sample = now;
-    }
+
+
     m_last_engine_tick = now;
-
-    if (hitch_diagnostics_enabled && previous_engine_tick.time_since_epoch().count() != 0) {
-        const auto tick_gap = now - previous_engine_tick;
-
-        if (tick_gap > std::chrono::milliseconds(250) &&
-            (m_last_tick_gap_log.time_since_epoch().count() == 0 || now - m_last_tick_gap_log >= std::chrono::seconds(1)))
-        {
-            m_last_tick_gap_log = now;
-
-            if (const auto runtime = get_runtime(); runtime != nullptr && runtime->is_openxr()) {
-                if (const auto openxr = get_openxr_runtime(); openxr != nullptr) {
-                    const auto mod_frame_gap_ms = m_last_mod_frame.time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_mod_frame).count();
-                    const auto framework_frame_gap_ms = (g_framework == nullptr || g_framework->get_last_framework_on_frame_time().time_since_epoch().count() == 0)
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - g_framework->get_last_framework_on_frame_time()).count();
-                    const auto d3d12_frame_gap_ms = m_d3d12.get_last_on_frame_time().time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - m_d3d12.get_last_on_frame_time()).count();
-                    const auto xr_begin_gap_ms = openxr->last_successful_begin_frame.time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - openxr->last_successful_begin_frame).count();
-                    const auto xr_end_gap_ms = openxr->last_successful_end_frame.time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - openxr->last_successful_end_frame).count();
-                    const auto xr_wait_gap_ms = openxr->last_successful_wait_frame.time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - openxr->last_successful_wait_frame).count();
-                    const auto pose_update_gap_ms = openxr->last_successful_pose_update.time_since_epoch().count() == 0
-                        ? -1ll
-                        : std::chrono::duration_cast<std::chrono::milliseconds>(now - openxr->last_successful_pose_update).count();
-
-                    if (openxr->session_state == XR_SESSION_STATE_FOCUSED) {
-                        ++m_post_focus_tick_gap_count;
-
-                        if (tick_gap > std::chrono::seconds(1)) {
-                            ++m_post_focus_long_tick_gap_count;
-                        }
-                    }
-
-                    spdlog::warn(
-                        "[VR] Large engine tick gap detected: {} ms. mod_frame={}ms framework_frame={}ms d3d12_frame={}ms xrBegin={}ms xrEnd={}ms session_state={} session_ready={} frame_synced={} frame_began={} got_first_poses={} got_first_valid_poses={} post_focus_gaps={} post_focus_long_gaps={}",
-                        std::chrono::duration_cast<std::chrono::milliseconds>(tick_gap).count(),
-                        mod_frame_gap_ms,
-                        framework_frame_gap_ms,
-                        d3d12_frame_gap_ms,
-                        xr_begin_gap_ms,
-                        xr_end_gap_ms,
-                        openxr->get_session_state_string(openxr->session_state),
-                        openxr->session_ready,
-                        openxr->frame_synced,
-                        openxr->frame_began,
-                        openxr->got_first_poses,
-                        openxr->got_first_valid_poses,
-                        m_post_focus_tick_gap_count,
-                        m_post_focus_long_tick_gap_count
-                    );
-
-                    if (openxr->session_state == XR_SESSION_STATE_FOCUSED) {
-                        const char* suspected_stall = "mixed_or_unknown";
-
-                        if (mod_frame_gap_ms > 500 && framework_frame_gap_ms <= 250 && d3d12_frame_gap_ms <= 250 && xr_wait_gap_ms <= 250 && xr_begin_gap_ms <= 250 && xr_end_gap_ms <= 250) {
-                            suspected_stall = "game_tick_starved_mod_frame_only";
-                        } else if (mod_frame_gap_ms > 500 && framework_frame_gap_ms > 500 && d3d12_frame_gap_ms <= 250 && xr_wait_gap_ms <= 250 && xr_begin_gap_ms <= 250 && xr_end_gap_ms <= 250) {
-                            suspected_stall = "game_or_framework_tick_starved_while_render_runtime_still_advancing";
-                        } else if (d3d12_frame_gap_ms > 500 && xr_begin_gap_ms <= 250 && xr_end_gap_ms <= 250) {
-                            suspected_stall = "d3d12_component_not_advancing";
-                        } else if (xr_wait_gap_ms > 500 && xr_begin_gap_ms > 500 && xr_end_gap_ms > 500) {
-                            suspected_stall = "openxr_frame_loop_not_advancing";
-                        } else if (pose_update_gap_ms > 500 && xr_wait_gap_ms <= 250) {
-                            suspected_stall = "pose_updates_not_advancing";
-                        }
-
-                        spdlog::warn(
-                            "[VR][stall-detail] tick={}ms mod_frame={}ms framework_frame={}ms d3d12_frame={}ms xrWait={}ms xrBegin={}ms xrEnd={}ms pose_update={}ms accepted_relaxed_startup_poses={} suspected={}",
-                            std::chrono::duration_cast<std::chrono::milliseconds>(tick_gap).count(),
-                            mod_frame_gap_ms,
-                            framework_frame_gap_ms,
-                            d3d12_frame_gap_ms,
-                            xr_wait_gap_ms,
-                            xr_begin_gap_ms,
-                            xr_end_gap_ms,
-                            pose_update_gap_ms,
-                            openxr->accepted_relaxed_startup_poses,
-                            suspected_stall
-                        );
-
-                        if (tick_gap > std::chrono::seconds(1)) {
-                            dump_hitch_snapshot(tick_gap, suspected_stall);
-                        }
-                    } else if (tick_gap > std::chrono::seconds(2)) {
-                        dump_hitch_snapshot(tick_gap, "non_focused_or_unknown");
-                    }
-                }
-            }
-        }
-    }
 
     if (!get_runtime()->loaded || !is_hmd_active()) {
         return;
@@ -3660,6 +1736,166 @@ void VR::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
     if (m_fake_stereo_hook != nullptr && !m_fake_stereo_hook->is_ignoring_next_viewport_draw()) {
         update_action_states();
     }
+}
+
+namespace {
+std::optional<sdk::UObject*> read_object_property(sdk::UObject* object, std::wstring_view name) try {
+    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
+        return std::nullopt;
+    }
+
+    const auto klass = object->get_class();
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+
+    const auto prop = klass->find_property(name);
+    if (prop == nullptr || prop->get_class() == nullptr) {
+        return std::nullopt;
+    }
+
+    const auto prop_type = prop->get_class()->get_name().to_string();
+    if (prop_type != L"ObjectProperty") {
+        return std::nullopt;
+    }
+
+    auto value = *(sdk::UObject**)((uint8_t*)object + prop->get_offset());
+    if (value == nullptr || IsBadReadPtr(value, sizeof(void*))) {
+        return std::nullopt;
+    }
+
+    return value;
+} catch (...) {
+    return std::nullopt;
+}
+
+std::optional<sdk::UObject*> call_object_object_function(sdk::UObject* object, std::wstring_view function_name) try {
+    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
+        return std::nullopt;
+    }
+
+    const auto klass = object->get_class();
+    if (klass == nullptr) {
+        return std::nullopt;
+    }
+
+    const auto fn = klass->find_function(function_name);
+    if (fn == nullptr) {
+        return std::nullopt;
+    }
+
+    struct ObjectReturnParams {
+        sdk::UObject* ret{nullptr};
+    } params{};
+
+    object->process_event(fn, &params);
+    if (params.ret == nullptr || IsBadReadPtr(params.ret, sizeof(void*))) {
+        return std::nullopt;
+    }
+
+    return params.ret;
+} catch (...) {
+    return std::nullopt;
+}
+
+bool write_object_bool_property(sdk::UObject* object, std::wstring_view name, bool value) try {
+    if (object == nullptr || IsBadReadPtr(object, sizeof(void*))) {
+        return false;
+    }
+
+    const auto klass = object->get_class();
+    if (klass == nullptr) {
+        return false;
+    }
+
+    const auto prop = klass->find_property(name);
+    if (prop == nullptr || prop->get_class() == nullptr) {
+        return false;
+    }
+
+    const auto prop_type = prop->get_class()->get_name().to_string();
+    if (prop_type != L"BoolProperty") {
+        return false;
+    }
+
+    ((sdk::FBoolProperty*)prop)->set_value_in_object(object, value);
+    return true;
+} catch (...) {
+    return false;
+}
+
+bool write_object_float_property(sdk::UObject* object, std::wstring_view name, float value) try {
+    if (object == nullptr || IsBadReadPtr(object, sizeof(void*)) || !std::isfinite(value)) {
+        return false;
+    }
+
+    const auto klass = object->get_class();
+    if (klass == nullptr) {
+        return false;
+    }
+
+    const auto prop = klass->find_property(name);
+    if (prop == nullptr || prop->get_class() == nullptr) {
+        return false;
+    }
+
+    const auto prop_type = prop->get_class()->get_name().to_string();
+    if (prop_type != L"FloatProperty") {
+        return false;
+    }
+
+    *(float*)((uint8_t*)object + prop->get_offset()) = value;
+    return true;
+} catch (...) {
+    return false;
+}
+
+bool write_struct_float_property(sdk::UObject* object, std::wstring_view struct_property, std::wstring_view field_name, float value) try {
+    if (object == nullptr || IsBadReadPtr(object, sizeof(void*)) || !std::isfinite(value)) {
+        return false;
+    }
+
+    const auto klass = object->get_class();
+    if (klass == nullptr) {
+        return false;
+    }
+
+    const auto prop = (sdk::FStructProperty*)klass->find_property(struct_property);
+    if (prop == nullptr || prop->get_class() == nullptr || prop->get_class()->get_name().to_string() != L"StructProperty") {
+        return false;
+    }
+
+    const auto structure = prop->get_struct();
+    if (structure == nullptr) {
+        return false;
+    }
+
+    const auto field = structure->find_property(field_name);
+    if (field == nullptr || field->get_class() == nullptr || field->get_class()->get_name().to_string() != L"FloatProperty") {
+        return false;
+    }
+
+    *(float*)((uint8_t*)object + prop->get_offset() + field->get_offset()) = value;
+    return true;
+} catch (...) {
+    return false;
+}
+
+bool write_camera_component_fullscreen_aspect(sdk::UObject* camera_component, float aspect_ratio) {
+    if (camera_component == nullptr || !std::isfinite(aspect_ratio) || aspect_ratio <= 0.1f) {
+        return false;
+    }
+
+    bool wrote = false;
+    wrote |= write_object_bool_property(camera_component, L"bConstrainAspectRatio", false);
+    wrote |= write_object_bool_property(camera_component, L"bOverrideAspectRatioAxisConstraint", false);
+    wrote |= write_object_bool_property(camera_component, L"bScaleResolutionWithOverscan", false);
+    wrote |= write_object_bool_property(camera_component, L"bCropOverscan", false);
+    wrote |= write_object_float_property(camera_component, L"AspectRatio", aspect_ratio);
+    wrote |= write_object_float_property(camera_component, L"Overscan", 0.0f);
+    wrote |= write_struct_float_property(camera_component, L"CropSettings", L"AspectRatio", aspect_ratio);
+    return wrote;
+}
 }
 
 void VR::update_fullscreen_16x9_camera_compatibility(sdk::UGameEngine* engine) {
@@ -3770,7 +2006,6 @@ void VR::update_fullscreen_16x9_camera_compatibility(sdk::UGameEngine* engine) {
     bool wrote_any = false;
     wrote_any |= write_object_bool_property((sdk::UObject*)pcm, L"bUse16_9CamerasAsFullscreen", true);
     wrote_any |= write_object_bool_property((sdk::UObject*)pcm, L"bForceOutputToConstraintXFov", false);
-    wrote_any |= write_game_camera_aspect_constraints(pcm, aspect_ratio);
 
     if (current_camera != nullptr) {
         wrote_any |= write_object_bool_property(current_camera, L"bEnableCameraViewportRemapPPMI", false);
@@ -3800,7 +2035,7 @@ void VR::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
     update_fullscreen_16x9_camera_compatibility(engine);
 }
 
-void VR::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+void VR::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double)
 {
     if (!is_hmd_active()) {
@@ -3819,125 +2054,6 @@ void VR::on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t 
     glm::vec3 target_position = is_double
         ? glm::vec3{(float)view_location_double->x, (float)view_location_double->y, (float)view_location_double->z}
         : glm::vec3{view_location->x, view_location->y, view_location->z};
-
-    const auto reset_head_turn_stabilizer = [&]() {
-        if (m_head_turn_camera_stabilizer.active) {
-            SPDLOG_INFO("[HeadTurnCameraStabilizer] active=false reason=reset");
-        }
-
-        m_head_turn_camera_stabilizer = {};
-    };
-
-    const auto apply_head_turn_camera_sample = [&](const glm::vec3& position, const glm::vec3& rotation) {
-        if (is_double) {
-            view_location_double->x = position.x;
-            view_location_double->y = position.y;
-            view_location_double->z = position.z;
-            view_rotation_double->pitch = rotation.x;
-            view_rotation_double->yaw = rotation.y;
-            view_rotation_double->roll = rotation.z;
-        } else {
-            view_location->x = position.x;
-            view_location->y = position.y;
-            view_location->z = position.z;
-            view_rotation->pitch = rotation.x;
-            view_rotation->yaw = rotation.y;
-            view_rotation->roll = rotation.z;
-        }
-
-        target_position = position;
-        target_rotation = rotation;
-    };
-
-    if (!is_head_turn_camera_stabilizer_enabled() || is_headlocked_aim_enabled() || is_using_2d_screen()) {
-        reset_head_turn_stabilizer();
-    } else {
-        auto& stabilizer = m_head_turn_camera_stabilizer;
-        const auto steady_now = std::chrono::steady_clock::now();
-        auto hmd_rotation = glm::normalize(glm::quat{get_rotation(0)});
-        const bool hmd_rotation_valid =
-            std::isfinite(hmd_rotation.x) &&
-            std::isfinite(hmd_rotation.y) &&
-            std::isfinite(hmd_rotation.z) &&
-            std::isfinite(hmd_rotation.w);
-        float hmd_angular_speed_deg = 0.0f;
-        bool fast_head_turn = false;
-
-        if (!hmd_rotation_valid) {
-            reset_head_turn_stabilizer();
-        } else {
-            if (stabilizer.has_hmd_sample) {
-                const auto dt = std::chrono::duration<float>(steady_now - stabilizer.last_hmd_time).count();
-
-                if (dt > 0.001f && dt < 0.25f) {
-                    const auto dot = std::clamp(std::abs(glm::dot(stabilizer.last_hmd_rotation, hmd_rotation)), 0.0f, 1.0f);
-                    const auto angle_deg = glm::degrees(2.0f * std::acos(dot));
-                    hmd_angular_speed_deg = angle_deg / dt;
-                    fast_head_turn = hmd_angular_speed_deg >= 160.0f;
-                }
-            }
-
-            stabilizer.last_hmd_rotation = hmd_rotation;
-            stabilizer.last_hmd_time = steady_now;
-            stabilizer.has_hmd_sample = true;
-
-            if (!stabilizer.has_camera_sample) {
-                stabilizer.last_stable_position = target_position;
-                stabilizer.last_stable_rotation = target_rotation;
-                stabilizer.has_camera_sample = true;
-                stabilizer.stable_frames = 1;
-            } else {
-                const auto position_delta = glm::distance(target_position, stabilizer.last_stable_position);
-                const auto pitch_delta = normalize_angle_delta(target_rotation.x, stabilizer.last_stable_rotation.x);
-                const auto yaw_delta = normalize_angle_delta(target_rotation.y, stabilizer.last_stable_rotation.y);
-                const auto roll_delta = normalize_angle_delta(target_rotation.z, stabilizer.last_stable_rotation.z);
-                const auto rotation_delta = (std::max)(pitch_delta, (std::max)(yaw_delta, roll_delta));
-
-                constexpr auto stable_position_delta = 2.0f;
-                constexpr auto stable_rotation_delta = 0.25f;
-                constexpr auto rejectable_position_delta = 35.0f;
-                constexpr auto rejectable_rotation_delta = 8.0f;
-                constexpr auto hard_cut_position_delta = 150.0f;
-                constexpr auto hard_cut_rotation_delta = 25.0f;
-
-                const bool camera_still_stable = position_delta <= stable_position_delta && rotation_delta <= stable_rotation_delta;
-                const bool rejectable_camera_spike = position_delta <= rejectable_position_delta && rotation_delta <= rejectable_rotation_delta;
-                const bool likely_real_cut_or_motion = position_delta >= hard_cut_position_delta || rotation_delta >= hard_cut_rotation_delta;
-                const bool can_hold_stable_camera =
-                    fast_head_turn &&
-                    stabilizer.stable_frames >= 3 &&
-                    !camera_still_stable &&
-                    rejectable_camera_spike &&
-                    !likely_real_cut_or_motion;
-
-                if (can_hold_stable_camera) {
-                    stabilizer.active = true;
-                    stabilizer.stabilize_until = steady_now + std::chrono::milliseconds(175);
-                    SPDLOG_INFO(
-                        "[HeadTurnCameraStabilizer] active=true hmd_speed={:.1f} pos_delta={:.2f} rot_delta={:.2f}",
-                        hmd_angular_speed_deg,
-                        position_delta,
-                        rotation_delta);
-                }
-
-                if (stabilizer.active && steady_now <= stabilizer.stabilize_until && !likely_real_cut_or_motion) {
-                    apply_head_turn_camera_sample(stabilizer.last_stable_position, stabilizer.last_stable_rotation);
-                } else {
-                    if (stabilizer.active) {
-                        SPDLOG_INFO("[HeadTurnCameraStabilizer] active=false reason={}", likely_real_cut_or_motion ? "camera_motion" : "timeout");
-                    }
-
-                    stabilizer.active = false;
-
-                    if (!fast_head_turn || camera_still_stable || likely_real_cut_or_motion) {
-                        stabilizer.last_stable_position = target_position;
-                        stabilizer.last_stable_rotation = target_rotation;
-                        stabilizer.stable_frames = camera_still_stable ? (std::min)(stabilizer.stable_frames + 1, 120u) : 1u;
-                    }
-                }
-            }
-        }
-    }
 
     const auto should_lerp_pitch = m_lerp_camera_pitch->value();
     const auto should_lerp_yaw = m_lerp_camera_yaw->value();
@@ -4114,7 +2230,7 @@ void VR::update_hmd_state(bool from_view_extensions, uint32_t frame_count) {
         sdk::set_cvar_data_int(L"Engine", L"r.DefaultFeature.MotionBlur", 0);
         return;
     }
-    
+
     runtime->update_poses(from_view_extensions, frame_count);
 
     // Update the poses used for the game
@@ -4172,7 +2288,7 @@ void VR::update_action_states() {
 
             //reinitialize_openvr();
             runtime->wants_reinitialize = true;
-        }   
+        }
     } else {
         get_runtime()->update_input();
     }
@@ -4271,8 +2387,8 @@ void VR::update_dpad_gestures() {
         m_dpad_gesture_state.direction |= DPadGestureState::Direction::LEFT;
     } else if (left_joystick_axis.x > 0.5f) {
         m_dpad_gesture_state.direction |= DPadGestureState::Direction::RIGHT;
-    } 
-    
+    }
+
     if (left_joystick_axis.y < -0.5f) {
         m_dpad_gesture_state.direction |= DPadGestureState::Direction::DOWN;
     } else if (left_joystick_axis.y > 0.5f) {
@@ -4287,12 +2403,6 @@ void VR::on_config_load(const utility::Config& cfg, bool set_defaults) {
         option.config_load(cfg, set_defaults);
     }
 
-    if (set_defaults && is_subnautica2_executable()) {
-        // Subnautica 2's UE5.6 native path can render SingleLayerWater black in the right eye.
-        // Keep this game-specific guard enabled for fresh profiles, but let existing profiles override it.
-        m_compatibility_subnautica2_native_water->value() = true;
-        m_subnautica2_native_water_mode->value() = SUBNAUTICA2_NATIVE_WATER_SAFE_REFLECTIONS;
-    }
 
     if (get_runtime() != nullptr && get_runtime()->loaded) {
         get_runtime()->on_config_load(cfg, set_defaults);
@@ -4315,7 +2425,7 @@ void VR::on_config_load(const utility::Config& cfg, bool set_defaults) {
     m_overlay_component.on_config_load(cfg, set_defaults);
 
     if (m_cvar_manager != nullptr) {
-        m_cvar_manager->on_config_load(cfg, set_defaults);   
+        m_cvar_manager->on_config_load(cfg, set_defaults);
     }
 
     // Load camera offsets
@@ -4449,8 +2559,7 @@ void VR::save_cameras() try {
 }
 
 std::string VR::get_current_game_camera_id() {
-    std::scoped_lock _{m_generic_camera_preset_mtx};
-    return m_current_game_camera_id;
+    return "";
 }
 
 
@@ -4477,8 +2586,8 @@ void VR::handle_keybinds() {
 
      if (m_keybind_recenter_horizon->is_key_down_once()) {
         recenter_horizon();
-    }	
-    	
+    }
+
     if (m_keybind_load_camera_0->is_key_down_once()) {
         load_camera(0);
     }
@@ -4563,11 +2672,11 @@ void VR::on_frame() {
         const auto rt_size = g_framework->get_rt_size();
 
         ImGui::Begin("RT Modifier Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav);
-        
+
         ImGui::Separator();
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "RT + Left Stick: Camera left/right/forward/back");
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "RT + Right Stick: Camera up/down");
-        
+
         ImGui::Text("Page: %d", m_rt_modifier.page + 1);
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "DPad Left: Previous page | DPad Right: Next page");
 
@@ -4728,7 +2837,7 @@ void VR::on_present() {
         // so the user doesn't have to click on the window to get input.
         if (m_first_submit) {
             m_first_submit = false;
-            const auto skip_initial_mouse_warp = is_ue418_executable() && should_skip_post_init_properties();
+            const auto skip_initial_mouse_warp = false;
 
             // for some reason this doesn't work if called directly from here
             // so we have to do it in a separate thread
@@ -4782,9 +2891,7 @@ void VR::on_post_present() {
     const auto is_left_eye_frame = is_using_afr() ? (is_same_frame || (m_render_frame_count % 2 == m_left_eye_interval)) : true;
 
     if (is_left_eye_frame) {
-        const auto should_defer_very_late_wait =
-            get_synchronize_stage() == VR::SynchronizeStage::VERY_LATE &&
-            should_defer_stalker2_very_late_openxr_wait(runtime, m_is_d3d12);
+        const auto should_defer_very_late_wait = false;
 
         if (!native_openxr_async_wait_requested && !should_defer_very_late_wait && (get_synchronize_stage() == VR::SynchronizeStage::VERY_LATE || !runtime->got_first_sync)) {
             const auto had_sync = runtime->got_first_sync;
@@ -5049,15 +3156,8 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 draw_status_badge("Native Fix status:", "skipped: title/runtime guard", blocked_color);
             }
 
-            if (should_force_native_stereo_fix_same_pass()) {
-                m_native_stereo_fix_same_pass->value() = true;
-                ImGui::BeginDisabled();
-                m_native_stereo_fix_same_pass->draw("Use Same Stereo Pass");
-                ImGui::EndDisabled();
-                ImGui::TextWrapped("Forced for Stalker2 stability while Native Stereo Fix is enabled.");
-            } else {
-                m_native_stereo_fix_same_pass->draw("Use Same Stereo Pass");
-            }
+            m_native_stereo_fix_same_pass->draw("Use Same Stereo Pass");
+
             m_native_stereo_fix_preserve_secondary_pass->draw("Preserve Secondary Pass on UE5.5+");
             ImGui::TextWrapped(
                 "Recommended for UE5.5 and newer. Keeps the real secondary-eye pass identity for per-eye water, "
@@ -5247,7 +3347,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             m_snapturn->draw("Enabled");
             m_snapturn_angle->draw("Angle");
             m_snapturn_joystick_deadzone->draw("Deadzone");
-        
+
             ImGui::TreePop();
         }
 
@@ -5281,7 +3381,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
         if (ImGui::TreeNode("Camera Freeze")) {
             float camera_offset[] = {m_camera_forward_offset->value(), m_camera_right_offset->value(), m_camera_up_offset->value()};
-            if (ImGui::SliderFloat3("Camera Offset", camera_offset, -4000.0f, 4000.0f)) {
+            if (ImGui::SliderFloat3("Camera Offset", camera_offset, -1024.f, 1024.0f)) {
                 m_camera_forward_offset->value() = camera_offset[0];
                 m_camera_right_offset->value() = camera_offset[1];
                 m_camera_up_offset->value() = camera_offset[2];
@@ -5384,12 +3484,6 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
         if (ImGui::TreeNode("Compatibility Options")) {
             m_compatibility_ahud->draw("AHUD UI Compatibility");
             m_compatibility_skip_uobjectarray_init->draw("Skip UObjectArray Init");
-            // Skip PostInitProperties restored at user request -- it gates the native-stereo
-            // LocalPlayer bootstrap and is genuinely useful. The rest of the joeyhodge per-game
-            // compatibility toggles stay removed from the UI (Direct Aim Fallback, Controller-Camera
-            // Conflict Guard, Head-Turn Camera Stabilizer, UI Layer Pose Telemetry/Stabilizer, Days
-            // Gone Bend UI Placement Fix, Days Gone GBuffer Safe Mode); their members/accessors are
-            // retained at their default (off), so dependent code paths are unchanged.
             m_compatibility_skip_pip->draw("Skip PostInitProperties");
             m_sceneview_compatibility_mode->draw("SceneView Compatibility Mode");
             m_extreme_compat_mode->draw("Extreme Compatibility Mode");
@@ -5412,7 +3506,7 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
             ImGui::TreePop();
         }
     }
-    
+
     if (selected_page == PAGE_DEBUG) {
         if (m_fake_stereo_hook != nullptr) {
             m_fake_stereo_hook->on_draw_ui();
@@ -5537,7 +3631,7 @@ void VR::on_draw_ui() {
      if (ImGui::Button("Recenter Horizon")) {
         recenter_horizon();
     }
-	
+
     if (ImGui::Button("Reinitialize Runtime")) {
         get_runtime()->wants_reinitialize = true;
     }
@@ -5614,7 +3708,7 @@ Vector4f VR::get_position_unsafe(uint32_t index) const {
         }
 
         return Vector4f{};
-    } 
+    }
 
     return Vector4f{};
 }
@@ -5664,7 +3758,7 @@ Vector4f VR::get_angular_velocity_unsafe(uint32_t index) const {
         if (index == 0) {
             return Vector4f{};
         }
-    
+
         return Vector4f{ *(Vector3f*)&m_openxr->hands[index-1].grip_velocity.angularVelocity, 0.0f };
     }
 
@@ -5785,7 +3879,7 @@ Vector4f VR::get_eye_offset(VRRuntime::Eye eye) const {
     if (eye == VRRuntime::Eye::LEFT) {
         return get_runtime()->eyes[vr::Eye_Left][3];
     }
-    
+
     return get_runtime()->eyes[vr::Eye_Right][3];
 }
 
@@ -5800,7 +3894,7 @@ Vector4f VR::get_current_offset() {
         //return Vector4f{m_eye_distance * -1.0f, 0.0f, 0.0f, 0.0f};
         return get_runtime()->eyes[vr::Eye_Left][3];
     }
-    
+
     return get_runtime()->eyes[vr::Eye_Right][3];
     //return Vector4f{m_eye_distance, 0.0f, 0.0f, 0.0f};
 }
@@ -5876,7 +3970,7 @@ bool VR::is_action_active(vr::VRActionHandle_t action, vr::VRInputValueHandle_t 
     if (action == vr::k_ulInvalidActionHandle) {
         return false;
     }
-    
+
     bool active = false;
 
     if (get_runtime()->is_openvr()) {
@@ -5991,7 +4085,7 @@ void VR::set_standing_origin(const Vector4f& origin) {
     ZoneScopedN(__FUNCTION__);
 
     std::unique_lock _{ get_runtime()->pose_mtx };
-    
+
     m_standing_origin = origin;
 }
 
@@ -6074,7 +4168,7 @@ void VR::process_snapturn() {
     if (const auto controller = sdk::UGameplayStatics::get()->get_player_controller(world, 0); controller != nullptr) {
         auto controller_rot = controller->get_control_rotation();
         auto turn_degrees = get_snapturn_angle();
-        
+
         if (m_snapturn_left) {
             turn_degrees = -turn_degrees;
             m_snapturn_left = false;
@@ -6083,7 +4177,6 @@ void VR::process_snapturn() {
         controller_rot.y += turn_degrees;
         controller->set_control_rotation(controller_rot);
     }
-        
-    m_snapturn_on_frame = false;
 
+    m_snapturn_on_frame = false;
 }

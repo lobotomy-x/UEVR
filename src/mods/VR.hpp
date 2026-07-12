@@ -144,7 +144,7 @@ public:
 
     void on_config_load(const utility::Config& cfg, bool set_defaults) override;
     void on_config_save(utility::Config& cfg) override;
-    
+
     void on_draw_ui() override;
     void on_draw_sidebar_entry(std::string_view name) override;
     void on_pre_imgui_frame() override;
@@ -176,7 +176,7 @@ public:
 
     void on_pre_engine_tick(sdk::UGameEngine* engine, float delta) override;
     void on_post_engine_tick(sdk::UGameEngine* engine, float delta) override;
-    void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation, 
+    void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
     void on_pre_viewport_client_draw(void* viewport_client, void* viewport, void* canvas) override;
 
@@ -265,7 +265,7 @@ public:
 
     Vector4f get_eye_offset(VRRuntime::Eye eye) const;
     Vector4f get_current_offset();
-    
+
     Matrix4x4f get_eye_transform(uint32_t index);
     Matrix4x4f get_current_eye_transform(bool flip = false);
     Matrix4x4f get_projection_matrix(VRRuntime::Eye eye, bool flip = false);
@@ -298,7 +298,7 @@ public:
     Vector2f get_right_stick_axis() const;
 
     void trigger_haptic_vibration(float seconds_from_now, float duration, float frequency, float amplitude, vr::VRInputValueHandle_t source = vr::k_ulInvalidInputValueHandle);
-    
+
     float get_standing_height();
     Vector4f get_standing_origin();
     void set_standing_origin(const Vector4f& origin);
@@ -347,17 +347,6 @@ public:
         return m_overlay_component;
     }
 
-    vrmod::UILayerPoseBasis build_ui_layer_pose_basis(uint32_t render_frame_count);
-    void record_ui_layer_pose_sample(
-        const vrmod::UILayerPoseBasis* basis,
-        runtimes::OpenXR::SwapchainIndex swapchain,
-        XrEyeVisibility eye,
-        bool follow_view,
-        bool stabilizer_used,
-        const glm::quat& hmd_rotation,
-        const glm::quat& live_ui_rotation,
-        const glm::quat& applied_rotation,
-        const char* refusal_reason);
 
     uint32_t get_hmd_width() const;
     uint32_t get_hmd_height() const;
@@ -432,10 +421,6 @@ public:
     }
 
     auto get_camera_forward_offset() const {
-        if (m_match_game_fov->value() && m_match_game_fov_dolly->value()) {
-            return m_camera_forward_offset->value() + m_game_fov_dolly_offset.load(std::memory_order_relaxed);
-        }
-
         return m_camera_forward_offset->value();
     }
 
@@ -481,7 +466,7 @@ public:
     }
 
     bool is_using_afr() const {
-        return m_rendering_method->value() == RenderingMethod::ALTERNATING || 
+        return m_rendering_method->value() == RenderingMethod::ALTERNATING ||
                m_rendering_method->value() == RenderingMethod::SYNCHRONIZED ||
                m_extreme_compat_mode->value() == true;
     }
@@ -569,7 +554,7 @@ public:
     float get_aim_speed() const {
         return m_aim_speed->value();
     }
-    
+
     bool is_aim_multiplayer_support_enabled() const {
         return m_aim_multiplayer_support->value();
     }
@@ -585,7 +570,7 @@ public:
     bool is_aim_interpolation_enabled() const {
         return m_aim_interp->value();
     }
-    
+
     bool is_any_aim_method_active() const {
         return m_aim_method->value() > AimMethod::GAME && !m_aim_temp_disabled;
     }
@@ -660,46 +645,18 @@ public:
             runtime->is_openxr();
     }
 
-    bool is_hitch_diagnostics_enabled() const {
-        return m_enable_hitch_diagnostics->value();
-    }
 
     bool is_ahud_compatibility_enabled() const {
         return m_compatibility_ahud->value();
     }
 
-    bool is_direct_aim_compatibility_enabled() const {
-        return m_compatibility_direct_aim->value();
-    }
-
-    bool is_controller_camera_conflict_guard_enabled() const {
-        return m_compatibility_controller_camera_guard->value();
-    }
-
-    bool is_head_turn_camera_stabilizer_enabled() const {
-        return m_compatibility_head_turn_camera_stabilizer->value();
-    }
-
-    bool is_ui_layer_pose_telemetry_enabled() const {
-        return m_compatibility_ui_layer_pose_telemetry->value();
-    }
-
-    bool is_ui_layer_pose_stabilizer_enabled() const {
-        return m_compatibility_ui_layer_pose_stabilizer->value();
-    }
-
-    bool is_daysgone_bend_ui_placement_fix_enabled() const {
-        return m_compatibility_daysgone_bend_ui_placement_fix->value();
-    }
 
     bool is_xinput_gamepad_active_within(std::chrono::seconds seconds) const {
         return m_last_xinput_update.time_since_epoch().count() != 0 &&
             (std::chrono::steady_clock::now() - m_last_xinput_update) <= seconds;
     }
 
-    bool is_controller_camera_conflict_guard_active() const;
-    void note_stalker2_transition_stress(const char* reason);
-    bool should_defer_stalker2_openxr_frame_for_transition(const char* reason);
+
     bool is_native_openxr_async_wait_active() const;
     bool request_native_openxr_async_wait();
     void ensure_native_openxr_async_wait_worker();
@@ -731,20 +688,6 @@ public:
     bool is_using_2d_screen() const {
         return m_2d_screen_mode->value();
     }
-
-    bool is_mixtape_auto_2d_active() const {
-        return m_mixtape_auto_2d_active.load(std::memory_order_relaxed);
-    }
-
-    void set_windrose_meta_ui_2d_state_active(
-        std::string_view state_name,
-        uintptr_t state_id,
-        std::string_view source,
-        bool force_2d,
-        bool active);
-    void clear_windrose_meta_ui_2d_state(std::string_view reason);
-    std::string get_windrose_meta_ui_2d_status_text() const;
-
     bool is_roomscale_enabled() const {
         return m_roomscale_movement->value() && !m_aim_temp_disabled;
     }
@@ -832,7 +775,7 @@ public:
     bool should_skip_post_init_properties() const {
         return m_compatibility_skip_pip->value();
     }
-    
+
     bool should_skip_uobjectarray_init() const {
         return m_compatibility_skip_uobjectarray_init->value();
     }
@@ -883,25 +826,6 @@ private:
 
     bool detect_controllers();
     bool is_any_action_down();
-    void update_shf_auto_2d_mode(sdk::UGameEngine* engine);
-    void update_dispatch_auto_2d_mode(sdk::UGameEngine* engine);
-    void update_mixtape_auto_2d_mode(sdk::UGameEngine* engine);
-    void update_windrose_meta_ui_auto_2d_mode();
-    void update_subnautica2_save_thumbnail_guard(sdk::UGameEngine* engine);
-    void update_subnautica2_native_water_compatibility(sdk::UGameEngine* engine);
-    void restore_subnautica2_native_water_cvars();
-    void update_1666amsterdam_native_postprocess_compatibility(sdk::UGameEngine* engine);
-    void restore_1666amsterdam_native_postprocess_cvars();
-    void update_everspace2_cinematic_bars(sdk::UGameEngine* engine);
-    struct HitchSnapshotDumpRequest;
-    void record_hitch_snapshot_sample(std::chrono::steady_clock::time_point now);
-    void dump_hitch_snapshot(std::chrono::steady_clock::duration tick_gap, const char* suspected_stall);
-    void enqueue_hitch_snapshot_dump(HitchSnapshotDumpRequest&& request);
-    void hitch_snapshot_writer_loop(std::stop_token stop_token);
-    void stop_hitch_snapshot_writer();
-    static void write_hitch_snapshot_request(HitchSnapshotDumpRequest&& request);
-    struct UILayerPoseTelemetrySnapshot;
-    UILayerPoseTelemetrySnapshot get_ui_layer_pose_telemetry_snapshot();
 
     std::optional<std::string> reinitialize_openvr() {
         spdlog::info("Reinitializing OpenVR");
@@ -937,7 +861,7 @@ private:
         m_openxr.reset();
         m_runtime.reset();
         m_runtime = std::make_shared<VRRuntime>();
-        
+
         m_controllers.clear();
         m_controllers_set.clear();
 
@@ -981,7 +905,7 @@ private:
 
     glm::vec3 m_overlay_rotation{-1.550f, 0.0f, -1.330f};
     glm::vec4 m_overlay_position{0.0f, 0.06f, -0.07f, 1.0f};
-    
+
     Vector4f m_standing_origin{ 0.0f, 1.5f, 0.0f, 0.0f };
     glm::quat m_rotation_offset{ glm::identity<glm::quat>() };
 
@@ -1070,146 +994,6 @@ private:
     std::chrono::steady_clock::time_point m_last_mod_frame{};
     std::chrono::steady_clock::time_point m_last_tick_gap_log{};
 
-    struct UILayerPoseTelemetrySnapshot {
-        uint64_t sample_count{};
-        uint64_t stabilizer_used_count{};
-        uint64_t invalid_basis_count{};
-        uint64_t follow_view_count{};
-        uint32_t last_render_frame_count{};
-        uint32_t last_openxr_internal_frame_count{};
-        uint32_t last_openxr_internal_render_frame_count{};
-        uint32_t last_pose_update_frame_count{};
-        uint32_t last_swapchain_index{};
-        int last_eye{};
-        bool last_basis_valid{};
-        bool last_stabilizer_used{};
-        bool last_follow_view{};
-        int last_ui_image_age_frames{-1};
-        int64_t last_pose_age_ms{-1};
-        double last_orientation_delta_deg{};
-        double max_orientation_delta_deg{};
-        double last_hmd_angular_velocity_deg_s{};
-        double max_hmd_angular_velocity_deg_s{};
-    };
-
-    struct HitchSnapshotSample {
-        std::chrono::steady_clock::time_point timestamp{};
-        uint64_t sequence{};
-        int frame_count{};
-        int render_frame_count{};
-        int rendering_method{};
-        bool hmd_active{};
-        bool runtime_loaded{};
-        bool runtime_ready{};
-        bool using_controllers{};
-        bool using_afr{};
-        bool native_stereo_fix{};
-        bool submitted{};
-        int64_t framework_frame_age_ms{-1};
-        int64_t mod_frame_age_ms{-1};
-        int64_t d3d12_frame_age_ms{-1};
-        int64_t xr_wait_age_ms{-1};
-        int64_t xr_begin_age_ms{-1};
-        int64_t xr_end_age_ms{-1};
-        int64_t pose_update_age_ms{-1};
-        int session_state{};
-        bool session_ready{};
-        bool frame_synced{};
-        bool frame_began{};
-        bool got_first_poses{};
-        bool got_first_valid_poses{};
-        bool accepted_relaxed_startup_poses{};
-        uint64_t cvar_change_counter{};
-        vrmod::D3D12Component::HitchFrameSnapshot d3d12{};
-        UILayerPoseTelemetrySnapshot ui_layer_pose{};
-    };
-
-    struct HitchSnapshotDumpRequest {
-        std::filesystem::path path{};
-        std::chrono::steady_clock::time_point dump_time{};
-        int64_t tick_gap_ms{};
-        std::string suspected_stall{};
-        CVarManager::ChangeSnapshot latest_cvar_change{};
-        std::vector<HitchSnapshotSample> samples{};
-    };
-
-    static constexpr size_t HITCH_SNAPSHOT_RING_SIZE = 600;
-    static constexpr size_t HITCH_SNAPSHOT_MAX_PENDING_DUMPS = 1;
-    static constexpr auto HITCH_SNAPSHOT_SAMPLE_INTERVAL = std::chrono::microseconds{16667}; // ~60 Hz.
-    std::array<HitchSnapshotSample, HITCH_SNAPSHOT_RING_SIZE> m_hitch_snapshot_samples{};
-    size_t m_hitch_snapshot_cursor{};
-    bool m_hitch_snapshot_wrapped{};
-    uint64_t m_hitch_snapshot_sequence{};
-    uint32_t m_hitch_snapshot_dump_count{};
-    std::chrono::steady_clock::time_point m_last_hitch_snapshot_sample{};
-    std::chrono::steady_clock::time_point m_last_hitch_snapshot_dump{};
-    std::jthread m_hitch_snapshot_writer_thread{};
-    std::mutex m_hitch_snapshot_writer_mutex{};
-    std::condition_variable m_hitch_snapshot_writer_cv{};
-    std::deque<HitchSnapshotDumpRequest> m_hitch_snapshot_dump_queue{};
-
-    std::chrono::steady_clock::time_point m_shf_auto_2d_last_sample{};
-    bool m_shf_auto_2d_active{false};
-    bool m_shf_auto_2d_previous_mode{false};
-    std::chrono::steady_clock::time_point m_dispatch_auto_2d_last_sample{};
-    bool m_dispatch_auto_2d_active{false};
-    bool m_dispatch_auto_2d_previous_mode{false};
-    std::chrono::steady_clock::time_point m_mixtape_auto_2d_last_sample{};
-    std::atomic_bool m_mixtape_auto_2d_active{false};
-    bool m_mixtape_auto_2d_previous_mode{false};
-    struct WindroseMetaUiToken {
-        std::string name{};
-        std::string source{};
-        std::chrono::steady_clock::time_point entered_at{};
-    };
-
-    mutable std::mutex m_windrose_meta_ui_auto_2d_mtx{};
-    std::unordered_map<uintptr_t, WindroseMetaUiToken> m_windrose_meta_ui_auto_2d_tokens{};
-    std::chrono::steady_clock::time_point m_windrose_meta_ui_auto_2d_restore_after{};
-    bool m_windrose_meta_ui_auto_2d_active{false};
-    bool m_windrose_meta_ui_auto_2d_previous_mode{false};
-    std::string m_windrose_meta_ui_auto_2d_last_state{};
-    std::string m_windrose_meta_ui_auto_2d_last_source{};
-    uint32_t m_windrose_meta_ui_auto_2d_stale_clears{};
-    uint32_t m_post_focus_tick_gap_count{};
-    uint32_t m_post_focus_long_tick_gap_count{};
-
-    struct UILayerPoseSample {
-        std::chrono::steady_clock::time_point timestamp{};
-        uint64_t sequence{};
-        uint32_t render_frame_count{};
-        uint32_t openxr_internal_frame_count{};
-        uint32_t openxr_internal_render_frame_count{};
-        uint32_t pose_update_frame_count{};
-        uint32_t swapchain_index{};
-        int eye{};
-        bool basis_valid{};
-        bool stabilizer_allowed{};
-        bool stabilizer_used{};
-        bool follow_view{};
-        int ui_image_age_frames{-1};
-        int64_t pose_age_ms{-1};
-        double orientation_delta_deg{};
-        double hmd_angular_velocity_deg_s{};
-        const char* refusal_reason{"none"};
-    };
-
-    static constexpr size_t UI_LAYER_POSE_TELEMETRY_RING_SIZE = 512;
-    std::array<UILayerPoseSample, UI_LAYER_POSE_TELEMETRY_RING_SIZE> m_ui_layer_pose_samples{};
-    size_t m_ui_layer_pose_cursor{};
-    uint64_t m_ui_layer_pose_sequence{};
-    UILayerPoseTelemetrySnapshot m_ui_layer_pose_snapshot{};
-    std::chrono::steady_clock::time_point m_ui_layer_pose_last_log{};
-    std::chrono::steady_clock::time_point m_ui_layer_pose_last_rotation_time{};
-    glm::quat m_ui_layer_pose_last_live_rotation{1.0f, 0.0f, 0.0f, 0.0f};
-    std::mutex m_ui_layer_pose_telemetry_mtx{};
-
-    std::atomic<int64_t> m_stalker2_transition_stress_until_ms{0};
-    std::atomic<int64_t> m_stalker2_transition_first_stress_ms{0};
-    std::atomic<int64_t> m_stalker2_transition_last_stress_ms{0};
-    std::atomic<int64_t> m_stalker2_transition_last_defer_ms{0};
-    std::atomic<uint32_t> m_stalker2_transition_stress_events{0};
-    std::atomic<uint32_t> m_stalker2_transition_deferred_frames{0};
 
     uint32_t m_lowest_xinput_user_index{};
 
@@ -1275,17 +1059,6 @@ private:
         "Scene Only",
     };
 
-    enum Subnautica2NativeWaterMode : int32_t {
-        SUBNAUTICA2_NATIVE_WATER_SAFE_REFLECTIONS = 0,
-        SUBNAUTICA2_NATIVE_WATER_NO_REFLECTIONS = 1,
-        SUBNAUTICA2_NATIVE_WATER_DISABLE_SINGLE_LAYER = 2,
-    };
-
-    static const inline std::vector<std::string> s_subnautica2_native_water_mode_names{
-        "Native Water Safe Reflections",
-        "Native Water No Reflections",
-        "Disable SingleLayerWater Fallback",
-    };
 
     const ModCombo::Ptr m_rendering_method{ ModCombo::create(generate_name("RenderingMethod"), s_rendering_method_names) };
     const ModCombo::Ptr m_synced_afr_method{ ModCombo::create(generate_name("SyncedSequentialMethod"), s_synced_afr_method_names, 1) };
@@ -1315,7 +1088,7 @@ private:
     // Snap turn settings and globals
     void gamepad_snapturn(XINPUT_STATE& state);
     void process_snapturn();
-    
+
     const ModToggle::Ptr m_snapturn{ ModToggle::create(generate_name("SnapTurn"), false) };
     const ModSlider::Ptr m_snapturn_joystick_deadzone{ ModSlider::create(generate_name("SnapturnJoystickDeadzone"), 0.01f, 0.99f, 0.2f) };
     const ModInt32::Ptr m_snapturn_angle{ ModSliderInt32::create(generate_name("SnapturnTurnAngle"), 1, 359, 45) };
@@ -1348,7 +1121,7 @@ private:
     const ModSlider::Ptr m_aim_speed{ ModSlider::create(generate_name("AimSpeed"), 0.01f, 25.0f, 15.0f) };
     const ModToggle::Ptr m_dpad_shifting{ ModToggle::create(generate_name("DPadShifting"), true) };
     const ModCombo::Ptr m_dpad_shifting_method{ ModCombo::create(generate_name("DPadShiftingMethod"), s_dpad_method_names, DPadMethod::RIGHT_TOUCH) };
-    
+
     struct DPadGestureState {
         std::recursive_mutex mtx{};
         enum Direction : uint8_t {
@@ -1368,81 +1141,6 @@ private:
     const ModSlider::Ptr m_camera_forward_offset{ ModSlider::create(generate_name("CameraForwardOffset"), -4000.0f, 4000.0f, 0.0f) };
     const ModSlider::Ptr m_camera_right_offset{ ModSlider::create(generate_name("CameraRightOffset"), -4000.0f, 4000.0f, 0.0f) };
     const ModSlider::Ptr m_camera_up_offset{ ModSlider::create(generate_name("CameraUpOffset"), -4000.0f, 4000.0f, 0.0f) };
-    const ModToggle::Ptr m_match_game_fov{ ModToggle::create(generate_name("MatchGameFOV"), false) };
-    const ModToggle::Ptr m_match_game_fov_dolly{ ModToggle::create(generate_name("MatchGameFOVDolly"), false) };
-    const ModSlider::Ptr m_match_game_fov_multiplier{ ModSlider::create(generate_name("MatchGameFOVMultiplier"), 0.1f, 3.0f, 1.0f) };
-    const ModSlider::Ptr m_match_game_fov_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVDollyDistance"), 10.0f, 50000.0f, 3000.0f) };
-    const ModToggle::Ptr m_match_game_fov_min_enabled{ ModToggle::create(generate_name("MatchGameFOVMinEnabled"), false) };
-    const ModSlider::Ptr m_match_game_fov_min{ ModSlider::create(generate_name("MatchGameFOVMin"), 5.0f, 120.0f, 40.0f) };
-    const ModToggle::Ptr m_match_game_fov_read_only_camera{ ModToggle::create(generate_name("MatchGameFOVReadOnlyCamera"), false) };
-    const ModToggle::Ptr m_match_game_fov_camera_cut_stabilizer{ ModToggle::create(generate_name("MatchGameFOVCameraCutStabilizer"), false) };
-    const ModSlider::Ptr m_match_game_fov_camera_cut_stabilizer_duration_ms{ ModSlider::create(generate_name("MatchGameFOVCameraCutStabilizerDurationMs"), 100.0f, 1500.0f, 500.0f) };
-    const ModSlider::Ptr m_match_game_fov_camera_cut_stabilizer_fov_delta{ ModSlider::create(generate_name("MatchGameFOVCameraCutStabilizerFOVDelta"), 1.0f, 45.0f, 10.0f) };
-    const ModSlider::Ptr m_match_game_fov_camera_cut_stabilizer_rotation_delta{ ModSlider::create(generate_name("MatchGameFOVCameraCutStabilizerRotationDelta"), 1.0f, 90.0f, 25.0f) };
-    const ModSlider::Ptr m_match_game_fov_camera_cut_stabilizer_location_delta{ ModSlider::create(generate_name("MatchGameFOVCameraCutStabilizerLocationDelta"), 25.0f, 10000.0f, 750.0f) };
-    const ModToggle::Ptr m_match_game_fov_generic_camera_presets{ ModToggle::create(generate_name("MatchGameFOVGenericCameraPresets"), false) };
-    const ModToggle::Ptr m_match_game_fov_generic_camera_presets_auto_apply{ ModToggle::create(generate_name("MatchGameFOVGenericCameraPresetsAutoApply"), false) };
-    const ModToggle::Ptr m_match_game_fov_prospi_actual_clamp{ ModToggle::create(generate_name("MatchGameFOVProSpiActualClamp"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_actual_min{ ModSlider::create(generate_name("MatchGameFOVProSpiActualMin"), 10.0f, 60.0f, 20.0f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_center_field_actual_min{ ModSlider::create(generate_name("MatchGameFOVProSpiCenterFieldActualMin"), 10.0f, 60.0f, 20.0f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_upper_deck_actual_min{ ModSlider::create(generate_name("MatchGameFOVProSpiUpperDeckActualMin"), 10.0f, 60.0f, 17.0f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_plate_high_actual_min{ ModSlider::create(generate_name("MatchGameFOVProSpiPlateHighActualMin"), 10.0f, 60.0f, 15.0f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_deep_outfield_actual_min{ ModSlider::create(generate_name("MatchGameFOVProSpiDeepOutfieldActualMin"), 10.0f, 60.0f, 18.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_telephoto_perf_override{ ModToggle::create(generate_name("MatchGameFOVProSpiTelephotoPerfOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_telephoto_perf_trigger_fov{ ModSlider::create(generate_name("MatchGameFOVProSpiTelephotoPerfTriggerFOV"), 10.0f, 40.0f, 26.0f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_telephoto_perf_view_distance_scale{ ModSlider::create(generate_name("MatchGameFOVProSpiTelephotoPerfViewDistanceScale"), 0.10f, 2.0f, 0.50f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_telephoto_perf_static_mesh_lod_distance_scale{ ModSlider::create(generate_name("MatchGameFOVProSpiTelephotoPerfStaticMeshLODDistanceScale"), 0.10f, 4.0f, 2.00f) };
-    const ModSlider::Ptr m_match_game_fov_prospi_telephoto_perf_skeletal_mesh_lod_bias{ ModSlider::create(generate_name("MatchGameFOVProSpiTelephotoPerfSkeletalMeshLODBias"), 0.0f, 4.0f, 1.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_tv_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiTVDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_tv_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiTVDollyDistance"), 10.0f, 50000.0f, 10000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_opening_aerial_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiOpeningAerialDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_opening_aerial_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiOpeningAerialDollyDistance"), 10.0f, 50000.0f, 4000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_behind_plate_wide_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiBehindPlateWideDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_behind_plate_wide_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiBehindPlateWideDollyDistance"), 10.0f, 50000.0f, 2000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_home_plate_waist_high_reverse_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiHomePlateWaistHighReverseDollyOverride"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_home_plate_waist_high_reverse_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiHomePlateWaistHighReverseDollyDistance"), 10.0f, 50000.0f, 530.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_low_plate_corner_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiLowPlateCornerDollyOverride"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_low_plate_corner_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiLowPlateCornerDollyDistance"), 10.0f, 50000.0f, 530.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_third_base_sweep_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiThirdBaseSweepDollyOverride"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_third_base_sweep_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiThirdBaseSweepDollyDistance"), 10.0f, 50000.0f, 750.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_left_field_corner_wide_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiLeftFieldCornerWideDollyOverride"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_left_field_corner_wide_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiLeftFieldCornerWideDollyDistance"), 10.0f, 50000.0f, 3500.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_first_base_corner_low_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiFirstBaseCornerLowDollyOverride"), false) };
-    const ModSlider::Ptr m_match_game_fov_prospi_first_base_corner_low_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiFirstBaseCornerLowDollyDistance"), 10.0f, 50000.0f, 750.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_center_field_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiCenterFieldDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_center_field_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiCenterFieldDollyDistance"), 10.0f, 50000.0f, 10000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_center_field_high_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiCenterFieldHighDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_center_field_high_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiCenterFieldHighDollyDistance"), 10.0f, 50000.0f, 10000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_deep_outfield_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiDeepOutfieldDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_deep_outfield_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiDeepOutfieldDollyDistance"), 10.0f, 50000.0f, 5000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_home_plate_sky_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiHomePlateSkyDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_home_plate_sky_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiHomePlateSkyDollyDistance"), 10.0f, 50000.0f, 4000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_upper_deck_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiUpperDeckDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_upper_deck_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiUpperDeckDollyDistance"), 10.0f, 50000.0f, 7000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_home_sky_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiHomeSkyDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_home_sky_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiHomeSkyDollyDistance"), 10.0f, 50000.0f, 7000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_third_base_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiThirdBaseDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_third_base_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiThirdBaseDollyDistance"), 10.0f, 50000.0f, 7000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_third_base_relay_low_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiThirdBaseRelayLowDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_third_base_relay_low_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiThirdBaseRelayLowDollyDistance"), 10.0f, 50000.0f, 250.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_third_base_wide_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiThirdBaseWideDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_third_base_wide_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiThirdBaseWideDollyDistance"), 10.0f, 50000.0f, 8000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_first_base_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiFirstBaseDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_first_base_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiFirstBaseDollyDistance"), 10.0f, 50000.0f, 7000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_first_base_wide_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiFirstBaseWideDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_first_base_wide_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiFirstBaseWideDollyDistance"), 10.0f, 50000.0f, 8000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_backstop_high_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiBackstopHighDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_backstop_high_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiBackstopHighDollyDistance"), 10.0f, 50000.0f, 5000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_right_field_corner_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiRightFieldCornerDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_right_field_corner_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiRightFieldCornerDollyDistance"), 10.0f, 50000.0f, 7000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_right_center_field_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiRightCenterFieldDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_right_center_field_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiRightCenterFieldDollyDistance"), 10.0f, 50000.0f, 10000.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_plate_high_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiPlateHighDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_plate_high_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiPlateHighDollyDistance"), 10.0f, 50000.0f, 1500.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_home_plate_overhead_dolly_override{ ModToggle::create(generate_name("MatchGameFOVProSpiHomePlateOverheadDollyOverride"), true) };
-    const ModSlider::Ptr m_match_game_fov_prospi_home_plate_overhead_dolly_distance{ ModSlider::create(generate_name("MatchGameFOVProSpiHomePlateOverheadDollyDistance"), 10.0f, 50000.0f, 2500.0f) };
-    const ModToggle::Ptr m_match_game_fov_prospi_camera_calibration_auto{ ModToggle::create(generate_name("MatchGameFOVProSpiCameraCalibrationAuto"), false) };
-    const ModSlider::Ptr m_camera_fov_distance_multiplier{ ModSlider::create(generate_name("CameraFOVDistanceMultiplier"), 0.00f, 1000.0f, 0.0f) };
     const ModSlider::Ptr m_world_scale{ ModSlider::create(generate_name("WorldScale"), 0.01f, 10.0f, 1.0f) };
     const ModSlider::Ptr m_depth_scale{ ModSlider::create(generate_name("DepthScale"), 0.01f, 1.0f, 1.0f) };
 
@@ -1466,19 +1164,8 @@ private:
     const ModToggle::Ptr m_compatibility_skip_uobjectarray_init{ ModToggle::create(generate_name("Compatibility_SkipUObjectArrayInit"), false, true) };
 
     const ModToggle::Ptr m_compatibility_ahud{ ModToggle::create(generate_name("Compatibility_AHUD"), false, true) };
-    const ModToggle::Ptr m_compatibility_direct_aim{ ModToggle::create(generate_name("Compatibility_DirectAimFallback"), false, true) };
-    const ModToggle::Ptr m_compatibility_controller_camera_guard{ ModToggle::create(generate_name("Compatibility_ControllerCameraGuard"), false, true) };
-    const ModToggle::Ptr m_compatibility_head_turn_camera_stabilizer{ ModToggle::create(generate_name("Compatibility_HeadTurnCameraStabilizer"), false, true) };
-    const ModToggle::Ptr m_compatibility_ui_layer_pose_telemetry{ ModToggle::create(generate_name("Compatibility_UILayerPoseTelemetry"), false, true) };
-    const ModToggle::Ptr m_compatibility_ui_layer_pose_stabilizer{ ModToggle::create(generate_name("Compatibility_UILayerPoseStabilizer"), false, true) };
     const ModToggle::Ptr m_compatibility_fullscreen_16x9_cameras{ ModToggle::create(generate_name("Compatibility_Fullscreen16x9Cameras"), false, true) };
     const ModSlider::Ptr m_compatibility_fullscreen_16x9_camera_aspect{ ModSlider::create(generate_name("Compatibility_Fullscreen16x9CameraAspect"), 0.0f, 4.0f, 0.0f, true) };
-    const ModToggle::Ptr m_compatibility_subnautica2_native_water{ ModToggle::create(generate_name("Compatibility_Subnautica2NativeWater"), false, true) };
-    const ModCombo::Ptr m_subnautica2_native_water_mode{ ModCombo::create(generate_name("Subnautica2NativeWaterMode"), s_subnautica2_native_water_mode_names, SUBNAUTICA2_NATIVE_WATER_SAFE_REFLECTIONS) };
-    const ModToggle::Ptr m_compatibility_1666amsterdam_native_postprocess{ ModToggle::create(generate_name("Compatibility_1666AmsterdamNativePostProcess"), true, true) };
-    const ModToggle::Ptr m_compatibility_daysgone_bend_ui_placement_fix{ ModToggle::create(generate_name("Compatibility_DaysGoneBendUIPlacementFix"), false, true) };
-    const ModToggle::Ptr m_compatibility_daysgone_gbuffer_safe_mode{ ModToggle::create(generate_name("Compatibility_DaysGoneGBufferSafeMode"), false, true) };
-    const ModToggle::Ptr m_compatibility_everspace2_remove_cinematic_bars{ ModToggle::create(generate_name("Compatibility_Everspace2RemoveCinematicBars"), false, true) };
 
     struct Fullscreen16x9CameraCompatState {
         bool was_enabled{false};
@@ -1506,7 +1193,7 @@ private:
     bool m_disable_vr{false}; // definitely should not be persistent
 
     const ModKey::Ptr m_keybind_toggle_gui{ ModKey::create(generate_name("ToggleSlateGUIKey")) };
-    
+
     const ModString::Ptr m_requested_runtime_name{ ModString::create("Frontend_RequestedRuntime", "unset") };
 
     const ModToggle::Ptr m_lerp_camera_pitch{ ModToggle::create(generate_name("LerpCameraPitch"), false) };
@@ -1536,17 +1223,6 @@ private:
         glm::vec3 last_rotation{};
     } m_camera_lerp{};
 
-    struct HeadTurnCameraStabilizer {
-        bool has_camera_sample{false};
-        bool has_hmd_sample{false};
-        bool active{false};
-        uint32_t stable_frames{0};
-        glm::vec3 last_stable_position{};
-        glm::vec3 last_stable_rotation{};
-        glm::quat last_hmd_rotation{};
-        std::chrono::steady_clock::time_point last_hmd_time{};
-        std::chrono::steady_clock::time_point stabilize_until{};
-    } m_head_turn_camera_stabilizer{};
 
     struct CameraData {
         glm::vec3 offset{};
@@ -1555,13 +1231,6 @@ private:
         bool decoupled_pitch_ui_adjust{true};
     };
 
-    struct ProSpiCameraCalibration {
-        std::string camera_id{};
-        std::string preset_name{};
-        float actual_min_fov{20.0f};
-        float dolly_distance{3000.0f};
-        float projection_multiplier{1.0f};
-    };
 
     struct GenericCameraPreset {
         std::string camera_id{};
@@ -1579,28 +1248,6 @@ private:
         float raw_fov{};
         std::string camera_id{};
         std::chrono::steady_clock::time_point timestamp{};
-    };
-
-    struct GameCameraProjectionState {
-        bool valid{false};
-        float game_fov_for_matching{};
-        float effective_fov{};
-        float active_dolly_distance{};
-        float active_fov_multiplier{1.0f};
-    };
-
-    struct CameraCutState {
-        bool has_previous_sample{false};
-        bool has_last_output{false};
-        bool stabilizing{false};
-        GameCameraSample previous_sample{};
-        GameCameraSample last_cut_from{};
-        GameCameraSample last_cut_to{};
-        GameCameraProjectionState last_output{};
-        GameCameraProjectionState blend_from{};
-        GameCameraProjectionState blend_to{};
-        std::chrono::steady_clock::time_point cut_time{};
-        std::chrono::steady_clock::time_point stabilize_until{};
     };
 
     std::array<CameraData, 3> m_camera_datas{};
@@ -1668,80 +1315,6 @@ public:
             *m_camera_forward_offset,
             *m_camera_right_offset,
             *m_camera_up_offset,
-            *m_match_game_fov,
-            *m_match_game_fov_dolly,
-            *m_match_game_fov_multiplier,
-            *m_match_game_fov_dolly_distance,
-            *m_match_game_fov_min_enabled,
-            *m_match_game_fov_min,
-            *m_match_game_fov_read_only_camera,
-            *m_match_game_fov_camera_cut_stabilizer,
-            *m_match_game_fov_camera_cut_stabilizer_duration_ms,
-            *m_match_game_fov_camera_cut_stabilizer_fov_delta,
-            *m_match_game_fov_camera_cut_stabilizer_rotation_delta,
-            *m_match_game_fov_camera_cut_stabilizer_location_delta,
-            *m_match_game_fov_generic_camera_presets,
-            *m_match_game_fov_generic_camera_presets_auto_apply,
-            *m_match_game_fov_prospi_actual_clamp,
-            *m_match_game_fov_prospi_actual_min,
-            *m_match_game_fov_prospi_center_field_actual_min,
-            *m_match_game_fov_prospi_upper_deck_actual_min,
-            *m_match_game_fov_prospi_plate_high_actual_min,
-            *m_match_game_fov_prospi_deep_outfield_actual_min,
-            *m_match_game_fov_prospi_telephoto_perf_override,
-            *m_match_game_fov_prospi_telephoto_perf_trigger_fov,
-            *m_match_game_fov_prospi_telephoto_perf_view_distance_scale,
-            *m_match_game_fov_prospi_telephoto_perf_static_mesh_lod_distance_scale,
-            *m_match_game_fov_prospi_telephoto_perf_skeletal_mesh_lod_bias,
-            *m_match_game_fov_prospi_tv_dolly_override,
-            *m_match_game_fov_prospi_tv_dolly_distance,
-            *m_match_game_fov_prospi_opening_aerial_dolly_override,
-            *m_match_game_fov_prospi_opening_aerial_dolly_distance,
-            *m_match_game_fov_prospi_behind_plate_wide_dolly_override,
-            *m_match_game_fov_prospi_behind_plate_wide_dolly_distance,
-            *m_match_game_fov_prospi_home_plate_waist_high_reverse_dolly_override,
-            *m_match_game_fov_prospi_home_plate_waist_high_reverse_dolly_distance,
-            *m_match_game_fov_prospi_low_plate_corner_dolly_override,
-            *m_match_game_fov_prospi_low_plate_corner_dolly_distance,
-            *m_match_game_fov_prospi_third_base_sweep_dolly_override,
-            *m_match_game_fov_prospi_third_base_sweep_dolly_distance,
-            *m_match_game_fov_prospi_left_field_corner_wide_dolly_override,
-            *m_match_game_fov_prospi_left_field_corner_wide_dolly_distance,
-            *m_match_game_fov_prospi_first_base_corner_low_dolly_override,
-            *m_match_game_fov_prospi_first_base_corner_low_dolly_distance,
-            *m_match_game_fov_prospi_center_field_dolly_override,
-            *m_match_game_fov_prospi_center_field_dolly_distance,
-            *m_match_game_fov_prospi_center_field_high_dolly_override,
-            *m_match_game_fov_prospi_center_field_high_dolly_distance,
-            *m_match_game_fov_prospi_deep_outfield_dolly_override,
-            *m_match_game_fov_prospi_deep_outfield_dolly_distance,
-            *m_match_game_fov_prospi_home_plate_sky_dolly_override,
-            *m_match_game_fov_prospi_home_plate_sky_dolly_distance,
-            *m_match_game_fov_prospi_upper_deck_dolly_override,
-            *m_match_game_fov_prospi_upper_deck_dolly_distance,
-            *m_match_game_fov_prospi_home_sky_dolly_override,
-            *m_match_game_fov_prospi_home_sky_dolly_distance,
-            *m_match_game_fov_prospi_third_base_dolly_override,
-            *m_match_game_fov_prospi_third_base_dolly_distance,
-            *m_match_game_fov_prospi_third_base_relay_low_dolly_override,
-            *m_match_game_fov_prospi_third_base_relay_low_dolly_distance,
-            *m_match_game_fov_prospi_third_base_wide_dolly_override,
-            *m_match_game_fov_prospi_third_base_wide_dolly_distance,
-            *m_match_game_fov_prospi_first_base_dolly_override,
-            *m_match_game_fov_prospi_first_base_dolly_distance,
-            *m_match_game_fov_prospi_first_base_wide_dolly_override,
-            *m_match_game_fov_prospi_first_base_wide_dolly_distance,
-            *m_match_game_fov_prospi_backstop_high_dolly_override,
-            *m_match_game_fov_prospi_backstop_high_dolly_distance,
-            *m_match_game_fov_prospi_right_field_corner_dolly_override,
-            *m_match_game_fov_prospi_right_field_corner_dolly_distance,
-            *m_match_game_fov_prospi_right_center_field_dolly_override,
-            *m_match_game_fov_prospi_right_center_field_dolly_distance,
-            *m_match_game_fov_prospi_plate_high_dolly_override,
-            *m_match_game_fov_prospi_plate_high_dolly_distance,
-            *m_match_game_fov_prospi_home_plate_overhead_dolly_override,
-            *m_match_game_fov_prospi_home_plate_overhead_dolly_distance,
-            *m_match_game_fov_prospi_camera_calibration_auto,
             *m_world_scale,
             *m_depth_scale,
             *m_custom_z_near,
@@ -1758,19 +1331,8 @@ public:
             *m_compatibility_skip_pip,
             *m_compatibility_skip_uobjectarray_init,
             *m_compatibility_ahud,
-            *m_compatibility_direct_aim,
-            *m_compatibility_controller_camera_guard,
-            *m_compatibility_head_turn_camera_stabilizer,
-            *m_compatibility_ui_layer_pose_telemetry,
-            *m_compatibility_ui_layer_pose_stabilizer,
             *m_compatibility_fullscreen_16x9_cameras,
             *m_compatibility_fullscreen_16x9_camera_aspect,
-            *m_compatibility_subnautica2_native_water,
-            *m_subnautica2_native_water_mode,
-            *m_compatibility_1666amsterdam_native_postprocess,
-            *m_compatibility_daysgone_bend_ui_placement_fix,
-            *m_compatibility_daysgone_gbuffer_safe_mode,
-            *m_compatibility_everspace2_remove_cinematic_bars,
             *m_sceneview_compatibility_mode,
             *m_keybind_recenter,
             *m_keybind_recenter_horizon,
@@ -1800,47 +1362,6 @@ private:
     bool m_wait_for_present{true};
     const ModToggle::Ptr m_controllers_allowed{ ModToggle::create(generate_name("ControllersAllowed"), true) };
     bool m_controller_test_mode{false};
-    std::atomic<float> m_game_fov{0.0f};
-    std::atomic<float> m_game_fov_raw{0.0f};
-    std::atomic<float> m_game_fov_base{0.0f};
-    std::atomic<float> m_game_fov_dolly_offset{0.0f};
-    std::atomic<bool> m_game_fov_valid{false};
-    std::atomic<int32_t> m_match_game_fov_prospi_preset{0};
-    std::atomic<float> m_match_game_fov_prospi_actual_min_active{0.0f};
-    std::atomic<bool> m_match_game_fov_prospi_calibration_applied{false};
-    std::atomic<float> m_match_game_fov_prospi_calibration_dolly_distance_active{0.0f};
-    std::atomic<float> m_match_game_fov_prospi_calibration_multiplier_active{1.0f};
-    std::atomic<float> m_match_game_fov_prospi_calibration_actual_min_active{0.0f};
-    std::atomic<bool> m_match_game_fov_prospi_tv_override_active{false};
-    std::atomic<float> m_match_game_fov_prospi_auto_dolly_distance_active{0.0f};
-    std::atomic<bool> m_match_game_fov_prospi_telephoto_perf_active{false};
-    std::atomic<bool> m_match_game_fov_read_only_camera_active{false};
-    std::atomic<bool> m_match_game_fov_would_write_game_camera{false};
-    std::atomic<bool> m_match_game_fov_camera_cut_stabilizer_active{false};
-    std::atomic<int32_t> m_match_game_fov_camera_cut_stabilizer_remaining_ms{0};
-    std::atomic<bool> m_match_game_fov_generic_camera_preset_applied{false};
-    std::atomic<bool> m_match_game_fov_generic_camera_tracking_active{false};
-    std::mutex m_prospi_camera_calibration_mtx{};
-    std::unordered_map<std::string, ProSpiCameraCalibration> m_prospi_camera_calibrations{};
-    std::string m_prospi_current_camera_id{};
-    bool m_prospi_sticky_preset_valid{false};
-    int32_t m_prospi_sticky_preset{0};
-    glm::vec3 m_prospi_sticky_location{};
-    glm::vec3 m_prospi_sticky_rotation{};
-    float m_prospi_sticky_raw_fov{0.0f};
-    bool m_prospi_sticky_calibration_valid{false};
-    ProSpiCameraCalibration m_prospi_sticky_calibration{};
-    std::string m_prospi_sticky_camera_id{};
-    bool m_prospi_telephoto_perf_baselines_valid{false};
-    float m_prospi_telephoto_perf_baseline_view_distance_scale{1.0f};
-    float m_prospi_telephoto_perf_baseline_static_mesh_lod_distance_scale{1.0f};
-    int m_prospi_telephoto_perf_baseline_skeletal_mesh_lod_bias{0};
-    bool m_prospi_telephoto_perf_override_applied{false};
-    std::mutex m_generic_camera_preset_mtx{};
-    std::unordered_map<std::string, GenericCameraPreset> m_generic_camera_presets{};
-    std::string m_current_game_camera_id{};
-    GenericCameraPreset m_active_generic_camera_preset{};
-    CameraCutState m_camera_cut_state{};
 
     const ModToggle::Ptr m_show_fps{ ModToggle::create(generate_name("ShowFPSOverlay"), false) };
     bool m_show_fps_state{ false };
@@ -1848,7 +1369,7 @@ private:
     const ModToggle::Ptr m_show_statistics{ ModToggle::create(generate_name("ShowStatsOverlay"), false) };
     bool m_show_statistics_state{ false };
 
-    
+
 
     int m_game_frame_count{};
     int m_frame_count{};
@@ -1866,54 +1387,15 @@ private:
     bool m_first_config_load{true};
     bool m_first_submit{true};
     bool m_is_d3d12{false};
-    bool m_hitch_diagnostics_enabled_last_frame{false};
-    bool m_backbuffer_inconsistency{false};
     bool m_init_finished{false};
     bool m_has_hw_scheduling{false}; // hardware accelerated GPU scheduling
     bool m_spoofed_gamepad_connection{false};
     bool m_aim_temp_disabled{false};
-    bool m_subnautica2_save_thumbnail_guard_done{false};
-    bool m_subnautica2_save_thumbnail_fallback_logged{false};
-    bool m_subnautica2_save_thumbnail_guard_warned_exhausted{false};
-    bool m_subnautica2_save_thumbnail_guard_found_candidate{false};
     std::jthread m_native_openxr_async_wait_thread{};
     std::mutex m_native_openxr_async_wait_mtx{};
     std::condition_variable m_native_openxr_async_wait_cv{};
     std::atomic_bool m_native_openxr_async_wait_inflight{false};
     bool m_native_openxr_async_wait_pending{false};
-    uint32_t m_subnautica2_save_thumbnail_guard_full_sweeps{0};
-    uint32_t m_subnautica2_save_thumbnail_guard_patched_objects{0};
-    int32_t m_subnautica2_save_thumbnail_guard_cursor{0};
-    std::unordered_map<uintptr_t, bool> m_subnautica2_save_thumbnail_guard_class_cache{};
-    bool m_subnautica2_native_water_cvars_applied{false};
-    bool m_subnautica2_native_water_cvars_logged{false};
-    uint32_t m_subnautica2_native_water_cvar_attempts{0};
-    int32_t m_subnautica2_native_water_last_mode{-1};
-    std::chrono::steady_clock::time_point m_subnautica2_native_water_next_apply{};
-    std::unordered_map<std::wstring, int> m_subnautica2_native_water_previous_ints{};
-    bool m_1666amsterdam_native_postprocess_cvars_applied{false};
-    bool m_1666amsterdam_native_postprocess_cvars_logged{false};
-    uint32_t m_1666amsterdam_native_postprocess_cvar_attempts{0};
-    std::chrono::steady_clock::time_point m_1666amsterdam_native_postprocess_next_apply{};
-    std::unordered_map<std::wstring, int> m_1666amsterdam_native_postprocess_previous_ints{};
-    bool m_daysgone_gbuffer_cvar_applied{false};
-    bool m_daysgone_gbuffer_cvar_logged{false};
-    bool m_daysgone_gbuffer_previous_valid{false};
-    int m_daysgone_gbuffer_previous_value{1};
-    uint32_t m_daysgone_gbuffer_cvar_attempts{0};
-    std::chrono::steady_clock::time_point m_daysgone_gbuffer_next_apply{};
-    struct Everspace2CinematicBarState {
-        void* hud_class{nullptr};
-        void* processed_hud{nullptr};
-        int32_t processed_index{-1};
-        int32_t processed_serial{0};
-        int32_t scan_cursor{0};
-        uint32_t removed_instances{0};
-        bool was_enabled{false};
-        bool invalid_layout_logged{false};
-        std::chrono::steady_clock::time_point next_class_lookup{};
-        std::chrono::steady_clock::time_point next_scan{};
-    } m_everspace2_cinematic_bars{};
 
     struct {
         bool draw{false};
@@ -1938,7 +1420,7 @@ private:
 
         PadContext gamepad{};
         PadContext vr_controller{};
-        
+
         TracyLockable(std::recursive_mutex, mtx);
 
         struct VRState {
@@ -1962,8 +1444,8 @@ private:
                     }
 
                     return false;
-                } 
-            
+                }
+
             private:
                 std::chrono::steady_clock::time_point initial_press{};
                 bool is_pressed{false};

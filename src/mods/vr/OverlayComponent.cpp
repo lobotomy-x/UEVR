@@ -129,7 +129,7 @@ void OverlayComponent::update_input_mouse_emulation() {
 
         const auto x = m_framework_intersect_state.swapchain_intersection_point.x;
         const auto y = m_framework_intersect_state.swapchain_intersection_point.y;
-        
+
         const auto window_size = g_framework->get_last_window_size();
         const auto window_pos = g_framework->get_last_window_pos();
 
@@ -194,7 +194,7 @@ void OverlayComponent::update_input_mouse_emulation() {
             }
 
             const auto right_stick_axis = vr->get_right_stick_axis();
-            
+
             // Mousewheel
             if (right_stick_axis.y > 0.5f) {
                 io.MouseWheel += right_stick_axis.y * delta_f * 10.0f;
@@ -403,7 +403,7 @@ void OverlayComponent::update_slate_openvr() {
     glm_matrix[3] += m_slate_x_offset->value() * glm_matrix[0];
     glm_matrix[3] += m_slate_y_offset->value() * glm_matrix[1];
     glm_matrix[3].w = 1.0f;
-    
+
     const auto steamvr_matrix = Matrix3x4f{glm::rowMajor4(glm_matrix)};
     vr::VROverlay()->SetOverlayTransformAbsolute(m_slate_overlay_handle, vr::TrackingUniverseStanding, (vr::HmdMatrix34_t*)&steamvr_matrix);
 
@@ -419,7 +419,7 @@ void OverlayComponent::update_slate_openvr() {
         }
 
         vr::Texture_t ui_tex{(void*)vr->m_d3d11.get_ui_tex().Get(), vr::TextureType_DirectX, vr::ColorSpace_Auto};
-        vr::VROverlay()->SetOverlayTexture(m_slate_overlay_handle, &ui_tex);   
+        vr::VROverlay()->SetOverlayTexture(m_slate_overlay_handle, &ui_tex);
     } else {
         if (vr->m_d3d12.get_openvr_ui_tex().texture.Get() == nullptr) {
             return;
@@ -432,7 +432,7 @@ void OverlayComponent::update_slate_openvr() {
         };
 
         vr::Texture_t ui_tex{(void*)&overlay_tex, vr::TextureType_DirectX12, vr::ColorSpace_Auto};
-        vr::VROverlay()->SetOverlayTexture(m_slate_overlay_handle, &ui_tex);   
+        vr::VROverlay()->SetOverlayTexture(m_slate_overlay_handle, &ui_tex);
     }
 }
 
@@ -459,7 +459,7 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
     // if things like the width or position of the window change
     if (m_overlay_data.last_x != last_window_pos.x || m_overlay_data.last_y != last_window_pos.y ||
         m_overlay_data.last_width != last_window_size.x || m_overlay_data.last_height != last_window_size.y ||
-        m_overlay_data.last_render_target_width != render_target_width || m_overlay_data.last_render_target_height != render_target_height || m_just_closed_ui || m_just_opened_ui) 
+        m_overlay_data.last_render_target_width != render_target_width || m_overlay_data.last_render_target_height != render_target_height || m_just_closed_ui || m_just_opened_ui)
     {
         // scaling for the intersection mask
         // so it doesn't become too intrusive during gameplay
@@ -510,13 +510,13 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
         if (controllers[0] != vr::k_unTrackedDeviceIndexInvalid) {
             const auto position_offset = vr->m_overlay_position;
             const auto rotation_offset = vr->m_overlay_rotation;
- 
+
             left_controller_world_transform = vr->get_transform(controllers[0]) * Matrix4x4f{glm::quat{rotation_offset}};
             left_controller_world_transform[3] -= glm::extractMatrixRotation(left_controller_world_transform) * position_offset;
             left_controller_world_transform[3].w = 1.0f;
 
             const auto steamvr_transform = Matrix3x4f{ glm::rowMajor4(left_controller_world_transform) };
-            
+
             vr::VROverlay()->SetOverlayTransformAbsolute(m_overlay_handle, vr::ETrackingUniverseOrigin::TrackingUniverseStanding, (vr::HmdMatrix34_t*)&steamvr_transform);
         }
 
@@ -570,8 +570,8 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
                     const auto v = ((m_overlay_data.last_render_target_height - (intersection_results.vUVs.v[1] * m_overlay_data.last_render_target_height)) - m_overlay_data.last_y) / m_overlay_data.last_height;
 
                     any_intersected = u >= 0.25f &&
-                                    u <= 0.75f && 
-                                    v >= 0.25f && 
+                                    u <= 0.75f &&
+                                    v >= 0.25f &&
                                     v <= 0.75f;
 
                     // Make sure the intersection hit the front of the overlay, not the back
@@ -602,8 +602,8 @@ bool OverlayComponent::update_wrist_overlay_openvr() {
                     const auto v = ((m_overlay_data.last_render_target_height - (intersection_results.vUVs.v[1] * m_overlay_data.last_render_target_height)) - m_overlay_data.last_y) / m_overlay_data.last_height;
 
                     any_intersected = u >= 0.25f &&
-                                    u <= 0.75f && 
-                                    v >= 0.25f && 
+                                    u <= 0.75f &&
+                                    v >= 0.25f &&
                                     v <= 0.75f;
                 }
 
@@ -725,7 +725,7 @@ void OverlayComponent::update_overlay_openvr() {
             // finally set the texture
             if (is_d3d11) {
                 vr::Texture_t imgui_tex{(void*)g_framework->get_rendertarget_d3d11().Get(), vr::TextureType_DirectX, vr::ColorSpace_Auto};
-                vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);   
+                vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);
             } else {
                 auto& hook = g_framework->get_d3d12_hook();
 
@@ -734,7 +734,7 @@ void OverlayComponent::update_overlay_openvr() {
                     hook->get_command_queue(),
                     0
                 };
-                
+
                 vr::Texture_t imgui_tex{(void*)&texture_data, vr::TextureType_DirectX12, vr::ColorSpace_Auto};
                 vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);
             }
@@ -751,7 +751,7 @@ void OverlayComponent::update_overlay_openvr() {
                     hook->get_command_queue(),
                     0
                 };
-                
+
                 vr::Texture_t imgui_tex{(void*)&texture_data, vr::TextureType_DirectX12, vr::ColorSpace_Auto};
                 vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);
             }
@@ -830,7 +830,7 @@ void OverlayComponent::update_overlay_openvr() {
 
         if (is_d3d11) {
             vr::Texture_t imgui_tex{(void*)g_framework->get_rendertarget_d3d11().Get(), vr::TextureType_DirectX, vr::ColorSpace_Auto};
-            vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);   
+            vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);
         } else {
             auto& hook = g_framework->get_d3d12_hook();
 
@@ -839,7 +839,7 @@ void OverlayComponent::update_overlay_openvr() {
                 hook->get_command_queue(),
                 0
             };
-            
+
             vr::Texture_t imgui_tex{(void*)&texture_data, vr::TextureType_DirectX12, vr::ColorSpace_Auto};
             vr::VROverlay()->SetOverlayTexture(m_overlay_handle, &imgui_tex);
         }
@@ -854,7 +854,7 @@ void OverlayComponent::update_overlay_openvr() {
             const auto start = right_controller_pos;
             auto fwd = (right_controller_rot * glm::vec3{0.0f, 0.0f, -1.0f});
             const auto end = right_controller_pos + (fwd * 1000.0f);
-            
+
             const auto plane_pos = glm::vec3{glm_matrix[3]};
 
             float intersection_distance = 0.0f;
@@ -938,7 +938,7 @@ const char* get_ui_layer_pose_refusal_reason(const UILayerPoseBasis* pose_basis,
 }
 
 std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::OpenXR::generate_slate_quad(
-    runtimes::OpenXR::SwapchainIndex swapchain, 
+    runtimes::OpenXR::SwapchainIndex swapchain,
     XrEyeVisibility eye,
     const UILayerPoseBasis* pose_basis)
 {
@@ -969,7 +969,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 
     auto glm_matrix = glm::identity<glm::mat4>();
     const auto follows_view = vr->m_overlay_component.m_ui_follows_view->value();
-    const auto pose_tracking_enabled = pose_basis != nullptr || vr->is_ui_layer_pose_telemetry_enabled() || vr->is_ui_layer_pose_stabilizer_enabled();
+    const auto pose_tracking_enabled = pose_basis != nullptr || false || false;
     const auto hmd_rotation = pose_tracking_enabled ? glm::quat{vr->get_rotation(0)} : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
     const auto live_pre_flattened_rotation = vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()
         ? vr->get_pre_flattened_rotation()
@@ -978,7 +978,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
     auto applied_ui_rotation = live_ui_rotation;
     auto standing_origin = vr->get_standing_origin();
     bool stabilizer_used = false;
-    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, vr->is_ui_layer_pose_stabilizer_enabled());
+    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, false);
 
     if (follows_view) {
         layer.space = vr->m_openxr->view_space;
@@ -1007,17 +1007,6 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
     layer.pose.orientation = runtimes::OpenXR::to_openxr(glm::quat_cast(glm_matrix));
     layer.pose.position = runtimes::OpenXR::to_openxr(glm_matrix[3]);
 
-    vr->record_ui_layer_pose_sample(
-        pose_basis,
-        swapchain,
-        eye,
-        follows_view,
-        stabilizer_used,
-        hmd_rotation,
-        live_ui_rotation,
-        applied_ui_rotation,
-        refusal_reason);
-
     // Check if the controller pointer intersects with the quad, and we can use this to emulate the mouse
     if (vr->is_using_controllers()) {
         // Right only for now for testing
@@ -1028,7 +1017,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
         const auto start = right_controller_pos;
         auto fwd = (right_controller_rot * glm::vec3{0.0f, 0.0f, -1.0f});
         const auto end = right_controller_pos + (fwd * 1000.0f);
-        
+
         const auto plane_pos = glm::vec3{glm_matrix[3]};
 
         float intersection_distance = 0.0f;
@@ -1065,7 +1054,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
 }
 
 std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComponent::OpenXR::generate_slate_cylinder(
-    runtimes::OpenXR::SwapchainIndex swapchain, 
+    runtimes::OpenXR::SwapchainIndex swapchain,
     XrEyeVisibility eye,
     const UILayerPoseBasis* pose_basis)
 {
@@ -1092,10 +1081,10 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     layer.subImage.imageRect.extent.width = ui_swapchain.width;
     layer.subImage.imageRect.extent.height = ui_swapchain.height;
     layer.eyeVisibility = eye;
-    
+
     auto glm_matrix = glm::identity<glm::mat4>();
     const auto follows_view = vr->m_overlay_component.m_ui_follows_view->value();
-    const auto pose_tracking_enabled = pose_basis != nullptr || vr->is_ui_layer_pose_telemetry_enabled() || vr->is_ui_layer_pose_stabilizer_enabled();
+    const auto pose_tracking_enabled = pose_basis != nullptr || false || false;
     const auto hmd_rotation = pose_tracking_enabled ? glm::quat{vr->get_rotation(0)} : glm::quat{1.0f, 0.0f, 0.0f, 0.0f};
     const auto live_pre_flattened_rotation = vr->is_decoupled_pitch_enabled() && vr->is_decoupled_pitch_ui_adjust_enabled()
         ? vr->get_pre_flattened_rotation()
@@ -1104,7 +1093,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     auto applied_ui_rotation = live_ui_rotation;
     auto standing_origin = vr->get_standing_origin();
     bool stabilizer_used = false;
-    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, vr->is_ui_layer_pose_stabilizer_enabled());
+    const auto refusal_reason = get_ui_layer_pose_refusal_reason(pose_basis, follows_view, false);
 
     if (follows_view) {
         layer.space = vr->m_openxr->view_space;
@@ -1141,22 +1130,11 @@ std::optional<std::reference_wrapper<XrCompositionLayerCylinderKHR>> OverlayComp
     layer.pose.orientation = runtimes::OpenXR::to_openxr(glm::quat_cast(glm_matrix));
     layer.pose.position = runtimes::OpenXR::to_openxr(glm_matrix[3]);
 
-    vr->record_ui_layer_pose_sample(
-        pose_basis,
-        swapchain,
-        eye,
-        follows_view,
-        stabilizer_used,
-        hmd_rotation,
-        live_ui_rotation,
-        applied_ui_rotation,
-        refusal_reason);
-
     return layer;
 }
 
 std::optional<std::reference_wrapper<XrCompositionLayerBaseHeader>> OverlayComponent::OpenXR::generate_slate_layer(
-    runtimes::OpenXR::SwapchainIndex swapchain, 
+    runtimes::OpenXR::SwapchainIndex swapchain,
     XrEyeVisibility eye,
     const UILayerPoseBasis* pose_basis)
 {
@@ -1264,7 +1242,7 @@ std::optional<std::reference_wrapper<XrCompositionLayerQuad>> OverlayComponent::
         const auto start = right_controller_pos;
         auto fwd = (right_controller_rot * glm::vec3{0.0f, 0.0f, -1.0f});
         const auto end = right_controller_pos + (fwd * 1000.0f);
-        
+
         const auto plane_pos = glm::vec3{glm_matrix[3]};
 
         float intersection_distance = 0.0f;

@@ -65,15 +65,7 @@ bool is_daysgone_controller_aim_requested() {
 }
 
 bool is_direct_aim_compatibility_requested() {
-    if (is_deadzone_ue56_executable()) {
-        return true;
-    }
-
-    if (is_daysgone_controller_aim_requested()) {
-        return true;
-    }
-
-    return VR::get()->is_direct_aim_compatibility_enabled();
+    return false;
 }
 
 bool is_direct_aim_compatibility_active() {
@@ -87,7 +79,7 @@ bool is_direct_aim_compatibility_active() {
         return false;
     }
 
-    if (vr->is_controller_camera_conflict_guard_active()) {
+    if (false) {
         return false;
     }
 
@@ -620,7 +612,7 @@ void IXRTrackingSystemHook::on_pre_engine_tick(sdk::UGameEngine* engine, float d
     if (direct_aim_compat_requested && vr->is_any_aim_method_active()) {
         const auto aim_method = vr->get_aim_method();
 
-        if (daysgone_controller_aim && vr->is_controller_camera_conflict_guard_active()) {
+        if (daysgone_controller_aim && false) {
             SPDLOG_WARN_ONCE("[DaysGone][Aim] Falling back to game aim because Controller-Camera Conflict Guard blocks the safe direct controller-aim path");
             vr->set_aim_method(VR::AimMethod::GAME);
             return;
@@ -690,7 +682,7 @@ void IXRTrackingSystemHook::on_pre_engine_tick(sdk::UGameEngine* engine, float d
 }
 
 void IXRTrackingSystemHook::on_post_engine_tick(sdk::UGameEngine* engine, float delta) {
-    if (VR::get()->is_controller_camera_conflict_guard_active()) {
+    if (false) {
         return;
     }
 
@@ -1085,7 +1077,7 @@ IXRTrackingSystemHook::SharedPtr* IXRTrackingSystemHook::get_stereo_rendering_de
 }
 
 void IXRTrackingSystemHook::manual_update_control_rotation(sdk::UGameEngine* engine_override) {
-    if (VR::get()->is_controller_camera_conflict_guard_active()) {
+    if (false) {
         return;
     }
 
@@ -2198,7 +2190,7 @@ void IXRTrackingSystemHook::process_view_rotation(
         return;
     }
 
-    if (vr->is_controller_camera_conflict_guard_active()) {
+    if (false) {
         SPDLOG_INFO_ONCE("[ControllerCameraGuard] Bypassing ProcessViewRotation mutation");
         call_orig();
         return;
@@ -2271,7 +2263,7 @@ void IXRTrackingSystemHook::update_view_rotation(sdk::UObject* reference_obj, Ro
         return;
     }
 
-    if (vr->is_controller_camera_conflict_guard_active()) {
+    if (false) {
         return;
     }
 

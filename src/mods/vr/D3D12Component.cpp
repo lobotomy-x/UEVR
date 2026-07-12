@@ -14,7 +14,6 @@
 
 #include "Framework.hpp"
 #include "render/D3D12Diagnostics.hpp"
-#include "../GameSpecific.hpp"
 #include "../VR.hpp"
 
 #include <sdk/Utility.hpp>
@@ -159,33 +158,10 @@ bool is_shf_current_game() {
     return result;
 }
 
-bool is_deadzone_rogue_current_game() {
-    static const bool result = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && exe_path->find(L"DeadzoneSteam-Win64-Shipping") != std::wstring::npos;
-    }();
-
-    return result;
-}
-
-bool is_everspace2_current_game() {
-    static const bool result = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_everspace2_executable_path(*exe_path);
-    }();
-
-    return result;
-}
-
 Microsoft::WRL::ComPtr<ID3D12Resource> acquire_scene_target_resource(
     VR* vr,
-    const char* consumer,
-    bool* from_everspace2_snapshot = nullptr)
+    const char* consumer)
 {
-    if (from_everspace2_snapshot != nullptr) {
-        *from_everspace2_snapshot = false;
-    }
-
     if (vr == nullptr) {
         return nullptr;
     }
@@ -200,32 +176,6 @@ Microsoft::WRL::ComPtr<ID3D12Resource> acquire_scene_target_resource(
         return nullptr;
     }
 
-    if (is_everspace2_current_game() && g_framework->is_dx12()) {
-        const auto snapshot = rtm->get_everspace2_scene_target_snapshot();
-        if (snapshot == nullptr || snapshot->resource == nullptr) {
-            SPDLOG_INFO_EVERY_N_SEC(
-                1,
-                "[Everspace2][SceneTargetSnapshot] {} waiting for a valid native scene target",
-                consumer != nullptr ? consumer : "<unknown>");
-            return nullptr;
-        }
-
-        if (from_everspace2_snapshot != nullptr) {
-            *from_everspace2_snapshot = true;
-        }
-
-        SPDLOG_INFO_EVERY_N_SEC(
-            5,
-            "[Everspace2][SceneTargetSnapshot] {} consuming generation={} frhi={:x} native={:x} size={}x{}",
-            consumer != nullptr ? consumer : "<unknown>",
-            snapshot->generation,
-            snapshot->source_texture,
-            (uintptr_t)snapshot->resource.Get(),
-            snapshot->desc.Width,
-            snapshot->desc.Height);
-        return snapshot->resource;
-    }
-
     const auto ue4_texture = rtm->get_render_target();
     if (ue4_texture == nullptr) {
         return nullptr;
@@ -238,15 +188,6 @@ bool is_stalker2_current_game() {
     static const bool result = []() {
         const auto exe_path = utility::get_module_pathw(utility::get_executable());
         return exe_path && exe_path->find(L"Stalker2-Win64-Shipping") != std::wstring::npos;
-    }();
-
-    return result;
-}
-
-bool is_avowed_current_game() {
-    static const bool result = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_avowed_executable_path(*exe_path);
     }();
 
     return result;
@@ -764,57 +705,26 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
     }
 
     // Real-backbuffer bootstrap (per-frame): mirror the setup-time fallback so a frame whose UE RT
-    // is momentarily null draws the game flat instead of black. everspace2 excluded (own handling).
+    // is momentarily null draws the game flat instead of black.
     if (backbuffer == nullptr && real_backbuffer != nullptr &&
-        !vr->is_extreme_compatibility_mode_enabled() && !is_everspace2_current_game()) {
+        !vr->is_extreme_compatibility_mode_enabled()) {
         SPDLOG_WARNING_EVERY_N_SEC(2, "[VR][D3D12] UE render target unavailable on frame; using real swapchain backbuffer fallback");
         backbuffer = real_backbuffer;
     }
 
     if (backbuffer == nullptr) {
         SPDLOG_ERROR_EVERY_N_SEC(1, "[VR] Failed to get back buffer.");
-        if (is_everspace2_current_game()) {
-            close_openxr_setup_failure_frame();
-        }
         return vr::VRCompositorError_None;
     }
 
-    const auto is_shf_external_backbuffer =
-        is_shf_current_game() &&
-        g_framework->is_dx12() &&
-        backbuffer.Get() != nullptr &&
-        real_backbuffer.Get() != nullptr &&
-        backbuffer.Get() != real_backbuffer.Get();
-    const auto is_stalker2_ue51_external_backbuffer =
-        is_stalker2_current_game() &&
-        is_ue_5_1_dx12_backend() &&
-        backbuffer.Get() != nullptr &&
-        real_backbuffer.Get() != nullptr &&
-        backbuffer.Get() != real_backbuffer.Get();
-    const auto use_stable_external_backbuffer_copy =
-        is_shf_external_backbuffer || is_stalker2_ue51_external_backbuffer;
-    const auto volatile_external_source_state =
-        is_shf_external_backbuffer ? ENGINE_SRC_COLOR : D3D12_RESOURCE_STATE_RENDER_TARGET;
-    const char* stable_external_copy_label =
-        is_stalker2_ue51_external_backbuffer ? "Stalker2 UE5.1" : "SHf";
-    const wchar_t* stable_external_copy_name =
-        is_stalker2_ue51_external_backbuffer ? L"Stalker2 UE5.1 Stable Scene Copy" : L"SHf Stable Scene Copy";
+    const auto is_shf_external_backbuffer = false;
+    const auto use_stable_external_backbuffer_copy = false;
+    const auto volatile_external_source_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    const char* stable_external_copy_label = "Stable Scene Copy";
+    const wchar_t* stable_external_copy_name = L"Stable Scene Copy";
     const auto skip_in_place_ui_invert = false;
     m_skip_spectator_view_for_volatile_external_rt = is_shf_external_backbuffer;
     auto scene_source_state = use_stable_external_backbuffer_copy ? ENGINE_SRC_COLOR : D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-    if (is_stalker2_ue51_external_backbuffer) {
-        static auto s_stalker2_last_d3d12_frame = std::chrono::steady_clock::time_point{};
-        const auto now = std::chrono::steady_clock::now();
-
-        if (s_stalker2_last_d3d12_frame.time_since_epoch().count() != 0 &&
-            now - s_stalker2_last_d3d12_frame > std::chrono::milliseconds{100})
-        {
-            vr->note_stalker2_transition_stress("d3d12_frame_gap");
-        }
-
-        s_stalker2_last_d3d12_frame = now;
-    }
 
     const auto ui_invert_alpha = vr->get_overlay_component().get_ui_invert_alpha();
 
@@ -841,11 +751,6 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
     // so we need to resynchronized or begin the frame again.
     if (runtime->ready()) {
         if (runtime->is_openxr()) {
-            // Keep xrWaitFrame ownership where it already is, but do not let the D3D12
-            // path begin the frame here. We open it at the first OpenXR copy/acquire.
-            defer_stalker2_transition_openxr =
-                vr->should_defer_stalker2_openxr_frame_for_transition("d3d12_pre_wait");
-
             if (!defer_stalker2_transition_openxr) {
                 runtime->synchronize_frame(std::nullopt, VRRuntime::SyncFrameCallsite::RuntimeFixFrame);
             }
@@ -990,16 +895,6 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
     if (vr->is_native_stereo_fix_enabled()) {
         const auto scene_capture = ffsr->get_render_target_manager()->get_scene_capture_render_target();
         const auto scene_capture_rt = scene_capture != nullptr ? (ID3D12Resource*)scene_capture->get_native_resource() : nullptr;
-
-        if (is_avowed_current_game()) {
-            SPDLOG_INFO_EVERY_N_SEC(
-                2,
-                "[Avowed][D3D12][NativeStereoFix] Scene capture texture state: rhi={} native={} cached={} game_tex={}",
-                (uintptr_t)scene_capture,
-                (uintptr_t)scene_capture_rt,
-                (uintptr_t)m_scene_capture_tex.texture.Get(),
-                (uintptr_t)m_game_tex.texture.Get());
-        }
 
         if (scene_capture_rt != nullptr && m_scene_capture_tex.texture.Get() != scene_capture_rt) {
             spdlog::info("[VR] Setting up scene capture texture as reference to original");
@@ -1158,10 +1053,7 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
         shf_scene_mode == ShfSceneMode::Mono2D &&
         m_game_tex.texture.Get() != nullptr &&
         m_game_tex.srv_heap != nullptr;
-    const auto mixtape_auto_2d_screen =
-        vr->is_mixtape_auto_2d_active() &&
-        m_game_tex.texture.Get() != nullptr &&
-        m_game_tex.srv_heap != nullptr;
+    const auto mixtape_auto_2d_screen = false;
     const auto use_2d_screen = is_2d_screen || shf_auto_2d_screen || mixtape_auto_2d_screen;
 
     if (shf_auto_2d_screen) {
@@ -1845,9 +1737,7 @@ vr::EVRCompositorError D3D12Component::on_frame(VR* vr) {
             std::vector<XrCompositionLayerBaseHeader*> quad_layers{};
 
             auto& openxr_overlay = vr->get_overlay_component().get_openxr();
-            const auto ui_pose_diagnostics_enabled = vr->is_ui_layer_pose_telemetry_enabled() || vr->is_ui_layer_pose_stabilizer_enabled();
-            const auto ui_pose_basis = ui_pose_diagnostics_enabled ? vr->build_ui_layer_pose_basis(frame_count) : vrmod::UILayerPoseBasis{};
-            const auto* ui_pose_basis_ptr = ui_pose_diagnostics_enabled ? &ui_pose_basis : nullptr;
+            const vrmod::UILayerPoseBasis* ui_pose_basis_ptr = nullptr;
 
             if (!suppress_ui_copy && use_2d_screen) {
                 if (shf_auto_2d_screen) {
@@ -2652,13 +2542,11 @@ bool D3D12Component::setup() {
 
     // Real-backbuffer bootstrap: when the engine's render target isn't available during setup on
     // the non-extreme path, draw from the real swapchain backbuffer so the game shows up (flat)
-    // instead of a black screen. Proper stereo resumes once the UE RT is captured. Excludes
-    // everspace2, which has its own setup-failure-frame handling.
+    // instead of a black screen. Proper stereo resumes once the UE RT is captured.
     const bool real_backbuffer_bootstrap =
         backbuffer == nullptr &&
         real_backbuffer != nullptr &&
-        !vr->is_extreme_compatibility_mode_enabled() &&
-        !is_everspace2_current_game();
+        !vr->is_extreme_compatibility_mode_enabled();
 
     if (real_backbuffer_bootstrap) {
         SPDLOG_WARNING_EVERY_N_SEC(2, "[VR][D3D12] UE render target unavailable during setup; bootstrapping from the real swapchain backbuffer (flat fallback)");

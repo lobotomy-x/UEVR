@@ -20,7 +20,6 @@
 
 #include "Framework.hpp"
 
-#include "../../GameSpecific.hpp"
 #include "../../VR.hpp"
 #include "../../../utility/Logging.hpp"
 #include "OpenXR.hpp"
@@ -113,22 +112,8 @@ bool is_eye_projection_valid(const Vector4f& projection) {
            projection[3] < -epsilon;
 }
 
-bool is_stalker2_openxr_frame_loop_guarded() {
-    static const bool result = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_stalker2_executable_path(*exe_path);
-    }();
-
-    return result;
-}
-
 bool is_everspace2_executable() {
-    static const bool result = []() {
-        const auto exe_path = utility::get_module_pathw(utility::get_executable());
-        return exe_path && uevr::games::is_everspace2_executable_path(*exe_path);
-    }();
-
-    return result;
+    return false;
 }
 
 std::string format_space_location_flags(XrSpaceLocationFlags flags) {
@@ -768,20 +753,6 @@ bool OpenXR::recover_focused_stale_frame_loop(const char* caller) {
         return false;
     }
 
-    if (!this->frame_began &&
-        is_stalker2_openxr_frame_loop_guarded() &&
-        caller != nullptr &&
-        std::string_view{caller} == "runtime_fix_frame")
-    {
-        SPDLOG_INFO_EVERY_N_SEC(
-            2,
-            "[Stalker2][OpenXR] Preserving stale synchronized frame for imminent D3D12 submit wait_age={}ms begin_age={}ms end_age={}ms recoveries={}",
-            wait_age_ms,
-            begin_age_ms,
-            end_age_ms,
-            this->focused_frame_loop_recovery_count);
-        return false;
-    }
 
     spdlog::warn(
         "[OpenXR] Recovering focused stale frame loop caller={} wait_age={}ms begin_age={}ms end_age={}ms frame_synced={} frame_began={} recoveries={}",
