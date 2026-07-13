@@ -142,6 +142,11 @@ protected:
     bool m_all_objects_hide_default{true};      // "All Objects" tab: hide CDOs ("Default__" name prefix)
     bool m_all_objects_hide_gen_variable{true}; // "All Objects" tab: hide Blueprint GEN_VARIABLE default-value holder objects
 
+    // Actors spawned through the Spawn Actor panel (draw_main), for the "Spawned Objects" foldout
+    // list there. Not persisted across restarts — a same-session convenience list, same class of
+    // state as m_most_recent_objects.
+    std::vector<sdk::UObjectBase*> m_spawned_via_panel{};
+
     void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
 

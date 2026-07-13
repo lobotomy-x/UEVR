@@ -1,4 +1,6 @@
 #include <fstream>
+#include <sstream>
+#include <cctype>
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -8060,14 +8062,92 @@ void UObjectHook::draw_main() {
     // out — same placement math as the w2s context menu's "Summon to camera" / "Recenter to camera".
     ImGui::SeparatorText("Spawn Actor");
     {
+        // Applies "Name=Value" lines (one property per line) to a freshly-spawned object. Covers the
+        // common scalar property types via the same class-name dispatch the context-menu's read-only
+        // compact_value uses; anything else (structs, arrays, objects, ...) is skipped rather than
+        // guessed at. Runs on the game thread (called from inside the spawn's enqueue).
+        auto apply_default_properties = [](sdk::UObject* obj, const std::string& text) {
+            if (obj == nullptr || text.empty()) return;
+            std::istringstream lines(text);
+            std::string line;
+            while (std::getline(lines, line)) {
+                const size_t eq = line.find('=');
+                if (eq == std::string::npos) continue;
+                std::string name = line.substr(0, eq);
+                std::string value = line.substr(eq + 1);
+                const auto trim = [](std::string& s) {
+                    while (!s.empty() && std::isspace((unsigned char)s.front())) s.erase(s.begin());
+                    while (!s.empty() && std::isspace((unsigned char)s.back())) s.pop_back();
+                };
+                trim(name);
+                trim(value);
+                if (name.empty()) continue;
+
+                auto* cls = obj->get_class();
+                auto* prop = cls != nullptr ? cls->find_property(utility::widen(name)) : nullptr;
+                if (prop == nullptr) {
+                    SPDLOG_WARN("[UObjectHook] Spawn default properties: property '{}' not found", name);
+                    continue;
+                }
+                std::string pcls;
+                try { pcls = utility::narrow(prop->get_class()->get_name().to_string()); } catch (...) { continue; }
+                try {
+                    if (pcls == "BoolProperty") {
+                        const bool b = value == "true" || value == "1" || value == "True";
+                        ((sdk::FBoolProperty*)prop)->set_value_in_object(obj, b);
+                    } else if (pcls == "FloatProperty") {
+                        *prop->get_data<float>(obj) = std::stof(value);
+                    } else if (pcls == "DoubleProperty") {
+                        *prop->get_data<double>(obj) = std::stod(value);
+                    } else if (pcls == "IntProperty") {
+                        *prop->get_data<int32_t>(obj) = std::stoi(value);
+                    } else if (pcls == "Int64Property") {
+                        *prop->get_data<int64_t>(obj) = std::stoll(value);
+                    } else if (pcls == "UInt32Property") {
+                        *prop->get_data<uint32_t>(obj) = (uint32_t)std::stoul(value);
+                    } else if (pcls == "ByteProperty") {
+                        *prop->get_data<uint8_t>(obj) = (uint8_t)std::stoi(value);
+                    } else if (pcls == "NameProperty") {
+                        *prop->get_data<sdk::FName>(obj) = sdk::FName{utility::widen(value)};
+                    } else if (pcls == "StrProperty") {
+                        // Deliberately unsupported: StrProperty's backing TArray<wchar_t> needs
+                        // FMalloc-aware realloc bookkeeping to touch safely (see the property-editor's
+                        // StrProperty case above this function) — a naive assignment here risks the
+                        // exact "unrecognized block" heap corruption that code works around.
+                        SPDLOG_WARN("[UObjectHook] Spawn default properties: '{}' is a StrProperty (not supported, skipped)", name);
+                    } else {
+                        SPDLOG_WARN("[UObjectHook] Spawn default properties: '{}' is a {} (unsupported type, skipped)", name, pcls);
+                    }
+                } catch (const std::exception& e) {
+                    SPDLOG_WARN("[UObjectHook] Spawn default properties: failed to set '{}': {}", name, e.what());
+                } catch (...) {}
+            }
+        };
+
+        static char s_default_props_buf[1024]{};
+        static bool s_attach_gizmo_on_spawn = false;
+        static bool s_attach_mc_on_spawn = false;
+        if (ImGui::TreeNode("Default properties / attach-on-spawn")) {
+            ImGui::TextDisabled("One \"Name=Value\" per line — bool/int/float/name properties only.");
+            ImGui::InputTextMultiline("##default_props", s_default_props_buf, sizeof(s_default_props_buf), ImVec2(-FLT_MIN, 60.0f));
+            ImGui::Checkbox("Attach gizmo on spawn", &s_attach_gizmo_on_spawn);
+            ImGui::SameLine();
+            ImGui::Checkbox("Attach motion controller on spawn", &s_attach_mc_on_spawn);
+            ImGui::TextDisabled("(overlapper-sphere-on-spawn is planned — not implemented yet)");
+            ImGui::TreePop();
+        }
+
         // Compute the screen-center ray HERE (draw thread — ImGui state isn't safe to touch from a
         // GameThreadWorker lambda) and defer the actual UGameplayStatics::SpawnActor + screen_to_world
         // ProcessEvent calls to the game thread, same split every other engine-touching action here uses.
-        auto spawn_at_look_at = [this](const std::wstring& class_path) {
+        auto spawn_at_look_at = [this, apply_default_properties](const std::wstring& class_path) {
             const auto* vp = ImGui::GetMainViewport();
             const glm::vec2 screen_center{vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f};
             const float dist = m_recenter_distance;
-            GameThreadWorker::get().enqueue([this, class_path, screen_center, dist]() {
+            const std::string default_props = s_default_props_buf;
+            const bool attach_gizmo = s_attach_gizmo_on_spawn;
+            const bool attach_mc = s_attach_mc_on_spawn;
+            GameThreadWorker::get().enqueue([this, class_path, screen_center, dist, apply_default_properties, default_props, attach_gizmo, attach_mc]() {
                 try {
                     auto* cls = sdk::find_uobject<sdk::UClass>(class_path);
                     auto* engine = sdk::UGameEngine::get();
@@ -8084,9 +8164,29 @@ void UObjectHook::draw_main() {
                             }
                         }
                     }
+                    // Spawned via UGameplayStatics::SpawnActor -- the actor is added to the level the
+                    // normal engine way, not patched into level data directly -- so gizmo/MC/list
+                    // tracking below attaches to a real, fully-initialized actor like any other.
                     auto* spawned = ugs->spawn_actor(world, cls, spawn_pos);
                     if (spawned == nullptr) {
                         SPDLOG_WARN("[UObjectHook] Spawn Actor failed for {}", utility::narrow(class_path));
+                        return;
+                    }
+
+                    apply_default_properties((sdk::UObject*)spawned, default_props);
+
+                    auto* root = spawned->get_root_component();
+                    {
+                        std::unique_lock _{m_mutex};
+                        m_spawned_via_panel.push_back((sdk::UObjectBase*)spawned);
+                        if (root != nullptr) {
+                            if (attach_gizmo) {
+                                m_gizmo_components.insert(root);
+                            }
+                            if (attach_mc && !m_motion_controller_attached_components.contains(root)) {
+                                m_motion_controller_attached_components[root] = std::make_shared<MotionControllerState>();
+                            }
+                        }
                     }
                 } catch (...) {}
             });
@@ -8114,6 +8214,40 @@ void UObjectHook::draw_main() {
             if (ImGui::SmallButton(kCommonActorTypes[i])) {
                 spawn_at_look_at(std::wstring{L"Class /Script/Engine."} + utility::widen(kCommonActorTypes[i]));
             }
+        }
+
+        // Foldout list of everything spawned through this panel this session — quick recall without
+        // hunting through "Recent Objects" / "All Objects".
+        std::vector<sdk::UObjectBase*> spawned_snapshot;
+        {
+            std::shared_lock _{m_mutex};
+            spawned_snapshot = m_spawned_via_panel;
+        }
+        if (!spawned_snapshot.empty() && ImGui::TreeNode("Spawned Objects")) {
+            ImGui::TextDisabled("%zu spawned this session", spawned_snapshot.size());
+            if (ImGui::SmallButton("Clear list (does not destroy)")) {
+                std::unique_lock _{m_mutex};
+                m_spawned_via_panel.clear();
+            }
+            for (auto* base_obj : spawned_snapshot) {
+                if (base_obj == nullptr || !this->exists_unsafe(base_obj)) continue;
+                auto* obj = (sdk::UObject*)base_obj;
+                std::string name;
+                try { name = shorten_object_path(utility::narrow(obj->get_full_name())); } catch (...) { continue; }
+                ImGui::PushID((void*)obj);
+                const bool node_open = ImGui::TreeNode(name.c_str());
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                    ImGui::Text("UObject: %s", name.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                if (node_open) {
+                    ui_handle_object(obj);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
         }
     }
 
