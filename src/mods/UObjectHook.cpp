@@ -130,35 +130,44 @@ inline void copy_text_to_clipboard(const std::string& s) {
 }
 
 // Shorten a UObject full name to a compact, readable label by dropping the long package/outer path.
-// UE get_full_name() is "ClassName /Package/Path.Outer:Leaf"; this keeps "ClassName Leaf" (the leaf is
-// the text after the last '.', ':' or '/'), so common objects (World, PersistentLevel, PlayerController,
-// Pawn, ...) read cleanly instead of blowing out the layout. The FULL name is still what search matches
-// and what copy/tooltip use — this only affects the on-screen text. Falls back to the input when it has
-// no recognizable structure.
+// UE get_full_name() is "ClassName /Package/Path.Outer:Leaf". Used to show "ClassName Leaf", but UE's
+// default object naming is "<ClassName><N>" (e.g. "StaticMeshComponent StaticMeshComponent0"), which
+// reads as a near-duplicate. Shows "Parent Leaf" instead (the object's immediate outer + its own name)
+// — the last two path segments split on '.', ':' or '/' — so entries read like "MyActor
+// StaticMeshComponent0" instead. The FULL name is still what search matches and what copy/tooltip use —
+// this only affects the on-screen text. Falls back to just the object name when there's no parent
+// segment (top-level object).
 inline std::string shorten_object_path(std::string_view full) {
     if (full.empty()) {
         return std::string{full};
     }
 
     const size_t sp = full.find(' '); // get_full_name() = "Class Path"
-    const std::string_view cls  = (sp == std::string_view::npos) ? std::string_view{} : full.substr(0, sp);
     const std::string_view path = (sp == std::string_view::npos) ? full : full.substr(sp + 1);
 
-    const size_t cut = path.find_last_of(".:/");
-    std::string_view leaf = (cut == std::string_view::npos) ? path : path.substr(cut + 1);
-    if (leaf.empty()) {
-        leaf = path;
+    std::vector<std::string_view> segs;
+    size_t start = 0;
+    for (size_t i = 0; i <= path.size(); ++i) {
+        if (i == path.size() || path[i] == '.' || path[i] == ':' || path[i] == '/') {
+            if (i > start) segs.push_back(path.substr(start, i - start));
+            start = i + 1;
+        }
     }
 
-    if (cls.empty()) {
-        return std::string{leaf};
+    if (segs.empty()) {
+        return std::string{path};
     }
-    // Already compact (no path, e.g. "Class Default__Class") -> keep as-is if the leaf equals the path.
+    if (segs.size() == 1) {
+        return std::string{segs.back()};
+    }
+
+    const std::string_view parent = segs[segs.size() - 2];
+    const std::string_view object = segs.back();
     std::string out;
-    out.reserve(cls.size() + 1 + leaf.size());
-    out.append(cls);
+    out.reserve(parent.size() + 1 + object.size());
+    out.append(parent);
     out.push_back(' ');
-    out.append(leaf);
+    out.append(object);
     return out;
 }
 
@@ -2617,6 +2626,7 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<float>("UObjectHook_GizmoAxisLen")) m_gizmo_axis_len = *v;
         if (auto v = cfg.get<float>("UObjectHook_GizmoRingRadius")) m_gizmo_ring_radius = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_HideGizmosWhenUiClosed")) m_hide_gizmos_when_ui_closed = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
         // Overlay-material highlight menu was removed (unreliable — SetOverlayMaterial silently
@@ -2645,6 +2655,7 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<float>("UObjectHook_GizmoAxisLen", m_gizmo_axis_len);
     cfg.set<float>("UObjectHook_GizmoRingRadius", m_gizmo_ring_radius);
     cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
+    cfg.set<bool>("UObjectHook_HideGizmosWhenUiClosed", m_hide_gizmos_when_ui_closed);
     cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
     cfg.set<bool>("UObjectHook_HighlightOverlayMaterial", m_highlight_overlay_material);
@@ -4707,22 +4718,75 @@ void UObjectHook::handle_click_select() {
         }
     };
 
-    // Re-scan m_objects (+ the screen_to_world ProcessEvent) only when the cursor moved / the wheel
-    // turned / a click happened — otherwise redraw the cached overlay. Keeps an armed-but-idle picker
-    // off the per-frame hot path (the scan holds a shared_lock the game-thread add/destroy hooks want).
+    // Dispatch the Lua selection-state event whenever the active candidate or the candidate SET
+    // changes (not on every pixel of mouse movement that leaves both unchanged). Declared up here
+    // (rather than after the fast path below) so wheel-only cycling can fire it too.
+    static sdk::USceneComponent* s_last_dispatched_active = nullptr;
+    static size_t s_last_dispatched_count = SIZE_MAX;
+
+    // Advances m_pick_cycle by the current wheel delta against the EXISTING m_pick_cache, redraws the
+    // overlay + focused-candidate reticle, and fires the Lua event on change. No m_objects rescan —
+    // shared by the fast "cursor didn't move" path (wheel-only cycling) and the full-rescan path
+    // further down, so scroll-cycling never pays for a fresh scan (it used to force one every tick,
+    // which is what made it laggy).
+    auto cycle_and_draw = [&]() {
+        const int n = (int)m_pick_cache.size();
+        if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1); // wheel up = nearer/previous
+        m_pick_cycle = ((m_pick_cycle % n) + n) % n;
+        if (s_idle_target != m_pick_cache[m_pick_cycle].comp) {
+            s_idle_target = m_pick_cache[m_pick_cycle].comp;
+            s_idle_since = ImGui::GetTime();
+        }
+        draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
+
+        if (s_last_dispatched_active != m_pick_cache[m_pick_cycle].comp || s_last_dispatched_count != m_pick_cache.size()) {
+            s_last_dispatched_active = m_pick_cache[m_pick_cycle].comp;
+            s_last_dispatched_count = m_pick_cache.size();
+            dispatch_picker_selection_event();
+        }
+
+        // World-space reticle on the focused cycle candidate (green, distinct from the amber selection
+        // box) so it's obvious WHICH overlapping object you're about to pick as you scroll through them.
+        if (m_highlight_selection) {
+            auto* engine0 = sdk::UGameEngine::get();
+            auto* world0 = engine0 != nullptr ? engine0->get_world() : nullptr;
+            auto* ugs0 = sdk::UGameplayStatics::get();
+            auto* pc0 = (ugs0 != nullptr && world0 != nullptr) ? ugs0->get_player_controller(world0, 0) : nullptr;
+            glm::vec2 sp{0.0f, 0.0f};
+            if (ugs0 != nullptr && pc0 != nullptr && ugs0->world_to_screen(pc0, m_pick_cache[m_pick_cycle].world, &sp)) {
+                ImVec2 c{sp.x, sp.y};
+                if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
+                    c = vr->get_overlay_component().transform_world_aligned_to_overlay(c);
+                }
+                const auto* vp0 = ImGui::GetMainViewport();
+                if (c.x >= vp0->Pos.x && c.x <= vp0->Pos.x + vp0->Size.x &&
+                    c.y >= vp0->Pos.y && c.y <= vp0->Pos.y + vp0->Size.y) {
+                    auto* dl = ImGui::GetForegroundDrawList();
+                    const ImU32 hl = IM_COL32(120, 255, 120, 245); // candidate green (matches the active list row)
+                    const float r = 16.0f, b = 7.0f;
+                    dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r + b, c.y - r}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r, c.y - r + b}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r - b, c.y - r}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r, c.y - r + b}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r + b, c.y + r}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r, c.y - r + b}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r - b, c.y + r}, hl, 2.0f);
+                    dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r, c.y + r - b}, hl, 2.0f);
+                    dl->AddCircleFilled(c, 2.5f, hl);
+                }
+            }
+        }
+    };
+
+    // Re-scan m_objects (+ the screen_to_world ProcessEvent) only when the cursor moved / a click
+    // happened — otherwise redraw the cached overlay (wheel-only ticks cycle the existing cache via
+    // cycle_and_draw above). Keeps an armed-but-idle-or-scrolling picker off the per-frame hot path
+    // (the scan holds a shared_lock the game-thread add/destroy hooks want).
     static ImVec2 s_last_pick_mouse{-1e9f, -1e9f};
     const bool pick_moved = std::fabs(io.MousePos.x - s_last_pick_mouse.x) > 0.5f ||
                             std::fabs(io.MousePos.y - s_last_pick_mouse.y) > 0.5f;
-    if (!(pick_moved || io.MouseWheel != 0.0f || clicked || m_pick_cache.empty())) {
-        if (!m_pick_cache.empty()) {
-            const int n = (int)m_pick_cache.size();
-            m_pick_cycle = ((m_pick_cycle % n) + n) % n;
-            if (s_idle_target != m_pick_cache[m_pick_cycle].comp) {
-                s_idle_target = m_pick_cache[m_pick_cycle].comp;
-                s_idle_since = ImGui::GetTime();
-            }
-            draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
-        }
+    if (!(pick_moved || clicked || m_pick_cache.empty())) {
+        cycle_and_draw();
         draw_click_marker(io.MousePos);
         return;
     }
@@ -4911,11 +4975,6 @@ void UObjectHook::handle_click_select() {
 
     draw_click_marker(io.MousePos);
 
-    // Dispatch the Lua selection-state event whenever the active candidate or the candidate SET
-    // changes (not on every pixel of mouse movement that leaves both unchanged).
-    static sdk::USceneComponent* s_last_dispatched_active = nullptr;
-    static size_t s_last_dispatched_count = SIZE_MAX;
-
     if (m_pick_cache.empty()) {
         m_pick_cycle = 0;
         auto* dl = ImGui::GetForegroundDrawList();
@@ -4929,49 +4988,7 @@ void UObjectHook::handle_click_select() {
         return;
     }
 
-    const int n = (int)m_pick_cache.size();
-    if (io.MouseWheel != 0.0f) m_pick_cycle -= (io.MouseWheel > 0 ? 1 : -1); // wheel up = nearer/previous
-    m_pick_cycle = ((m_pick_cycle % n) + n) % n; // wrap
-    if (s_idle_target != m_pick_cache[m_pick_cycle].comp) {
-        s_idle_target = m_pick_cache[m_pick_cycle].comp;
-        s_idle_since = ImGui::GetTime();
-    }
-    draw_pick_overlay(io.MousePos, m_pick_cache, m_pick_cycle);
-
-    if (s_last_dispatched_active != m_pick_cache[m_pick_cycle].comp || s_last_dispatched_count != m_pick_cache.size()) {
-        s_last_dispatched_active = m_pick_cache[m_pick_cycle].comp;
-        s_last_dispatched_count = m_pick_cache.size();
-        dispatch_picker_selection_event();
-    }
-
-    // World-space reticle on the focused cycle candidate (green, distinct from the amber selection
-    // box) so it's obvious WHICH overlapping object you're about to pick as you scroll through them.
-    // Drawn while actively scanning/cycling; disappears when the picker disarms.
-    if (m_highlight_selection && m_pick_cycle >= 0 && m_pick_cycle < (int)cands.size()) {
-        glm::vec2 sp{0.0f, 0.0f};
-        if (ugs->world_to_screen(pc, cands[m_pick_cycle].world, &sp)) {
-            ImVec2 c{sp.x, sp.y};
-            if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
-                c = vr->get_overlay_component().transform_world_aligned_to_overlay(c);
-            }
-            const auto* vp0 = ImGui::GetMainViewport();
-            if (c.x >= vp0->Pos.x && c.x <= vp0->Pos.x + vp0->Size.x &&
-                c.y >= vp0->Pos.y && c.y <= vp0->Pos.y + vp0->Size.y) {
-                auto* dl = ImGui::GetForegroundDrawList();
-                const ImU32 hl = IM_COL32(120, 255, 120, 245); // candidate green (matches the active list row)
-                const float r = 16.0f, b = 7.0f;
-                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r + b, c.y - r}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x - r, c.y - r}, ImVec2{c.x - r, c.y - r + b}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r - b, c.y - r}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x + r, c.y - r}, ImVec2{c.x + r, c.y - r + b}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r + b, c.y + r}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x - r, c.y + r}, ImVec2{c.x - r, c.y + r - b}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r - b, c.y + r}, hl, 2.0f);
-                dl->AddLine(ImVec2{c.x + r, c.y + r}, ImVec2{c.x + r, c.y + r - b}, hl, 2.0f);
-                dl->AddCircleFilled(c, 2.5f, hl);
-            }
-        }
-    }
+    cycle_and_draw();
 
     if (!clicked) {
         return; // overlay + scroll only; the click below commits the selection
@@ -5220,6 +5237,20 @@ void UObjectHook::draw_component_gizmos() {
         return;
     }
 
+    // "Hide (don't remove) gizmos when UI closed": m_gizmo_components stays intact above (targets
+    // aren't touched), we just skip rendering/hit-testing/dragging this frame while no UObjectHook
+    // panel is open. Deliberately excludes m_has_gizmos/m_click_select_mode from the "UI open" check
+    // (unlike wants_active_ui()) so hiding doesn't get stuck permanently true from its own targets.
+    if (m_hide_gizmos_when_ui_closed) {
+        const bool ui_open = g_framework->is_drawing_ui() || m_show_main_window ||
+            m_show_class_browser || m_show_function_caller || m_show_options_window;
+        if (!ui_open) {
+            s_drag_comp = nullptr;
+            s_drag_axis = -1;
+            return;
+        }
+    }
+
     auto engine = sdk::UGameEngine::get();
     auto world = engine != nullptr ? engine->get_world() : nullptr;
     if (world == nullptr) {
@@ -5390,11 +5421,11 @@ void UObjectHook::draw_component_gizmos() {
             }
         }
         if (m_gizmo_mode == 1 || m_gizmo_mode == 3) { // rotate rings: pure-rotate mode AND combined
-            // Pure-rotate mode uses its own ring radius (decoupled from the translate axis length) so
-            // cranking the gizmo scale for big arrows doesn't balloon the rings and wreck centering —
-            // worst in VR. Combined mode keeps the axis-length base (its radial layout pushes the rings
-            // outside the arrows via kRingScaleCombined).
-            const float ring_radius = (m_gizmo_mode == 1) ? m_gizmo_ring_radius : kAxisLen;
+            // Ring radius is decoupled from the translate axis length (so cranking the gizmo scale for
+            // big arrows doesn't balloon the rings and wreck centering, worst in VR) and applies the
+            // same way in both pure-rotate and Combined mode; Combined's radial layout still pushes the
+            // rings outside the arrows via kRingScaleCombined below.
+            const float ring_radius = m_gizmo_ring_radius;
             for (int i = 0; i < 3; ++i) {
                 const glm::vec3& u = axes[(i + 1) % 3].dir;
                 const glm::vec3& v = axes[(i + 2) % 3].dir;
@@ -7536,6 +7567,10 @@ void UObjectHook::draw_gizmo_options() {
     }
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
+    ImGui::Checkbox("Hide (don't remove) gizmos when UI closed", &m_hide_gizmos_when_ui_closed);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Stops drawing/hit-testing gizmos while no UObjectHook panel is open.\nTargets stay selected — they reappear as soon as a panel (or the picker) is opened again.");
+    }
     ImGui::TextDisabled("Tip: pick the Combined gizmo mode above to see move + rotate + scale handles at once.");
 
     ImGui::SeparatorText("Selection / picking");
@@ -7908,6 +7943,10 @@ void UObjectHook::draw_main() {
         ImGui::SetTooltip("Pop this page (selected-object inspector, attached components, spawn actor, ...)\nout into its own dockable window, summonable without opening the main UEVR overlay.");
     }
 
+    // Spawners folded into one collapsible subpanel (Spawn Actor + Spawn Overlapper/Overlapped
+    // Objects) so the main page isn't dominated by them when you're not actively spawning things.
+    ImGui::SeparatorText("Spawners");
+    if (ImGui::TreeNode("Spawners##panel")) {
     // Basic spawn-actor: type a full class path (Class /Script/Engine.X) or use one of the common-type
     // quick-spawn buttons. Both place the new actor along the camera's look-at ray, m_recenter_distance
     // out — same placement math as the w2s context menu's "Summon to camera" / "Recenter to camera".
@@ -7968,6 +8007,65 @@ void UObjectHook::draw_main() {
                 spawn_at_look_at(std::wstring{L"Class /Script/Engine."} + utility::widen(kCommonActorTypes[i]));
             }
         }
+    }
+
+    ImGui::SeparatorText("Spawn Overlapper");
+    if (m_overlap_detection_actor == nullptr) {
+        if (ImGui::Button("Spawn Overlapper")) {
+            spawn_overlapper(0);
+            spawn_overlapper(1);
+        }
+    } else if (!this->exists_unsafe(m_overlap_detection_actor)) {
+        m_overlap_detection_actor = nullptr;
+    } else {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
+        if (ImGui::TreeNode("Overlapped Objects")) {
+            if (ImGui::Button("Destroy Overlapper")) {
+                destroy_overlapper();
+            }
+
+            ImGui::SameLine();
+            bool attach_all = false;
+            if (ImGui::Button("Attach all")) {
+                attach_all = true;
+            }
+
+            auto overlapped_components = m_overlap_detection_actor->get_overlapping_components();
+
+            for (auto& it : overlapped_components) {
+                auto comp = (sdk::USceneComponent*)it;
+                if (!this->exists_unsafe(comp)) {
+                    continue;
+                }
+
+                if (m_spawned_spheres.contains(comp) && m_spawned_spheres_to_components.contains(comp)) {
+                    comp = m_spawned_spheres_to_components[comp];
+                }
+
+                if (attach_all){
+                    if (!m_motion_controller_attached_components.contains(comp)) {
+                        m_motion_controller_attached_components[comp] = std::make_shared<MotionControllerState>();
+                    }
+                }
+
+                std::wstring comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
+
+                const std::string narrow_comp_name = utility::narrow(comp_name);
+                if (ImGui::TreeNode(narrow_comp_name.data())) {
+                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
+                    ui_handle_object(comp);
+                    ImGui::TreePop();
+                } else {
+                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
+                }
+            }
+
+            ImGui::TreePop();
+        }
+    }
+
+    ImGui::TreePop(); // Spawners##panel
     }
 
     // Labelled section header so the user-curated objects below (selected pick, MC-attached
@@ -8135,59 +8233,30 @@ void UObjectHook::draw_main() {
         }
     }
 
-    if (m_overlap_detection_actor == nullptr) {
-        if (ImGui::Button("Spawn Overlapper")) {
-            spawn_overlapper(0);
-            spawn_overlapper(1);
+    // Quick gizmo-target access without opening the Options window: arm the click-select picker, or
+    // wipe every current target. Mirrors the same m_click_select_mode / m_gizmo_components the
+    // "Selection / picking" section in draw_gizmo_options() drives.
+    if (m_click_select_mode) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.55f, 0.25f, 0.10f, 1.0f});
+        if (ImGui::Button("Picking… click a world object (Esc to cancel)")) {
+            m_click_select_mode = false;
         }
-    } else if (!this->exists_unsafe(m_overlap_detection_actor)) {
-        m_overlap_detection_actor = nullptr;
-    } else {
-        ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-
-        if (ImGui::TreeNode("Overlapped Objects")) {
-            if (ImGui::Button("Destroy Overlapper")) {
-                destroy_overlapper();
-            }
-
-            ImGui::SameLine();
-            bool attach_all = false;
-            if (ImGui::Button("Attach all")) {
-                attach_all = true;
-            }
-
-            auto overlapped_components = m_overlap_detection_actor->get_overlapping_components();
-
-            for (auto& it : overlapped_components) {
-                auto comp = (sdk::USceneComponent*)it;
-                if (!this->exists_unsafe(comp)) {
-                    continue;
-                }
-
-                if (m_spawned_spheres.contains(comp) && m_spawned_spheres_to_components.contains(comp)) {
-                    comp = m_spawned_spheres_to_components[comp];
-                }
-
-                if (attach_all){
-                    if (!m_motion_controller_attached_components.contains(comp)) {
-                        m_motion_controller_attached_components[comp] = std::make_shared<MotionControllerState>();
-                    }
-                }
-
-                std::wstring comp_name = comp->get_class()->get_fname().to_string() + L" " + comp->get_fname().to_string();
-
-                const std::string narrow_comp_name = utility::narrow(comp_name);
-                if (ImGui::TreeNode(narrow_comp_name.data())) {
-                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
-                    ui_handle_object(comp);
-                    ImGui::TreePop();
-                } else {
-                    make_drag_source_for_object(comp, narrow_comp_name.c_str());
-                }
-            }
-
-            ImGui::TreePop();
+        ImGui::PopStyleColor();
+    } else if (ImGui::Button("Pick a target")) {
+        m_click_select_mode = true;
+    }
+    ImGui::SameLine();
+    {
+        size_t n_targets = 0;
+        { std::shared_lock _{m_mutex}; n_targets = m_gizmo_components.size(); }
+        ImGui::BeginDisabled(n_targets == 0);
+        if (ImGui::Button("Clear all targets")) {
+            std::unique_lock _{m_mutex};
+            m_gizmo_components.clear();
         }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::TextDisabled("%zu active", n_targets);
     }
 
     ImGui::SeparatorText("Browse all objects");

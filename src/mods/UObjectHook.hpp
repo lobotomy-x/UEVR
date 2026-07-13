@@ -378,8 +378,9 @@ private:
     float m_gizmo_axis_len{50.0f}; // world units (UE cm) for the translate gizmo axes
     float m_gizmo_ring_radius{40.0f}; // rotate-mode ring radius (UE cm), decoupled from the axis length so big translate arrows don't balloon the rotate rings (better centering, esp. in VR)
     float m_gizmo_thickness{4.0f}; // gizmo line thickness (px), applies to all modes
-    int m_gizmo_mode{0};           // 0 = translate, 1 = rotate, 2 = scale
+    int m_gizmo_mode{3};           // 0 = translate, 1 = rotate, 2 = scale, 3 = combined (default: combined shows all handles at once)
     bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
+    bool m_hide_gizmos_when_ui_closed{true}; // skip gizmo rendering/hit-testing (not the target list) while no UObjectHook panel is open
     bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
     bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
