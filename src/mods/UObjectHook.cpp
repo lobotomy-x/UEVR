@@ -8182,12 +8182,74 @@ void UObjectHook::draw_main() {
             }
         };
 
+        static char s_spawn_actor_class[256]{};
         static char s_default_props_buf[1024]{};
         static bool s_attach_gizmo_on_spawn = false;
         static bool s_attach_mc_on_spawn = false;
+        static std::string s_default_props_loaded_for; // which class key s_default_props_buf currently reflects
+
+        // Default properties are keyed per-class (m_spawn_default_props_by_class), so switching between
+        // a couple of classes you spawn repeatedly doesn't require re-typing each time. Reload the
+        // buffer whenever the typed/picked class changes.
+        if (s_default_props_loaded_for != s_spawn_actor_class) {
+            s_default_props_loaded_for = s_spawn_actor_class;
+            auto it = m_spawn_default_props_by_class.find(s_spawn_actor_class);
+            if (it != m_spawn_default_props_by_class.end()) {
+                strncpy_s(s_default_props_buf, it->second.c_str(), sizeof(s_default_props_buf) - 1);
+            } else {
+                s_default_props_buf[0] = '\0';
+            }
+        }
+
+        // Class picker: filtered list of AActor-derived classes from the same m_sorted_classes the
+        // class browser uses, so spawning doesn't require knowing/typing the full class path.
+        if (ImGui::Button("Browse classes...")) {
+            ImGui::OpenPopup("##spawn_class_picker");
+        }
+        if (ImGui::BeginPopup("##spawn_class_picker")) {
+            static char s_class_picker_filter[128]{};
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::InputTextWithHint("##spawn_class_filter", "filter...", s_class_picker_filter, sizeof(s_class_picker_filter));
+            if (ImGui::BeginChild("spawn_class_list", ImVec2(400.0f, 300.0f), ImGuiChildFlags_Borders)) {
+                drag_scroll_current_window();
+                static const auto actor_t = sdk::AActor::static_class();
+                std::string filter_lower = s_class_picker_filter;
+                for (auto& ch : filter_lower) ch = (char)std::tolower((unsigned char)ch);
+                std::shared_lock _{m_mutex};
+                for (auto* uclass : m_sorted_classes) {
+                    if (uclass == nullptr || actor_t == nullptr || !uclass->is_a(actor_t)) continue;
+                    auto it = m_meta_objects.find(uclass);
+                    if (it == m_meta_objects.end() || it->second == nullptr) continue;
+                    const std::string full = utility::narrow(it->second->full_name);
+                    std::string full_lower = full;
+                    for (auto& ch : full_lower) ch = (char)std::tolower((unsigned char)ch);
+                    if (!filter_lower.empty() && full_lower.find(filter_lower) == std::string::npos) continue;
+                    const std::string display = shorten_object_path(full);
+                    ImGui::PushID(uclass);
+                    if (ImGui::Selectable(display.c_str())) {
+                        // full = "Class /Script/Engine.StaticMeshActor" — strip the leading "Class " so
+                        // it matches the same format s_spawn_actor_class already expects/finds.
+                        const size_t sp = full.find(' ');
+                        const std::string path = sp == std::string::npos ? full : full.substr(sp + 1);
+                        strncpy_s(s_spawn_actor_class, path.c_str(), sizeof(s_spawn_actor_class) - 1);
+                        ImGui::CloseCurrentPopup();
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("%s", full.c_str());
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::EndPopup();
+        }
+
         if (ImGui::TreeNode("Default properties / attach-on-spawn")) {
+            ImGui::TextDisabled("Applies to: %s", s_spawn_actor_class[0] != '\0' ? s_spawn_actor_class : "(no class set)");
             ImGui::TextDisabled("One \"Name=Value\" per line — bool/int/float/name properties only.");
-            ImGui::InputTextMultiline("##default_props", s_default_props_buf, sizeof(s_default_props_buf), ImVec2(-FLT_MIN, 60.0f));
+            if (ImGui::InputTextMultiline("##default_props", s_default_props_buf, sizeof(s_default_props_buf), ImVec2(-FLT_MIN, 60.0f))) {
+                m_spawn_default_props_by_class[s_spawn_actor_class] = s_default_props_buf;
+            }
             ImGui::Checkbox("Attach gizmo on spawn", &s_attach_gizmo_on_spawn);
             ImGui::SameLine();
             ImGui::Checkbox("Attach motion controller on spawn", &s_attach_mc_on_spawn);
@@ -8250,7 +8312,6 @@ void UObjectHook::draw_main() {
             });
         };
 
-        static char s_spawn_actor_class[256]{};
         ImGui::SetNextItemWidth(-FLT_MIN);
         if (ImGui::InputTextWithHint("##spawn_actor_class",
                 "Class /Script/Engine.StaticMeshActor  (Enter to spawn at the camera's look-at point)",

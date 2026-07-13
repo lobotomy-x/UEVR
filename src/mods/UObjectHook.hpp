@@ -146,6 +146,10 @@ protected:
     // list there. Not persisted across restarts — a same-session convenience list, same class of
     // state as m_most_recent_objects.
     std::vector<sdk::UObjectBase*> m_spawned_via_panel{};
+    // Default-properties text (see draw_main's Spawn Actor panel), keyed by the class path typed/picked
+    // into the spawner — so switching between a few classes you spawn repeatedly doesn't require
+    // re-typing their default properties every time. Session-only (not persisted across restarts).
+    std::unordered_map<std::string, std::string> m_spawn_default_props_by_class{};
 
     void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
