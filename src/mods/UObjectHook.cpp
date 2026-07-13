@@ -4629,6 +4629,10 @@ void UObjectHook::on_frame() {
     try { draw_component_gizmos(); }
     catch (const std::exception& e) { spdlog::error("[UObjectHook] gizmo draw threw: {}", e.what()); }
     catch (...)                     { spdlog::error("[UObjectHook] gizmo draw threw (unknown)"); }
+
+    try { draw_light_icons(); }
+    catch (const std::exception& e) { spdlog::error("[UObjectHook] light icon draw threw: {}", e.what()); }
+    catch (...)                     { spdlog::error("[UObjectHook] light icon draw threw (unknown)"); }
 }
 
 void UObjectHook::handle_click_select() {
@@ -5142,6 +5146,85 @@ void UObjectHook::dispatch_gizmo_target_event(sdk::USceneComponent* comp, bool a
         spdlog::error("[UObjectHook] dispatch_gizmo_target_event failed: {}", e.what());
     } catch (...) {
         spdlog::error("[UObjectHook] dispatch_gizmo_target_event failed");
+    }
+}
+
+// Toggleable overlay icon over every live light component. Reuses m_objects_by_class (populated by
+// walking each object's FULL super chain on creation — see the m_objects_by_class insertion in
+// add_object — so looking up PointLightComponent/SpotLightComponent/DirectionalLightComponent's
+// UClass directly gets every live instance of that concrete type without needing a base
+// ULightComponent lookup). World positions are refreshed on a throttle (get_world_location is a
+// ProcessEvent call, and lights rarely move) — only the screen projection re-runs every frame, so the
+// icons still track camera movement smoothly.
+void UObjectHook::draw_light_icons() {
+    if (!m_show_light_icons) {
+        return;
+    }
+
+    static const auto point_light_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.PointLightComponent");
+    static const auto spot_light_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.SpotLightComponent");
+    static const auto dir_light_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.DirectionalLightComponent");
+
+    const auto now = std::chrono::steady_clock::now();
+    if (m_light_icon_cache.empty() || (now - m_light_icon_last_refresh) > std::chrono::milliseconds(500)) {
+        m_light_icon_last_refresh = now;
+        std::vector<LightIconEntry> fresh;
+        auto collect = [&](sdk::UClass* cls, int kind) {
+            if (cls == nullptr) return;
+            std::shared_lock _{m_mutex};
+            auto it = m_objects_by_class.find(cls);
+            if (it == m_objects_by_class.end()) return;
+            for (auto* base : it->second) {
+                if (base == nullptr || !this->exists_unsafe(base)) continue;
+                auto* comp = (sdk::USceneComponent*)base;
+                try {
+                    fresh.push_back(LightIconEntry{comp, comp->get_world_location(), kind});
+                } catch (...) {}
+            }
+        };
+        collect(point_light_t, 0);
+        collect(spot_light_t, 1);
+        collect(dir_light_t, 2);
+        m_light_icon_cache = std::move(fresh);
+    }
+
+    if (m_light_icon_cache.empty()) {
+        return;
+    }
+
+    auto engine = sdk::UGameEngine::get();
+    auto world = engine != nullptr ? engine->get_world() : nullptr;
+    auto ugs = sdk::UGameplayStatics::get();
+    auto pc = (world != nullptr && ugs != nullptr) ? ugs->get_player_controller(world, 0) : nullptr;
+    if (ugs == nullptr || pc == nullptr) {
+        return;
+    }
+
+    auto* dl = ImGui::GetForegroundDrawList();
+    const auto* vp = ImGui::GetMainViewport();
+    for (auto& e : m_light_icon_cache) {
+        if (e.light == nullptr || !this->exists_unsafe((sdk::UObjectBase*)e.light)) continue;
+        glm::vec2 sp{0.0f, 0.0f};
+        if (!ugs->world_to_screen(pc, e.world, &sp)) continue;
+        ImVec2 c{sp.x, sp.y};
+        if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
+            c = vr->get_overlay_component().transform_world_aligned_to_overlay(c);
+        }
+        if (c.x < vp->Pos.x || c.x > vp->Pos.x + vp->Size.x || c.y < vp->Pos.y || c.y > vp->Pos.y + vp->Size.y) continue;
+
+        // Simple bulb glyph: circle + rays. Directional lights get more/longer rays (sun-like);
+        // point/spot get a compact 4-ray bulb.
+        const ImU32 col = IM_COL32(255, 225, 90, 235);
+        constexpr float r = 6.0f;
+        dl->AddCircle(c, r, col, 12, 1.5f);
+        const int rays = e.kind == 2 ? 8 : 4;
+        const float ray_len = e.kind == 2 ? 8.0f : 5.0f;
+        for (int i = 0; i < rays; ++i) {
+            const float ang = (6.28318530718f / rays) * i;
+            const ImVec2 a{c.x + std::cos(ang) * (r + 2.0f), c.y + std::sin(ang) * (r + 2.0f)};
+            const ImVec2 b{c.x + std::cos(ang) * (r + 2.0f + ray_len), c.y + std::sin(ang) * (r + 2.0f + ray_len)};
+            dl->AddLine(a, b, col, 1.5f);
+        }
     }
 }
 
@@ -7731,6 +7814,10 @@ void UObjectHook::draw_gizmo_options() {
     }
     ImGui::Checkbox("Gizmo local space", &m_gizmo_local);
     ImGui::Checkbox("Show gizmo labels", &m_gizmo_show_labels);
+    ImGui::Checkbox("Show light icons", &m_show_light_icons);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Overlay icon over every live Point/Spot/Directional light component.");
+    }
     ImGui::Checkbox("Hide (don't remove) gizmos when UI closed", &m_hide_gizmos_when_ui_closed);
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Stops drawing/hit-testing gizmos while no UObjectHook panel is open.\nTargets stay selected — they reappear as soon as a panel (or the picker) is opened again.");

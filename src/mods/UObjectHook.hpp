@@ -151,6 +151,13 @@ protected:
     // re-typing their default properties every time. Session-only (not persisted across restarts).
     std::unordered_map<std::string, std::string> m_spawn_default_props_by_class{};
 
+    // Toggleable ImGui overlay icon over every live light component (Point/Spot/Directional).
+    bool m_show_light_icons{false};
+    struct LightIconEntry { sdk::USceneComponent* light{nullptr}; glm::vec3 world{}; int kind{0}; }; // kind: 0=point, 1=spot, 2=directional
+    std::vector<LightIconEntry> m_light_icon_cache{};
+    std::chrono::steady_clock::time_point m_light_icon_last_refresh{};
+    void draw_light_icons();
+
     void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
 
