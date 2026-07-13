@@ -266,9 +266,25 @@ private:
     void apply_overlay_highlight(sdk::USceneComponent* comp, sdk::UObject* material);
     void restore_overlay_highlight(sdk::USceneComponent* comp);
 
+    // Scrubs every UObjectHook-side reference to `object` (gizmo targets, MC attachments, the
+    // spawned-objects list, camera attach, last-selected/recent-objects) BEFORE it's actually
+    // destroyed, so a destroyed component/actor doesn't linger as a dangling gizmo or attachment.
+    // Game-thread only (mutates m_mutex-protected containers under the unique lock).
+    void cleanup_references_to(sdk::UObjectBase* object);
     void ui_standard_object_context_menu(sdk::UObjectBase* object);
     void ui_handle_object(sdk::UObject* object);
     void ui_handle_properties(void* object, sdk::UStruct* definition);
+    // Nearest enclosing USceneComponent for the ui_handle_object call currently on the stack (nullptr
+    // if none / not a scene component), pushed/popped in ui_handle_object. Reflected property writes
+    // in ui_handle_properties are raw memory pokes with no PostEditChangeProperty equivalent, so
+    // rendering-affecting changes (mesh, transform, most bools/scalars) silently don't take effect
+    // until something else forces a refresh — previously the only thing that did was the separate
+    // "Toggle Visibility" context action, which happens to call the reflected SetVisibility (the one
+    // property write in this file that already goes through a real UFunction). notify_property_changed
+    // reuses exactly that: toggling visibility to its own current value via SetVisibility, called from
+    // every scalar-widget commit site in ui_handle_properties.
+    std::vector<sdk::USceneComponent*> m_property_edit_target_stack{};
+    void notify_property_changed();
     void ui_handle_array_property(void* object, sdk::FArrayProperty* definition);
     void ui_handle_functions(void* object, sdk::UStruct* definition);
     void ui_function_context_menu(sdk::UFunction* func, void* object, bool is_real_object);

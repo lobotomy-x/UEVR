@@ -5910,8 +5910,17 @@ void UObjectHook::draw_component_gizmos() {
         if (ImGui::BeginPopup("##uobj_sel_ctx")) {
             sdk::USceneComponent* c = s_ctx_comp;
             if (c != nullptr && this->exists(c)) {
+                // Gizmo targets are (in practice) always root components — the picker only ever offers
+                // root components as candidates — so the owning actor is what the user actually thinks
+                // of as "the thing I selected". Naming, the Properties glance, "Select new target",
+                // "Set view target" and "Destroy" below all target the actor when one resolves;
+                // attach/detach/duplicate/summon stay on the component `c` itself since those are
+                // inherently component-level engine operations.
+                sdk::AActor* owner = nullptr;
+                try { owner = c->get_owner(); } catch (...) {}
+
                 std::string cn;
-                try { cn = utility::narrow(c->get_fname().to_string()); } catch (...) {}
+                try { cn = utility::narrow((owner != nullptr ? (sdk::UObject*)owner : (sdk::UObject*)c)->get_fname().to_string()); } catch (...) {}
                 ImGui::TextDisabled("%s", cn.c_str());
                 ImGui::Separator();
 
@@ -5923,6 +5932,51 @@ void UObjectHook::draw_component_gizmos() {
                     if (ImGui::RadioButton("Scale##ctxgizmo", &m_gizmo_mode, 2)) ImGui::CloseCurrentPopup();
                     if (ImGui::RadioButton("Combined##ctxgizmo", &m_gizmo_mode, 3)) ImGui::CloseCurrentPopup();
                     ImGui::EndMenu();
+                }
+                ImGui::Separator();
+
+                if (ImGui::MenuItem("Select new target")) {
+                    GameThreadWorker::get().enqueue([this, c]() {
+                        std::unique_lock _{m_mutex};
+                        m_gizmo_components.erase(c);
+                    });
+                    m_click_select_mode = true;
+                    ImGui::CloseCurrentPopup();
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Clears this target and arms the picker so the next world click replaces it.");
+                }
+                if (owner != nullptr && ImGui::MenuItem("Set view target to actor")) {
+                    GameThreadWorker::get().enqueue([this, owner]() {
+                        if (!this->exists(owner)) return;
+                        try {
+                            auto* ugs = sdk::UGameplayStatics::get();
+                            auto* engine = sdk::UGameEngine::get();
+                            auto* world = engine != nullptr ? engine->get_world() : nullptr;
+                            auto* pc = (ugs != nullptr && world != nullptr) ? ugs->get_player_controller(world, 0) : nullptr;
+                            if (pc == nullptr) return;
+                            // Same SetViewTargetWithBlend reflected call spawn_view_camera() uses.
+                            if (auto fn = pc->get_class()->find_function(L"SetViewTargetWithBlend"); fn != nullptr) {
+                                SetViewTargetWithBlendParams params{};
+                                params.NewViewTarget = owner;
+                                params.BlendTime = 0.3f;
+                                pc->process_event(fn, &params);
+                            }
+                        } catch (...) {}
+                    });
+                    ImGui::CloseCurrentPopup();
+                }
+                if (ImGui::MenuItem("Destroy")) {
+                    GameThreadWorker::get().enqueue([this, c, owner]() {
+                        if (owner != nullptr && this->exists(owner)) {
+                            cleanup_references_to((sdk::UObjectBase*)owner);
+                            try { owner->destroy_actor(); } catch (...) {}
+                        } else if (this->exists(c)) {
+                            cleanup_references_to((sdk::UObjectBase*)c);
+                            try { c->destroy_component(); } catch (...) {}
+                        }
+                    });
+                    ImGui::CloseCurrentPopup();
                 }
                 ImGui::Separator();
 
@@ -5950,7 +6004,11 @@ void UObjectHook::draw_component_gizmos() {
                             } catch (...) {}
                             return "(" + cname + ")";
                         };
-                        for (auto super = (sdk::UStruct*)c->get_class(); super != nullptr; super = super->get_super_struct()) {
+                        // Actor properties when one resolves (matches the header naming above), the
+                        // component's own properties otherwise (no owner, e.g. a bare component target).
+                        void* prop_obj = owner != nullptr ? (void*)owner : (void*)c;
+                        auto* prop_uclass = owner != nullptr ? owner->get_class() : c->get_class();
+                        for (auto super = (sdk::UStruct*)prop_uclass; super != nullptr; super = super->get_super_struct()) {
                             std::string cls_name;
                             try { cls_name = utility::narrow(super->get_fname().to_string()); } catch (...) { continue; }
                             if (!ImGui::BeginMenu(cls_name.c_str())) continue;
@@ -5958,7 +6016,7 @@ void UObjectHook::draw_component_gizmos() {
                                 auto* p = reinterpret_cast<sdk::FProperty*>(f);
                                 std::string pn;
                                 try { pn = utility::narrow(p->get_field_name().to_string()); } catch (...) { continue; }
-                                const auto row = pn + ": " + compact_value(c, p);
+                                const auto row = pn + ": " + compact_value(prop_obj, p);
                                 ImGui::MenuItem(row.c_str(), nullptr, false, false); // display-only row
                             }
                             ImGui::EndMenu();
@@ -8235,6 +8293,23 @@ void UObjectHook::draw_main() {
                 std::string name;
                 try { name = shorten_object_path(utility::narrow(obj->get_full_name())); } catch (...) { continue; }
                 ImGui::PushID((void*)obj);
+                if (ImGui::SmallButton("Destroy")) {
+                    GameThreadWorker::get().enqueue([this, base_obj]() {
+                        if (!this->exists_unsafe(base_obj)) return;
+                        cleanup_references_to(base_obj);
+                        auto* o = (sdk::UObject*)base_obj;
+                        try {
+                            if (o->is_a(sdk::AActor::static_class())) {
+                                ((sdk::AActor*)o)->destroy_actor();
+                            } else if (o->is_a(sdk::UActorComponent::static_class())) {
+                                ((sdk::UActorComponent*)o)->destroy_component();
+                            }
+                        } catch (...) {}
+                    });
+                    ImGui::PopID();
+                    continue;
+                }
+                ImGui::SameLine();
                 const bool node_open = ImGui::TreeNode(name.c_str());
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
@@ -8982,6 +9057,18 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
         return;
     }
 
+    // See m_property_edit_target_stack: tracks the nearest enclosing scene component so a property
+    // edit reached through nested ui_handle_object recursion (Outer, ObjectProperty trees, ...) still
+    // knows which component to refresh. Inherits the parent's target when this object isn't itself a
+    // scene component, rather than clearing it, so drilling into e.g. a non-component sub-object still
+    // refreshes the component that owns the path down to it.
+    static const auto scene_comp_t = sdk::USceneComponent::static_class();
+    sdk::USceneComponent* stack_target = (scene_comp_t != nullptr && uclass->is_a(scene_comp_t))
+        ? (sdk::USceneComponent*)object
+        : (m_property_edit_target_stack.empty() ? nullptr : m_property_edit_target_stack.back());
+    m_property_edit_target_stack.push_back(stack_target);
+    utility::ScopeGuard property_edit_stack_guard{[this]() { m_property_edit_target_stack.pop_back(); }};
+
 
     if (!this->exists_unsafe(uclass)) {
         ImGui::Text("Invalid class");
@@ -9064,6 +9151,7 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
             auto comp = (sdk::UActorComponent*)object;
             GameThreadWorker::get().enqueue([this, comp]() {
                 if (!this->exists(comp)) return;
+                cleanup_references_to((sdk::UObjectBase*)comp);
                 try { comp->destroy_component(); } catch (...) {}
             });
         }
@@ -9823,6 +9911,17 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
         }
     }
 
+    if (ImGui::Button("Destroy Actor")) {
+        GameThreadWorker::get().enqueue([this, actor]() {
+            if (!this->exists(actor)) return;
+            cleanup_references_to((sdk::UObjectBase*)actor);
+            try { actor->destroy_actor(); } catch (...) {}
+        });
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Removes this actor's gizmo/motion-controller/camera-attach references first, then destroys it.");
+    }
+
         if (m_camera_attach.object != object ){
         if (ImGui::Button("Attach Camera to")) {
             m_camera_attach.object = object;
@@ -10432,6 +10531,63 @@ void UObjectHook::ui_handle_functions(void* object, sdk::UStruct* uclass) {
     }
 }
 
+// Game-thread only — call BEFORE the actual destroy_component()/destroy_actor(), so nothing else
+// touches the pointer again once the engine call runs. `object` may be a component or an actor;
+// gizmo/MC-attachment cleanup only applies when it's a USceneComponent (attaching/gizmo-ing an actor
+// always goes through its root component elsewhere in this file), but the recent-objects/spawned-list/
+// camera-attach cleanup applies to any UObject.
+void UObjectHook::cleanup_references_to(sdk::UObjectBase* object) {
+    if (object == nullptr) {
+        return;
+    }
+    auto* obj = (sdk::UObject*)object;
+    auto* as_comp = reinterpret_cast<sdk::USceneComponent*>(object);
+
+    bool gizmo_removed = false;
+    {
+        std::unique_lock _{m_mutex};
+        gizmo_removed = m_gizmo_components.erase(as_comp) > 0;
+        m_motion_controller_attached_components.erase(as_comp);
+        if (m_last_selected == as_comp) {
+            m_last_selected = nullptr;
+        }
+        std::erase(m_spawned_via_panel, object);
+        std::erase(m_most_recent_objects, obj);
+    }
+    if (gizmo_removed) {
+        dispatch_gizmo_target_event(as_comp, false); // outside the lock — dispatch can re-enter
+    }
+    if (m_camera_attach.object == obj) {
+        m_camera_attach.object = nullptr;
+        m_camera_attach.offset = glm::vec3{0.0f, 0.0f, 0.0f};
+        if (m_persistent_camera_state != nullptr) {
+            m_persistent_camera_state->erase_json_file();
+        }
+        m_persistent_camera_state.reset();
+    }
+}
+
+// See m_property_edit_target_stack in the header. Called after any property widget in
+// ui_handle_properties reports a real edit; forces the nearest enclosing scene component to actually
+// re-render by toggling SetVisibility to its own current value (deferred to the game thread — this is
+// a ProcessEvent call, not safe to make directly from the draw thread).
+void UObjectHook::notify_property_changed() {
+    if (m_property_edit_target_stack.empty()) {
+        return;
+    }
+    auto* comp = m_property_edit_target_stack.back();
+    if (comp == nullptr) {
+        return;
+    }
+    GameThreadWorker::get().enqueue([this, comp]() {
+        if (!this->exists(comp)) return;
+        try {
+            const bool vis = comp->is_visible();
+            comp->set_visibility(vis, false);
+        } catch (...) {}
+    });
+}
+
 void UObjectHook::ui_handle_properties(void* object, sdk::UStruct* uclass) {
 
     auto previous_path = m_path;
@@ -10994,7 +11150,9 @@ const auto check_flags = [](uint64_t flags){
         case L"FloatProperty"_fnv:
             {
                 auto& value = *(float*)((uintptr_t)object + fprop->get_offset());
-                ImGui::DragFloat(prop_name.data(), &value, 0.01f);
+                if (ImGui::DragFloat(prop_name.data(), &value, 0.01f)) {
+                    notify_property_changed();
+                }
                 display_context(value);
             }
             break;
@@ -11004,6 +11162,7 @@ const auto check_flags = [](uint64_t flags){
                 float casted_value = (float)value;
                 if (ImGui::DragFloat(prop_name.data(), (float*)&casted_value, 0.01f)) {
                     value = (double)casted_value;
+                    notify_property_changed();
                 }
                 display_context(value);
             }
@@ -11014,6 +11173,7 @@ const auto check_flags = [](uint64_t flags){
                 int converted = (int)value;
                 if (ImGui::SliderInt(prop_name.data(), (int*)&converted, 0, 65535)) {
                     value = (uint16_t)converted;
+                    notify_property_changed();
                 }
                 display_context(value);
             }
@@ -11022,14 +11182,18 @@ const auto check_flags = [](uint64_t flags){
         case L"IntProperty"_fnv:
             {
                 auto& value = *(int32_t*)((uintptr_t)object + fprop->get_offset());
-            ImGui::DragInt(prop_name.data(), &value, 1);
+                if (ImGui::DragInt(prop_name.data(), &value, 1)) {
+                    notify_property_changed();
+                }
                 display_context(value);
             }
             break;
         case L"UInt64Property"_fnv:
             {
                 auto& value = *(uint64_t*)((uintptr_t)object + fprop->get_offset());
-            ImGui::DragScalar(prop_name.data(), ImGuiDataType_U64, &value, 1);
+                if (ImGui::DragScalar(prop_name.data(), ImGuiDataType_U64, &value, 1)) {
+                    notify_property_changed();
+                }
                 display_context(value);
             }
             break;
@@ -11039,6 +11203,7 @@ const auto check_flags = [](uint64_t flags){
                 auto value = boolprop->get_value_from_object(object);
                 if (ImGui::Checkbox(prop_name.data(), &value)) {
                     boolprop->set_value_in_object(object, value);
+                    notify_property_changed();
                 }
                 display_context(value);
             }
@@ -11049,6 +11214,7 @@ const auto check_flags = [](uint64_t flags){
                 int converted = (int)value;
                 if (ImGui::SliderInt(prop_name.data(), &converted, 0, 255)) {
                     value = (uint8_t)converted;
+                    notify_property_changed();
                 }
                 display_context(value);
             }
@@ -11339,6 +11505,7 @@ const auto check_flags = [](uint64_t flags){
                     const std::wstring wide = utility::widen(buf);
                     value = sdk::FName{std::wstring_view{wide}, sdk::EFindName::Add};
                     buf.resize(std::max<size_t>(buf.size() + 1, 256));
+                    notify_property_changed();
                 }
                 display_context(value);
             }
