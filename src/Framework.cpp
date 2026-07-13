@@ -761,7 +761,11 @@ void Framework::run_imgui_frame(bool from_present) {
     // here; windows that already call drag_scroll_current_window keep their own SetScroll target,
     // which Begin applies next frame and overrides this write (so no double-scroll). Latches the
     // window so a fast drag that leaves its bounds keeps scrolling until release. Menu-only.
-    if (m_draw_ui) {
+    // NOTE: intentionally NOT gated on m_draw_ui — standalone pop-out windows (e.g. UObjectHook's F3
+    // main window) can be open with the main overlay checkbox off, and previously got no drag-scroll
+    // at all because this whole block was skipped. It only ever acts on an actually-hovered ImGui
+    // window, so there's nothing to do here when no UEVR window is showing anyway.
+    {
         ImGuiContext& g = *ImGui::GetCurrentContext();
         ImGuiIO& io = g.IO;
         // MIDDLE mouse only. It is unbound by imgui (no drag-drop / context menu / window-move), so it
@@ -778,10 +782,11 @@ void Framework::run_imgui_frame(bool from_present) {
                 s_drag_scroll_win = nullptr;
             } else {
                 ImGuiWindow* w = s_drag_scroll_win;
-                if (w->ScrollMax.y > 0.0f && io.MouseDelta.y != 0.0f) {
-                    w->Scroll.y = ImClamp(w->Scroll.y - io.MouseDelta.y * 2.5f, 0.0f, w->ScrollMax.y);
+                const float ady = std::fabs(io.MouseDelta.y), adx = std::fabs(io.MouseDelta.x);
+                if (w->ScrollMax.y > 0.0f && ady != 0.0f) {
+                    w->Scroll.y = ImClamp(w->Scroll.y - io.MouseDelta.y * 3.0f, 0.0f, w->ScrollMax.y);
                 }
-                if (w->ScrollMax.x > 0.0f && io.MouseDelta.x != 0.0f) {
+                if (w->ScrollMax.x > 0.0f && adx > ady * 1.5f) {
                     w->Scroll.x = ImClamp(w->Scroll.x - io.MouseDelta.x * 1.5f, 0.0f, w->ScrollMax.x);
                 }
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);

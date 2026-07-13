@@ -100,10 +100,14 @@ inline void drag_scroll_current_window() {
 
     if (s_active == id) {
         if (ImGui::IsMouseDown(btn)) {
-            if (io.MouseDelta.y != 0.0f) {
-                ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y * 2.5f);
+            // Bias hard towards vertical: content here is almost always a tall list, so a drag that's
+            // only slightly diagonal shouldn't nudge the list sideways. X only scrolls once the drag is
+            // clearly more horizontal than vertical.
+            const float ady = std::fabs(io.MouseDelta.y), adx = std::fabs(io.MouseDelta.x);
+            if (ady != 0.0f) {
+                ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y * 3.0f);
             }
-            if (io.MouseDelta.x != 0.0f) {
+            if (adx > ady * 1.5f) {
                 ImGui::SetScrollX(ImGui::GetScrollX() - io.MouseDelta.x * 1.5f);
             }
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
@@ -2627,6 +2631,7 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<float>("UObjectHook_GizmoRingRadius")) m_gizmo_ring_radius = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoLocal")) m_gizmo_local = *v;
         if (auto v = cfg.get<bool>("UObjectHook_HideGizmosWhenUiClosed")) m_hide_gizmos_when_ui_closed = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_BlockPassthroughWhenGizmosVisible")) m_block_passthrough_when_gizmos_visible = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
         // Overlay-material highlight menu was removed (unreliable — SetOverlayMaterial silently
@@ -2656,6 +2661,7 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<float>("UObjectHook_GizmoRingRadius", m_gizmo_ring_radius);
     cfg.set<bool>("UObjectHook_GizmoLocal", m_gizmo_local);
     cfg.set<bool>("UObjectHook_HideGizmosWhenUiClosed", m_hide_gizmos_when_ui_closed);
+    cfg.set<bool>("UObjectHook_BlockPassthroughWhenGizmosVisible", m_block_passthrough_when_gizmos_visible);
     cfg.set<bool>("UObjectHook_GizmoShowLabels", m_gizmo_show_labels);
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
     cfg.set<bool>("UObjectHook_HighlightOverlayMaterial", m_highlight_overlay_material);
@@ -4548,7 +4554,14 @@ void UObjectHook::on_frame() {
     // picker/gizmo/standalone-window state independent of whether the main "UEVR [...]" panel happens
     // to be open (see Framework::set_force_input_capture). Recomputed and re-pushed every frame, so it
     // naturally clears itself once nothing here is active anymore.
-    g_framework->set_force_input_capture(wants_active_ui());
+    // wants_active_ui() alone still gates gizmo dragging/click-select below (those must keep working
+    // whether or not this toggle is on); force_input_capture additionally lets "block passthrough
+    // when gizmos visible" be turned off so an active-but-hidden gizmo (m_hide_gizmos_when_ui_closed)
+    // doesn't keep game input blocked purely because targets are still selected.
+    const bool ui_panel_reasons = g_framework->is_drawing_ui() || m_show_main_window || m_click_select_mode ||
+        m_show_class_browser || m_show_function_caller || m_show_options_window;
+    g_framework->set_force_input_capture(
+        ui_panel_reasons || (m_block_passthrough_when_gizmos_visible && m_has_gizmos));
 
     // Quick-access keybind: F2 toggles the Class Browser window whenever UObjectHook is already
     // active (and not typing into a field) — reachable without navigating to the UObjectHook sidebar
@@ -5241,10 +5254,14 @@ void UObjectHook::draw_component_gizmos() {
     // aren't touched), we just skip rendering/hit-testing/dragging this frame while no UObjectHook
     // panel is open. Deliberately excludes m_has_gizmos/m_click_select_mode from the "UI open" check
     // (unlike wants_active_ui()) so hiding doesn't get stuck permanently true from its own targets.
+    // Also un-sets m_has_gizmos: it's what wants_active_ui() (-> force_input_capture) uses to decide
+    // whether to block passthrough for "gizmos visible", so a hidden gizmo must stop counting as
+    // visible or passthrough would stay blocked purely because targets are still selected.
     if (m_hide_gizmos_when_ui_closed) {
         const bool ui_open = g_framework->is_drawing_ui() || m_show_main_window ||
             m_show_class_browser || m_show_function_caller || m_show_options_window;
         if (!ui_open) {
+            m_has_gizmos = false;
             s_drag_comp = nullptr;
             s_drag_axis = -1;
             return;
@@ -5894,6 +5911,17 @@ void UObjectHook::draw_component_gizmos() {
                 std::string cn;
                 try { cn = utility::narrow(c->get_fname().to_string()); } catch (...) {}
                 ImGui::TextDisabled("%s", cn.c_str());
+                ImGui::Separator();
+
+                // Gizmo mode switch right from the target's own context menu — no need to go to the
+                // Options window just to change Move/Rotate/Scale/Combined.
+                if (ImGui::BeginMenu("Gizmo mode")) {
+                    if (ImGui::RadioButton("Move##ctxgizmo", &m_gizmo_mode, 0)) ImGui::CloseCurrentPopup();
+                    if (ImGui::RadioButton("Rotate##ctxgizmo", &m_gizmo_mode, 1)) ImGui::CloseCurrentPopup();
+                    if (ImGui::RadioButton("Scale##ctxgizmo", &m_gizmo_mode, 2)) ImGui::CloseCurrentPopup();
+                    if (ImGui::RadioButton("Combined##ctxgizmo", &m_gizmo_mode, 3)) ImGui::CloseCurrentPopup();
+                    ImGui::EndMenu();
+                }
                 ImGui::Separator();
 
                 // Minimal read-only inspection view, right here in the context menu — no need to open
@@ -6733,16 +6761,23 @@ void UObjectHook::draw_class_browser_window() {
         // Shared per-class row: click opens a dedicated Class Inspector window;
         // drag publishes a UEVR_UClass payload. `display` is the visible label —
         // the short leaf name in the tree view, the full path in the flat lists.
+        // Callers all already hold m_mutex (shared_lock) around their render_class_row loop, so this
+        // count lookup is safe without an extra lock of its own.
         auto render_class_row = [&](sdk::UClass* uclass, const std::wstring& full, const std::string& display) {
             ImGui::PushID(uclass);
-            if (ImGui::Selectable(display.c_str())) {
+            size_t live_count = 0;
+            if (auto it = m_objects_by_class.find(uclass); it != m_objects_by_class.end()) {
+                live_count = it->second.size();
+            }
+            const std::string row_label = live_count > 0 ? (display + "  (" + std::to_string(live_count) + ")") : display;
+            if (ImGui::Selectable(row_label.c_str())) {
                 if (std::find(m_open_class_inspectors.begin(), m_open_class_inspectors.end(), uclass)
                         == m_open_class_inspectors.end()) {
                     m_open_class_inspectors.push_back(uclass);
                 }
             }
             if (ImGui::IsItemHovered() && !full.empty()) {
-                ImGui::SetTooltip("%s", utility::narrow(full).c_str()); // full path on hover; row shows the short form
+                ImGui::SetTooltip("%s\n%zu live instance(s)", utility::narrow(full).c_str(), live_count); // full path on hover; row shows the short form
             }
             if (ImGui::BeginDragDropSource()) {
                 ImGui::SetDragDropPayload("UEVR_UClass", &uclass, sizeof(uclass));
@@ -6965,6 +7000,75 @@ void UObjectHook::draw_class_browser_window() {
             }
             ImGui::EndTabBar();
         }
+        ImGui::EndTabItem();
+    }
+
+    // ---- All Objects tab ---------------------------------------------------
+    // Every live UObject tracked in m_objects (not just one class' instances like the class
+    // inspector's Instances tab). CDOs and Blueprint GEN_VARIABLE default-value holder objects are
+    // usually noise here (there's one CDO per class, and GEN_VARIABLE objects are Blueprint-internal
+    // template storage) — hidden by default via name-substring, since there's no reflected object-flag
+    // accessor exposed to check RF_ClassDefaultObject directly.
+    if (ImGui::BeginTabItem("All Objects")) {
+        ImGui::Checkbox("Hide default objects (CDOs)", &m_all_objects_hide_default);
+        ImGui::SameLine();
+        ImGui::Checkbox("Hide GEN_VARIABLE objects", &m_all_objects_hide_gen_variable);
+
+        std::vector<sdk::UObjectBase*> snapshot;
+        {
+            std::shared_lock _{m_mutex};
+            snapshot.reserve(m_objects.size());
+            for (auto* obj : m_objects) snapshot.push_back(obj);
+        }
+        ImGui::TextDisabled("%zu objects total", snapshot.size());
+
+        if (ImGui::BeginChild("all_objects_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+            drag_scroll_current_window();
+            std::shared_lock _{m_mutex};
+            int shown = 0;
+            int matched = 0;
+            const int kCap = 5000;
+            for (auto* base_obj : snapshot) {
+                if (base_obj == nullptr || !this->exists_unsafe(base_obj)) continue;
+                std::wstring full_w;
+                auto meta_it = m_meta_objects.find(base_obj);
+                if (meta_it != m_meta_objects.end() && meta_it->second != nullptr) {
+                    full_w = meta_it->second->full_name;
+                } else {
+                    try { full_w = ((sdk::UObject*)base_obj)->get_full_name(); } catch (...) { continue; }
+                }
+                if (m_all_objects_hide_default && full_w.find(L"Default__") != std::wstring::npos) continue;
+                if (m_all_objects_hide_gen_variable && full_w.find(L"GEN_VARIABLE") != std::wstring::npos) continue;
+                if (has_filter && full_w.find(wfilter) == std::wstring::npos) continue;
+                ++matched;
+                if (shown >= kCap) continue;
+                ++shown;
+
+                auto* obj = (sdk::UObject*)base_obj;
+                const std::string name = utility::narrow(full_w);
+                ImGui::PushID((void*)obj);
+                const bool node_open = ImGui::TreeNode(shorten_object_path(name).c_str());
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", name.c_str());
+                }
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
+                    ImGui::Text("UObject: %s", name.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                if (node_open) {
+                    ui_handle_object(obj);
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            if (matched > kCap) {
+                ImGui::TextDisabled("(truncated at %d of %d matches — narrow with the filter)", kCap, matched);
+            } else if (shown == 0) {
+                ImGui::TextDisabled(has_filter ? "no matches for filter" : "(no live objects tracked)");
+            }
+        }
+        ImGui::EndChild();
         ImGui::EndTabItem();
     }
 
@@ -7570,6 +7674,10 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::Checkbox("Hide (don't remove) gizmos when UI closed", &m_hide_gizmos_when_ui_closed);
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Stops drawing/hit-testing gizmos while no UObjectHook panel is open.\nTargets stay selected — they reappear as soon as a panel (or the picker) is opened again.");
+    }
+    ImGui::Checkbox("Block game input passthrough while gizmos visible", &m_block_passthrough_when_gizmos_visible);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("While on, the game doesn't see mouse/keyboard input whenever a gizmo is actually drawn\n(even with every UObjectHook panel closed), so clicks/drags reliably hit the gizmo instead of the game.\nCombine with \"Hide gizmos when UI closed\" above to get full passthrough back the moment gizmos hide,\neven if targets are still selected.");
     }
     ImGui::TextDisabled("Tip: pick the Combined gizmo mode above to see move + rotate + scale handles at once.");
 

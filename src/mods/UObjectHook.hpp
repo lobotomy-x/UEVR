@@ -139,6 +139,8 @@ protected:
     bool m_show_main_window{false};    // dockable pop-out of draw_main() (the sidebar "Main" page)
     // Filter buffer for the class browser (shared across tabs)
     std::string m_class_browser_filter{};
+    bool m_all_objects_hide_default{true};      // "All Objects" tab: hide CDOs ("Default__" name prefix)
+    bool m_all_objects_hide_gen_variable{true}; // "All Objects" tab: hide Blueprint GEN_VARIABLE default-value holder objects
 
     void on_pre_calculate_stereo_view_offset(void* stereo_device, const int32_t view_index, Rotator<float>* view_rotation,
                                              const float world_to_meters, Vector3f* view_location, bool is_double) override;
@@ -381,6 +383,7 @@ private:
     int m_gizmo_mode{3};           // 0 = translate, 1 = rotate, 2 = scale, 3 = combined (default: combined shows all handles at once)
     bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
     bool m_hide_gizmos_when_ui_closed{true}; // skip gizmo rendering/hit-testing (not the target list) while no UObjectHook panel is open
+    bool m_block_passthrough_when_gizmos_visible{true}; // force input capture (block game passthrough) while any gizmo is actually drawn; combined with m_hide_gizmos_when_ui_closed, passthrough re-enables once gizmos are hidden even if targets are still selected
     bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
     bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
