@@ -3681,6 +3681,78 @@ void UObjectHook::restore_overlay_highlight(sdk::USceneComponent* comp) {
     });
 }
 
+// Direct SetMaterial(index, material) on one component's one slot — used by both the material's own
+// "Apply to actor" section and the gizmo target context menu's per-slot Materials editor.
+void UObjectHook::set_material_override_slot(sdk::UActorComponent* comp, int32_t slot, sdk::UObject* material) {
+    GameThreadWorker::get().enqueue([this, comp, slot, material]() {
+        if (!this->exists(comp) || (material != nullptr && !this->exists(material))) return;
+        try {
+            auto* set_fn = comp->get_class()->find_function(L"SetMaterial");
+            if (set_fn == nullptr) return;
+            struct { int32_t index{}; sdk::UObject* material{}; } sp{};
+            sp.index = slot;
+            sp.material = material;
+            comp->process_event(set_fn, &sp);
+        } catch (...) {}
+    });
+}
+
+// Direct SetOverlayMaterial(material) — deliberately NOT tracked in m_overlay_mat_originals (see the
+// header comment): this is a persistent user action, not the transient selection-highlight feature,
+// and must not get silently reverted by that feature's own restore pass. Pass nullptr to clear.
+void UObjectHook::set_material_overlay(sdk::USceneComponent* comp, sdk::UObject* material) {
+    GameThreadWorker::get().enqueue([this, comp, material]() {
+        if (!this->exists(comp) || (material != nullptr && !this->exists(material))) return;
+        try {
+            auto* set_fn = comp->get_class()->find_function(L"SetOverlayMaterial");
+            if (set_fn == nullptr) return; // UE4 / non-mesh component — silent no-op, same as the highlight feature
+            struct { sdk::UObject* mat{nullptr}; } sp{};
+            sp.mat = material;
+            comp->process_event(set_fn, &sp);
+        } catch (...) {}
+    });
+}
+
+// Applies `material` to every mesh component on `actor` — every material slot as an override, or the
+// whole component as an overlay. Single enqueue that does all the process_event calls directly
+// (rather than re-enqueuing through set_material_override_slot/set_material_overlay, which are meant
+// to be called from the draw thread and each do their own enqueue).
+void UObjectHook::apply_material_to_actor(sdk::AActor* actor, sdk::UObject* material, bool as_overlay) {
+    if (actor == nullptr || material == nullptr) return;
+    GameThreadWorker::get().enqueue([this, actor, material, as_overlay]() {
+        if (!this->exists(actor) || !this->exists(material)) return;
+        static const auto mesh_component_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.StaticMeshComponent");
+        if (mesh_component_t == nullptr) return;
+        std::vector<sdk::UActorComponent*> comps;
+        try { comps = actor->get_all_components(); } catch (...) { return; }
+        for (auto* c : comps) {
+            if (c == nullptr || c->get_class() == nullptr || !c->get_class()->is_a(mesh_component_t)) continue;
+            auto* comp = (sdk::UActorComponent*)c;
+            try {
+                if (as_overlay) {
+                    auto* set_fn = comp->get_class()->find_function(L"SetOverlayMaterial");
+                    if (set_fn == nullptr) continue;
+                    struct { sdk::UObject* mat{nullptr}; } sp{};
+                    sp.mat = material;
+                    comp->process_event(set_fn, &sp);
+                    continue;
+                }
+                auto* get_num_fn = mesh_component_t->find_function(L"GetNumMaterials");
+                auto* set_material_fn = mesh_component_t->find_function(L"SetMaterial");
+                if (get_num_fn == nullptr || set_material_fn == nullptr) continue;
+                struct { int32_t num{}; } np{};
+                comp->process_event(get_num_fn, &np);
+                for (int32_t i = 0; i < np.num; ++i) {
+                    struct { int32_t index{}; sdk::UObject* material{}; } sp{};
+                    sp.index = i;
+                    sp.material = material;
+                    comp->process_event(set_material_fn, &sp);
+                }
+            } catch (...) {}
+        }
+    });
+}
+
 std::optional<UObjectHook::StatePath> UObjectHook::deserialize_path(const nlohmann::json& data) {
     if (!data.contains("path")) {
         SPDLOG_ERROR("[UObjectHook] Malfomed JSON file (missing path)");
@@ -6135,6 +6207,18 @@ void UObjectHook::draw_component_gizmos() {
                         ImGui::EndMenu();
                     }
                     ImGui::EndMenu();
+                }
+
+                // Material drag-drop targets do NOT work inside a hover-cascading BeginMenu chain:
+                // starting the drag means moving the mouse off the menu to the source item, which
+                // collapses the submenu before you can drag back to drop on it — there's no way to
+                // actually complete the drop. The real material-editing UI lives in the actor's own
+                // persistent inspector (ui_handle_actor's "Materials" section) instead, where the
+                // window stays open regardless of where the drag source is. This is just a shortcut
+                // there.
+                if (owner != nullptr && ImGui::MenuItem("Inspect materials...")) {
+                    m_last_selected = c;
+                    ImGui::CloseCurrentPopup();
                 }
 
                 // Spawn a new component of a common type on this component's owner.
@@ -9933,6 +10017,41 @@ void UObjectHook::ui_handle_material_interface(sdk::UObject* object) {
         return;
     }
 
+    // Targeted per-actor apply — reuses apply_material_to_actor (the same backend the in-world
+    // right-click "Materials" menu uses), rather than the blunt "every mesh component in the level"
+    // button below. Defaults the target to whatever's currently gizmo-selected so the common
+    // select-then-apply flow needs no drag; drop a different actor onto the target row to retarget.
+    ImGui::SeparatorText("Apply to actor");
+    {
+        static sdk::AActor* s_target_actor = nullptr;
+        if (s_target_actor == nullptr || !this->exists_unsafe((sdk::UObjectBase*)s_target_actor)) {
+            s_target_actor = (m_last_selected != nullptr && this->exists_unsafe((sdk::UObjectBase*)m_last_selected))
+                ? m_last_selected->get_owner() : nullptr;
+        }
+        std::string target_label = "(drop an actor here)";
+        if (s_target_actor != nullptr && this->exists_unsafe((sdk::UObjectBase*)s_target_actor)) {
+            try { target_label = shorten_object_path(utility::narrow(s_target_actor->get_full_name())); } catch (...) {}
+        }
+        ImGui::Selectable(("Target: " + target_label).c_str());
+        if (auto dropped = accept_object_drop(); dropped != nullptr) {
+            static const auto actor_t = sdk::AActor::static_class();
+            if (actor_t != nullptr && dropped->get_class() != nullptr && dropped->get_class()->is_a(actor_t)) {
+                s_target_actor = (sdk::AActor*)dropped;
+            }
+        }
+        ImGui::BeginDisabled(s_target_actor == nullptr || !this->exists_unsafe((sdk::UObjectBase*)s_target_actor));
+        if (ImGui::Button("Apply as Override")) {
+            apply_material_to_actor(s_target_actor, object, false);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Apply as Overlay")) {
+            apply_material_to_actor(s_target_actor, object, true);
+        }
+        ImGui::EndDisabled();
+        ImGui::TextDisabled("Override replaces every material slot; Overlay uses SetOverlayMaterial (UE5.1+ only).");
+    }
+    ImGui::Separator();
+
     if (ImGui::Button("Apply to all actors")) {
         static const auto mesh_component_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.StaticMeshComponent");
         static const auto create_dynamic_mat = mesh_component_t->find_function(L"CreateDynamicMaterialInstance");
@@ -10115,6 +10234,77 @@ void UObjectHook::ui_handle_actor(sdk::UObject* object) {
                 m_persistent_camera_state->offset = m_camera_attach.offset;
             }
         }
+    }
+
+    // In-world material drag-drop, moved here from the right-click gizmo-target context menu: a
+    // right-click popup collapses its hover-cascading submenus the moment the mouse leaves them to go
+    // grab a drag source elsewhere, so a drop target nested inside one can never actually receive a
+    // drop. This tree stays open regardless of where the drag originates (same as any other drag
+    // target in this inspector, e.g. Attach Camera to above), so it actually works.
+    if (ImGui::TreeNode("Materials")) {
+        static const auto material_iface_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.MaterialInterface");
+        static const auto mesh_component_t = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.StaticMeshComponent");
+
+        ImGui::TextDisabled("Drop a material below to apply it.");
+        auto accept_material_for_actor = [&](bool as_overlay) {
+            ImGui::Selectable(as_overlay ? "Whole actor (Overlay)" : "Whole actor (Override, all slots)");
+            if (auto dropped = accept_object_drop(); dropped != nullptr) {
+                if (material_iface_t != nullptr && dropped->get_class() != nullptr && dropped->get_class()->is_a(material_iface_t)) {
+                    apply_material_to_actor(actor, dropped, as_overlay);
+                }
+            }
+        };
+        accept_material_for_actor(false);
+        accept_material_for_actor(true);
+
+        std::vector<sdk::UActorComponent*> comps;
+        try { comps = actor->get_all_components(); } catch (...) {}
+        bool any_mesh = false;
+        for (auto* comp_obj : comps) {
+            if (comp_obj == nullptr || mesh_component_t == nullptr || comp_obj->get_class() == nullptr ||
+                !comp_obj->get_class()->is_a(mesh_component_t)) continue;
+            auto* mesh_comp = comp_obj;
+            std::string comp_name;
+            try { comp_name = utility::narrow(comp_obj->get_fname().to_string()); } catch (...) { continue; }
+            ImGui::PushID(comp_obj);
+            if (ImGui::TreeNode(comp_name.c_str())) {
+                any_mesh = true;
+                try {
+                    auto* get_num_fn = mesh_component_t->find_function(L"GetNumMaterials");
+                    auto* get_mat_fn = mesh_component_t->find_function(L"GetMaterial");
+                    if (get_num_fn != nullptr) {
+                        struct { int32_t num{}; } np{};
+                        comp_obj->process_event(get_num_fn, &np);
+                        for (int32_t i = 0; i < np.num; ++i) {
+                            std::string slot_label = "Slot " + std::to_string(i) + ": (empty)";
+                            if (get_mat_fn != nullptr) {
+                                struct { int32_t index{}; sdk::UObject* ret{}; } gp{};
+                                gp.index = i;
+                                comp_obj->process_event(get_mat_fn, &gp);
+                                if (gp.ret != nullptr) {
+                                    try { slot_label = "Slot " + std::to_string(i) + ": " + shorten_object_path(utility::narrow(gp.ret->get_full_name())); }
+                                    catch (...) {}
+                                }
+                            }
+                            ImGui::PushID(i);
+                            ImGui::Selectable(slot_label.c_str());
+                            if (auto dropped = accept_object_drop(); dropped != nullptr) {
+                                if (material_iface_t != nullptr && dropped->get_class() != nullptr && dropped->get_class()->is_a(material_iface_t)) {
+                                    set_material_override_slot(mesh_comp, i, dropped);
+                                }
+                            }
+                            ImGui::PopID();
+                        }
+                    }
+                } catch (...) {}
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+        if (!any_mesh) {
+            ImGui::TextDisabled("(no mesh components)");
+        }
+        ImGui::TreePop();
     }
 
     static char component_add_name[256]{};
@@ -10717,8 +10907,14 @@ void UObjectHook::cleanup_references_to(sdk::UObjectBase* object) {
 
 // See m_property_edit_target_stack in the header. Called after any property widget in
 // ui_handle_properties reports a real edit; forces the nearest enclosing scene component to actually
-// re-render by toggling SetVisibility to its own current value (deferred to the game thread — this is
-// a ProcessEvent call, not safe to make directly from the draw thread).
+// re-render by toggling SetVisibility (deferred to the game thread — this is a ProcessEvent call, not
+// safe to make directly from the draw thread).
+// Flip-then-restore, NOT set-to-current: UE's SetVisibility early-outs when the new value equals the
+// current one (bNewVisibility == bVisible), so calling it with the SAME value is a complete no-op —
+// no MarkRenderStateDirty, nothing refreshes. That's exactly why the manual "toggle the checkbox
+// twice" workaround was needed: two clicks are two DIFFERENT values in a row. Flipping to !vis then
+// back to vis reproduces that with two calls, guaranteeing the flag actually changes at least once so
+// the refresh fires, while still leaving visibility at its correct value.
 void UObjectHook::notify_property_changed() {
     if (m_property_edit_target_stack.empty()) {
         return;
@@ -10731,6 +10927,7 @@ void UObjectHook::notify_property_changed() {
         if (!this->exists(comp)) return;
         try {
             const bool vis = comp->is_visible();
+            comp->set_visibility(!vis, false);
             comp->set_visibility(vis, false);
         } catch (...) {}
     });
