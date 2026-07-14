@@ -32,6 +32,14 @@ class UObjectHook : public Mod {
 public:
     static std::shared_ptr<UObjectHook>& get();
 
+    // Shared by UObjectHook.cpp and uobjecthook/Gizmo.cpp — static members (not free functions in an
+    // anonymous namespace) so they have the external linkage a second translation unit needs to call
+    // them. See each definition for what it actually does.
+    static std::string shorten_object_path(std::string_view full);
+    static sdk::UObject* render_object_picker_popup(const char* popup_id, std::string& filter_buf,
+                                                     sdk::UClass* expected_class, bool list_classes = false);
+    static void load_live_caller_target(sdk::UObject* obj);
+
     // True when a transform gizmo is grabbed / hot under the cursor, or the click-select picker is
     // armed, for THIS frame. Computed in draw_component_gizmos (runs during draw_ui, before the
     // global drag-scroll). The drag-scroll reads it to yield in VR, where it shares the left button
@@ -277,6 +285,17 @@ private:
     void apply_overlay_highlight(sdk::USceneComponent* comp, sdk::UObject* material);
     void restore_overlay_highlight(sdk::USceneComponent* comp);
 
+    // User-driven material application (ui_handle_material_interface's "Apply to actor" section, the
+    // gizmo target context menu's "Materials" submenu). Deliberately independent from
+    // apply_overlay_highlight/m_overlay_mat_originals above — that pair is the transient
+    // selection-highlight feature and auto-restores the instant a component leaves the gizmo
+    // selection, which would silently undo a persistent user-applied overlay. `material == nullptr`
+    // clears the overlay. All game-thread (enqueue internally).
+    void set_material_override_slot(sdk::UActorComponent* comp, int32_t slot, sdk::UObject* material);
+    void set_material_overlay(sdk::USceneComponent* comp, sdk::UObject* material);
+    // Applies to every mesh-component slot on the actor (override) or every mesh component (overlay).
+    void apply_material_to_actor(sdk::AActor* actor, sdk::UObject* material, bool as_overlay);
+
     // Scrubs every UObjectHook-side reference to `object` (gizmo targets, MC attachments, the
     // spawned-objects list, camera attach, last-selected/recent-objects) BEFORE it's actually
     // destroyed, so a destroyed component/actor doesn't linger as a dangling gizmo or attachment.
@@ -413,10 +432,10 @@ private:
     float m_gizmo_ring_radius{40.0f}; // rotate-mode ring radius (UE cm), decoupled from the axis length so big translate arrows don't balloon the rotate rings (better centering, esp. in VR)
     float m_gizmo_thickness{4.0f}; // gizmo line thickness (px), applies to all modes
     int m_gizmo_mode{3};           // 0 = translate, 1 = rotate, 2 = scale, 3 = combined (default: combined shows all handles at once)
-    bool m_gizmo_local{false};     // transform editor space: false = world, true = relative
+    bool m_gizmo_local{true};     // transform editor space: false = world, true = relative
     bool m_hide_gizmos_when_ui_closed{true}; // skip gizmo rendering/hit-testing (not the target list) while no UObjectHook panel is open
     bool m_block_passthrough_when_gizmos_visible{true}; // force input capture (block game passthrough) while any gizmo is actually drawn; combined with m_hide_gizmos_when_ui_closed, passthrough re-enables once gizmos are hidden even if targets are still selected
-    bool m_auto_gizmo_on_adjust{false}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
+    bool m_auto_gizmo_on_adjust{true}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
     bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
     bool m_click_select_picked_frame{false}; // set by handle_click_select on a pick; suppresses the gizmo-axis grab on that same left-press frame
@@ -425,7 +444,7 @@ private:
     bool m_gizmo_show_labels{true};     // draw the per-gizmo actor/component name + transform-metrics text overlay
     bool m_show_texture_previews{false}; // STUB feature gate — render UTexture as ImGui::Image (default OFF; will crash until draw_texture_preview is implemented)
     float m_inspector_item_width{320.0f}; // UObjectHook property-editor max width (px); <=0 = unlimited. Keeps inherited-object rows in a readable column on a wide window.
-    bool m_click_select_single{false};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating
+    bool m_click_select_single{true};    // pick REPLACES the selection (one gizmo target at a time) instead of accumulating
     bool m_gizmo_set_movable{true};       // on click-select, set the component's Mobility to Movable(2) so StaticMeshComponents can actually be moved by the gizmo
     bool m_highlight_selection{true};     // draw a world->screen outline over each gizmo-selected object
     bool m_highlight_overlay_material{false}; // also highlight selected mesh comps via SetOverlayMaterial (UE5.1+; no-op on older engines)
