@@ -5365,10 +5365,8 @@ void UObjectHook::draw_component_gizmos() {
             m_highlight_material_search_attempted = true;
             GameThreadWorker::get().enqueue([this]() {
                 static const wchar_t* candidates[] = {
-                    L"Material /Engine/EngineDebugMaterials/DebugMeshMaterial.DebugMeshMaterial",
-                    L"Material /Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial",
+					L"Material /ControlRig/M_Manip.M_Manip",
                     L"Material /Engine/EngineMaterials/WidgetMaterial.WidgetMaterial",
-                    L"Material /Engine/EngineMaterials/DefaultDeferredDecalMaterial.DefaultDeferredDecalMaterial",
                 };
                 for (auto path : candidates) {
                     if (auto mat = sdk::find_uobject<sdk::UObject>(path); mat != nullptr) {
@@ -9552,16 +9550,6 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
                 }
             }
 
-            //for (auto uobject : m_inline_uobjecthooks) {
-            //    sdk::UObject* out;
-            //    if (UObjectHook::object_from_path_or_address(uobject.first, out)){
-            //        if (out == comp) {
-            //
-            //                }
-            //        }
-            //
-            //}
-
             auto save_state_logic = [&](const std::vector<std::string>& path) {
                 auto json = serialize_mc_state(path, state);
 
@@ -9691,7 +9679,7 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
 
     void* addr = (void*)((uintptr_t)comp);
     const auto hex = (std::stringstream{} << std::hex << (uintptr_t)addr).str();
-
+	
     // Local toggle switches location/rotation between world and parent-relative
     // space (scale is always relative). Reset buttons go to identity. The Quat row
     // edits the same rotation as a quaternion (routed through euler since the SDK
@@ -9913,16 +9901,6 @@ void UObjectHook::ui_handle_scene_component(sdk::USceneComponent* comp) {
 
                         comp->process_event(parms.ReturnValue ? unhidebone : hidebone, &parms);
 
-
-
-                //std::string_view luadata = "local comp = uevr.api:to_uobject(" +
-                //     (std::stringstream{} << std::hex << (uintptr_t)comp).str() +  ")\nlocal socket = '" +
-                //        (utility::narrow(name.to_string())) + R"('
-                //                    if comp:IsBoneHiddenByName(socket) then
-                //                    comp:UnHideBoneByName(socket)
-                //                    else comp:HideBoneByName(socket)
-                //                end)";
-                //    PluginLoader::get()->do_lua_string(luadata.data(), "togglevis");
                     }
                 }
                 ImGui::TreePop();
@@ -11158,16 +11136,17 @@ const auto check_flags = [](uint64_t flags){
     };
 
     // Sort by group key first (when grouping), then by field name. "By base class" groups sort by
-    // inheritance depth (root/base first, most-derived last) instead of alphabetically -- class_depth
-    // only covers uclass's own chain, so a group key with no depth entry (shouldn't happen since decl
-    // is always one of uclass's supers) falls back to alphabetical via the -1 default.
+    // inheritance depth (most-derived/most-unique class first, root/base last) instead of
+    // alphabetically -- class_depth only covers uclass's own chain, so a group key with no depth
+    // entry (shouldn't happen since decl is always one of uclass's supers) falls back to alphabetical
+    // via the -1 default.
     std::sort(sorted_fields.begin(), sorted_fields.end(), [&](const FieldEntry& a, const FieldEntry& b) {
         if (s_prop_group_mode == 1) {
             const auto it_a = class_depth.find(a.decl);
             const auto it_b = class_depth.find(b.decl);
             const int da = it_a != class_depth.end() ? it_a->second : -1;
             const int db = it_b != class_depth.end() ? it_b->second : -1;
-            if (da != db) return da > db; // higher depth = more base = first
+            if (da != db) return da < db; // lower depth = more derived/unique = first
         } else if (s_prop_group_mode != 0) {
             const auto ga = group_key_of(a), gb = group_key_of(b);
             if (ga != gb) return ga < gb;
@@ -11223,13 +11202,20 @@ const auto check_flags = [](uint64_t flags){
         // just the object's OWN fields bucketed for readability, not a pointer to another object,
         // so it counts as "sensibly grouped data" and should read uncollapsed. Any individual field
         // that IS an object reference still gets its own separately-gated (collapsed) TreeNode
-        // further down regardless of this group's state.
+        // further down regardless of this group's state. Exception: "By base class" groups for the
+        // common low-value base classes (their own fields are rarely what you're looking for when
+        // inspecting a specific object) start COLLAPSED instead.
         if (s_prop_group_mode != 0) {
+            static const std::unordered_set<std::wstring> kBaseGroupsCollapsedByDefault = {
+                L"Object", L"Actor", L"ActorComponent", L"SceneComponent"
+            };
             const std::wstring key = (s_prop_group_mode == 1) ? decl->get_fname().to_string() : propc_type;
             if (!any_group_started || key != cur_group_key) {
                 cur_group_key = key;
                 any_group_started = true;
-                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+                const bool default_collapsed = s_prop_group_mode == 1 && kBaseGroupsCollapsedByDefault.contains(key);
+                const auto header_flags = default_collapsed ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen;
+                cur_group_open = ImGui::CollapsingHeader((utility::narrow(key) + "##propgrp").c_str(), header_flags);
             }
             if (!cur_group_open) {
                 continue;
