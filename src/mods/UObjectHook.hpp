@@ -26,6 +26,8 @@ class USceneComponent;
 class UActorComponent;
 class AActor;
 class FArrayProperty;
+class FMapProperty;
+class FSetProperty;
 }
 
 class UObjectHook : public Mod {
@@ -39,6 +41,12 @@ public:
     static sdk::UObject* render_object_picker_popup(const char* popup_id, std::string& filter_buf,
                                                      sdk::UClass* expected_class, bool list_classes = false);
     static void load_live_caller_target(sdk::UObject* obj);
+    static std::string format_script_delegate(const uint8_t* d);
+    static std::string format_multicast_delegate(const uint8_t* in);
+    static int read_map_entries(sdk::FMapProperty* mp, const uint8_t* base, int cap,
+                                 std::vector<std::pair<std::string, std::string>>& out);
+    static int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap,
+                                 std::vector<std::string>& out);
 
     // True when a transform gizmo is grabbed / hot under the cursor, or the click-select picker is
     // armed, for THIS frame. Computed in draw_component_gizmos (runs during draw_ui, before the
