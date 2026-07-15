@@ -28,6 +28,7 @@ class AActor;
 class FArrayProperty;
 class FMapProperty;
 class FSetProperty;
+class UFunction;
 }
 
 class UObjectHook : public Mod {
@@ -47,6 +48,11 @@ public:
                                  std::vector<std::pair<std::string, std::string>>& out);
     static int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap,
                                  std::vector<std::string>& out);
+    // Function block/monitor status — backed by file-scoped sets/maps that stay in UObjectHook.cpp;
+    // these are just the accessors, promoted the same way for uobjecthook/ClassBrowser.cpp to call.
+    static bool is_func_blocked(sdk::UFunction* fn);
+    static bool is_func_monitored(sdk::UFunction* fn);
+    static uint64_t func_call_count(sdk::UFunction* fn);
 
     // True when a transform gizmo is grabbed / hot under the cursor, or the click-select picker is
     // armed, for THIS frame. Computed in draw_component_gizmos (runs during draw_ui, before the
