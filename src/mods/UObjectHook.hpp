@@ -48,11 +48,14 @@ public:
                                  std::vector<std::pair<std::string, std::string>>& out);
     static int read_set_entries(sdk::FSetProperty* sp, const uint8_t* base, int cap,
                                  std::vector<std::string>& out);
-    // Function block/monitor status — backed by file-scoped sets/maps that stay in UObjectHook.cpp;
-    // these are just the accessors, promoted the same way for uobjecthook/ClassBrowser.cpp to call.
+    // Function block/monitor status — backed by file-scoped sets/maps that now live in
+    // uobjecthook/FunctionHooks.cpp; these are just the accessors, promoted so both that file and
+    // UObjectHook.cpp (ui_function_context_menu, which sets these) can call them.
     static bool is_func_blocked(sdk::UFunction* fn);
     static bool is_func_monitored(sdk::UFunction* fn);
     static uint64_t func_call_count(sdk::UFunction* fn);
+    static void set_func_blocked(sdk::UFunction* fn, bool blocked);
+    static void set_func_monitored(sdk::UFunction* fn, bool on);
 
     // True when a transform gizmo is grabbed / hot under the cursor, or the click-select picker is
     // armed, for THIS frame. Computed in draw_component_gizmos (runs during draw_ui, before the
