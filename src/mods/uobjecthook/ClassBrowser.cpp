@@ -520,6 +520,69 @@ void sdk_write_split(DumpFmt fmt, const char* kind, const std::map<std::string, 
 } // namespace
 
 
+// Rebuild the "All Objects" row cache when a trigger says it's stale — see AllObjectsRow in the
+// header for why the tab is cached at all. Safe to call every frame; the common case is three
+// comparisons and a return.
+//
+// Triggers, in the order checked:
+//   1. never built yet;
+//   2. explicit request (the Refresh button, m_all_objects_force_refresh);
+//   3. m_objects.size() changed — objects were spawned/destroyed, so the list definitely moved;
+//   4. the auto-refresh timer elapsed — catches changes the COUNT can't see (an object renamed, or an
+//      equal number of spawns and destroys between checks).
+// The count read in (3) takes the shared lock, but it's one size() call, not a full walk.
+void UObjectHook::pump_all_objects_cache() {
+    const auto now = std::chrono::steady_clock::now();
+
+    size_t current_count = 0;
+    { std::shared_lock _{m_mutex}; current_count = m_objects.size(); }
+
+    const bool never_built = m_all_objects_last_refresh == std::chrono::steady_clock::time_point{};
+    const bool count_changed = current_count != m_all_objects_last_count;
+    const bool timer_due = m_all_objects_auto_refresh &&
+        (now - m_all_objects_last_refresh) >= std::chrono::milliseconds((int64_t)(m_all_objects_refresh_seconds * 1000.0f));
+
+    if (!never_built && !m_all_objects_force_refresh && !count_changed && !timer_due) {
+        return;
+    }
+
+    m_all_objects_force_refresh = false;
+    m_all_objects_last_refresh = now;
+    m_all_objects_last_count = current_count;
+
+    // One pass under the lock: copy out the pointer AND the cached wide name, so the expensive part
+    // (widen->narrow conversion, shorten_object_path) happens after the lock is released. Objects
+    // without meta are skipped rather than calling get_full_name under the lock — the meta map is the
+    // authority on what's safely nameable, and anything missing from it will be picked up on the next
+    // rebuild once the add hook has populated it.
+    std::vector<std::pair<sdk::UObjectBase*, std::wstring>> raw;
+    {
+        std::shared_lock _{m_mutex};
+        raw.reserve(m_objects.size());
+        for (auto* obj : m_objects) {
+            if (obj == nullptr || !this->exists_unsafe(obj)) continue;
+            auto it = m_meta_objects.find(obj);
+            if (it == m_meta_objects.end() || it->second == nullptr) continue;
+            raw.emplace_back(obj, it->second->full_name);
+        }
+    }
+
+    m_all_objects_cache.clear();
+    m_all_objects_cache.reserve(raw.size());
+    for (auto& [obj, full_w] : raw) {
+        AllObjectsRow row{};
+        row.obj = obj;
+        row.full = utility::narrow(full_w);
+        row.short_label = shorten_object_path(row.full);
+        m_all_objects_cache.push_back(std::move(row));
+    }
+
+    // Stable order so rows don't jump between rebuilds (m_objects is an unordered set — its iteration
+    // order is arbitrary and can change on rehash, which made the old per-frame list shuffle itself).
+    std::sort(m_all_objects_cache.begin(), m_all_objects_cache.end(),
+              [](const AllObjectsRow& a, const AllObjectsRow& b) { return a.full < b.full; });
+}
+
 // Build/refresh m_sorted_classes by either harvesting a completed async sort
 // or kicking off a new one. Idempotent and safe to call every frame from
 // multiple views (Class Browser + Objects-by-Class). Throttled to ~2s between
@@ -947,6 +1010,7 @@ void UObjectHook::draw_class_browser_window() {
     }
 
     // ---- All Objects tab ---------------------------------------------------
+    // (see pump_all_objects_cache above the tab body for the caching rationale)
     // Every live UObject tracked in m_objects (not just one class' instances like the class
     // inspector's Instances tab). CDOs and Blueprint GEN_VARIABLE default-value holder objects are
     // usually noise here (there's one CDO per class, and GEN_VARIABLE objects are Blueprint-internal
@@ -957,46 +1021,65 @@ void UObjectHook::draw_class_browser_window() {
         ImGui::SameLine();
         ImGui::Checkbox("Hide GEN_VARIABLE objects", &m_all_objects_hide_gen_variable);
 
-        std::vector<sdk::UObjectBase*> snapshot;
-        {
-            std::shared_lock _{m_mutex};
-            snapshot.reserve(m_objects.size());
-            for (auto* obj : m_objects) snapshot.push_back(obj);
+        pump_all_objects_cache();
+
+        if (ImGui::Button("Refresh##all_objects")) {
+            m_all_objects_force_refresh = true;
         }
-        ImGui::TextDisabled("%zu objects total", snapshot.size());
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Rebuild the list now.\n"
+                              "It otherwise rebuilds only when the tracked object count changes"
+                              " (or on the timer, if auto-refresh is on),\n"
+                              "because re-deriving every object's name each frame contends with the"
+                              " game thread's object hooks.");
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Auto##all_objects", &m_all_objects_auto_refresh);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Also rebuild periodically, so renames/repossessions that don't change the\n"
+                              "object COUNT still show up. Off = count-change and manual only.");
+        }
+        if (m_all_objects_auto_refresh) {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(110.0f);
+            ImGui::SliderFloat("##all_objects_interval", &m_all_objects_refresh_seconds, 0.25f, 15.0f, "%.2fs");
+        }
+        ImGui::SameLine();
+        const auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - m_all_objects_last_refresh).count();
+        ImGui::TextDisabled("%zu objects  (%.1fs old)", m_all_objects_cache.size(), (double)age / 1000.0);
 
         if (ImGui::BeginChild("all_objects_list", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
             drag_scroll_current_window();
-            std::shared_lock _{m_mutex};
+            // No lock and no name derivation here — everything below reads the cache built by
+            // pump_all_objects_cache. exists_unsafe is still checked per row because the cache can go
+            // stale between rebuilds (that's the deliberate trade), and a freed pointer must never
+            // reach ui_handle_object.
             int shown = 0;
             int matched = 0;
+            int dead = 0;
             const int kCap = 5000;
-            for (auto* base_obj : snapshot) {
-                if (base_obj == nullptr || !this->exists_unsafe(base_obj)) continue;
-                std::wstring full_w;
-                auto meta_it = m_meta_objects.find(base_obj);
-                if (meta_it != m_meta_objects.end() && meta_it->second != nullptr) {
-                    full_w = meta_it->second->full_name;
-                } else {
-                    try { full_w = ((sdk::UObject*)base_obj)->get_full_name(); } catch (...) { continue; }
-                }
-                if (m_all_objects_hide_default && full_w.find(L"Default__") != std::wstring::npos) continue;
-                if (m_all_objects_hide_gen_variable && full_w.find(L"GEN_VARIABLE") != std::wstring::npos) continue;
-                if (has_filter && full_w.find(wfilter) == std::wstring::npos) continue;
+            // The filter compares narrow strings now (the cache is narrow), so use the narrow filter
+            // text rather than the wide one the other tabs use.
+            std::string nfilter = m_class_browser_filter;
+            for (auto& row : m_all_objects_cache) {
+                if (row.obj == nullptr || !this->exists_unsafe(row.obj)) { ++dead; continue; }
+                if (m_all_objects_hide_default && row.full.find("Default__") != std::string::npos) continue;
+                if (m_all_objects_hide_gen_variable && row.full.find("GEN_VARIABLE") != std::string::npos) continue;
+                if (!nfilter.empty() && row.full.find(nfilter) == std::string::npos) continue;
                 ++matched;
                 if (shown >= kCap) continue;
                 ++shown;
 
-                auto* obj = (sdk::UObject*)base_obj;
-                const std::string name = utility::narrow(full_w);
+                auto* obj = (sdk::UObject*)row.obj;
                 ImGui::PushID((void*)obj);
-                const bool node_open = ImGui::TreeNode(shorten_object_path(name).c_str());
+                const bool node_open = ImGui::TreeNode(row.short_label.c_str());
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("%s", name.c_str());
+                    ImGui::SetTooltip("%s", row.full.c_str());
                 }
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("UEVR_UObject", &obj, sizeof(obj));
-                    ImGui::Text("UObject: %s", name.c_str());
+                    ImGui::Text("UObject: %s", row.full.c_str());
                     ImGui::EndDragDropSource();
                 }
                 if (node_open) {
@@ -1008,7 +1091,12 @@ void UObjectHook::draw_class_browser_window() {
             if (matched > kCap) {
                 ImGui::TextDisabled("(truncated at %d of %d matches — narrow with the filter)", kCap, matched);
             } else if (shown == 0) {
-                ImGui::TextDisabled(has_filter ? "no matches for filter" : "(no live objects tracked)");
+                ImGui::TextDisabled(!nfilter.empty() ? "no matches for filter" : "(no live objects tracked)");
+            }
+            // Objects destroyed since the last rebuild. Surfaced rather than silently skipped so a
+            // stale cache is visible as staleness instead of looking like the list is just wrong.
+            if (dead > 0) {
+                ImGui::TextDisabled("(%d cached object%s destroyed since last refresh)", dead, dead == 1 ? "" : "s");
             }
         }
         ImGui::EndChild();

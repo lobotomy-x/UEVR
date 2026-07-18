@@ -2625,6 +2625,18 @@ void UObjectHook::on_config_load(const utility::Config& cfg, bool set_defaults) 
         if (auto v = cfg.get<bool>("UObjectHook_BlockPassthroughWhenGizmosVisible")) m_block_passthrough_when_gizmos_visible = *v;
         if (auto v = cfg.get<bool>("UObjectHook_GizmoShowLabels")) m_gizmo_show_labels = *v;
         if (auto v = cfg.get<bool>("UObjectHook_AutoGizmoOnAdjust")) m_auto_gizmo_on_adjust = *v;
+        // Picker aiming / LOS.
+        if (auto v = cfg.get<bool>("UObjectHook_PickUseBounds")) m_pick_use_bounds = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_PickIncludePrimitives")) m_pick_include_primitives = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_PickRequireLos")) m_pick_require_los = *v;
+        if (auto v = cfg.get<bool>("UObjectHook_LightIconsRequireLos")) m_light_icons_require_los = *v;
+        if (auto v = cfg.get<float>("UObjectHook_PickConeSlack")) m_pick_cone_slack = *v;
+        if (auto v = cfg.get<int>("UObjectHook_PickBoundsMax")) m_pick_bounds_max = *v;
+        if (auto v = cfg.get<float>("UObjectHook_PickLosTolerance")) m_pick_los_tolerance = *v;
+        // All Objects cache. Deliberately NOT persisting m_vr_adjust_mode: it blocks game input, so
+        // restoring it armed on startup is the one state you'd never want to inherit silently.
+        if (auto v = cfg.get<bool>("UObjectHook_AllObjectsAutoRefresh")) m_all_objects_auto_refresh = *v;
+        if (auto v = cfg.get<float>("UObjectHook_AllObjectsRefreshSeconds")) m_all_objects_refresh_seconds = *v;
         // Overlay-material highlight menu was removed (unreliable — SetOverlayMaterial silently
         // no-ops on UE4 and the "restore on deselect" bookkeeping never fully worked). Deliberately
         // NOT loading a saved true value here so it can't come back enabled from an old config; the
@@ -2657,6 +2669,16 @@ void UObjectHook::on_config_save(utility::Config& cfg) {
     cfg.set<bool>("UObjectHook_AutoGizmoOnAdjust", m_auto_gizmo_on_adjust);
     cfg.set<bool>("UObjectHook_HighlightOverlayMaterial", m_highlight_overlay_material);
     cfg.set<bool>("UObjectHook_ShowTexturePreviews", m_show_texture_previews);
+    cfg.set<bool>("UObjectHook_PickUseBounds", m_pick_use_bounds);
+    cfg.set<bool>("UObjectHook_PickIncludePrimitives", m_pick_include_primitives);
+    cfg.set<bool>("UObjectHook_PickRequireLos", m_pick_require_los);
+    cfg.set<bool>("UObjectHook_LightIconsRequireLos", m_light_icons_require_los);
+    cfg.set<float>("UObjectHook_PickConeSlack", m_pick_cone_slack);
+    cfg.set<int>("UObjectHook_PickBoundsMax", m_pick_bounds_max);
+    cfg.set<float>("UObjectHook_PickLosTolerance", m_pick_los_tolerance);
+    cfg.set<bool>("UObjectHook_AllObjectsAutoRefresh", m_all_objects_auto_refresh);
+    cfg.set<float>("UObjectHook_AllObjectsRefreshSeconds", m_all_objects_refresh_seconds);
+    // m_vr_adjust_mode is intentionally not saved — see the load side.
 }
 
 void UObjectHook::on_pre_engine_tick(sdk::UGameEngine* engine, float delta) {
@@ -4615,6 +4637,26 @@ void UObjectHook::on_frame() {
     catch (const std::exception& e) { spdlog::error("[UObjectHook] gizmo draw threw: {}", e.what()); }
     catch (...)                     { spdlog::error("[UObjectHook] gizmo draw threw (unknown)"); }
 
+    // VR adjust mode HUD. Adjust mode blocks game input and its transform mode is cycled with a
+    // controller button — both invisible in-headset without this, and "why is my controller dead"
+    // needs an on-screen answer. Foreground draw list so it survives with every panel closed.
+    if (is_vr_adjust_active()) {
+        static const char* kModes[] = {"MOVE", "ROTATE", "SCALE", "COMBINED"};
+        char msg[96];
+        snprintf(msg, sizeof(msg), "ADJUST MODE  [%s]   A = cycle   B = exit",
+                 kModes[m_gizmo_mode >= 0 && m_gizmo_mode < 4 ? m_gizmo_mode : 0]);
+        auto* dl = ImGui::GetForegroundDrawList();
+        const auto* vp = ImGui::GetMainViewport();
+        const auto sz = ImGui::CalcTextSize(msg);
+        ImVec2 p{vp->Pos.x + (vp->Size.x - sz.x) * 0.5f, vp->Pos.y + vp->Size.y * 0.12f};
+        if (auto vr = VR::get(); vr != nullptr && vr->is_hmd_active()) {
+            p = vr->get_overlay_component().transform_world_aligned_to_overlay(p);
+        }
+        dl->AddRectFilled(ImVec2{p.x - 8.0f, p.y - 4.0f}, ImVec2{p.x + sz.x + 8.0f, p.y + sz.y + 4.0f},
+                          IM_COL32(20, 20, 20, 180), 4.0f);
+        dl->AddText(p, IM_COL32(120, 255, 120, 245), msg);
+    }
+
     try { draw_light_icons(); }
     catch (const std::exception& e) { spdlog::error("[UObjectHook] light icon draw threw: {}", e.what()); }
     catch (...)                     { spdlog::error("[UObjectHook] light icon draw threw (unknown)"); }
@@ -4672,10 +4714,18 @@ void UObjectHook::draw_light_icons() {
         return;
     }
 
+    // Camera POV fetched once for the whole overlay (a reflected call — never per icon). Used for the
+    // distance label and, when enabled, as the LOS trace origin.
+    glm::vec3 cam_loc{0.0f, 0.0f, 0.0f};
+    const bool have_cam = get_camera_pov_location(&cam_loc);
+
     auto* dl = ImGui::GetForegroundDrawList();
     const auto* vp = ImGui::GetMainViewport();
     for (auto& e : m_light_icon_cache) {
         if (e.light == nullptr || !this->exists_unsafe((sdk::UObjectBase*)e.light)) continue;
+        // LOS gate before the projection work: a light buried inside geometry or behind a wall is
+        // clutter, not a target. Only when explicitly enabled — this is a trace per visible light.
+        if (m_light_icons_require_los && have_cam && !has_line_of_sight(cam_loc, e.world)) continue;
         glm::vec2 sp{0.0f, 0.0f};
         if (!ugs->world_to_screen(pc, e.world, &sp)) continue;
         ImVec2 c{sp.x, sp.y};
@@ -6204,7 +6254,14 @@ void UObjectHook::ui_handle_object(sdk::UObject* object) {
         }
     }
 
-    if (ImGui::TreeNode("Outer")) {
+    // A UScriptStruct's Outer is always just the package that declares it — a dead end that adds a
+    // foldout and a recursion level for no information. Suppressed here for the same reason
+    // ui_handle_struct suppresses Inheritance/Functions on script structs: keep the struct view about
+    // the struct's fields.
+    static const auto script_struct_c = sdk::UScriptStruct::static_class();
+    const bool is_script_struct = script_struct_c != nullptr && uclass->is_a(script_struct_c);
+
+    if (!is_script_struct && ImGui::TreeNode("Outer")) {
         auto outer_scope = m_path.enter("Outer");
         ui_handle_object(object->get_outer());
         ImGui::TreePop();

@@ -167,6 +167,28 @@ protected:
     bool m_all_objects_hide_default{true};      // "All Objects" tab: hide CDOs ("Default__" name prefix)
     bool m_all_objects_hide_gen_variable{true}; // "All Objects" tab: hide Blueprint GEN_VARIABLE default-value holder objects
 
+    // --- "All Objects" tab cache --------------------------------------------------------------
+    // The tab used to snapshot m_objects and, EVERY FRAME, re-take the shared lock and re-derive each
+    // row's name (m_meta_objects lookup / get_full_name + utility::narrow) for tens of thousands of
+    // objects — all to render the same list as the previous frame. That lock is the one the game
+    // thread's object add/destroy hooks want, so the cost landed on the game, not just the UI.
+    // Now the row text is built once into m_all_objects_cache and rebuilt only on a real trigger:
+    // the tracked object count changed, the refresh interval elapsed (if enabled), or the user asked.
+    // Filtering still runs per frame, but against the cached narrow strings — no lock, no conversions.
+    struct AllObjectsRow {
+        sdk::UObjectBase* obj{nullptr};
+        std::string full{};        // full object path (filter + tooltip)
+        std::string short_label{}; // shorten_object_path(full), precomputed for the tree node
+    };
+    std::vector<AllObjectsRow> m_all_objects_cache{};
+    std::chrono::steady_clock::time_point m_all_objects_last_refresh{};
+    size_t m_all_objects_last_count{SIZE_MAX};      // m_objects.size() at the last rebuild; a change triggers one
+    bool m_all_objects_force_refresh{false};        // set by the Refresh button / anything wanting a rebuild next frame
+    bool m_all_objects_auto_refresh{true};          // also rebuild on the timer below (off = count-change + manual only)
+    float m_all_objects_refresh_seconds{2.0f};      // timer period when auto-refresh is on
+    // Rebuild m_all_objects_cache if any trigger fired. Cheap no-op otherwise.
+    void pump_all_objects_cache();
+
     // Actors spawned through the Spawn Actor panel (draw_main), for the "Spawned Objects" foldout
     // list there. Not persisted across restarts — a same-session convenience list, same class of
     // state as m_most_recent_objects.
@@ -453,6 +475,33 @@ private:
     bool m_hide_gizmos_when_ui_closed{true}; // skip gizmo rendering/hit-testing (not the target list) while no UObjectHook panel is open
     bool m_block_passthrough_when_gizmos_visible{true}; // force input capture (block game passthrough) while any gizmo is actually drawn; combined with m_hide_gizmos_when_ui_closed, passthrough re-enables once gizmos are hidden even if targets are still selected
     bool m_auto_gizmo_on_adjust{true}; // VR: auto-show a gizmo on any MC-attached component currently in adjust mode (transient; never modifies m_gizmo_components)
+
+    // --- VR adjust mode ------------------------------------------------------------------------
+    // In VR the thumbsticks drive the game (locomotion/turning) AND the gizmo at the same time, so
+    // nudging an object also walks your character. Adjust mode fixes that by blocking the game's view
+    // of the controller entirely while leaving UEVR's own reading of it intact.
+    //
+    // How the split works: the game reads the XInput state that VR::on_xinput_get_state hands it,
+    // while vr_gizmo_stick_adjust reads VR::get_left_stick_axis() — which comes from the OpenXR/OpenVR
+    // ACTION state, a completely separate source. So zeroing the XInput gamepad struct silences the
+    // game without the gizmo noticing. See apply_vr_adjust_input.
+    //
+    // Gated on having a gizmo target (see is_vr_adjust_active): arming with nothing selected would
+    // leave the controller dead with no obvious way back, and "clear your targets" is a much more
+    // discoverable escape than "find the menu with a controller that no longer talks to the game".
+    bool m_vr_adjust_mode{false};          // armed (user-facing toggle)
+    bool m_vr_adjust_cycle_held{false};    // edge-detect for the cycle button (A) — it repeats every poll otherwise
+    bool m_vr_adjust_exit_held{false};     // edge-detect for the exit button (B)
+    // True when adjust mode should actually be blocking input this frame: armed AND something is
+    // selected to adjust. Read from the XInput hook (any thread) — both members are plain bools whose
+    // torn-read worst case is one frame of wrong blocking state.
+    bool is_vr_adjust_active() const;
+public:
+    // Called from VR::on_xinput_get_state with the state the GAME is about to read. When adjust mode
+    // is active this consumes the face buttons (A = cycle transform mode, B = exit) and then zeroes
+    // the whole gamepad so none of it reaches the game. Returns true if the state was zeroed.
+    bool apply_vr_adjust_input(void* xinput_state);
+private:
     bool m_click_select_mode{false};    // armed state: left-click in the world adds the front-most scene component to m_gizmo_components (suppresses gizmo-axis dragging while armed). One-shot by default — auto-disarms after a hit unless m_click_select_sticky.
     bool m_click_select_sticky{false};  // keep picking after each hit instead of auto-disarming (multi-pick)
     bool m_click_select_picked_frame{false}; // set by handle_click_select on a pick; suppresses the gizmo-axis grab on that same left-press frame
@@ -486,20 +535,71 @@ private:
     char m_pick_class_filter[128]{}; // picker: restrict candidates to those whose full name contains this (case-insensitive)
     int  m_pick_cycle{0};            // picker: which of the overlapping candidates under the cursor is the active one (scroll to cycle)
 
+    // --- Picker aiming model -------------------------------------------------------------------
+    // A component's pivot is a terrible aim point: in UE a SkeletalMeshComponent's root sits at the
+    // BOTTOM of the mesh, so pivot-only hit-testing makes you aim at a character's feet even though
+    // the mesh/collision capsule is a metre higher. So the scan runs in two stages:
+    //   stage 1 (every candidate, cheap): the existing pivot cone test, widened by m_pick_cone_slack
+    //     so a bottom-rooted mesh whose BODY is under the cursor still makes the shortlist;
+    //   stage 2 (shortlist only, reflected): GetActorBounds / component bounds to get a real
+    //     origin+extent, re-rank by ray-vs-AABB, and drop the pivot-only near-misses.
+    // Stage 2 is a ProcessEvent per candidate, hence the shortlist cap.
+    bool m_pick_use_bounds{true};       // stage 2 on/off (off = legacy pivot-only behavior)
+    bool m_pick_include_primitives{true}; // also offer non-root primitive comps (skeletal/static mesh, capsule) as their own candidates
+    bool m_pick_require_los{false};      // reject candidates with no clear visibility line from the camera (LineTraceSingle on the Visibility channel)
+    bool m_light_icons_require_los{false}; // same LOS gate for the light-icon overlay
+    float m_pick_cone_slack{140.0f};    // world units added to the stage-1 cone radius to catch bottom-rooted meshes (see above)
+    int  m_pick_bounds_max{24};         // hard cap on stage-2 reflected bounds calls per scan
+    float m_pick_los_tolerance{25.0f};  // world units: a trace whose hit is within this of the target counts as "reached it" (self-hit slop)
+
+    // Bounds of a candidate in world space, from stage 2. valid=false means stage 2 didn't run (or
+    // failed) and origin falls back to the pivot — the legacy behavior.
+    struct PickBounds {
+        glm::vec3 origin{0.0f, 0.0f, 0.0f};
+        glm::vec3 extent{0.0f, 0.0f, 0.0f};
+        bool valid{false};
+    };
+
+    // Reflected GetActorBounds on the component's owning actor (bOnlyCollidingComponents=false).
+    // Falls back to the component's own Bounds (FBoxSphereBounds) when the owner lookup fails.
+    // MUST run on the game thread (ProcessEvent). Returns valid=false on any failure.
+    PickBounds query_pick_bounds(sdk::USceneComponent* comp);
+    // Ray vs axis-aligned box (slab test). Returns the entry distance along `dir`, or -1 on miss.
+    // A ray originating inside the box returns 0.
+    static float ray_box_distance(const glm::vec3& origin, const glm::vec3& dir, const PickBounds& b);
+    // Camera POV location from APlayerCameraManager (GetCameraLocation, falling back to the actor
+    // location). Returns false when there's no PCM yet. Cheap enough to call once per scan/draw, NOT
+    // once per candidate.
+    static bool get_camera_pov_location(glm::vec3* out_location);
+    // UKismetSystemLibrary::LineTraceSingle on ECC_Visibility from `start` to `end`. Returns true when
+    // the trace reached `end` unobstructed (nothing hit, or the only thing hit is within
+    // m_pick_los_tolerance of `end` — i.e. the target itself). Reflected param build (layout varies
+    // by engine version), game thread only.
+    bool has_line_of_sight(const glm::vec3& start, const glm::vec3& end);
+
     // One picker candidate: the component, a short display label, its full path (shown on
     // hover/idle), and the screen/world points it was found at this scan (reused for the marker draw
-    // and the Lua selection-state event without re-projecting).
+    // and the Lua selection-state event without re-projecting). `world` is the AIM point — the bounds
+    // center when stage 2 ran, else the pivot — so the reticle and the Lua payload agree with what
+    // the hit test actually used. `pivot` keeps the raw component origin for callers that want it.
     struct PickCandidate {
         sdk::USceneComponent* comp{nullptr};
         std::string short_label{};
         std::string full_path{};
         glm::vec2 screen{0.0f, 0.0f};
         glm::vec3 world{0.0f, 0.0f, 0.0f};
+        glm::vec3 pivot{0.0f, 0.0f, 0.0f};
+        PickBounds bounds{};
+        float camera_distance{-1.0f}; // world units from the PCM POV to `world` (-1 = unknown)
     };
     // Cached candidate list so the per-frame overlay doesn't re-scan m_objects (+ screen_to_world
     // ProcessEvent) every frame while the picker is armed — rebuilt only when the cursor moves / the
     // wheel turns / a click happens. Touched only on the draw thread in handle_click_select.
     std::vector<PickCandidate> m_pick_cache{};
+    // Stage-2 bounds, parallel to the candidate vector while the scan is rearranging it (sort/LOS
+    // filter). Lives here rather than as a scan local purely to avoid reallocating it every rebuild.
+    // Draw thread only, same as m_pick_cache.
+    std::vector<PickBounds> m_pick_bounds_scratch{};
 
     // Fire a Lua custom event ("uobjecthook_picker_selection") with the current picker candidate list
     // — the active (scroll-focused) one moved to index 0 — plus each candidate's screen/world point.

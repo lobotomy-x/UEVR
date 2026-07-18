@@ -45,6 +45,92 @@
 
 #include "../UObjectHook.hpp"
 
+namespace {
+// Same payload id UObjectHook.cpp / ClassBrowser.cpp publish ("UEVR_UObject"). Those files keep their
+// drag/drop helpers in their own anonymous namespaces, so this is a local twin rather than a shared
+// one — same three-line body, and keeping it local avoids promoting internal UI plumbing to a header
+// just for this.
+constexpr const char* kDragPayloadUObject = "UEVR_UObject";
+
+// Drag source on the PREVIOUS item. Local twin of UObjectHook.cpp's make_drag_source_for_object (same
+// anonymous-namespace reason as above).
+void make_drag_source_for_object_local(sdk::UObject* obj, const char* label) {
+    if (obj == nullptr) return;
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+        ImGui::SetDragDropPayload(kDragPayloadUObject, &obj, sizeof(obj));
+        ImGui::Text("UObject: %s", label != nullptr ? label : "<anon>");
+        ImGui::EndDragDropSource();
+    }
+}
+
+// Drop target for the PREVIOUS item. Returns the dropped object on the frame it lands, else nullptr.
+// `accepted_class` (may be null) is the property's declared PropertyClass: a drop whose object isn't
+// an instance of it is rejected outright, because writing a mismatched pointer into a typed
+// UObject* field is how you get a delayed crash somewhere deep in the game's own code rather than an
+// error here. `AcceptBeforeDelivery` lets us paint the reject state while the payload is still held.
+sdk::UObject* accept_object_drop_typed(sdk::UClass* accepted_class) {
+    if (!ImGui::BeginDragDropTarget()) {
+        return nullptr;
+    }
+    utility::ScopeGuard guard{[]() { ImGui::EndDragDropTarget(); }};
+
+    const ImGuiPayload* peek = ImGui::AcceptDragDropPayload(
+        kDragPayloadUObject, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+    if (peek == nullptr || peek->DataSize != (int)sizeof(sdk::UObject*)) {
+        return nullptr;
+    }
+    auto* candidate = *reinterpret_cast<sdk::UObject**>(peek->Data);
+
+    bool type_ok = true;
+    if (candidate == nullptr) {
+        type_ok = false;
+    } else if (accepted_class != nullptr) {
+        try {
+            auto* cc = candidate->get_class();
+            type_ok = cc != nullptr && cc->is_a(accepted_class);
+        } catch (...) { type_ok = false; }
+    }
+
+    // Tooltip + border tell you BEFORE releasing whether the drop will take.
+    if (type_ok) {
+        ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(120, 255, 120, 255));
+    } else {
+        ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 90, 90, 255));
+        ImGui::BeginTooltip();
+        std::string want = "<any UObject>";
+        if (accepted_class != nullptr) {
+            try { want = utility::narrow(accepted_class->get_fname().to_string()); } catch (...) {}
+        }
+        ImGui::TextColored(ImVec4{1.0f, 0.45f, 0.45f, 1.0f}, "wrong type — expects %s", want.c_str());
+        ImGui::EndTooltip();
+    }
+
+    if (!type_ok || !peek->IsDelivery()) {
+        return nullptr;
+    }
+    return candidate;
+}
+
+// The declared PropertyClass of an Object/Class/Weak/Lazy/Soft property, or nullptr when it can't be
+// resolved (in which case the drop target accepts any UObject — same permissiveness as the
+// pre-existing function-caller targets).
+//
+// Object / Class / Soft / Weak / Lazy props all derive from FObjectPropertyBase and share the
+// get_property_class accessor. FInterfaceProperty does NOT — it stores its InterfaceClass at a
+// different offset, so casting it to FObjectProperty would read an unrelated pointer and produce a
+// bogus type check. Same carve-out the function-caller makes (UObjectHook.cpp ~1068); interface props
+// just get an untyped target.
+sdk::UClass* property_accepted_class(sdk::FProperty* prop, size_t class_name_hash) {
+    if (prop == nullptr || class_name_hash == L"InterfaceProperty"_fnv) {
+        return nullptr;
+    }
+    try {
+        return ((sdk::FObjectProperty*)prop)->get_property_class();
+    } catch (...) {}
+    return nullptr;
+}
+}
+
 // See m_property_edit_target_stack in the header. Called after any property widget in
 // ui_handle_properties reports a real edit; forces the nearest enclosing scene component to actually
 // re-render by toggling SetVisibility (deferred to the game thread — this is a ProcessEvent call, not
@@ -719,6 +805,20 @@ const auto check_flags = [](uint64_t flags){
                 auto& value = *(sdk::UObject**)((uintptr_t)object + fprop->get_offset());
 
                 const bool open = ImGui::TreeNode(prop_name.data());
+                // Drop target on the TreeNode itself: drag any object row from the class browser /
+                // picker / inspector onto this field to assign it. Attached to the node (not the
+                // subtree) so it works whether or not the node is expanded. Type-checked against the
+                // property's declared class — see accept_object_drop_typed.
+                if (auto* dropped = accept_object_drop_typed(property_accepted_class(fprop, hash_type));
+                    dropped != nullptr) {
+                    value = dropped;
+                    notify_property_changed();
+                }
+                // Also a drag SOURCE, so an object reached through a property field can be dragged
+                // straight into another field without hunting for it in the browser.
+                if (value != nullptr) {
+                    make_drag_source_for_object_local(value, prop_name.data());
+                }
                 utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
                 if (open) {
                     auto scope2 = m_path.enter(prop_name);
@@ -754,8 +854,35 @@ const auto check_flags = [](uint64_t flags){
                         }
                     }
                 }
+                // Assigning a weak ptr means writing the INDEX+SERIAL pair, not a pointer — so the
+                // dropped object has to be looked up in FUObjectArray to recover its index. Shared by
+                // the three render paths below (resolved / stale / null), each of which needs a drop
+                // target on whatever widget it happened to draw.
+                auto try_accept_weak_drop = [&]() {
+                    auto* dropped = accept_object_drop_typed(property_accepted_class(fprop, hash_type));
+                    if (dropped == nullptr) {
+                        return;
+                    }
+                    // FUObjectArray has no pointer->index reverse map, so scan for the entry. Only runs
+                    // on the single frame a drop is delivered, never per-frame.
+                    auto* arr = sdk::FUObjectArray::get();
+                    if (arr == nullptr) return;
+                    const auto count = arr->get_object_count();
+                    for (int32_t i = 0; i < count; ++i) {
+                        auto* item = arr->get_object(i);
+                        if (item == nullptr || item->get_object() != (sdk::UObjectBase*)dropped) continue;
+                        raw[0] = i;
+                        raw[1] = item->get_serial_number();
+                        notify_property_changed();
+                        return;
+                    }
+                    spdlog::warn("[UObjectHook] weak-ptr drop: object not found in FUObjectArray — not assigned");
+                };
+
                 if (resolved != nullptr) {
                     const bool open = ImGui::TreeNode(prop_name.data());
+                    try_accept_weak_drop();
+                    make_drag_source_for_object_local(resolved, prop_name.data());
                     utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
                     if (open) {
                         auto scope2 = m_path.enter(prop_name);
@@ -763,13 +890,21 @@ const auto check_flags = [](uint64_t flags){
                         catch (...) { ImGui::TextColored(ImVec4{1.0f, 0.3f, 0.3f, 1.0f}, "<failed to display>"); }
                     }
                 } else if (stale) {
-                    ImGui::Text("%s: ", prop_name.data());
-                    ImGui::SameLine(0.0f, 0.0f);
-                    ImGui::TextColored(ImVec4{1.0f, 0.5f, 0.5f, 1.0f}, "<stale weak: idx=%d>", obj_index);
+                    // Selectable rather than Text for the empty/stale states: a drop target needs an
+                    // item with real bounds to attach to, and Text() rows are too thin to hit reliably.
+                    char lbl[160];
+                    snprintf(lbl, sizeof(lbl), "%s: <stale weak: idx=%d>", prop_name.data(), obj_index);
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 0.5f, 0.5f, 1.0f});
+                    ImGui::Selectable(lbl);
+                    ImGui::PopStyleColor();
+                    try_accept_weak_drop();
                 } else {
-                    ImGui::Text("%s: ", prop_name.data());
-                    ImGui::SameLine(0.0f, 0.0f);
-                    ImGui::TextDisabled("nullptr (weak)");
+                    char lbl[160];
+                    snprintf(lbl, sizeof(lbl), "%s: nullptr (weak)", prop_name.data());
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                    ImGui::Selectable(lbl);
+                    ImGui::PopStyleColor();
+                    try_accept_weak_drop();
                 }
             }
             break;
@@ -1093,14 +1228,30 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
     case "InterfaceProperty"_fnv:
     case "ObjectProperty"_fnv:
     {
-        const auto& array_obj = *(sdk::TArray<sdk::UObject*>*)((uintptr_t)addr + prop->get_offset());
+        auto& array_obj = *(sdk::TArray<sdk::UObject*>*)((uintptr_t)addr + prop->get_offset());
+        // Elements are REPLACEABLE by drop, not appendable: growing a TArray means reallocating
+        // through UE's own allocator with the exact layout it expects, and getting that subtly wrong
+        // corrupts the array for the game rather than erroring here. Writing an in-bounds element is
+        // just a pointer store into memory the engine already owns. Null slots (common in e.g.
+        // OverrideMaterials) are drop targets too, which covers the usual "fill in the empty
+        // material slot" case without any allocation.
+        auto* accepted = property_accepted_class(inner, utility::hash(inner_c_type));
 
         int32_t i = -1;
-        for (auto obj : array_obj) {
+        for (auto*& obj : array_obj) {
             ++i;
             // Object arrays (e.g. OverrideMaterials) routinely contain null slots.
             if (obj == nullptr) {
-                ImGui::BulletText("[%d] nullptr", i);
+                // Selectable, not BulletText: a drop target needs an item with real bounds.
+                char lbl[64];
+                snprintf(lbl, sizeof(lbl), "[%d] nullptr", i);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                ImGui::Selectable(lbl);
+                ImGui::PopStyleColor();
+                if (auto* dropped = accept_object_drop_typed(accepted); dropped != nullptr) {
+                    obj = dropped;
+                    notify_property_changed();
+                }
                 continue;
             }
             std::wstring name;
@@ -1114,6 +1265,11 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
             }
             const auto narrow_name = std::format("[{}] {}", i, utility::narrow(name));
             const bool open = ImGui::TreeNode(narrow_name.c_str());
+            if (auto* dropped = accept_object_drop_typed(accepted); dropped != nullptr) {
+                obj = dropped; // replace this element
+                notify_property_changed();
+            }
+            make_drag_source_for_object_local(obj, narrow_name.c_str());
             utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
             if (open) {
                 auto scope = m_path.enter(narrow_name);
@@ -1131,17 +1287,47 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
         // 8B weak + 16B FGuid). Resolve each via FUObjectArray.
         const auto stride = (inner_c_type == "WeakObjectProperty") ? (int32_t)8 : (int32_t)24;
         const auto& arr = *(sdk::TArray<uint8_t>*)((uintptr_t)addr + prop->get_offset());
+        auto* accepted = property_accepted_class(inner, utility::hash(inner_c_type));
+        // Replace-in-place only, same reasoning as the ObjectProperty array above. Writing a weak slot
+        // means storing index+serial rather than a pointer — see the scalar weak case.
+        auto accept_weak_element_drop = [&](int32_t* raw) {
+            auto* dropped = accept_object_drop_typed(accepted);
+            if (dropped == nullptr) return;
+            auto* uarr = sdk::FUObjectArray::get();
+            if (uarr == nullptr) return;
+            const auto count = uarr->get_object_count();
+            for (int32_t k = 0; k < count; ++k) {
+                auto* it = uarr->get_object(k);
+                if (it == nullptr || it->get_object() != (sdk::UObjectBase*)dropped) continue;
+                raw[0] = k;
+                raw[1] = it->get_serial_number();
+                notify_property_changed();
+                return;
+            }
+            spdlog::warn("[UObjectHook] weak-array drop: object not found in FUObjectArray — not assigned");
+        };
+
         for (int32_t i = 0; i < arr.count; ++i) {
             auto raw = (int32_t*)((uintptr_t)arr.data + (uintptr_t)i * stride);
             const auto obj_index = raw[0];
             const auto serial = raw[1];
             if (obj_index <= 0) {
-                ImGui::BulletText("[%d] nullptr", i);
+                char lbl[64];
+                snprintf(lbl, sizeof(lbl), "[%d] nullptr", i);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                ImGui::Selectable(lbl);
+                ImGui::PopStyleColor();
+                accept_weak_element_drop(raw);
                 continue;
             }
             auto item = sdk::FUObjectArray::get()->get_object(obj_index);
             if (item == nullptr || item->get_object() == nullptr || item->get_serial_number() != serial) {
-                ImGui::BulletText("[%d] <stale weak idx=%d>", i, obj_index);
+                char lbl[80];
+                snprintf(lbl, sizeof(lbl), "[%d] <stale weak idx=%d>", i, obj_index);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 0.5f, 0.5f, 1.0f});
+                ImGui::Selectable(lbl);
+                ImGui::PopStyleColor();
+                accept_weak_element_drop(raw);
                 continue;
             }
             auto obj = (sdk::UObject*)item->get_object();
@@ -1149,6 +1335,8 @@ void UObjectHook::ui_handle_array_property(void* addr, sdk::FArrayProperty* prop
                 utility::narrow(obj->get_class()->get_fname().to_string()),
                 utility::narrow(obj->get_fname().to_string()));
             const bool open = ImGui::TreeNode(label.c_str());
+            accept_weak_element_drop(raw);
+            make_drag_source_for_object_local(obj, label.c_str());
             utility::ScopeGuard guard{[open]() { if (open) ImGui::TreePop(); }};
             if (open) {
                 try { ui_handle_object(obj); }
@@ -1570,8 +1758,21 @@ void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {
         addr = nullptr;
     }
 
+    // UScriptStructs are plain data layouts: they carry no UFunctions, and their super chain is an
+    // engine detail (most bottom out immediately) rather than something you'd browse. Showing both
+    // buries the ONE thing a struct view is for — its fields — under two empty foldouts. So for a
+    // script struct, skip straight to Properties. Every other UStruct (UClass etc.) is unaffected.
+    // NOTE: uclass here is the UStruct being DISPLAYED (e.g. FVector's UScriptStruct), not an object's
+    // class — so the test is on its own class, not its super chain. uclass->is_a(...) would walk
+    // FVector -> (null) and never find UScriptStruct. Same form as the ScriptStructs tab's filter in
+    // ClassBrowser.cpp (~1060).
+    static const auto s_script_struct_c = sdk::UScriptStruct::static_class();
+    const auto uclass_class = uclass->get_class();
+    const bool is_script_struct = s_script_struct_c != nullptr && uclass_class != nullptr &&
+                                  uclass_class->is_a(s_script_struct_c);
+
     // Display inheritance tree
-    {
+    if (!is_script_struct) {
         const bool inh_open = ImGui::TreeNode("Inheritance");
         utility::ScopeGuard inh_guard{[inh_open]() {
             if (inh_open) {
@@ -1600,7 +1801,7 @@ void UObjectHook::ui_handle_struct(void* addr, sdk::UStruct* uclass) {
         }
     }
 
-    {
+    if (!is_script_struct) {
         const bool fn_open = ImGui::TreeNode("Functions");
         utility::ScopeGuard fn_guard{[fn_open]() {
             if (fn_open) {

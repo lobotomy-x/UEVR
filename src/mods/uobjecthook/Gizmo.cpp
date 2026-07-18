@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 #include <utility/Logging.hpp>
 #include <utility/String.hpp>
@@ -22,6 +23,8 @@
 #include <sdk/USceneComponent.hpp>
 #include <sdk/UGameplayStatics.hpp>
 #include <sdk/APlayerController.hpp>
+#include <sdk/APlayerCameraManager.hpp>
+#include <sdk/KismetSystemLibrary.hpp>
 #include <sdk/UMotionControllerComponent.hpp>
 #include <sdk/ScriptVector.hpp>
 #include <sdk/FBoolProperty.hpp>
@@ -47,6 +50,21 @@ struct SetViewTargetWithBlendParams {
     bool bLockOutgoing{false};
     uint8_t _pad1[3]{};
 };
+
+// The ReturnValue FProperty of a UFunction, or nullptr. Mirrors the child_properties walk in
+// UObjectHook.cpp's function-caller (~1685), including its guard: child_properties can hold FFields
+// that are not FProperties, so the class-name check must come before the cast.
+sdk::FProperty* find_return_param(sdk::UFunction* fn) {
+    if (fn == nullptr) {
+        return nullptr;
+    }
+    for (auto* f = fn->get_child_properties(); f != nullptr; f = f->get_next()) {
+        if (!f->get_class()->get_name().to_string().contains(L"Property")) continue;
+        auto* p = (sdk::FProperty*)f;
+        if (p->is_return_param()) return p;
+    }
+    return nullptr;
+}
 }
 
 float UObjectHook::get_nearest_gizmo_distance_meters() const {
@@ -124,6 +142,238 @@ void UObjectHook::restore_overlay_highlight(sdk::USceneComponent* comp) {
             comp->process_event(set_fn, &sp);
         } catch (...) {}
     });
+}
+
+// --- Picker aiming helpers (see the "Picker aiming model" block in UObjectHook.hpp) -------------
+
+// Reflected AActor::GetActorBounds(bool bOnlyCollidingComponents, FVector& Origin, FVector& BoxExtent).
+// Param layout is built from the UFunction's own reflected property offsets rather than a hardcoded
+// struct: UE5 widened FVector to double and later versions appended a bIncludeFromChildActors param,
+// so a fixed struct would silently mis-write on some engines. Falls back to the component's cached
+// USceneComponent::Bounds (FBoxSphereBounds{Origin, BoxExtent, SphereRadius}) when the actor path is
+// unavailable. Game thread only (ProcessEvent).
+UObjectHook::PickBounds UObjectHook::query_pick_bounds(sdk::USceneComponent* comp) {
+    PickBounds out{};
+    if (comp == nullptr || !this->exists(comp)) {
+        return out;
+    }
+
+    const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+        sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+    auto read_vec = [is_ue5_vec](const uint8_t* base, int32_t off) -> glm::vec3 {
+        if (is_ue5_vec) {
+            const auto* d = (const glm::vec<3, double>*)(base + off);
+            return glm::vec3{(float)d->x, (float)d->y, (float)d->z};
+        }
+        return *(const glm::vec3*)(base + off);
+    };
+
+    try {
+        auto* owner = comp->get_owner();
+        if (owner != nullptr && this->exists(owner)) {
+            static const auto s_fn = []() -> sdk::UFunction* {
+                auto* cls = sdk::AActor::static_class();
+                return cls != nullptr ? cls->find_function(L"GetActorBounds") : nullptr;
+            }();
+            if (s_fn != nullptr) {
+                // Resolve the out-param offsets once — they're a property of the UFunction, not the actor.
+                static const auto s_origin_prop = s_fn->find_property(L"Origin");
+                static const auto s_extent_prop = s_fn->find_property(L"BoxExtent");
+                static const auto s_colliding_prop = s_fn->find_property(L"bOnlyCollidingComponents");
+                if (s_origin_prop != nullptr && s_extent_prop != nullptr) {
+                    std::vector<uint8_t> params(std::max<size_t>(64, (size_t)s_fn->get_properties_size()), 0);
+                    if (s_colliding_prop != nullptr) {
+                        // false = include non-colliding comps too. A character's visual mesh is often the
+                        // only thing you can see but has no collision of its own (the capsule carries it),
+                        // so colliding-only would give bounds that ignore exactly what you aimed at.
+                        *s_colliding_prop->get_data<bool>(params.data()) = false;
+                    }
+                    owner->process_event(s_fn, params.data());
+                    out.origin = read_vec(params.data(), s_origin_prop->get_offset());
+                    out.extent = read_vec(params.data(), s_extent_prop->get_offset());
+                    // A zero-extent result means "actor has no registered primitives" — useless as an aim
+                    // target, so report invalid and let the caller keep the pivot.
+                    if (glm::length(out.extent) > 0.01f) {
+                        out.valid = true;
+                        return out;
+                    }
+                }
+            }
+        }
+    } catch (...) {}
+
+    // Fallback: the component's own cached FBoxSphereBounds. Plain memory read (no ProcessEvent), but
+    // only meaningful on registered primitive comps — hence the second choice.
+    try {
+        static const auto s_bounds_prop = []() -> sdk::FProperty* {
+            auto* cls = sdk::USceneComponent::static_class();
+            return cls != nullptr ? cls->find_property(L"Bounds") : nullptr;
+        }();
+        if (s_bounds_prop != nullptr) {
+            const auto* base = (const uint8_t*)comp + s_bounds_prop->get_offset();
+            const int32_t vec_sz = is_ue5_vec ? (int32_t)sizeof(glm::vec<3, double>) : (int32_t)sizeof(glm::vec3);
+            const glm::vec3 origin = read_vec(base, 0);          // FBoxSphereBounds::Origin
+            const glm::vec3 extent = read_vec(base, vec_sz);     // FBoxSphereBounds::BoxExtent
+            if (glm::length(extent) > 0.01f) {
+                out.origin = origin;
+                out.extent = extent;
+                out.valid = true;
+            }
+        }
+    } catch (...) {}
+
+    return out;
+}
+
+// Standard slab test. dir must be normalized. Returns the distance along dir to the box entry, 0 when
+// the origin is already inside, or -1 on miss / behind.
+float UObjectHook::ray_box_distance(const glm::vec3& origin, const glm::vec3& dir, const PickBounds& b) {
+    if (!b.valid) {
+        return -1.0f;
+    }
+    const glm::vec3 lo = b.origin - b.extent;
+    const glm::vec3 hi = b.origin + b.extent;
+    float t_near = -std::numeric_limits<float>::infinity();
+    float t_far = std::numeric_limits<float>::infinity();
+    for (int a = 0; a < 3; ++a) {
+        if (std::fabs(dir[a]) < 1e-6f) {
+            if (origin[a] < lo[a] || origin[a] > hi[a]) return -1.0f; // parallel and outside this slab
+            continue;
+        }
+        const float inv = 1.0f / dir[a];
+        float t0 = (lo[a] - origin[a]) * inv;
+        float t1 = (hi[a] - origin[a]) * inv;
+        if (t0 > t1) std::swap(t0, t1);
+        t_near = std::max(t_near, t0);
+        t_far = std::min(t_far, t1);
+        if (t_near > t_far) return -1.0f;
+    }
+    if (t_far < 0.0f) return -1.0f;   // box entirely behind the ray
+    return t_near < 0.0f ? 0.0f : t_near; // inside the box => 0
+}
+
+// PlayerCameraManager POV location. Prefers the reflected GetCameraLocation (the POV the game itself
+// renders from, which is what "distance to camera" should mean); falls back to the PCM actor's own
+// location if that function is missing. Game thread only.
+bool UObjectHook::get_camera_pov_location(glm::vec3* out_location) {
+    if (out_location == nullptr) {
+        return false;
+    }
+    try {
+        auto* engine = sdk::UGameEngine::get();
+        auto* world = engine != nullptr ? engine->get_world() : nullptr;
+        auto* ugs = sdk::UGameplayStatics::get();
+        if (world == nullptr || ugs == nullptr) return false;
+        auto* pc = ugs->get_player_controller(world, 0);
+        if (pc == nullptr) return false;
+        auto* pcm = pc->get_player_camera_manager();
+        if (pcm == nullptr) return false;
+
+        static const auto s_fn = []() -> sdk::UFunction* {
+            auto* cls = sdk::APlayerCameraManager::static_class();
+            return cls != nullptr ? cls->find_function(L"GetCameraLocation") : nullptr;
+        }();
+        if (s_fn != nullptr) {
+            static const auto s_ret = find_return_param(s_fn);
+            if (s_ret != nullptr) {
+                std::vector<uint8_t> params(std::max<size_t>(64, (size_t)s_fn->get_properties_size()), 0);
+                pcm->process_event(s_fn, params.data());
+                const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+                    sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+                const auto* base = params.data() + s_ret->get_offset();
+                if (is_ue5_vec) {
+                    const auto* d = (const glm::vec<3, double>*)base;
+                    *out_location = glm::vec3{(float)d->x, (float)d->y, (float)d->z};
+                } else {
+                    *out_location = *(const glm::vec3*)base;
+                }
+                return true;
+            }
+        }
+        *out_location = pcm->get_actor_location(); // fallback: PCM actor transform
+        return true;
+    } catch (...) {}
+    return false;
+}
+
+// UKismetSystemLibrary::LineTraceSingle(WorldContextObject, Start, End, TraceChannel, bTraceComplex,
+// ActorsToIgnore, DrawDebugType, OutHit, bIgnoreSelf, TraceColor, TraceHitColor, DrawTime) -> bool.
+// Built by reflected offsets: the signature has gained params across engine versions and FVector width
+// differs UE4/UE5, so a hardcoded param struct is not portable. "Clear LOS" = the trace returned false
+// (hit nothing) OR it hit something within m_pick_los_tolerance of `end` (that's the target itself, or
+// its own collision skin). Game thread only.
+bool UObjectHook::has_line_of_sight(const glm::vec3& start, const glm::vec3& end) {
+    try {
+        auto* engine = sdk::UGameEngine::get();
+        auto* world = engine != nullptr ? engine->get_world() : nullptr;
+        if (world == nullptr) return true; // no world to trace against — don't filter anything out
+
+        auto* cls = sdk::UKismetSystemLibrary::static_class();
+        if (cls == nullptr) return true;
+        auto* dfo = cls->get_class_default_object();
+        if (dfo == nullptr) return true;
+        static const auto s_fn = cls->find_function(L"LineTraceSingle");
+        if (s_fn == nullptr) {
+            static bool s_warned = false;
+            if (!s_warned) {
+                spdlog::warn("[UObjectHook] LOS filter: KismetSystemLibrary.LineTraceSingle not found — LOS checks disabled");
+                s_warned = true;
+            }
+            return true; // can't trace => treat everything as visible rather than hiding the whole list
+        }
+
+        static const auto s_ctx = s_fn->find_property(L"WorldContextObject");
+        static const auto s_start = s_fn->find_property(L"Start");
+        static const auto s_end = s_fn->find_property(L"End");
+        static const auto s_channel = s_fn->find_property(L"TraceChannel");
+        static const auto s_complex = s_fn->find_property(L"bTraceComplex");
+        static const auto s_ignore_self = s_fn->find_property(L"bIgnoreSelf");
+        static const auto s_ret = find_return_param(s_fn);
+        if (s_start == nullptr || s_end == nullptr || s_ret == nullptr) return true;
+
+        const bool is_ue5_vec = sdk::ScriptVector::static_struct() != nullptr &&
+            sdk::ScriptVector::static_struct()->get_struct_size() == sizeof(glm::vec<3, double>);
+        auto write_vec = [is_ue5_vec](uint8_t* base, int32_t off, const glm::vec3& v) {
+            if (is_ue5_vec) {
+                *(glm::vec<3, double>*)(base + off) = glm::vec<3, double>{v.x, v.y, v.z};
+            } else {
+                *(glm::vec3*)(base + off) = v;
+            }
+        };
+
+        std::vector<uint8_t> params(std::max<size_t>(256, (size_t)s_fn->get_properties_size()), 0);
+        if (s_ctx != nullptr) *s_ctx->get_data<sdk::UObject*>(params.data()) = (sdk::UObject*)world;
+        write_vec(params.data(), s_start->get_offset(), start);
+        write_vec(params.data(), s_end->get_offset(), end);
+        // ETraceTypeQuery::TraceTypeQuery1 == the Visibility channel in every stock engine config.
+        if (s_channel != nullptr) *s_channel->get_data<uint8_t>(params.data()) = 0;
+        if (s_complex != nullptr) *s_complex->get_data<bool>(params.data()) = false;
+        if (s_ignore_self != nullptr) *s_ignore_self->get_data<bool>(params.data()) = true;
+        // ActorsToIgnore / DrawDebugType / colors / DrawTime stay zeroed: an empty TArray,
+        // EDrawDebugType::None(0), and zero colors are all the correct "do nothing" defaults.
+
+        dfo->process_event(s_fn, params.data());
+
+        const bool blocked = *s_ret->get_data<bool>(params.data());
+        if (!blocked) {
+            return true; // reached `end` without hitting anything
+        }
+        // Something was hit — if it's essentially AT the target, that's the target's own surface, which
+        // means we can see it. FHitResult's layout is too version-volatile to parse for the impact point,
+        // so re-trace to just short of the target instead: if the shortened ray is clear, the only thing
+        // in the way was the target itself.
+        const glm::vec3 d = end - start;
+        const float len = glm::length(d);
+        if (len <= m_pick_los_tolerance) {
+            return true; // target is closer than the slop distance; nothing could be between
+        }
+        const glm::vec3 shortened = start + d * ((len - m_pick_los_tolerance) / len);
+        write_vec(params.data(), s_end->get_offset(), shortened);
+        if (s_ret != nullptr) *s_ret->get_data<bool>(params.data()) = false;
+        dfo->process_event(s_fn, params.data());
+        return !*s_ret->get_data<bool>(params.data());
+    } catch (...) {}
+    return true; // any failure => don't filter
 }
 
 void UObjectHook::handle_click_select() {
@@ -225,6 +475,19 @@ void UObjectHook::handle_click_select() {
             const std::string row = (act ? "> " : "  ") + list[k].short_label;
             dl->AddText(ImVec2{b.x + 1.0f, y + 1.0f}, IM_COL32(0, 0, 0, 200), row.c_str());
             dl->AddText(ImVec2{b.x, y}, col, row.c_str());
+            // Distance to the camera, trailing the name in a dimmer color so it reads as metadata
+            // rather than part of the path. Metres past 100 units to keep the column narrow.
+            if (list[k].camera_distance >= 0.0f) {
+                char dist[32];
+                const float d = list[k].camera_distance;
+                if (d >= 100.0f) {
+                    snprintf(dist, sizeof(dist), "  %.1fm", d / 100.0f);
+                } else {
+                    snprintf(dist, sizeof(dist), "  %.0fcm", d);
+                }
+                const float name_w = ImGui::CalcTextSize(row.c_str()).x;
+                dl->AddText(ImVec2{b.x + name_w, y}, IM_COL32(150, 190, 220, 210), dist);
+            }
         }
     };
 
@@ -356,15 +619,22 @@ void UObjectHook::handle_click_select() {
     }
     ray_dir /= dir_len;
 
+    // STAGE 1 — cheap pivot cone (see the "Picker aiming model" block in UObjectHook.hpp).
     // Single pass under the shared lock: filter to scene components (via the cached super-class
     // list — no virtual calls, no ProcessEvent), compose each candidate's WORLD location from its
     // reflected RelativeLocation/Rotation/Scale3D by walking the AttachParent chain (still plain
-    // memory reads), and keep the front-most one inside an angular cone of the click ray. Doing the
+    // memory reads), and keep everything inside an angular cone of the click ray. Doing the
     // reads under the lock blocks the add/destructor hooks for the (brief) scan so we never read a
     // component that is being freed on the game thread. Approximations: socket offsets and the
     // bAbsolute* overrides are ignored (rare; the cone radius usually still catches those).
+    //
+    // The cone is deliberately SLOPPY here (m_pick_cone_slack) because a pivot is not an aim point:
+    // a SkeletalMeshComponent's pivot sits at the mesh's feet, so aiming at a character's chest puts
+    // the pivot ~90cm off-axis. Stage 2 tightens this back up using real bounds — stage 1 only has to
+    // avoid false NEGATIVES, since anything it drops can never be picked.
     constexpr float kConeTan = 0.06f;  // ~3.4 deg half-angle of the pick cone
     constexpr float kMinPerp = 40.0f;  // world units: always allow at least this radius up close
+    const float min_perp = kMinPerp + (m_pick_use_bounds ? m_pick_cone_slack : 0.0f);
 
     // Read a reflected FVector/FRotator (double on UE5, float on UE4) as glm::vec3.
     auto read_vec3_prop = [is_ue5_vec](const sdk::FProperty* prop, sdk::USceneComponent* c) -> glm::vec3 {
@@ -423,12 +693,18 @@ void UObjectHook::handle_click_select() {
 
     // Gather ALL candidates inside the pick cone (front-most first), optionally class-filtered, so the
     // user can scroll/swipe to cycle through overlapping objects instead of always getting the nearest.
-    // Root components only (see the AttachParent check below for why/how).
-    struct Cand { float t; sdk::USceneComponent* comp; glm::vec3 world; std::string name; };
+    // `world` is the AIM point and may be rewritten to the bounds center by stage 2; `pivot` always
+    // keeps the raw composed component origin so the cache can report both.
+    struct Cand { float t; sdk::USceneComponent* comp; glm::vec3 world; glm::vec3 pivot; std::string name; };
     std::vector<Cand> cands;
     {
         std::shared_lock _{m_mutex};
         auto* scene_cls = sdk::USceneComponent::static_class();
+        // Non-root candidates are restricted to PRIMITIVE components: those are the things with a
+        // visual/collision presence you could plausibly be aiming at (skeletal & static meshes, capsules,
+        // boxes). Without this, every bare USceneComponent used as an attach point / socket dummy would
+        // crowd the cycle list with invisible entries.
+        static const auto prim_cls = sdk::find_uobject<sdk::UClass>(L"Class /Script/Engine.PrimitiveComponent");
         for (auto* obj : m_objects) {
             auto it = m_meta_objects.find(obj);
             if (it == m_meta_objects.end() || it->second == nullptr) continue;
@@ -437,32 +713,103 @@ void UObjectHook::handle_click_select() {
             if (!is_scene) for (auto* sc : meta->super_classes) { if (sc == scene_cls) { is_scene = true; break; } }
             if (!is_scene) continue;
             auto* comp = reinterpret_cast<sdk::USceneComponent*>(obj);
-            // Root components only: an actor's RootComponent always sits at the top of ITS OWN
-            // attach chain (AttachParent == nullptr), so this is a cheap proxy for "is root" without
-            // calling AActor::get_root_component() (a ProcessEvent call — too costly/unsafe to run
-            // per-candidate in this per-frame scan). Approximation: an actor attached to ANOTHER actor
-            // has a non-null AttachParent on its own root too, so that case is missed (false negative,
-            // never a false positive — a true non-root child is never mistaken for a root).
+            // Root components: an actor's RootComponent always sits at the top of ITS OWN attach chain
+            // (AttachParent == nullptr), so this is a cheap proxy for "is root" without calling
+            // AActor::get_root_component() (a ProcessEvent call — too costly/unsafe to run per-candidate
+            // in this per-frame scan). Approximation: an actor attached to ANOTHER actor has a non-null
+            // AttachParent on its own root too, so that case reads as non-root (it'll still be offered
+            // when it's a primitive; otherwise it's a false negative, never a false positive).
+            bool is_root = true;
             if (s_attach_parent_prop != nullptr) {
-                auto* parent0 = *s_attach_parent_prop->get_data<sdk::USceneComponent*>(comp);
-                if (parent0 != nullptr) continue;
+                is_root = *s_attach_parent_prop->get_data<sdk::USceneComponent*>(comp) == nullptr;
+            }
+            if (!is_root) {
+                // Non-root: only offer it when primitive-candidates are enabled AND it is one. This is
+                // what lets you aim at (and select) a character's mesh directly instead of only ever
+                // getting the actor root down at its feet.
+                if (!m_pick_include_primitives || prim_cls == nullptr) continue;
+                bool is_prim = meta->uclass == prim_cls;
+                if (!is_prim) for (auto* sc : meta->super_classes) { if (sc == prim_cls) { is_prim = true; break; } }
+                if (!is_prim) continue;
             }
             const glm::vec3 p = compose_world_location(comp);
             const glm::vec3 v = p - ray_origin;
             const float t = glm::dot(v, ray_dir);
             if (t <= 1.0f) continue; // behind / on top of the camera
             const float perp = glm::length(v - t * ray_dir);
-            if (perp > kMinPerp + kConeTan * t) continue;
+            if (perp > min_perp + kConeTan * t) continue;
             std::string fn = utility::narrow(meta->full_name);
             if (!class_filter.empty()) { // case-insensitive substring of the cached full name
                 std::string fl = fn;
                 for (auto& ch : fl) ch = (char)std::tolower((unsigned char)ch);
                 if (fl.find(class_filter) == std::string::npos) continue;
             }
-            cands.push_back({t, comp, p, std::move(fn)});
+            cands.push_back({t, comp, p, p, std::move(fn)});
         }
     }
     std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.t < b.t; });
+
+    // STAGE 2 — real bounds on the shortlist. Each entry costs a reflected GetActorBounds
+    // (ProcessEvent), so only the nearest m_pick_bounds_max survive stage 1's slack; beyond that the
+    // list is unusable to scroll through anyway. Re-ranks by ray-vs-AABB entry distance and drops the
+    // pivot-only near-misses that the widened cone let through. Runs OUTSIDE the shared lock:
+    // ProcessEvent can re-enter the object hooks, which want the same mutex.
+    //
+    // The rejects here are the whole point of the slack: a component whose pivot is near the ray but
+    // whose body is nowhere near it (e.g. a huge actor rooted at the world origin) gets dropped, while
+    // a bottom-rooted character whose pivot is 90cm below the ray gets KEPT and re-ranked to its
+    // chest — which is where you were aiming.
+    if (m_pick_use_bounds && !cands.empty()) {
+        if ((int)cands.size() > m_pick_bounds_max) {
+            cands.resize((size_t)m_pick_bounds_max);
+        }
+        struct Refined { Cand cand; PickBounds bounds; float t; };
+        std::vector<Refined> refined;
+        refined.reserve(cands.size());
+        for (auto& c : cands) {
+            const PickBounds b = query_pick_bounds(c.comp);
+            float bt = c.t; // no bounds (unregistered/abstract comp) — keep the pivot ranking
+            if (b.valid) {
+                bt = ray_box_distance(ray_origin, ray_dir, b);
+                if (bt < 0.0f) {
+                    continue; // the ray genuinely misses this object's volume — a stage-1 false positive
+                }
+                c.world = b.origin; // aim at the bounds center, not the pivot
+            }
+            refined.push_back({std::move(c), b, bt});
+        }
+        std::sort(refined.begin(), refined.end(), [](const Refined& a, const Refined& b) { return a.t < b.t; });
+        cands.clear();
+        std::vector<PickBounds> refined_bounds;
+        refined_bounds.reserve(refined.size());
+        for (auto& r : refined) {
+            r.cand.t = r.t;
+            cands.push_back(std::move(r.cand));
+            refined_bounds.push_back(r.bounds);
+        }
+        m_pick_bounds_scratch = std::move(refined_bounds);
+    } else {
+        m_pick_bounds_scratch.assign(cands.size(), PickBounds{});
+    }
+
+    // STAGE 3 — optional visibility gate. Trace from the camera POV to each surviving candidate's aim
+    // point and drop the ones something solid is standing in front of. Last, so it only ever runs on
+    // the handful of things that already passed the bounds test.
+    glm::vec3 cam_loc{0.0f, 0.0f, 0.0f};
+    const bool have_cam = get_camera_pov_location(&cam_loc);
+    if (m_pick_require_los && have_cam && !cands.empty()) {
+        std::vector<PickBounds> kept_bounds;
+        std::vector<Cand> kept;
+        kept.reserve(cands.size());
+        kept_bounds.reserve(cands.size());
+        for (size_t i = 0; i < cands.size(); ++i) {
+            if (!has_line_of_sight(cam_loc, cands[i].world)) continue;
+            kept.push_back(std::move(cands[i]));
+            kept_bounds.push_back(i < m_pick_bounds_scratch.size() ? m_pick_bounds_scratch[i] : PickBounds{});
+        }
+        cands = std::move(kept);
+        m_pick_bounds_scratch = std::move(kept_bounds);
+    }
 
     // Commit to the frame-persistent cache so an armed-but-idle picker can redraw without re-scanning.
     // short_label is name-first (via the shared shorten_object_path helper); full_path backs the
@@ -470,12 +817,19 @@ void UObjectHook::handle_click_select() {
     // here and reused by both the marquee width math and the Lua event payload.
     m_pick_cache.clear();
     m_pick_cache.reserve(cands.size());
-    for (auto& c : cands) {
+    for (size_t i = 0; i < cands.size(); ++i) {
+        auto& c = cands[i];
         PickCandidate entry{};
         entry.comp = c.comp;
         entry.full_path = c.name;
         entry.short_label = shorten_object_path(c.name);
-        entry.world = c.world;
+        entry.world = c.world; // bounds center when stage 2 ran, else the pivot
+        entry.pivot = c.pivot;
+        entry.bounds = i < m_pick_bounds_scratch.size() ? m_pick_bounds_scratch[i] : PickBounds{};
+        // Distance from the camera POV, not from the deprojected ray origin: the two differ once the
+        // UEVR camera is attached/offset, and the number in the list should mean "how far is this from
+        // the eye" in the way the user expects.
+        entry.camera_distance = have_cam ? glm::length(c.world - cam_loc) : -1.0f;
         glm::vec2 sp{0.0f, 0.0f};
         if (ugs->world_to_screen(pc, c.world, &sp)) {
             entry.screen = sp;
@@ -1762,6 +2116,38 @@ void UObjectHook::draw_gizmo_options() {
     }
     ImGui::TextDisabled("Tip: pick the Combined gizmo mode above to see move + rotate + scale handles at once.");
 
+    ImGui::SeparatorText("VR adjust mode");
+    ImGui::Checkbox("Adjust mode (VR: block game input, sticks drive gizmo)", &m_vr_adjust_mode);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("In VR the thumbsticks drive BOTH the game and the gizmo, so nudging an object also\n"
+                          "walks your character. While this is on (and at least one gizmo target is selected),\n"
+                          "the game sees a dead gamepad — sticks, buttons and triggers all — while UEVR keeps\n"
+                          "reading the sticks for the gizmo.\n\n"
+                          "  A = cycle Move / Rotate / Scale / Combined\n"
+                          "  B = exit adjust mode\n\n"
+                          "Only engages while something is selected, so clearing the gizmo targets always\n"
+                          "gives the controller back.");
+    }
+    {
+        // Live state readout: "armed" and "actually blocking" differ (the target gate), and that
+        // difference is invisible in-headset otherwise.
+        size_t n = 0;
+        { std::shared_lock _{m_mutex}; n = m_gizmo_components.size(); }
+        auto vr = VR::get();
+        const bool vr_ok = vr != nullptr && vr->is_hmd_active() && vr->is_using_controllers();
+        if (!m_vr_adjust_mode) {
+            ImGui::TextDisabled("inactive");
+        } else if (!vr_ok) {
+            ImGui::TextDisabled("armed — inactive (no HMD / controllers)");
+        } else if (n == 0) {
+            ImGui::TextColored(ImVec4{1.0f, 0.8f, 0.3f, 1.0f}, "armed — waiting for a gizmo target");
+        } else {
+            static const char* kModes[] = {"Move", "Rotate", "Scale", "Combined"};
+            ImGui::TextColored(ImVec4{0.4f, 1.0f, 0.4f, 1.0f}, "ACTIVE — game input blocked  [%s]",
+                               kModes[m_gizmo_mode >= 0 && m_gizmo_mode < 4 ? m_gizmo_mode : 0]);
+        }
+    }
+
     ImGui::SeparatorText("Selection / picking");
     ImGui::Checkbox("Auto-gizmo on MC adjust (VR)", &m_auto_gizmo_on_adjust);
     // One-shot picker: arm with the button, click a world object, it auto-disarms (no toggle-off
@@ -1800,6 +2186,59 @@ void UObjectHook::draw_gizmo_options() {
     ImGui::Checkbox("Highlight selection", &m_highlight_selection);
     ImGui::Checkbox("Set Movable on select (Mobility=2)", &m_gizmo_set_movable);
 
+    ImGui::SeparatorText("Pick aiming");
+    ImGui::Checkbox("Aim at object bounds", &m_pick_use_bounds);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("A component's pivot is a poor aim point: a SkeletalMeshComponent is rooted at the BOTTOM\n"
+                          "of the mesh, so pivot-only picking makes you aim at a character's feet.\n"
+                          "On: candidates are hit-tested against their real GetActorBounds box and reticled at its\n"
+                          "center, so you aim where the object actually is.\n"
+                          "Off: legacy pivot-only behavior.");
+    }
+    ImGui::BeginDisabled(!m_pick_use_bounds);
+    ImGui::SetNextItemWidth(200.0f);
+    ImGui::SliderFloat("Pivot search slack", &m_pick_cone_slack, 0.0f, 400.0f, "%.0f cm");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("How far off-axis a pivot may sit and still be bounds-tested.\n"
+                          "Must exceed the pivot-to-body offset of things you want to pick (~90cm for a\n"
+                          "human character). Too low = tall objects get missed; too high = more bounds\n"
+                          "calls per scan for no gain. Bounds still reject the real misses either way.");
+    }
+    ImGui::SetNextItemWidth(200.0f);
+    ImGui::SliderInt("Max bounds tests", &m_pick_bounds_max, 4, 64);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Cap on reflected GetActorBounds calls per scan (each is a ProcessEvent).\n"
+                          "Only the nearest N candidates get bounds-tested.");
+    }
+    ImGui::EndDisabled();
+    ImGui::Checkbox("Offer mesh/primitive components", &m_pick_include_primitives);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Also offer non-root primitive components (skeletal/static meshes, capsules) as their\n"
+                          "own pick candidates, not just actor roots. Scroll to cycle between a character's\n"
+                          "mesh and its actor root.");
+    }
+    ImGui::Checkbox("Require line of sight (picker)", &m_pick_require_los);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Trace from the camera to each candidate on the Visibility channel and drop the ones\n"
+                          "something solid is in front of — so you only pick what you can actually see.\n"
+                          "Costs one LineTraceSingle per surviving candidate.");
+    }
+    ImGui::Checkbox("Require line of sight (light icons)", &m_light_icons_require_los);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Same gate for the light-icon overlay: hide icons for lights behind geometry.\n"
+                          "Costs one trace per on-screen light.");
+    }
+    ImGui::BeginDisabled(!m_pick_require_los && !m_light_icons_require_los);
+    ImGui::SetNextItemWidth(200.0f);
+    ImGui::SliderFloat("LOS self-hit slop", &m_pick_los_tolerance, 1.0f, 200.0f, "%.0f cm");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("A trace toward an object hits the object itself. Anything within this distance of the\n"
+                          "target counts as \"reached it\" rather than \"blocked\".\n"
+                          "Too low = visible objects get hidden by their own collision; too high = things behind\n"
+                          "thin walls show through.");
+    }
+    ImGui::EndDisabled();
+
     ImGui::SeparatorText("Ctrl-snap steps (hold Ctrl while dragging the gizmo)");
     ImGui::SliderFloat("Move snap (cm)", &m_snap_translate, 0.0f, 100.0f, "%.1f");
     ImGui::SliderFloat("Rotate snap (deg)", &m_snap_rotate, 0.0f, 90.0f, "%.1f");
@@ -1811,6 +2250,60 @@ void UObjectHook::draw_gizmo_options() {
     if (g_framework->get_renderer_type() == Framework::RendererType::D3D11) {
         ImGui::Checkbox("Texture previews (D3D11, experimental)", &m_show_texture_previews);
     }
+}
+
+// --- VR adjust mode (see the block in UObjectHook.hpp) ------------------------------------------
+
+// Armed AND something selected. The target check is the safety gate: it means "clear your gizmo
+// targets" always restores game input, without needing the menu.
+bool UObjectHook::is_vr_adjust_active() const {
+    if (!m_vr_adjust_mode) {
+        return false;
+    }
+    auto vr = VR::get();
+    if (vr == nullptr || !vr->is_hmd_active() || !vr->is_using_controllers()) {
+        return false; // flat play: the sticks aren't driving the gizmo, so there's nothing to protect
+    }
+    std::shared_lock _{m_mutex};
+    return !m_gizmo_components.empty();
+}
+
+// Runs on the XInput hook thread, NOT the draw thread — keep it to plain member reads/writes and the
+// brief shared_lock in is_vr_adjust_active. m_gizmo_mode is written here (the cycle) and read by the
+// draw thread; it's an int whose worst case is one frame of the old mode, same benign cross-thread
+// read the rest of this file already tolerates (see m_last_world_to_meters).
+bool UObjectHook::apply_vr_adjust_input(void* xinput_state) {
+    if (xinput_state == nullptr || !is_vr_adjust_active()) {
+        // Reset the edge latches so a button held THROUGH arming doesn't fire on the first poll.
+        m_vr_adjust_cycle_held = false;
+        m_vr_adjust_exit_held = false;
+        return false;
+    }
+
+    auto* state = (XINPUT_STATE*)xinput_state;
+    const auto buttons = state->Gamepad.wButtons;
+
+    // A = cycle Move -> Rotate -> Scale -> Combined. Edge-triggered: XInputGetState is polled many
+    // times a second, so a level check would cycle the whole list on a single press.
+    const bool cycle_now = (buttons & XINPUT_GAMEPAD_A) != 0;
+    if (cycle_now && !m_vr_adjust_cycle_held) {
+        m_gizmo_mode = (m_gizmo_mode + 1) % 4; // 0=Move 1=Rotate 2=Scale 3=Combined
+    }
+    m_vr_adjust_cycle_held = cycle_now;
+
+    // B = leave adjust mode and hand the controller back to the game.
+    const bool exit_now = (buttons & XINPUT_GAMEPAD_B) != 0;
+    if (exit_now && !m_vr_adjust_exit_held) {
+        m_vr_adjust_mode = false;
+    }
+    m_vr_adjust_exit_held = exit_now;
+
+    // Zero EVERYTHING the game could read. Not just the sticks: triggers fire weapons and face buttons
+    // jump/interact, and the point of adjust mode is that fiddling with an object has no effect on the
+    // game world at all. UEVR's own gizmo reads the VR action state, not this struct, so it is
+    // unaffected — that separation is the whole mechanism (see the header block).
+    state->Gamepad = {};
+    return true;
 }
 
 // VR thumbstick gizmo control (needs a headset to verify feel/sensitivity, but the logic below is

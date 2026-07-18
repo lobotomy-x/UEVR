@@ -1375,6 +1375,17 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
 
     // Do it again after all the VR buttons have been spoofed
     update_imgui_state_from_xinput_state(*state, true);
+
+    // UObjectHook's VR adjust mode: when armed with a gizmo target, the game gets a dead gamepad so
+    // the thumbsticks can drive the gizmo without also walking the character. Runs LAST, after every
+    // other spoof/dpad/snapturn path above has had its say, because it must win over all of them —
+    // anything that wrote to state->Gamepad earlier is deliberately discarded here.
+    // Deliberately AFTER update_imgui_state_from_xinput_state too: the UI still needs to see the real
+    // buttons (that's what lets you drive the menu while adjust mode is on), it's only the GAME's copy
+    // that gets zeroed. See UObjectHook::apply_vr_adjust_input.
+    if (auto& uoh = UObjectHook::get(); uoh != nullptr) { // NOTE: shared_ptr&, not a raw pointer
+        uoh->apply_vr_adjust_input(state);
+    }
 }
 
 void VR::on_xinput_set_state(uint32_t* retval, uint32_t user_index, XINPUT_VIBRATION* vibration) {
