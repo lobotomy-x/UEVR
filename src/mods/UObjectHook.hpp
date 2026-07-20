@@ -158,6 +158,10 @@ protected:
     // ImGui IDs unique even when two classes share short names.
     void draw_class_inspector_window(sdk::UClass* cls);
     std::vector<sdk::UClass*> m_open_class_inspectors{};
+    // Classes whose inspector has already performed its one-time "select the Instances tab" on first
+    // show. An entry is added the first frame a class's inspector renders and removed when the window
+    // closes, so re-opening a class lands on Instances again. See draw_class_inspector_window.
+    std::unordered_set<sdk::UClass*> m_class_inspector_tab_initialized{};
     bool m_show_class_browser{false};
     bool m_show_function_caller{false};
     bool m_show_options_window{false}; // dockable pop-out of the gizmo/selection options

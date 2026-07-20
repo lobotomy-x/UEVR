@@ -664,6 +664,37 @@ static void uobjecthook_dock_into_host_once() {
     }
 }
 
+// Dedicated dock node that ALL class-inspector windows share, so opening several classes stacks them
+// as tabs in one side panel instead of cascading floating windows across the screen (the user's ask:
+// "inspected class windows from new clicks always being docked in the same location").
+//
+// Built with DockBuilder as a standalone floating node — independent of the main UEVR dockspace host,
+// which is currently disabled (get_main_dockspace_id() returns 0). Docking must be enabled at the IO
+// level (it is, see Framework.cpp); returns 0 otherwise so the caller can fall back to normal floating
+// placement. The node is (re)created when missing or on the PageUp "reset windows" pulse, and parked
+// against the right edge of the work area.
+static ImGuiID uobjecthook_class_inspector_dock_id() {
+    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable) == 0) {
+        return 0;
+    }
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    if (vp == nullptr) {
+        return 0;
+    }
+    const ImGuiID node_id = ImGui::GetID("UEVR_ClassInspectorColumn");
+    if (ImGui::DockBuilderGetNode(node_id) == nullptr || Framework::is_force_reset_windows()) {
+        ImGui::DockBuilderRemoveNode(node_id);
+        ImGui::DockBuilderAddNode(node_id, ImGuiDockNodeFlags_None);
+        // Right ~32% column, vertically inset a little so it doesn't fight the top-of-screen HUD.
+        const ImVec2 size{vp->WorkSize.x * 0.32f, vp->WorkSize.y * 0.62f};
+        const ImVec2 pos{vp->WorkPos.x + vp->WorkSize.x - size.x, vp->WorkPos.y + vp->WorkSize.y * 0.16f};
+        ImGui::DockBuilderSetNodeSize(node_id, size);
+        ImGui::DockBuilderSetNodePos(node_id, pos);
+        ImGui::DockBuilderFinish(node_id);
+    }
+    return node_id;
+}
+
 void UObjectHook::draw_class_browser_window() {
     uobjecthook_dock_into_host_once();
     if (!ImGui::Begin("UEVR Class Browser", &m_show_class_browser)) {
@@ -1384,7 +1415,14 @@ void UObjectHook::draw_class_browser_window() {
 void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
     if (cls == nullptr) return;
 
-    uobjecthook_dock_into_host_once();
+    // Dock into the shared class-inspector column so successive inspectors stack in one side panel.
+    // FirstUseEver: a class opened for the first time lands in the column; if the user later drags it
+    // out, that choice sticks. Falls back to the generic host placement when docking is unavailable.
+    if (auto node = uobjecthook_class_inspector_dock_id(); node != 0) {
+        ImGui::SetNextWindowDockID(node, ImGuiCond_FirstUseEver);
+    } else {
+        uobjecthook_dock_into_host_once();
+    }
 
     // Resolve display name + window ID. The ###ptr suffix is what ImGui
     // actually keys the window on, so two classes with identical short names
@@ -1412,6 +1450,7 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
         ImGui::End();
         if (!open) {
             std::erase(m_open_class_inspectors, cls);
+            m_class_inspector_tab_initialized.erase(cls);
         }
         return;
     }
@@ -1426,6 +1465,7 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
         ImGui::TextColored(ImVec4{1.0f, 0.4f, 0.4f, 1.0f}, "Not a valid UClass (stale or non-class entry) — close this window.");
         if (!open) {
             std::erase(m_open_class_inspectors, cls);
+            m_class_inspector_tab_initialized.erase(cls);
         }
         return;
     }
@@ -1482,40 +1522,18 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
     ImGui::Separator();
 
     if (!ImGui::BeginTabBar("ClassInspectorTabs")) {
-        if (!open) std::erase(m_open_class_inspectors, cls);
+        if (!open) { std::erase(m_open_class_inspectors, cls); m_class_inspector_tab_initialized.erase(cls); }
         return;
     }
     utility::ScopeGuard tab_guard{[]() { ImGui::EndTabBar(); }};
 
-    // ---- Properties tab (structural, no CDO read) -------------------------
-    if (ImGui::BeginTabItem("Properties")) {
-        ImGui::TextDisabled("structural FProperty list (no live values)");
-        int count = 0;
-        for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
-            for (auto field = super->get_child_properties(); field != nullptr; field = field->get_next()) {
-                auto pclass = field->get_class();
-                if (pclass == nullptr) continue;
-                const auto type_name = utility::narrow(pclass->get_name().to_string());
-                if (!type_name.contains("Property")) continue;
-                const auto field_name = utility::narrow(field->get_field_name().to_string());
-                ImGui::BulletText("%s %s", type_name.c_str(), field_name.c_str());
-                ++count;
-            }
-        }
-        if (count == 0) {
-            ImGui::TextDisabled("(no FProperties)");
-        }
-        ImGui::EndTabItem();
-    }
+    // Force the Instances tab selected the first frame THIS class's inspector shows — that's the view
+    // you almost always want when you click a class (live objects to grab), and it overrides any tab
+    // selection persisted in imgui.ini. Only on first show, so the user can freely switch afterward;
+    // the flag is cleared when the window closes (see below) so re-opening re-selects Instances.
+    const bool first_show = m_class_inspector_tab_initialized.insert(cls).second;
+    const ImGuiTabItemFlags instances_tab_flags = first_show ? ImGuiTabItemFlags_SetSelected : 0;
 
-    // ---- Functions tab ----------------------------------------------------
-    if (ImGui::BeginTabItem("Functions")) {
-        // Pass nullptr as object so ui_handle_functions only shows signatures
-        // (the Call UI is gated on is_real_object). To actually invoke, the
-        // user drags a target into Function Caller.
-        ui_handle_functions(nullptr, cls);
-        ImGui::EndTabItem();
-    }
 
     // ---- Instances tab ----------------------------------------------------
     // Live UObjects of this class, pulled from m_objects_by_class (the same
@@ -1524,7 +1542,7 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
     // motion-controller attach widget, anywhere else that accepts an object.
     // Selecting also pops the address into the picker_text_buffer so the
     // text-input lookups elsewhere can refer to it.
-    if (ImGui::BeginTabItem("Instances")) {
+    if (ImGui::BeginTabItem("Instances", nullptr, instances_tab_flags)) {
         std::shared_lock _{m_mutex};
         auto it = m_objects_by_class.find(cls);
         if (it == m_objects_by_class.end() || it->second.empty()) {
@@ -1580,8 +1598,38 @@ void UObjectHook::draw_class_inspector_window(sdk::UClass* cls) {
         }
         ImGui::EndTabItem();
     }
+        // ---- Properties tab (structural, no CDO read) -------------------------
+    if (ImGui::BeginTabItem("Properties")) {
+
+        ImGui::TextDisabled("structural FProperty list (no live values)");
+        int count = 0;
+        for (auto super = (sdk::UStruct*)cls; super != nullptr; super = super->get_super_struct()) {
+            for (auto field = super->get_child_properties(); field != nullptr; field = field->get_next()) {
+                auto pclass = field->get_class();
+                if (pclass == nullptr) continue;
+                const auto type_name = utility::narrow(pclass->get_name().to_string());
+                if (!type_name.contains("Property")) continue;
+                const auto field_name = utility::narrow(field->get_field_name().to_string());
+                ImGui::BulletText("%s %s", type_name.c_str(), field_name.c_str());
+                ++count;
+            }
+        }
+        if (count == 0) {
+            ImGui::TextDisabled("(no FProperties)");
+        }
+        if (ImGui::TreeNode("Functions"))	
+        {
+	    	ui_handle_functions(nullptr, cls);
+        	ImGui::TreePop();
+        }
+        ImGui::EndTabItem();
+    }
+
+
+
 
     if (!open) {
         std::erase(m_open_class_inspectors, cls);
+        m_class_inspector_tab_initialized.erase(cls);
     }
 }
