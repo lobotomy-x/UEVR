@@ -3121,18 +3121,6 @@ void draw_filled_quad(Vector2f p1, Vector2f p2, Vector2f p3, Vector2f p4, ImU32 
 //    ::imgui::draw_capsule(start_pos, end_pos, radius, color, outline);
 //}
 
-//
-// triangle
-// ellipse
-// ngon
-// bezier
-// image // read from utextures >:)
-// #include "..\pluginloader\FRHITexture2DFunctions.hpp"
-//
-// void texture_image(sol::object utexture) {
-//    const auto native_texture = utexture.is<>() ? flags_obj.as<int>() : 0;
-//}
-//} // namespace api::draw
 
 void bindings::open_imgui(sol::state_view &lua)
 {

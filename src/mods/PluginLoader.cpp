@@ -420,7 +420,15 @@ static void free_sol_state_view_shim(void* sv) {
     PluginLoader::get()->free_sol_state_view(sv);
 }
 static void reset_lua_scripts_shim() {
-    if (auto ll = LuaLoader::get()) ll->reset_scripts();
+    // Do NOT call reset_scripts() directly here: this shim can be invoked
+    // synchronously from a C plugin's ImGui callback (e.g. a "Reset scripts"
+    // button drawn from on_imgui_frame), which runs mid-frame, potentially
+    // while some other thread is mid-execution of a lua callback against the
+    // very state reset_scripts() is about to destroy — a use-after-free.
+    // uevr.reset_scripts() (the Lua-exposed version) avoids this by only
+    // setting a flag that LuaLoader::on_frame() consumes at the top of the
+    // frame, before any callbacks run; go through the same safe path.
+    if (auto ll = LuaLoader::get()) ll->request_script_reset();
 }
 static void reload_plugins_shim() {
     PluginLoader::get()->reload_plugins();
@@ -591,82 +599,6 @@ UEVR_SDKFunctions g_sdk_functions {
 
         return (UEVR_UObjectHandle)ugs->spawn_object((sdk::UClass*)klass, (sdk::UObject*)outer);
     },
-/*    // as_actor
-    [](UEVR_UObjectHandle object) -> UEVR_UObjectHandle {
-        if (object == nullptr) {
-            return nullptr;
-        }
-        
-        auto obj = (sdk::UObject*)object;
-        if (!obj->is_a(sdk::AActor::static_class())) {
-            return nullptr;
-        }
-        
-        return object;
-    },
-    // is_actor
-    [](UEVR_UObjectHandle object) -> bool {
-        if (object == nullptr) {
-            return false;
-        }
-        
-        return ((sdk::UObject*)object)->is_a(sdk::AActor::static_class());
-    },
-    // as_component
-    [](UEVR_UObjectHandle object) -> UEVR_UObjectHandle {
-        if (object == nullptr) {
-            return nullptr;
-        }
-        
-        auto obj = (sdk::UObject*)object;
-        if (!obj->is_a(sdk::UActorComponent::static_class())) {
-            return nullptr;
-        }
-        
-        return object;
-    },
-    // is_component
-    [](UEVR_UObjectHandle object) -> bool {
-        if (object == nullptr) {
-            return false;
-        }
-        
-        return ((sdk::UObject*)object)->is_a(sdk::UActorComponent::static_class());
-    },
-    // add_component
-    [](UEVR_UObjectHandle object, UEVR_UClassHandle klass) -> UEVR_UObjectHandle {
-        if (object == nullptr || klass == nullptr) {
-            return nullptr;
-        }
-        
-        auto actor = (sdk::AActor*)object;
-        return (UEVR_UObjectHandle)actor->add_component_by_class((sdk::UClass*)klass, false);
-    },
-    // attach
-    [](UEVR_UObjectHandle object, UEVR_UObjectHandle other, std::wstring& socket, uint8_t attach_rules) -> UEVR_UObjectHandle {
-        if (object == nullptr || other == nullptr) {
-            return nullptr;
-        }
-        
-        auto comp = (sdk::USceneComponent*)object;
-        auto parent = (sdk::USceneComponent*)other;
-        
-        // AttachToComponent with socket name and rules
-        comp->attach_to(parent, socket, attach_rules);
-        
-        return object;
-    },
-    // detach
-    [](UEVR_UObjectHandle object, bool keep_world, bool propagate) -> UEVR_UObjectHandle {
-        if (object == nullptr) {
-            return nullptr;
-        }
-        
-        auto comp = (sdk::USceneComponent*)object;
-        comp->detach_from_parent(keep_world, propagate);
-        
-        return object;
-    },*/
     // execute_command
     [](const wchar_t* command) -> void {
         if (command == nullptr) {
@@ -2855,28 +2787,6 @@ bool PluginLoader::add_on_post_viewport_client_draw(UEVR_ViewportClient_DrawCb c
 lua_State* create_script_state() {
     return LuaLoader::get()->create_state();
 }
-/// <summary>
-/// Request the destruction of the script_state belonging to the lua state in question
-/// </summary>
-/*void destroy_script_state(lua_State* lua_state) {
-    LuaLoader::get()->delete_state(lua_state);
-}
-
-bool on_lua_state_created(UEVR_LuaStateCreatedCb cb) {
-    if (cb == nullptr) {
-        return false;
-    }
-
-    return  PluginLoader::get()->add_on_lua_state_created(cb);
-}
-
-bool on_lua_state_destroyed(UEVR_LuaStateDestroyedCb cb) {
-    if (cb == nullptr) {
-        return false;
-    }
-
-    return PluginLoader::get()->add_on_lua_state_destroyed(cb);
-}*/
 
 void PluginLoader::lock_lua() {
     LuaLoader::get()->lock();
@@ -2886,10 +2796,3 @@ void PluginLoader::unlock_lua() {
     LuaLoader::get()->unlock();
 }                                                                                                        
 
-/*bool PluginLoader::on_imgui_frame(UEVR_OnImGuiFrameCb cb) {
-    if (cb == nullptr) {
-        return false;
-    }
-
-    return PluginLoader::get()->add_on_imgui_frame(cb);
-}*/

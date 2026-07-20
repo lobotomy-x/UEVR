@@ -8,7 +8,13 @@ Build: `cmake --build build --config RelWithDebInfo --target uevr -- /m` (ignore
 
 ---
 
-## LATEST STATUS — 2026-06-24 (autonomous flat/desktop pass, branch `auto-roadmap-2026-06-24` off `luavrlib`; each item is its own atomic, revertible commit; all build clean; NOT in-game/headset verified)
+## LATEST STATUS — 2026-07-07 (autonomous scheduled-run continuation; UNCOMMITTED working-tree changes; built exit 0, DLL deployed via symlink, hash verified; NOT in-game/headset verified)
+
+- ✅ **#3 Lua exposure, first half — `uevr.api_fast.world_to_screen_overlay`** (`src/mods/bindings/SDKFast.cpp`, APPEND-ONLY per the contended-file rule; left UNCOMMITTED because the file carries the parallel instance's uncommitted work — do not fold into an unrelated commit). Reuses `world_to_screen` then remaps via `OverlayComponent::transform_world_aligned_to_overlay` when `vr->is_hmd_active()`; identity when flat. Added `#include "../VR.hpp"`. REMAINING from #3: the UObjectHook gizmo-list API (`add_gizmo`/`remove_gizmo`/`list_gizmos`).
+- ✅ **TODO B — example script** `lua-api/examples/world_anchor_demo.lua` (new file): anchors a marker+label to the local pawn's world location via `world_to_screen_overlay` on `on_frame`, drawn with `imgui.get_background_draw_list()` (verified binding names `add_circle_filled`/`add_text` against `ImGui.cpp`). Needs in-game (ideally in-headset, UI open) verification.
+- NOTE: the hourly "rerun-limited-sessions" scheduled task had produced ~366 stub sessions while Fable 5 was unavailable/limited; a concurrent run of it was active during this pass (blocked on a permission prompt), so work was kept to append-only + new files to avoid collisions.
+
+## Previous status — 2026-06-24 (autonomous flat/desktop pass, branch `auto-roadmap-2026-06-24` off `luavrlib`; each item is its own atomic, revertible commit; all build clean; NOT in-game/headset verified)
 
 Four non-headset-gated gizmo items implemented, built (`cmake --build build --config RelWithDebInfo --target uevr`, exit 0 each) and committed individually so any one can be reverted in isolation:
 
@@ -93,7 +99,7 @@ Each entry says where to add it and, for the offload-friendly ones, the empty-fu
 
 ### From prior sessions (still open)
 - ⏳ **camera_attach (#2)** — gizmo projects from the unshifted PlayerController POV; fold `m_camera_attach.offset` in. `UObjectHook.cpp` ~2529-2561. Needs headset.
-- ⏳ **Lua exposure (#3)** — VR-aware `world_to_screen_overlay` + UObjectHook gizmo-list API (`add_gizmo`/`remove_gizmo`/`list_gizmos`). Lives in the contended `SDKFast.cpp` — append-only; see Parallel section.
+- 🟡 **Lua exposure (#3)** — ✅ `world_to_screen_overlay` DONE 2026-07-07 (appended to `SDKFast.cpp`, built exit 0, uncommitted; example in `lua-api/examples/world_anchor_demo.lua`). REMAINING: UObjectHook gizmo-list API (`add_gizmo`/`remove_gizmo`/`list_gizmos`). Contended file — append-only; see Parallel section.
 - ⏳ **Mouse-click select / spawner / overlapper-auto-add** — see `HANDOFF-vr-gizmo-roadmap.md` TODO-A.
 - ⏳ **Mortal Shell 2 `m_runtime` use-after-free** — full fix = locked `get_runtime_safe()` accessor. `vr_runtime_race_2026_06_16.md`.
 

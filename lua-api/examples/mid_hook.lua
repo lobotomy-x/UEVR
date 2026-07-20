@@ -91,24 +91,21 @@ end
 --  it ourselves rather than waiting for the engine, which may invoke the C++ method directly.)
 -- =================================================================================================
 local demo_done = false
-
+local api = uevr.api
 uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     if demo_done then return end
 
     -- need a live PlayerController to call on; wait until the world has one
-    local pc_class = api:find_uobject("Class /Script/Engine.PlayerController")
-    if pc_class == nil then return end
-    local pc = UEVR_UObjectHook.get_first_object_by_class(pc_class)
-    if pc == nil then return end
+    local pc_class = api:get_player_controller(0):get_class()
 
-    local fn_obj = api:find_uobject("Function /Script/Engine.PlayerController.GetControlRotation")
+    local fn_obj = pc_class:find_function("GetControlRotation")
     local fn = fn_obj ~= nil and fn_obj:as_function() or nil
     if fn == nil then
         print("[mid_hook] demo: GetControlRotation UFunction not found - edit the target. Demo skipped.")
         demo_done = true
         return
     end
-
+	fn:set_flag("is_native", true)
     local addr = uevr.to_address(fn:get_native_function())
     if addr == 0 then
         print("[mid_hook] demo: GetControlRotation has no native code. Demo skipped.")

@@ -66,7 +66,7 @@ uevr.sdk.callbacks.on_lua_event(function(name, data)
     end
 end)
 
-uevr.sdk.callbacks.on_draw_ui(function()
+uevr.sdk.callbacks.on_frame(function()
     imgui.begin_window("Function Monitor Demo")
     imgui.text(string.format("Events received: %d", event_count))
     imgui.text(string.format("Currently in pool: %d", #pool_order))

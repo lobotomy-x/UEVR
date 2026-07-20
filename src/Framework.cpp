@@ -1447,7 +1447,7 @@ bool Framework::on_message(HWND wnd, UINT message, WPARAM w_param, LPARAM l_para
         // takes control back. draw_ui() drops/re-applies the SetCursorPos pin + cursor
         // to match m_smart_game_mouse.
         if (ui_active_for_input && m_input_mode == 2 && message == WM_LBUTTONDOWN) {
-            m_smart_game_mouse = !io.WantCaptureMouse;
+            m_smart_game_mouse = true;//!io.WantCaptureMouse;
         }
         if (ui_active_for_input && m_input_mode != 1) {
             const bool is_keyboard = (message >= WM_KEYFIRST && message <= WM_KEYLAST);
@@ -1787,10 +1787,7 @@ void Framework::draw_ui_impl() {
 
     ImGui::EndGroup();
     ImGui::NextColumn();
-    if (editstyle) {
-        auto style = ImGui::GetStyle();
-        ImGui::ShowStyleEditor(&style);
-    }
+
     ImGui::BeginGroup();
     ImGui::Text("Keyboard Menu Key: Insert");
     ImGui::Text("Gamepad L3 + R3: Toggle Menu");
@@ -1801,7 +1798,10 @@ void Framework::draw_ui_impl() {
     ImGui::EndGroup();
 
     ImGui::Columns(1);
-
+    if (editstyle) {
+        auto style = ImGui::GetStyle();
+        ImGui::ShowStyleEditor(&style);
+    }
     // Mods:
     auto& sidebar_entries = m_sidebar_state.entries;
     sidebar_entries.clear();

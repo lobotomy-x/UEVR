@@ -211,8 +211,6 @@ typedef struct {
 // allow for plugins to use cimgui and pass data
 // these will still run during onframe
 typedef void (*UEVR_OnImGuiFrameCb)(UEVR_ImGuiFrameCbData*);
-// leaving that one out for now since onframe also runs during on_draw_ui
-/*typedef void (*UEVR_OnImGuiDrawUICb)(UEVR_ImGuiFrameCbData*);*/
 typedef bool (*UEVR_OnImGuiFrameFn)(UEVR_OnImGuiFrameCb);
 /* Lua */
 typedef struct lua_State* (*UEVR_CreateScriptState)();
@@ -429,23 +427,6 @@ typedef struct {
 } UEVR_UObjectFunctions;
 
 
-//typedef struct {
-//
-//     bool (*is_actor)(UEVR_UObjectHandle object);
-//     UEVR_AActorHandle (*as_actor)(UEVR_UObjectHandle object);
-//        UEVR_USceneComponentHandle (*get_root_component)(UEVR_AActorHandle object);
-//
-//
-//    UEVR_USceneComponentHandle (*add_component)(UEVR_AActorHandle object, UEVR_UClassHandle uclass);
-//    UEVR_USceneComponentHandle (*as_scene_component)(UEVR_UObjectHandle object);
-//
-// 
-//    UEVR_USceneComponentHandle (*add_component)(UEVR_UObjectHandle object, UEVR_UClassHandle klass);
-//    UEVR_USceneComponentHandle (*attach)(UEVR_UObjectHandle object, UEVR_UObjectHandle other, const wchar_t* socket, uint8_t attach_rules);
-//    UEVR_USceneComponentHandle (*detach)(bool keep_world, bool propagate);
-//
-//} UEVR_AActorFunctions;
-
 DECLARE_UEVR_HANDLE(UEVR_UObjectHookMotionControllerStateHandle);
 
 typedef struct {
@@ -555,8 +536,6 @@ typedef struct {
     const UEVR_SDKCallbacks* callbacks;
     const UEVR_UObjectFunctions* uobject;
     const UEVR_UObjectArrayFunctions* uobject_array;
-    //const UEVR_AActorFunctions* aactor;
-    //const UEVR_USceneComponentFunctions* uscenecomponent;
     const UEVR_FFieldFunctions* ffield;
     const UEVR_FPropertyFunctions* fproperty;
     const UEVR_UStructFunctions* ustruct;

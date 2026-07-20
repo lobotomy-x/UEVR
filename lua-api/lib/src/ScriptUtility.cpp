@@ -478,9 +478,9 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
                     return sol::make_object(s, *(lua::datatypes::Quaternionf*)struct_data);
                 return sol::make_object(s, (lua::datatypes::Quaternionf*)struct_data);
             }
-        }    
+        }
         else if (struct_desc == get_transform_struct()) {
-            static const auto quat_offset =struct_desc->find_property(L"Rotation")->get_offset();
+            static const auto quat_offset = struct_desc->find_property(L"Rotation")->get_offset();
             static const auto loc_offset = struct_desc->find_property(L"Translation")->get_offset();
             static const auto scale_offset = struct_desc->find_property(L"Scale3D")->get_offset();
             if (is_ue5()) {
@@ -499,12 +499,6 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
                 return sol::make_object(s, t);
 
             }
-
-         /*   if (is_ue5()) {     
-                return sol::make_object(s, *(lua::datatypes::Transformd*)struct_data);
-            } else {
-                return sol::make_object(s, *(lua::datatypes::Transformf*)struct_data);
-            }*/
         }
         // New Matrix Integration
         else if (struct_desc == get_matrix_struct()) {
@@ -556,11 +550,6 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::FProperty* 
         const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
         switch (inner_name_hash) {
-            // UE's TArray<T> stores elements inline, not as pointers - these casts used to be
-            // TArray<T*> with a TArray<T*>-typed loop, which read sizeof(T*) bytes per element
-            // (e.g. 8 bytes interpreted as a "pointer" instead of a 4-byte float). Result was
-            // half the array length, with each entry being garbage bits of two adjacent values
-            // reinterpreted as a pointer/integer. Fixed to use the actual element type.
             case L"FloatProperty"_fnv: {
                 const auto& arr = *(uevr::API::TArray<float>*)((uintptr_t)self + offset);
                 return tarray_to_table<float>(s, arr);
@@ -792,9 +781,6 @@ sol::object prop_to_object(sol::this_state s, void* self, uevr::API::UStruct* c,
 
     if (desc == nullptr) {
         if (auto fn = c->find_function(name.c_str()); fn != nullptr) {
-            /*return sol::make_object(s, [self, s, fn](sol::variadic_args args) {
-                return call_function(s, self, fn, args);
-            });*/
             return sol::make_object(s, fn);
         }
 
@@ -1187,7 +1173,7 @@ void set_property(sol::this_state s, void* self, uevr::API::UStruct* owner_c, ue
 
         Params parms{};
 
-    
+
         if (arg_obj.is<std::wstring>()) {
             const auto src = arg_obj.as<std::wstring>();
             auto buffer = std::make_unique<wchar_t[]>(src.size() + 1);
@@ -1540,38 +1526,6 @@ sol::object call_function(sol::this_state s, uevr::API::UObject* self, uevr::API
 
             const auto inner_name_hash = ::utility::hash(inner_c->get_fname()->to_string());
 
-/*            switch (inner_name_hash) {
-            case L"InterfaceProperty"_fnv:
-            case L"ObjectProperty"_fnv:
-            case L"ClassProperty"_fnv: {
-                const auto arg_obj = args[args_index++];
-
-                if (arg_obj.is<sol::lua_table>()) {
-                    const auto arg_table = arg_obj.as<sol::lua_table>();
-
-                    auto& arr = *(uevr::API::TArray<uevr::API::UObject*>*)&params[offset];
-
-                    // if (!prop_desc->is_out_param()) {
-                    auto& dynamic_arr = dynamic_object_arrays.emplace_back();
-                    dynamic_arr.resize(arg_table.size());
-
-                    for (size_t i = 0; i < arg_table.size(); ++i) {
-                        dynamic_arr[i] = arg_table[i + 1];
-                    }
-
-                    arr.count = dynamic_arr.size();
-                    arr.capacity = dynamic_arr.size();
-                    arr.data = dynamic_arr.data();
-                    //} else {
-                    // throw sol::error("Cannot set an out parameter with an array (yet)");
-                    //}
-                } else {
-                    throw sol::error("Invalid argument type for ArrayProperty<ObjectProperty>");
-                }
-            }
-            default:
-                continue;
-            }*/
             const auto arg_obj = args[args_index++];
 
             if (arg_obj.is<sol::lua_table>()) {
