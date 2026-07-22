@@ -1,47 +1,95 @@
-# ImGui-IDE ↔ UEVR bridge plugin
+# UEVR ![build](https://github.com/praydog/UEVR/actions/workflows/dev-release.yml/badge.svg)
 
-A tiny, **headless** UEVR plugin that lets ImGui-IDE's **UEVR Live** panel run
-Lua inside a running UEVR game — a REPL plus live Globals / Modules / Inspect —
-without the IDE and the game sharing a process.
+Universal Unreal Engine VR Mod (4/5)
 
-## How it works
+## Supported Engine Versions
 
-The IDE and this plugin talk over a file inbox, no sockets:
+4.8 - 5.4
 
-```
-%APPDATA%\UnrealVRMod\UEVR\ide_bridge\
-    cmd\   ← ImGui-IDE writes command files here
-    out\   ← this plugin writes results here
-```
+## Links
 
-Each command file's first line is a kind (`run` | `globals` | `modules` |
-`inspect`); the rest is the payload (Lua code, or an expression to inspect).
-On every ~12th engine tick the plugin drains `cmd\`, runs each request through
-UEVR's `exec_lua_chunk`, writes the result to `out\<reqId>.txt`, and deletes the
-command. The IDE polls `out\` at ~5 Hz and shows the results.
+- [Download (Stable release)](https://github.com/praydog/UEVR/releases)
+- [Download (Nightly release)](https://github.com/praydog/UEVR-nightly/releases/latest)
+- [Documentation](https://praydog.github.io/uevr-docs)
+- [Flat2VR Discord](https://flat2vr.com)
 
-With no game running, the IDE's sends simply accumulate in `cmd\` and nothing
-comes back — everything is best-effort on both ends.
+## Features
 
-## Build
+- Full 6DOF support out of the box (HMD movement)
+- Full stereoscopic 3D out of the box
+- Native UE4/UE5 stereo rendering system
+- Frontend GUI for easy process injection
+- Supports OpenVR and OpenXR runtimes
+- 3 rendering modes: Native Stereo, Synchronized Sequential, and Alternating/AFR
+- Automatic handling of most in-game UI so it is projected into 3D space
+- Optional 3DOF motion controls out of the box in many games, essentially emulating a semi-native VR experience
+- Optional roomscale movement in many games, moving the player character itself in 3D space along with the headset
+- User-authored UI-based system for adding motion controls and first person to games that don't support them
+- In-game menu with shortcuts for adjusting settings
+- Access to various CVars for fixing broken shaders/effects/performance issues
+- Optional depth buffer integration for improved latency on some headsets
+- Per-game configurations
+- [C++ Plugin system](https://praydog.github.io/uevr-docs/plugins/getting_started.html) and [Blueprint support](https://praydog.github.io/uevr-docs/plugins/blueprint.html) for modders to add additional features like motion controls
 
-Needs only the UEVR SDK headers (`<UEVR>/include/uevr/Plugin.hpp`). Easiest is
-to build it inside your UEVR checkout the same way as the bundled examples:
+## Getting Started
 
-```
-cmake -S tools/uevr-bridge -B build -DUEVR_ROOT=<path-to-UEVR-checkout>
-cmake --build build --config Release
-```
+Before launching, ensure you have installed .NET 6.0 SDK. It should tell you where to install it upon first open, but if not, you can [download it from here](https://dotnet.microsoft.com/en-us/download/dotnet/6.0). Most people should click x64 in the top left table, under the Installers column, next to windows.
 
-This produces `imgui_ide_uevr_bridge.dll`.
+Download the latest release from the [Releases page](https://github.com/praydog/UEVR/releases)
 
-## Install
+1. Launch UEVRInjector.exe
+2. Launch the target game
+3. Locate the game in the process dropdown list
+4. Select your desired runtime (OpenVR/OpenXR)
+5. Toggle existing VR plugin nullification (if necessary)
+6. Configure pre-injection settings
+7. Inject
 
-Copy `imgui_ide_uevr_bridge.dll` into UEVR's plugins folder for your game
-(alongside `UEVRBackend.dll`), or drop it where UEVR loads per-game plugins.
-Launch the game with UEVR, then in ImGui-IDE open **View → UEVR Live (bridge)**
-and Run / Refresh. (ImGui-IDE can also install it for you from the Blueprint /
-UEVR menu once bundled next to the exe.)
+## To-dos before injection
 
-> Requires a UEVR build whose `exec_lua_chunk` is available. If the plugin logs
-> "exec_lua_chunk unavailable — rebuild UEVRBackend", update UEVR.
+1. Disable HDR (it will still work without it, but the game will be darker than usual if it is)
+2. Start as administrator if the game is not visible in the list
+3. Pass `-nohmd` to the game's command line and/or delete VR plugins from the game directory if the game contains any existing VR plugins
+4. Disable any overlays that may conflict and cause crashes (Rivatuner, ASUS software, Razer software, Overwolf, etc...)
+5. Disable graphical options in-game that may cause crashes or severe issues like DLSS Frame Generation
+6. Consider disabling `Hardware Accelerated GPU Scheduling` in your Windows `Graphics settings`
+
+## In-Game Menu
+
+Press the **Insert** key or **L3+R3** on an XInput based controller to access the in-game menu, which opens by default at startup. With the menu open, hold **RT** for various shortcuts:
+
+- RT + Left Stick: Move the camera left/right/forward/back
+- RT + Right Stick: Move the camera up/down
+- RT + B: Reset camera offset
+- RT + Y: Recenter view
+- RT + X: Reset standing origin
+
+## Quick overview of rendering methods
+
+### Native Stereo
+
+When it works, it looks the best, performs the best (usually). Can cause crashes or graphical bugs if the game does not play well with it.
+
+Temporal effects like TAA are fully intact. DLSS/FSR2 usually work completely fine with no ghosting in this mode.
+
+Fully synchronized eye rendering. Works with the majority of games. Uses the actual stereo rendering pipeline in the Unreal Engine to achieve a stereoscopic image.
+
+### Synchronized Sequential
+
+A form of AFR. Can fix many rendering bugs that are introduced with Native Stereo. Renders two frames **sequentially** in a **synchronized** fashion on the same engine tick.
+
+Fully synchronized eye rendering. Game world does not advance time between frames.
+
+Looks normal but temporal effects like TAA will have ghosting/doubling effect. Motion blur will need to be turned off.
+
+This is the first alternative option that should be used if Native Stereo is not working as expected or you are encountering graphical bugs.
+
+**Skip Draw** skips the viewport draw on the next engine tick. Usually works the best but sometimes particle effects may not play at the correct speed.
+
+**Skip Tick** skips the next engine tick entirely. Usually buggy but does fix particle effects and sometimes brings higher performance.
+
+### AFR
+
+Alternated Frame Rendering. Renders each eye on separate frames in an alternating fashion, with the game world advancing time in between frames. Causes eye desyncs and usually nausea along with it.
+
+Not synchronized. Generally should not be used unless the other two are unusable in some way.
