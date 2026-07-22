@@ -555,15 +555,27 @@ void UObjectHook::handle_click_select() {
     // happened — otherwise redraw the cached overlay (wheel-only ticks cycle the existing cache via
     // cycle_and_draw above). Keeps an armed-but-idle-or-scrolling picker off the per-frame hot path
     // (the scan holds a shared_lock the game-thread add/destroy hooks want).
+    // "Moved" alone isn't enough of a gate on its own: the cursor moves on nearly every frame while
+    // actively aiming, so without a time throttle this rescan (a full walk of m_objects, composing each
+    // candidate's world position through an AttachParent chain) ran at full display refresh rate the
+    // whole time you were picking — the actual source of the picker's reported lag. Capped to ~20Hz;
+    // s_last_pick_mouse deliberately only updates when a rescan actually runs, so `pick_moved` stays
+    // true (and a rescan fires the instant the interval elapses) for as long as the cursor keeps moving,
+    // rather than resetting the throttle window every frame.
     static ImVec2 s_last_pick_mouse{-1e9f, -1e9f};
+    static double s_last_rescan_time = 0.0;
+    constexpr double kRescanIntervalSec = 1.0 / 20.0;
     const bool pick_moved = std::fabs(io.MousePos.x - s_last_pick_mouse.x) > 0.5f ||
                             std::fabs(io.MousePos.y - s_last_pick_mouse.y) > 0.5f;
-    if (!(pick_moved || clicked || m_pick_cache.empty())) {
+    const double now_t = ImGui::GetTime();
+    const bool rescan_due = pick_moved && (now_t - s_last_rescan_time) >= kRescanIntervalSec;
+    if (!(rescan_due || clicked || m_pick_cache.empty())) {
         cycle_and_draw();
         draw_click_marker(io.MousePos);
         return;
     }
     s_last_pick_mouse = io.MousePos;
+    s_last_rescan_time = now_t;
 
     auto engine = sdk::UGameEngine::get();
     auto world = engine != nullptr ? engine->get_world() : nullptr;
