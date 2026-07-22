@@ -26,6 +26,7 @@
 #include "vr/D3D11Component.hpp"
 #include "vr/D3D12Component.hpp"
 #include "vr/OverlayComponent.hpp"
+#include "vr/InputEmulation.hpp"
 
 #include "vr/FFakeStereoRenderingHook.hpp"
 #include "vr/RenderTargetPoolHook.hpp"
@@ -345,6 +346,10 @@ public:
 
     auto& get_overlay_component() {
         return m_overlay_component;
+    }
+
+    auto& get_input_emulation() {
+        return m_input_emulation;
     }
 
 
@@ -887,9 +892,12 @@ private:
             m_fake_stereo_hook.get(),
             m_render_target_pool_hook.get(),
             m_cvar_manager.get(),
-            &m_overlay_component
+            &m_overlay_component,
+            &m_input_emulation
         };
     }
+
+    vrmod::InputEmulation m_input_emulation{};
 
     std::shared_ptr<VRRuntime> m_runtime{std::make_shared<VRRuntime>()}; // will point to the real runtime if it exists
     std::shared_ptr<runtimes::OpenVR> m_openvr{std::make_shared<runtimes::OpenVR>()};
@@ -1511,5 +1519,6 @@ private:
     friend class vrmod::D3D11Component;
     friend class vrmod::D3D12Component;
     friend class vrmod::OverlayComponent;
+    friend class vrmod::InputEmulation;
     friend class FFakeStereoRenderingHook;
 };

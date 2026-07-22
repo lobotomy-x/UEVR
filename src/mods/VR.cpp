@@ -1373,6 +1373,12 @@ void VR::on_xinput_get_state(uint32_t* retval, uint32_t user_index, XINPUT_STATE
         }
     }
 
+    // User-configured VR-source -> XInput bindings, additive on top of everything above (see the
+    // class comment on InputEmulation for why this doesn't replace the fixed mapping). Runs before
+    // update_imgui_state_from_xinput_state so the UI sees these too, and still gets discarded by
+    // UObjectHook's VR adjust mode below like everything else here.
+    m_input_emulation.apply_to_xinput(*this, state->Gamepad);
+
     // Do it again after all the VR buttons have been spoofed
     update_imgui_state_from_xinput_state(*state, true);
 
@@ -2434,6 +2440,7 @@ void VR::on_config_load(const utility::Config& cfg, bool set_defaults) {
     }
 
     m_overlay_component.on_config_load(cfg, set_defaults);
+    m_input_emulation.on_config_load(cfg, set_defaults);
 
     if (m_cvar_manager != nullptr) {
         m_cvar_manager->on_config_load(cfg, set_defaults);
@@ -2459,6 +2466,7 @@ void VR::on_config_save(utility::Config& cfg) {
     }
 
     m_overlay_component.on_config_save(cfg);
+    m_input_emulation.on_config_save(cfg);
 
     // Save camera offsets
     save_cameras();
@@ -2639,6 +2647,8 @@ void VR::on_frame() {
     if (!get_runtime()->ready()) {
         return;
     }
+
+    m_input_emulation.on_frame(*this);
 
     const auto now = std::chrono::steady_clock::now();
     const auto is_allowed_draw_window = now - m_last_xinput_update < std::chrono::seconds(2);
@@ -3384,6 +3394,12 @@ void VR::on_draw_sidebar_entry(std::string_view name) {
                 ImGui::SetTooltip("When enabled, roomscale movement will use a sweep to prevent the player from moving through walls.\nThis also allows physics objects to interact with the player, like doors.");
             }
 
+            ImGui::TreePop();
+        }
+
+        ImGui::SetNextItemOpen(true, ImGuiCond_::ImGuiCond_Once);
+        if (ImGui::TreeNode("Input Rebinding / Emulation")) {
+            m_input_emulation.on_draw_ui();
             ImGui::TreePop();
         }
     }

@@ -1056,6 +1056,39 @@ static sol::object call_function(sol::this_state s, uevr::API::UObject* obj, con
 	return sol::make_object(lua, true); // void success
 }
 
+// Direct input synthesis, not tied to a VR source or binding table.
+static void input_inject_key(int32_t vk, bool down) { vrmod::InputEmulation::inject_key(vk, down); }
+static void input_inject_mouse_button(int32_t button, bool down) { vrmod::InputEmulation::inject_mouse_button(button, down); }
+static void input_inject_mouse_move(int32_t dx, int32_t dy) { vrmod::InputEmulation::inject_mouse_move(dx, dy); }
+
+// VR-source -> output binding table CRUD, reaching through VR::get()->get_input_emulation().
+static bool input_add_vr_binding(const std::string& source_name, const std::string& kind_name, int32_t code, float scale, bool invert)
+{
+	auto vr = VR::get();
+	if (vr == nullptr) {
+		return false;
+	}
+
+	const auto source = vrmod::emu_source_from_string(source_name);
+	const auto kind = vrmod::emu_output_kind_from_string(kind_name);
+	if (source == vrmod::EmuSource::None || kind == vrmod::EmuOutputKind::None) {
+		return false;
+	}
+
+	vr->get_input_emulation().add_binding(vrmod::EmuBinding{source, kind, code, scale, invert});
+	return true;
+}
+
+static void input_clear_vr_bindings()
+{
+	auto vr = VR::get();
+	if (vr == nullptr) {
+		return;
+	}
+
+	vr->get_input_emulation().clear_bindings();
+}
+
 void bindings::open_sdk_fast(sol::state_view& lua)
 {
 	auto t = lua.create_table();
@@ -1131,6 +1164,17 @@ void bindings::open_sdk_fast(sol::state_view& lua)
 
 	// Fast UFunction call by name with positional scalar args + return value.
 	t["call_function"] = &call_function;
+
+	// Direct keyboard/mouse synthesis (SendInput), independent of any VR binding.
+	t["input_inject_key"] = &input_inject_key;
+	t["input_inject_mouse_button"] = &input_inject_mouse_button;
+	t["input_inject_mouse_move"] = &input_inject_mouse_move;
+
+	// VR controller -> XInput/keyboard/mouse binding table (see vrmod::InputEmulation).
+	// source_name/kind_name are the string forms from emu_source_to_string/emu_output_kind_to_string
+	// (e.g. "TriggerLeft", "XInputButton").
+	t["input_add_vr_binding"] = &input_add_vr_binding;
+	t["input_clear_vr_bindings"] = &input_clear_vr_bindings;
 
 	// Surface under `uevr.api_fast`. Keeping it separate from `uevr.api` makes
 	// intent explicit at call sites ("use the fast path") and avoids shadowing
